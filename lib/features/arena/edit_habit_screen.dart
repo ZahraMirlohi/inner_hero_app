@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/features/arena/models/habit_model.dart';
 
 class EditHabitScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late List<String> _subHabits;
-  late List<String> _completedSubHabits; // اضافه شد
+  late List<String> _completedSubHabits;
   final _subHabitController = TextEditingController();
 
   late String _selectedIcon;
@@ -35,6 +35,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
 
   late int _xpReward;
   bool _isLoading = false;
+
+  final _supabase = SupabaseService(); // ← تغییر
 
   final List<String> _weekdayLetters = ['د', 'س', 'چ', 'پ', 'ج', 'ش', 'ی'];
 
@@ -127,7 +129,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               const SizedBox(height: 16),
               _buildDescriptionField(),
               const SizedBox(height: 16),
-              _buildSubHabitsSection(), // بخش زیرعادت‌ها
+              _buildSubHabitsSection(),
               const SizedBox(height: 24),
               _buildIconAndColorSection(),
               const SizedBox(height: 24),
@@ -147,7 +149,6 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  // ==================== بخش زیرعادت‌ها (اصلاح شده) ====================
   Widget _buildSubHabitsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,9 +213,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 label: Text(sh),
                 onDeleted: () {
                   setState(() {
-                    // حذف زیرعادت از لیست
                     _subHabits.removeAt(index);
-                    // همچنین از لیست انجام شده‌ها حذف شود
                     _completedSubHabits.remove(sh);
                   });
                 },
@@ -226,8 +225,6 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
       ],
     );
   }
-
-  // ==================== بقیه متدها (بدون تغییر) ====================
 
   Widget _buildIconAndColorSection() {
     return Card(
@@ -865,7 +862,6 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
   Future<void> _updateHabit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // هماهنگ‌سازی completedSubHabits با subHabits
     final validCompletedSubHabits = _completedSubHabits
         .where((c) => _subHabits.contains(c))
         .toList();
@@ -908,7 +904,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         groupId: widget.habit.groupId,
       );
 
-      await AppwriteService().updateHabit(updatedHabit);
+      await _supabase.updateHabit(updatedHabit); // ← تغییر
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

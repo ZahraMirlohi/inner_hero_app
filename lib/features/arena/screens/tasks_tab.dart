@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
-import 'package:appwrite/models.dart' as models;
 import '../add_task_screen.dart';
 import '../edit_task_screen.dart';
 
@@ -14,10 +13,10 @@ class TasksTab extends StatefulWidget {
 }
 
 class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
-  final AppwriteService _appwrite = AppwriteService();
+  final SupabaseService _supabase = SupabaseService();
   List<Task> _tasks = [];
   bool _isLoading = true;
-  models.User? _currentUser;
+  String? _currentUserId;
   String? _expandedItemId;
   String? _expandedSubItemId;
 
@@ -77,9 +76,11 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
   Future<void> _loadTasks() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    _currentUser = await _appwrite.getCurrentUser();
-    if (_currentUser != null && mounted) {
-      _tasks = await _appwrite.getTasks(_currentUser!.$id);
+
+    final user = await _supabase.getCurrentUser();
+    if (user != null && mounted) {
+      _currentUserId = user.id;
+      _tasks = await _supabase.getTasks(_currentUserId!);
     }
     if (mounted) {
       setState(() => _isLoading = false);
@@ -90,9 +91,9 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     setState(() {
       task.isCompleted = !task.isCompleted;
     });
-    await _appwrite.updateTask(task);
-    if (task.isCompleted && mounted) {
-      await _appwrite.addXP(_currentUser!.$id, task.xpReward);
+    await _supabase.updateTask(task);
+    if (task.isCompleted && mounted && _currentUserId != null) {
+      await _supabase.addXP(_currentUserId!, task.xpReward);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -110,7 +111,7 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     setState(() {
       task.isCompleted = false;
     });
-    await _appwrite.updateTask(task);
+    await _supabase.updateTask(task);
     _loadTasks();
   }
 
@@ -250,7 +251,7 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
       updatedAt: DateTime.now(),
     );
 
-    await _appwrite.updateTask(updatedTask);
+    await _supabase.updateTask(updatedTask);
 
     setState(() {
       final index = _tasks.indexWhere((t) => t.id == task.id);
@@ -263,8 +264,6 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
   String _formatDate(DateTime date) {
     return '${date.year}/${date.month}/${date.day}';
   }
-
-  // ==================== متدهای ویرایش و حذف ====================
 
   void _editTask(Task task) async {
     final result = await Navigator.push(
@@ -296,7 +295,7 @@ class _TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
       ),
     );
     if (confirm == true && mounted) {
-      await _appwrite.deleteTask(task.id);
+      await _supabase.deleteTask(task.id);
       _loadTasks();
     }
     _toggleExpanded(task.id);

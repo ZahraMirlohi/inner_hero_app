@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
@@ -81,6 +81,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     const Color(0xFFFDF5E8),
     const Color(0xFFF0E8FD),
   ];
+
+  final _supabase = SupabaseService(); // ← تغییر
 
   @override
   void initState() {
@@ -325,39 +327,24 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // عنوان و توضیحات
               _buildTitleField(),
               const SizedBox(height: 16),
               _buildDescriptionField(),
               const SizedBox(height: 16),
               _buildSubHabitsSection(),
               const SizedBox(height: 24),
-
-              // آیکن و رنگ
               _buildIconAndColorSection(),
               const SizedBox(height: 24),
-
-              // زمانبندی
               _buildFrequencySection(),
               const SizedBox(height: 24),
-
-              // زمان
               _buildTimeSection(),
               const SizedBox(height: 24),
-
-              // تاریخ شروع
               _buildStartDateSection(),
               const SizedBox(height: 24),
-
-              // یادآور
               _buildRemindersSection(),
               const SizedBox(height: 24),
-
-              // XP
               _buildXPSection(),
               const SizedBox(height: 32),
-
-              // دکمه ایجاد
               _buildSubmitButton(),
             ],
           ),
@@ -1114,12 +1101,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   Future<void> _saveHabit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // اعتبارسنجی برای ماهانه - اطمینان از اینکه روزهای انتخاب شده معتبر هستند
     if (_frequencyType == 'monthly' && _monthlyDays.isNotEmpty) {
-      // حذف روزهای نامعتبر (بیشتر از 31)
       _monthlyDays.removeWhere((day) => day < 1 || day > 31);
-
-      // اگر بعد از حذف لیست خالی شد، خطا نمایش بده
       if (_monthlyDays.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1134,12 +1117,12 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await AppwriteService().getCurrentUser();
+      final user = await _supabase.getCurrentUser(); // ← تغییر
 
       if (user != null && mounted) {
         final habit = Habit(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: user.$id,
+          userId: user.id, // ← تغییر
           title: _titleController.text,
           description: _descriptionController.text,
           subHabits: _subHabits,
@@ -1167,7 +1150,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           updatedAt: DateTime.now(),
         );
 
-        await AppwriteService().createHabit(habit);
+        await _supabase.createHabit(habit); // ← تغییر
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

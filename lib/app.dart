@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '/features/auth/screens/login_screen.dart';
 import '/features/home/screens/main_screen.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart'; // ← تغییر
 
 class HeroApp extends StatefulWidget {
   const HeroApp({super.key});
@@ -14,6 +14,8 @@ class _HeroAppState extends State<HeroApp> {
   bool _isInitialized = false;
   bool _isLoggedIn = false;
 
+  final _supabase = SupabaseService(); // ← اضافه شده
+
   @override
   void initState() {
     super.initState();
@@ -21,8 +23,7 @@ class _HeroAppState extends State<HeroApp> {
   }
 
   Future<void> _initializeApp() async {
-    await AppwriteService().init();
-    final user = await AppwriteService().getCurrentUser();
+    final user = await _supabase.getCurrentUser(); // ← تغییر
     setState(() {
       _isInitialized = true;
       _isLoggedIn = user != null;

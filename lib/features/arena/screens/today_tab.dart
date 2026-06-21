@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import '/features/arena/models/task_model.dart';
-import 'package:appwrite/models.dart' as models;
 import '../category_selection_screen.dart';
 import '../add_task_screen.dart';
 import '../edit_habit_screen.dart';
@@ -20,7 +19,7 @@ class TodayTab extends StatefulWidget {
 }
 
 class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
-  final AppwriteService _appwrite = AppwriteService();
+  final SupabaseService _supabase = SupabaseService();
   List<Habit> _todayHabits = [];
   List<Task> _todayTasks = [];
   List<Habit> _completedHabits = [];
@@ -29,7 +28,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   List<Task> _failedTasks = [];
 
   bool _isLoading = true;
-  models.User? _currentUser;
+  String? _currentUserId;
   final Map<String, bool> _habitCompletionStatus = {};
   final Map<String, bool> _habitFailedStatus = {};
   final Map<String, bool> _taskCompletedStatus = {};
@@ -180,22 +179,22 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    _currentUser = await _appwrite.getCurrentUser();
-    if (_currentUser != null && mounted) {
-      // پاک کردن عادت‌های منقضی شده
-      await _appwrite.cleanupExpiredHabits(_currentUser!.$id);
 
-      final allHabits = await _appwrite.getHabits(_currentUser!.$id);
-      final allTasks = await _appwrite.getTasks(_currentUser!.$id);
+    final user = await _supabase.getCurrentUser();
+    if (user != null && mounted) {
+      _currentUserId = user.id;
+
+      final allHabits = await _supabase.getHabits(_currentUserId!);
+      final allTasks = await _supabase.getTasks(_currentUserId!);
 
       final List<Habit> pendingHabits = [];
       final List<Habit> completedHabits = [];
       final List<Habit> failedHabits = [];
 
       for (var habit in allHabits) {
-        final isCompleted = await _appwrite.isHabitCompletedOnDate(
+        final isCompleted = await _supabase.isHabitCompletedOnDate(
           habit.id,
-          _currentUser!.$id,
+          _currentUserId!,
           widget.selectedDate,
         );
         final isFailed = _habitFailedStatus[habit.id] ?? false;
@@ -206,7 +205,6 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         } else if (isFailed) {
           failedHabits.add(habit);
         } else if (habit.shouldDoOnDate(widget.selectedDate)) {
-          // اینجا shouldDoOnDate بررسی می‌کند که تاریخ انتخاب شده در بازه باشد
           pendingHabits.add(habit);
         }
       }
@@ -255,13 +253,13 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.markHabitCompletedOnDate(
+    await _supabase.markHabitCompletedOnDate(
       habit.id,
-      _currentUser!.$id,
+      _currentUserId!,
       widget.selectedDate,
       true,
     );
-    await _appwrite.addXP(_currentUser!.$id, habit.xpReward);
+    await _supabase.addXP(_currentUserId!, habit.xpReward);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,9 +286,9 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.markHabitCompletedOnDate(
+    await _supabase.markHabitCompletedOnDate(
       habit.id,
-      _currentUser!.$id,
+      _currentUserId!,
       widget.selectedDate,
       false,
     );
@@ -310,9 +308,9 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.markHabitCompletedOnDate(
+    await _supabase.markHabitCompletedOnDate(
       habit.id,
-      _currentUser!.$id,
+      _currentUserId!,
       widget.selectedDate,
       false,
     );
@@ -333,8 +331,8 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.updateTask(task);
-    await _appwrite.addXP(_currentUser!.$id, task.xpReward);
+    await _supabase.updateTask(task);
+    await _supabase.addXP(_currentUserId!, task.xpReward);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -362,7 +360,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.updateTask(task);
+    await _supabase.updateTask(task);
     _checkAllCompletedAndShowCongratulation();
   }
 
@@ -379,7 +377,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    await _appwrite.updateTask(task);
+    await _supabase.updateTask(task);
     _hasShownCongratulationToday = false;
     _checkAllCompletedAndShowCongratulation();
   }
@@ -738,7 +736,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       startDate: habit.startDate,
     );
 
-    await _appwrite.updateHabit(updatedHabit);
+    await _supabase.updateHabit(updatedHabit);
 
     setState(() {
       final index = _todayHabits.indexWhere((h) => h.id == habit.id);
@@ -780,7 +778,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       updatedAt: DateTime.now(),
     );
 
-    await _appwrite.updateTask(updatedTask);
+    await _supabase.updateTask(updatedTask);
 
     setState(() {
       final index = _todayTasks.indexWhere((t) => t.id == task.id);
@@ -797,8 +795,6 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       }
     });
   }
-
-  // ==================== متدهای ویرایش و حذف ====================
 
   void _editHabit(Habit habit) async {
     final result = await Navigator.push(
@@ -830,7 +826,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       ),
     );
     if (confirm == true && mounted) {
-      await _appwrite.deleteHabit(habit.id);
+      await _supabase.deleteHabit(habit.id);
       _loadData();
     }
     _toggleExpanded(habit.id, 'habit');
@@ -866,7 +862,7 @@ class _TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       ),
     );
     if (confirm == true && mounted) {
-      await _appwrite.deleteTask(task.id);
+      await _supabase.deleteTask(task.id);
       _loadData();
     }
     _toggleExpanded(task.id, 'task');

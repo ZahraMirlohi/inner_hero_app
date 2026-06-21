@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart'; // ← تغییر
 import '/services/date_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -13,6 +13,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _levelAnimationController;
   late Animation<double> _levelAnimation;
+
+  final _supabase = SupabaseService(); // ← اضافه شده
 
   final int _userLevel = 27;
   final int _currentXP = 2450;
@@ -1112,7 +1114,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           );
           if (confirm == true) {
-            await AppwriteService().logout();
+            await _supabase.logout(); // ← تغییر
             if (mounted) {
               Navigator.pushReplacementNamed(context, '/login');
             }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -26,6 +26,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   String _errorMessage = '';
   String _currentUserId = '';
   int _refreshCounter = 0;
+
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -56,8 +58,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() => _errorMessage = '');
 
     try {
-      final appwrite = AppwriteService();
-      final currentUser = await appwrite.getCurrentUser();
+      final currentUser = await _supabase.getCurrentUser();
 
       if (currentUser == null) {
         setState(() {
@@ -67,24 +68,23 @@ class _ExploreScreenState extends State<ExploreScreen>
         return;
       }
 
-      _currentUserId = currentUser.$id;
+      _currentUserId = currentUser.id;
 
-      // ========== تغییر اینجا ==========
-      // فقط چالش‌های قابل ثبت‌نام جدید
-      _challenges = await appwrite.getAvailableChallenges();
-      // چالش‌های فعال کاربر (حتی اگه ثبت‌نامشون بسته شده باشه)
-      _myChallenges = await appwrite.getUserChallenges(currentUser.$id);
-      // ================================
+      // دریافت چالش‌ها
+      _challenges = await _supabase.getChallenges();
+
+      // دریافت چالش‌های کاربر
+      _myChallenges = await _supabase.getUserChallenges(currentUser.id);
 
       // فقط برای چالش‌های جدید، isJoined رو محاسبه کن
       for (int i = 0; i < _challenges.length; i++) {
         final challengeId = _challenges[i]['id'];
 
         // محاسبه روزهای باقی‌مونده برای ثبت‌نام
-        if (_challenges[i]['registrationEndDate'] != null) {
+        if (_challenges[i]['registration_end_date'] != null) {
           try {
             final registrationEnd = DateTime.parse(
-              _challenges[i]['registrationEndDate'],
+              _challenges[i]['registration_end_date'],
             );
             final daysLeft = registrationEnd.difference(DateTime.now()).inDays;
             _challenges[i]['daysLeft'] = daysLeft > 0 ? daysLeft : 0;
@@ -118,21 +118,16 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() => _isLoading = true);
 
     try {
-      final appwrite = AppwriteService();
-      final currentUser = await appwrite.getCurrentUser();
+      final currentUser = await _supabase.getCurrentUser();
 
       if (currentUser != null) {
-        debugPrint('کاربر: ${currentUser.$id}');
+        debugPrint('کاربر: ${currentUser.id}');
 
         // 1. ثبت در user_challenges
-        await appwrite.joinChallenge(currentUser.$id, challenge['id']);
+        await _supabase.joinChallenge(currentUser.id, challenge['id']);
         debugPrint('✅ ثبت در user_challenges انجام شد');
 
-        // 2. اضافه کردن عادت چالش
-        await appwrite.addChallengeHabitToUser(currentUser.$id, challenge);
-        debugPrint('✅ عادت چالش اضافه شد');
-
-        // 3. بارگذاری مجدد داده‌ها
+        // 2. بارگذاری مجدد داده‌ها
         await _loadData();
         debugPrint('✅ داده‌ها بارگذاری مجدد شد');
 
@@ -169,35 +164,14 @@ class _ExploreScreenState extends State<ExploreScreen>
     setState(() => _isLoading = true);
 
     try {
-      final appwrite = AppwriteService();
-      final currentUser = await appwrite.getCurrentUser();
+      final currentUser = await _supabase.getCurrentUser();
 
       if (currentUser != null) {
-        // 1. پیدا کردن userProgressId
-        final userChallenge = _myChallenges.firstWhere(
-          (c) => c['id'] == challenge['id'],
-          orElse: () => {},
-        );
+        // انصراف از چالش
+        await _supabase.leaveChallenge(currentUser.id, challenge['id']);
+        debugPrint('✅ انصراف از چالش انجام شد');
 
-        final userProgressId = userChallenge['userProgressId'];
-
-        if (userProgressId != null && userProgressId.isNotEmpty) {
-          await appwrite.leaveChallenge(
-            currentUser.$id,
-            challenge['id'],
-            userProgressId,
-          );
-          debugPrint('✅ انصراف از چالش انجام شد');
-        }
-
-        // 2. حذف عادت چالش از کاربر (با استفاده از challengeId)
-        await appwrite.removeChallengeHabitByChallengeId(
-          currentUser.$id,
-          challenge['id'],
-        );
-        debugPrint('✅ عادت چالش حذف شد');
-
-        // 3. بارگذاری مجدد داده‌ها
+        // بارگذاری مجدد داده‌ها
         await _loadData();
         debugPrint('✅ داده‌ها بارگذاری مجدد شد');
 
@@ -229,25 +203,23 @@ class _ExploreScreenState extends State<ExploreScreen>
   // نمایش دیالوگ جزئیات چالش
   void _showChallengeDetailsDialog(Map<String, dynamic> challenge) async {
     // گرفتن تعداد واقعی شرکت‌کنندگان
-    final realParticipants = await AppwriteService().getRealParticipantsCount(
+    final realParticipants = await _supabase.getRealParticipantsCount(
       challenge['id'],
     );
 
     final isJoined = _myChallenges.any((c) => c['id'] == challenge['id']);
 
-    // ========== حذف رنگ داینامیک و استفاده از رنگ ثابت ==========
-    const fixedColor = Color(0xFF4A90E2); // آبی ثابت برای همه چالش‌ها
-    // ============================================================
+    const fixedColor = Color(0xFF4A90E2);
 
-    final registrationEnd = DateTime.parse(challenge['registrationEndDate']);
+    final registrationEnd = DateTime.parse(challenge['registration_end_date']);
     final daysLeftToRegister = registrationEnd
         .difference(DateTime.now())
         .inDays;
     final displayDaysLeft = daysLeftToRegister > 0 ? daysLeftToRegister : 0;
 
-    final duration = challenge['challengeDuration'] as int;
-    final startDate = DateTime.parse(challenge['startDate']);
-    final endDate = DateTime.parse(challenge['endDate']);
+    final duration = challenge['challenge_duration'] as int;
+    final startDate = DateTime.parse(challenge['start_date']);
+    final endDate = DateTime.parse(challenge['end_date']);
 
     showModalBottomSheet(
       context: context,
@@ -284,7 +256,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // هدر چالش (اینجا می‌تونه از رنگ خود چالش استفاده کنه برای تنوع)
+                          // هدر چالش
                           Row(
                             children: [
                               Container(
@@ -295,7 +267,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Icon(
-                                  challenge['isBoss'] == true
+                                  challenge['is_boss'] == true
                                       ? Icons.emoji_events
                                       : Icons.flag,
                                   color: fixedColor,
@@ -333,7 +305,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           const Divider(),
                           const SizedBox(height: 16),
 
-                          // ========== اطلاعات اصلی با رنگ ثابت آبی ==========
+                          // اطلاعات اصلی با رنگ ثابت آبی
                           _buildDetailRowFixed(
                             Icons.access_time,
                             'مهلت ثبت‌نام',
@@ -358,7 +330,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                           _buildDetailRowFixed(
                             Icons.stars,
                             'پاداش نهایی',
-                            '+${challenge['xpReward']} XP',
+                            '+${challenge['xp_reward']} XP',
                             fixedColor,
                           ),
                           const SizedBox(height: 12),
@@ -375,11 +347,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                             _formatDate(endDate),
                             fixedColor,
                           ),
-                          // ================================================
 
                           // نوار پیشرفت جمعی (برای باس فایت)
-                          if (challenge['isBoss'] == true &&
-                              challenge['communityXP'] != null) ...[
+                          if (challenge['is_boss'] == true &&
+                              challenge['community_xp'] != null) ...[
                             const SizedBox(height: 16),
                             const Divider(),
                             const SizedBox(height: 12),
@@ -399,8 +370,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     borderRadius: BorderRadius.circular(8),
                                     child: LinearProgressIndicator(
                                       value:
-                                          (challenge['communityXP'] as int) /
-                                          (challenge['targetXP'] as int),
+                                          (challenge['community_xp'] as int) /
+                                          (challenge['target_xp'] as int),
                                       backgroundColor: Colors.grey.shade200,
                                       color: fixedColor,
                                       minHeight: 8,
@@ -409,7 +380,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  '${((challenge['communityXP'] as int) / (challenge['targetXP'] as int) * 100).toInt()}%',
+                                  '${((challenge['community_xp'] as int) / (challenge['target_xp'] as int) * 100).toInt()}%',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -423,14 +394,14 @@ class _ExploreScreenState extends State<ExploreScreen>
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'XP جمع‌آوری شده: ${challenge['communityXP']}',
+                                  'XP جمع‌آوری شده: ${challenge['community_xp']}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade700,
                                   ),
                                 ),
                                 Text(
-                                  'هدف: ${challenge['targetXP']} XP',
+                                  'هدف: ${challenge['target_xp']} XP',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade700,
@@ -510,7 +481,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         ),
                                       ),
                                       Text(
-                                        'با انجام هر روز چالش، +${(challenge['xpReward'] as int) ~/ (challenge['challengeDuration'] as int)} XP دریافت می‌کنید',
+                                        'با انجام هر روز چالش، +${(challenge['xp_reward'] as int) ~/ (challenge['challenge_duration'] as int)} XP دریافت می‌کنید',
                                         style: TextStyle(
                                           fontSize: 11,
                                           color: Colors.grey.shade700,
@@ -620,7 +591,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: color.withAlpha(38), // آبی با 15% opacity
+              color: color.withAlpha(38),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -633,7 +604,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E), // مشکی
+                color: Color(0xFF1A1A2E),
               ),
             ),
           ),
@@ -641,7 +612,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: color.withAlpha(30), // آبی با 12% opacity
+                color: color.withAlpha(30),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Text(
@@ -650,7 +621,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: color, // آبی پررنگ
+                  color: color,
                 ),
               ),
             ),
@@ -863,7 +834,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildActiveChallengeCard(Map<String, dynamic> challenge) {
     final fixedColor = const Color(0xFF4A90E2);
-    final totalDays = challenge['challengeDuration'] as int;
+    final totalDays = challenge['challenge_duration'] as int;
     final challengeId = challenge['id'];
 
     return GestureDetector(
@@ -919,10 +890,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                   ),
                   const SizedBox(height: 8),
 
-                  // ========== FutureBuilder برای پیشرفت واقعی ==========
+                  // FutureBuilder برای پیشرفت واقعی
                   FutureBuilder<Map<String, int>>(
                     key: ValueKey('${challengeId}_${_refreshCounter}'),
-                    future: AppwriteService().getUserChallengeProgressDetails(
+                    future: _supabase.getUserChallengeProgressDetails(
                       _currentUserId,
                       challengeId,
                     ),
@@ -1076,7 +1047,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                       );
                     },
                   ),
-                  // ====================================================
                 ],
               ),
             ),
@@ -1106,16 +1076,21 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildChallengeCard(Map<String, dynamic> challenge) {
     final bgColor = _parseColor(challenge['color'] ?? '#FFB8B8');
-    final textColor = _parseColor(challenge['textColor'] ?? '#E57373');
-    final challengeId = challenge['id'];
+    final textColor = _parseColor(challenge['text_color'] ?? '#E57373');
+    final challengeId = challenge['id'] ?? '';
+    final badge = challenge['badge'] ?? '🔥 داغ'; // ← مقدار پیش‌فرض
+    final tasks = challenge['tasks'] ?? ''; // ← مقدار پیش‌فرض
 
-    final registrationEnd = DateTime.parse(challenge['registrationEndDate']);
+    final registrationEnd = challenge['registration_end_date'] != null
+        ? DateTime.parse(challenge['registration_end_date'])
+        : DateTime.now().add(const Duration(days: 7));
     final daysLeftToRegister = registrationEnd
         .difference(DateTime.now())
         .inDays;
     final displayDaysLeft = daysLeftToRegister > 0 ? daysLeftToRegister : 0;
 
-    final duration = challenge['challengeDuration'] as int;
+    final duration =
+        challenge['challenge_duration'] as int? ?? 7; // ← مقدار پیش‌فرض
 
     return GestureDetector(
       onTap: () => _showChallengeDetailsDialog(challenge),
@@ -1134,12 +1109,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ========== هدر کارت ==========
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // روزهای باقی‌مانده برای ثبت‌نام
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -1168,15 +1141,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                   const Spacer(),
-
-                  // تعداد واقعی شرکت‌کنندگان
                   FutureBuilder<int>(
                     key: ValueKey(
                       'participants_${challengeId}_${_refreshCounter}',
                     ),
-                    future: AppwriteService().getRealParticipantsCount(
-                      challengeId,
-                    ),
+                    future: _supabase.getRealParticipantsCount(challengeId),
                     builder: (context, snapshot) {
                       final count = snapshot.data ?? 0;
                       return Container(
@@ -1212,14 +1181,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ],
               ),
             ),
-
-            // ========== محتوای اصلی ==========
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // نشان (Badge)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -1230,7 +1196,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      challenge['badge'] ?? '🔥 داغ',
+                      badge, // ← الان مقدار پیش‌فرض دارد
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -1239,10 +1205,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // عنوان چالش
                   Text(
-                    challenge['title'],
+                    challenge['title'] ?? 'بدون عنوان',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1250,17 +1214,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                   const SizedBox(height: 4),
-
-                  // توضیحات
                   Text(
-                    challenge['description'],
+                    challenge['description'] ?? '',
                     style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 12),
-
-                  // مدت زمان چالش
                   Row(
                     children: [
                       const Icon(
@@ -1279,10 +1239,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ],
                   ),
                   const SizedBox(height: 8),
-
-                  // نوار پیشرفت جمعی (برای باس فایت)
-                  if (challenge['isBoss'] == true &&
-                      challenge['communityXP'] != null) ...[
+                  if (challenge['is_boss'] == true &&
+                      challenge['community_xp'] != null) ...[
                     Row(
                       children: [
                         Expanded(
@@ -1290,8 +1248,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                             borderRadius: BorderRadius.circular(8),
                             child: LinearProgressIndicator(
                               value:
-                                  (challenge['communityXP'] as int) /
-                                  (challenge['targetXP'] as int),
+                                  ((challenge['community_xp'] as int?) ?? 0) /
+                                  ((challenge['target_xp'] as int?) ?? 1)
+                                      .toDouble(), // ← تبدیل به double
                               backgroundColor: Colors.white.withAlpha(51),
                               color: bgColor,
                               minHeight: 6,
@@ -1300,7 +1259,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${((challenge['communityXP'] as int) / (challenge['targetXP'] as int) * 100).toInt()}%',
+                          '${(((challenge['community_xp'] as int?) ?? 0) / ((challenge['target_xp'] as int?) ?? 1) * 100).toInt()}%',
                           style: const TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -1311,14 +1270,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                     const SizedBox(height: 12),
                   ],
-
-                  // تسک‌های چالش (حداکثر ۲ تا)
-                  if (challenge['tasks'] != null &&
-                      challenge['tasks'].toString().isNotEmpty) ...[
+                  if (tasks.isNotEmpty) ...[
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: (challenge['tasks'].toString().split(','))
+                      children: tasks
+                          .toString()
+                          .split(',')
                           .take(2)
                           .map(
                             (task) => Container(
@@ -1354,11 +1312,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                     const SizedBox(height: 16),
                   ],
-
-                  // ========== بخش پایین کارت ==========
                   Row(
                     children: [
-                      // پاداش XP
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -1377,7 +1332,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '+${challenge['xpReward']} XP',
+                              '+${challenge['xp_reward'] ?? 0} XP',
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -1388,8 +1343,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                         ),
                       ),
                       const Spacer(),
-
-                      // دکمه جزئیات
                       ElevatedButton(
                         onPressed: () => _showChallengeDetailsDialog(challenge),
                         style: ElevatedButton.styleFrom(
@@ -1602,7 +1555,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildPackageCard(Map<String, dynamic> pkg) {
     final color = _parseColor(pkg['color'] ?? '#4A90E2');
-    final bgColor = _parseColor(pkg['backgroundColor'] ?? '#D4F1F4');
+    final bgColor = _parseColor(pkg['background_color'] ?? '#D4F1F4');
     final habits = pkg['habits']?.toString().split(',') ?? [];
 
     return Container(
@@ -1793,7 +1746,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '+${quest['xpReward']} XP',
+                                '+${quest['xp_reward']} XP',
                                 style: const TextStyle(fontSize: 10),
                               ),
                             ],

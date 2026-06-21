@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
@@ -21,6 +21,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   int _xpReward = 10;
   bool _isLoading = false;
   String _calendarType = 'jalali';
+
+  final _supabase = SupabaseService(); // ← تغییر
 
   @override
   void initState() {
@@ -72,7 +74,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            // محاسبه تعداد روزهای ماه انتخابی
             int daysInMonth = _getDaysInMonth(selectedYear, selectedMonth);
             if (selectedDay > daysInMonth) {
               selectedDay = daysInMonth;
@@ -203,7 +204,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   int _getDaysInMonth(int year, int month) {
     if (month <= 6) return 31;
     if (month <= 11) return 30;
-    // اسفند
     final date = Jalali(year, month, 1);
     return (date.isLeapYear == true) ? 30 : 29;
   }
@@ -256,7 +256,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // عنوان تسک
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -273,8 +272,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
             ),
             const SizedBox(height: 16),
-
-            // توضیحات
             TextFormField(
               controller: _descriptionController,
               decoration: InputDecoration(
@@ -292,12 +289,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               maxLines: 2,
             ),
             const SizedBox(height: 16),
-
-            // زیرتسک‌ها
             _buildSubTasksSection(),
             const SizedBox(height: 16),
-
-            // تاریخ سررسید
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Container(
@@ -324,8 +317,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               onTap: _selectDate,
             ),
             const SizedBox(height: 16),
-
-            // امتیاز XP
             Row(
               children: [
                 const Text('امتیاز XP:'),
@@ -362,8 +353,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ],
             ),
             const SizedBox(height: 32),
-
-            // دکمه ذخیره
             ElevatedButton(
               onPressed: _isLoading ? null : _saveTask,
               style: ElevatedButton.styleFrom(
@@ -474,11 +463,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await AppwriteService().getCurrentUser();
+      final user = await _supabase.getCurrentUser(); // ← تغییر
       if (user != null && mounted) {
         final task = Task(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: user.$id,
+          userId: user.id, // ← تغییر
           title: _titleController.text,
           description: _descriptionController.text,
           subTasks: _subTasks,
@@ -490,7 +479,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           updatedAt: DateTime.now(),
         );
 
-        await AppwriteService().createTask(task);
+        await _supabase.createTask(task); // ← تغییر
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

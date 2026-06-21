@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '/features/arena/models/task_model.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart'; // ← تغییر
 
 class TaskExpansionTile extends StatefulWidget {
   final Task task;
@@ -19,6 +19,8 @@ class TaskExpansionTile extends StatefulWidget {
 class _TaskExpansionTileState extends State<TaskExpansionTile> {
   late List<String> _completedSubTasks;
   bool _isExpanded = false;
+
+  final _supabase = SupabaseService(); // ← اضافه شده
 
   @override
   void initState() {
@@ -51,7 +53,7 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
       updatedAt: DateTime.now(),
     );
 
-    await AppwriteService().updateTask(updatedTask);
+    await _supabase.updateTask(updatedTask); // ← تغییر
     widget.onChanged();
   }
 

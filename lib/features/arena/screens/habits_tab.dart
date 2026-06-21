@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
-import 'package:appwrite/models.dart' as models;
 import '../category_selection_screen.dart';
 import '../edit_habit_screen.dart';
 
@@ -14,10 +13,10 @@ class HabitsTab extends StatefulWidget {
 }
 
 class _HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
-  final AppwriteService _appwrite = AppwriteService();
+  final SupabaseService _supabase = SupabaseService();
   List<Habit> _habits = [];
   bool _isLoading = true;
-  models.User? _currentUser;
+  String? _currentUserId;
   String? _expandedItemId;
   String? _expandedSubItemId;
 
@@ -77,13 +76,11 @@ class _HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   Future<void> _loadHabits() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    _currentUser = await _appwrite.getCurrentUser();
-    if (_currentUser != null && mounted) {
-      // پاک کردن عادت‌های منقضی شده
-      await _appwrite.cleanupExpiredHabits(_currentUser!.$id);
 
-      final allHabits = await _appwrite.getHabits(_currentUser!.$id);
-      // فقط عادت‌های فعال و منقضی نشده
+    final user = await _supabase.getCurrentUser();
+    if (user != null && mounted) {
+      _currentUserId = user.id;
+      final allHabits = await _supabase.getHabits(_currentUserId!);
       _habits = allHabits.where((h) => h.isActive && h.isNotExpired()).toList();
     }
     if (mounted) {
@@ -322,7 +319,7 @@ class _HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
       startDate: habit.startDate,
     );
 
-    await _appwrite.updateHabit(updatedHabit);
+    await _supabase.updateHabit(updatedHabit);
 
     setState(() {
       final index = _habits.indexWhere((h) => h.id == habit.id);
@@ -331,8 +328,6 @@ class _HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
       }
     });
   }
-
-  // ==================== متدهای ویرایش و حذف ====================
 
   void _editHabit(Habit habit) async {
     final result = await Navigator.push(
@@ -364,7 +359,7 @@ class _HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
       ),
     );
     if (confirm == true && mounted) {
-      await _appwrite.deleteHabit(habit.id);
+      await _supabase.deleteHabit(habit.id);
       _loadHabits();
     }
     _toggleExpanded(habit.id);

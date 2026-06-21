@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
@@ -23,6 +23,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late int _xpReward;
   bool _isLoading = false;
   String _calendarType = 'jalali';
+
+  final _supabase = SupabaseService(); // ← تغییر
 
   @override
   void initState() {
@@ -219,7 +221,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   int _getDaysInMonth(int year, int month) {
     if (month <= 6) return 31;
     if (month <= 11) return 30;
-    // اسفند
     final date = Jalali(year, month, 1);
     return (date.isLeapYear == true) ? 30 : 29;
   }
@@ -272,7 +273,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // عنوان تسک
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -289,8 +289,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                   value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
             ),
             const SizedBox(height: 16),
-
-            // توضیحات
             TextFormField(
               controller: _descriptionController,
               decoration: InputDecoration(
@@ -308,12 +306,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               maxLines: 2,
             ),
             const SizedBox(height: 16),
-
-            // زیرتسک‌ها
             _buildSubTasksSection(),
             const SizedBox(height: 16),
-
-            // تاریخ سررسید
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Container(
@@ -340,8 +334,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               onTap: _selectDate,
             ),
             const SizedBox(height: 16),
-
-            // امتیاز XP
             Row(
               children: [
                 const Text('امتیاز XP:'),
@@ -378,8 +370,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ],
             ),
             const SizedBox(height: 32),
-
-            // دکمه ذخیره
             ElevatedButton(
               onPressed: _isLoading ? null : _updateTask,
               style: ElevatedButton.styleFrom(
@@ -507,7 +497,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         updatedAt: DateTime.now(),
       );
 
-      await AppwriteService().updateTask(updatedTask);
+      await _supabase.updateTask(updatedTask); // ← تغییر
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart'; // ← تغییر
 import '/features/home/screens/main_screen.dart';
 import 'signup_screen.dart';
 
@@ -14,7 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _appwrite = AppwriteService();
+  final _supabase = SupabaseService(); // ← تغییر
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -35,13 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user = await _appwrite.login(
+      final response = await _supabase.login(
+        // ← تغییر
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (mounted) {
-        // ذخیره وضعیت لاگین در صورت نیاز
+      if (mounted && response.user != null) {
         if (_rememberMe) {
           // می‌توانید از SharedPreferences برای ذخیره وضعیت استفاده کنید
         }
@@ -61,11 +61,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString().replaceFirst('Exception: ', '');
+        if (errorMessage.contains('invalid_credentials')) {
+          errorMessage = 'ایمیل یا رمز عبور اشتباه است';
+        } else if (errorMessage.contains('email_not_confirmed')) {
+          errorMessage = 'لطفاً ایمیل خود را تأیید کنید';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'خطا در ورود: ${e.toString().replaceFirst('Exception: ', '')}',
-            ),
+            content: Text('خطا در ورود: $errorMessage'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -80,6 +84,8 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // ==================== بقیه متدها بدون تغییر ====================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,13 +97,8 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-
-              // لوگو و عنوان
               _buildHeader(),
-
               const SizedBox(height: 40),
-
-              // فرم ورود
               Form(
                 key: _formKey,
                 child: Column(
@@ -116,7 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
               _buildForgotPasswordButton(),
             ],
@@ -319,7 +319,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildForgotPasswordButton() {
     return TextButton(
       onPressed: () {
-        // TODO: پیاده‌سازی بازیابی رمز عبور
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('بازیابی رمز عبور به زودی اضافه می‌شود'),

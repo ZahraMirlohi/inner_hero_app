@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '/services/appwrite_service.dart';
+import '/services/supabase_service.dart'; // ← تغییر
 import '/features/home/screens/main_screen.dart';
 import 'login_screen.dart';
 
@@ -16,7 +16,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _appwrite = AppwriteService();
+  final _supabase = SupabaseService(); // ← تغییر
 
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -51,16 +51,27 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final user = await _appwrite.signup(
+      final response = await _supabase.signup(
+        // ← تغییر
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
       );
 
-      if (mounted) {
+      if (mounted && response.user != null) {
+        // ایجاد پروفایل در Supabase
+        await _supabase.createProfile(
+          response.user!.id,
+          _emailController.text.trim(),
+          _nameController.text.trim(),
+        );
+
+        // ایجاد رکورد user_progress
+        await _supabase.createUserProgress(response.user!.id);
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('ثبت‌نام با موفقیت انجام شد!'),
+            content: Text('ثبت‌نام با موفقیت انجام شد! 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -82,6 +93,9 @@ class _SignupScreenState extends State<SignupScreen> {
           errorMessage = 'ایمیل وارد شده معتبر نیست';
         } else if (errorMessage.contains('weak password')) {
           errorMessage = 'رمز عبور بسیار ضعیف است';
+        } else if (errorMessage.contains('email_address_invalid')) {
+          errorMessage =
+              'فرمت ایمیل وارد شده معتبر نیست. لطفاً یک ایمیل معتبر وارد کنید.';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -101,6 +115,8 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  // ==================== بقیه متدها بدون تغییر ====================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,13 +128,8 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-
-              // هدر
               _buildHeader(),
-
               const SizedBox(height: 30),
-
-              // فرم ثبت‌نام
               Form(
                 key: _formKey,
                 child: Column(
