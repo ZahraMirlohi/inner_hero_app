@@ -1,0 +1,38 @@
+name: Build Inner Hero APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: دریافت کدها
+        uses: actions/checkout@v4
+
+      - name: نصب Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: نصب Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: نصب وابستگی‌ها
+        run: flutter pub get
+
+      - name: ساخت APK نهایی
+        run: flutter build apk --release
+
+      - name: ذخیره APK به عنوان خروجی
+        uses: actions/upload-artifact@v4
+        with:
+          name: inner-hero-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

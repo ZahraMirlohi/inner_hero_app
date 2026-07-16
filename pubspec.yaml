@@ -1,0 +1,44 @@
+name: inner_hero_app
+description: "Inner Hero - Personal Growth Platform"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.5+1
+  supabase_flutter: ^2.14.1
+  lottie: ^2.7.0
+  flutter_dotenv: ^5.1.0
+  shared_preferences: ^2.2.2
+  shamsi_date: ^1.0.0
+  font_awesome_flutter: ^10.7.0
+  material_symbols_icons: ^4.0.0
+  carousel_slider: ^5.1.2 
+  hive: 2.2.3          
+  hive_flutter: 1.1.0   
+  internet_connection_checker: ^1.0.0+1
+  #connectivity_plus: 5.0.0 
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13      
+  hive_generator: ^2.0.1   
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+
+# فقط این override را نگه دارید
+dependency_overrides:
+  flutter_web_auth_2: ^5.0.0
