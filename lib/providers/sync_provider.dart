@@ -1,6 +1,7 @@
 // lib/providers/sync_provider.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/supabase_service.dart';
@@ -10,7 +11,6 @@ import '../features/arena/models/task_model.dart';
 import '../features/explore/models/quest_model.dart';
 import '../features/explore/models/package_model.dart';
 import '../models/offline_operation.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SyncProvider extends ChangeNotifier {
   final SupabaseService _supabase = SupabaseService();
@@ -26,98 +26,127 @@ class SyncProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   SyncProvider() {
+    print('🟣 [SyncProvider] Constructor called');
     _init();
   }
 
   Future<void> _init() async {
-    try {
-      await _localStorage.init();
-      print('✅ LocalStorage initialized');
+    print('🟣 [SyncProvider] _init started');
 
+    try {
+      // ✅ مرحله 1: مقداردهی LocalStorage
+      print('🟣 [SyncProvider] Initializing LocalStorage...');
+      await _localStorage.init();
+      print('✅ [SyncProvider] LocalStorage initialized');
+
+      // ✅ مرحله 2: دریافت userId از SharedPreferences
+      print('🟣 [SyncProvider] Getting userId from SharedPreferences...');
       final prefs = await SharedPreferences.getInstance();
       _currentUserId = prefs.getString('user_id');
-      print('👤 Current user: $_currentUserId');
+      print('👤 [SyncProvider] Current user: $_currentUserId');
 
+      // ✅ مرحله 3: بررسی داده‌های محلی
+      final hasLocalData =
+          _localStorage.getHabits().isNotEmpty ||
+          _localStorage.getTasks().isNotEmpty ||
+          _localStorage.getUserProfile() != null;
+
+      print('🟣 [SyncProvider] Has local data: $hasLocalData');
+
+      // ✅ مرحله 4: مقداردهی کامل - مهم: همیشه true کن
       _isInitialized = true;
       notifyListeners();
+      print('✅ [SyncProvider] Initialized successfully (isInitialized = true)');
 
-      _checkConnectivity();
+      // ✅ مرحله 5: بررسی اتصال اینترنت
+      await _checkConnectivity();
 
+      // ✅ مرحله 6: اگر آنلاین هستیم و کاربر داریم، داده‌ها رو همگام‌سازی کن
       if (_isOnline && _currentUserId != null) {
+        print('🟣 [SyncProvider] Starting data sync...');
         _syncAllData();
+      } else if (_currentUserId != null && hasLocalData) {
+        print('🟢 [SyncProvider] Offline mode - using local data');
+        // حتی اگر آفلاین باشیم، داده‌های محلی رو داریم
+      } else {
+        print('🟡 [SyncProvider] No user or no local data');
       }
-    } catch (e) {
-      print('❌ Init error: $e');
+    } catch (e, stackTrace) {
+      print('🔴 [SyncProvider] Init error: $e');
+      print('🔴 [SyncProvider] StackTrace: $stackTrace');
+      // ✅ حتی در صورت خطا، مقداردهی رو کامل کن
       _isInitialized = true;
       notifyListeners();
     }
   }
 
-  void _checkConnectivity() {
-    // ✅ فقط در پلتفرم‌های موبایل و دسکتاپ چک کن
+  Future<void> _checkConnectivity() async {
+    print('🟣 [SyncProvider] _checkConnectivity called');
+
     if (kIsWeb) {
-      // در وب، همیشه آنلاین در نظر بگیر
+      print('🟣 [SyncProvider] Running on Web - setting isOnline = true');
       _isOnline = true;
       notifyListeners();
-      if (_currentUserId != null) {
-        _syncAllData();
-      }
       return;
     }
 
     try {
-      InternetConnectionChecker().onStatusChange.listen((status) {
-        final isOnline = status == InternetConnectionStatus.connected;
-        if (_isOnline != isOnline) {
-          _isOnline = isOnline;
-          notifyListeners();
-          if (_isOnline && _currentUserId != null) {
-            _syncAllData();
-          }
-        }
-      });
+      final isOnline = await InternetConnectionChecker().hasConnection;
+      print('🟣 [SyncProvider] InternetConnectionChecker result: $isOnline');
+      _isOnline = isOnline;
+      notifyListeners();
     } catch (e) {
-      print('⚠️ Connectivity check error: $e');
-      // در صورت خطا، آنلاین فرض کن
+      print('🟡 [SyncProvider] Connectivity check error: $e');
       _isOnline = true;
       notifyListeners();
-      if (_currentUserId != null) {
-        _syncAllData();
-      }
     }
   }
 
   Future<void> _syncAllData() async {
-    if (_isSyncing || _currentUserId == null || !_isOnline) return;
+    if (_isSyncing || _currentUserId == null || !_isOnline) {
+      print(
+        '🟡 [SyncProvider] Skipping sync: isSyncing=$_isSyncing, userId=$_currentUserId, isOnline=$_isOnline',
+      );
+      return;
+    }
 
+    print('🟣 [SyncProvider] _syncAllData started');
     _isSyncing = true;
     notifyListeners();
 
     try {
-      print('🔄 Syncing data...');
-
+      print('🟣 [SyncProvider] Syncing offline operations...');
       await _syncOfflineOperations();
 
+      print('🟣 [SyncProvider] Fetching habits...');
       final habits = await _supabase.getHabits(_currentUserId!);
+      print('🟣 [SyncProvider] Got ${habits.length} habits');
       if (habits.isNotEmpty) {
         await _localStorage.saveHabits(habits);
       }
 
+      print('🟣 [SyncProvider] Fetching tasks...');
       final tasks = await _supabase.getTasks(_currentUserId!);
+      print('🟣 [SyncProvider] Got ${tasks.length} tasks');
       if (tasks.isNotEmpty) {
         await _localStorage.saveTasks(tasks);
       }
 
+      print('🟣 [SyncProvider] Fetching quests...');
       final quests = await _supabase.getQuests();
+      print('🟣 [SyncProvider] Got ${quests.length} quests');
       if (quests.isNotEmpty) {
         await _localStorage.saveQuests(quests);
       }
 
+      print('🟣 [SyncProvider] Fetching packages...');
       final packages = await _supabase.getPackages();
+      print('🟣 [SyncProvider] Got ${packages.length} packages');
       if (packages.isNotEmpty) {
         await _localStorage.savePackages(packages);
       }
 
+      print('🟣 [SyncProvider] Fetching profile...');
       try {
         final profile = await _supabase.client
             .from('profiles')
@@ -126,24 +155,29 @@ class SyncProvider extends ChangeNotifier {
             .maybeSingle();
         if (profile != null) {
           await _localStorage.saveUserProfile(profile);
+          print('✅ [SyncProvider] Profile saved');
         }
       } catch (e) {
-        print('⚠️ Profile sync error: $e');
+        print('🟡 [SyncProvider] Profile sync error: $e');
       }
 
+      print('🟣 [SyncProvider] Fetching challenges...');
       final challenges = await _supabase.getChallenges();
+      print('🟣 [SyncProvider] Got ${challenges.length} challenges');
       if (challenges.isNotEmpty) {
         await _localStorage.saveChallenges(challenges);
       }
 
+      print('🟣 [SyncProvider] Fetching user challenges...');
       final userChallenges = await _supabase.getUserChallenges(_currentUserId!);
+      print('🟣 [SyncProvider] Got ${userChallenges.length} user challenges');
       if (userChallenges.isNotEmpty) {
         await _localStorage.saveUserChallenges(userChallenges);
       }
 
-      print('✅ Sync completed');
+      print('✅ [SyncProvider] Sync completed successfully');
     } catch (e) {
-      print('⚠️ Sync error: $e');
+      print('🔴 [SyncProvider] Sync error: $e');
     } finally {
       _isSyncing = false;
       notifyListeners();
@@ -151,20 +185,27 @@ class SyncProvider extends ChangeNotifier {
   }
 
   Future<void> _syncOfflineOperations() async {
+    print('🟣 [SyncProvider] _syncOfflineOperations started');
     final operations = _localStorage.getOfflineOperations();
-    if (operations.isEmpty) return;
+    if (operations.isEmpty) {
+      print('🟣 [SyncProvider] No offline operations to sync');
+      return;
+    }
 
-    print('🔄 Syncing ${operations.length} offline operations...');
+    print(
+      '🟣 [SyncProvider] Syncing ${operations.length} offline operations...',
+    );
 
     for (var operation in operations) {
       try {
         await _executeOfflineOperation(operation);
         await _localStorage.removeOfflineOperation(operation.id);
       } catch (e) {
-        print('⚠️ Failed to sync operation: $e');
+        print('🔴 [SyncProvider] Failed to sync operation: $e');
         if (e.toString().contains('SocketException')) break;
       }
     }
+    print('✅ [SyncProvider] Offline operations sync completed');
   }
 
   Future<void> _executeOfflineOperation(OfflineOperation operation) async {
@@ -253,82 +294,6 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  // ==================== متدهای ذخیره‌سازی ====================
-
-  Future<void> saveHabitToLocal(Habit habit) async {
-    try {
-      await _localStorage.saveHabit(habit);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  Future<void> saveTaskToLocal(Task task) async {
-    try {
-      await _localStorage.saveTask(task);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  // ✅ متد saveProfileToLocal که در profile_screen استفاده میشه
-  Future<void> saveProfileToLocal(Map<String, dynamic> profile) async {
-    try {
-      await _localStorage.saveUserProfile(profile);
-      notifyListeners();
-    } catch (e) {
-      print('❌ Error saving profile to local: $e');
-    }
-  }
-
-  Future<void> saveChallengesToLocal(
-    List<Map<String, dynamic>> challenges,
-  ) async {
-    try {
-      await _localStorage.saveChallenges(challenges);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  Future<void> saveUserChallengesToLocal(
-    List<Map<String, dynamic>> userChallenges,
-  ) async {
-    try {
-      await _localStorage.saveUserChallenges(userChallenges);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  Future<void> savePackagesToLocal(List<Package> packages) async {
-    try {
-      await _localStorage.savePackages(packages);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  Future<void> saveQuestsToLocal(List<Quest> quests) async {
-    try {
-      await _localStorage.saveQuests(quests);
-      notifyListeners();
-    } catch (e) {
-      // خطا رو نادیده بگیر
-    }
-  }
-
-  Future<void> manualSync() async {
-    if (_isOnline) {
-      await _syncAllData();
-    }
-  }
-
   // ==================== Getterها ====================
 
   List<Habit> get habits {
@@ -412,6 +377,81 @@ class SyncProvider extends ChangeNotifier {
   }
 
   bool get hasOfflineOperations => offlineOperationsCount > 0;
+
+  // ==================== متدهای ذخیره‌سازی ====================
+
+  Future<void> saveHabitToLocal(Habit habit) async {
+    try {
+      await _localStorage.saveHabit(habit);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> saveTaskToLocal(Task task) async {
+    try {
+      await _localStorage.saveTask(task);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> saveProfileToLocal(Map<String, dynamic> profile) async {
+    try {
+      await _localStorage.saveUserProfile(profile);
+      notifyListeners();
+    } catch (e) {
+      print('🔴 [SyncProvider] Error saving profile to local: $e');
+    }
+  }
+
+  Future<void> saveChallengesToLocal(
+    List<Map<String, dynamic>> challenges,
+  ) async {
+    try {
+      await _localStorage.saveChallenges(challenges);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> saveUserChallengesToLocal(
+    List<Map<String, dynamic>> userChallenges,
+  ) async {
+    try {
+      await _localStorage.saveUserChallenges(userChallenges);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> savePackagesToLocal(List<Package> packages) async {
+    try {
+      await _localStorage.savePackages(packages);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> saveQuestsToLocal(List<Quest> quests) async {
+    try {
+      await _localStorage.saveQuests(quests);
+      notifyListeners();
+    } catch (e) {
+      // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> manualSync() async {
+    if (_isOnline) {
+      await _syncAllData();
+    }
+  }
 
   Future<void> refreshProfile() async {
     if (_currentUserId == null) return;

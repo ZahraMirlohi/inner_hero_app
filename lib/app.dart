@@ -17,35 +17,71 @@ class HeroApp extends StatefulWidget {
 class _HeroAppState extends State<HeroApp> {
   bool _isLoggedIn = false;
   bool _isLoading = true;
+  String _debugInfo = '';
 
   @override
   void initState() {
     super.initState();
+    print('🔵 [APP] initState called');
     _checkLoginStatus();
   }
 
   Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
+    print('🔵 [APP] _checkLoginStatus started');
 
-    setState(() {
-      _isLoggedIn = userId != null && userId.isNotEmpty;
-      _isLoading = false;
-    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      print('🔵 [APP] SharedPreferences loaded');
+
+      final userId = prefs.getString('user_id');
+      print('🔵 [APP] userId from SharedPreferences: $userId');
+
+      setState(() {
+        _isLoggedIn = userId != null && userId.isNotEmpty;
+        _isLoading = false;
+        _debugInfo = 'userId: $userId, isLoggedIn: $_isLoggedIn';
+        print(
+          '🔵 [APP] State updated: isLoggedIn=$_isLoggedIn, isLoading=$_isLoading',
+        );
+      });
+    } catch (e) {
+      print('🔴 [APP] Error in _checkLoginStatus: $e');
+      setState(() {
+        _isLoading = false;
+        _debugInfo = 'Error: $e';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    print(
+      '🔵 [APP] build called, isLoading=$_isLoading, isLoggedIn=$_isLoggedIn',
+    );
+
     if (_isLoading) {
+      print('🟡 [APP] Showing loading screen');
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
-            child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF4A90E2)),
+                SizedBox(height: 16),
+                Text(
+                  'در حال بارگذاری...',
+                  style: TextStyle(color: Color(0xFF6B7280)),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
+
+    print('🟢 [APP] Building main app with isLoggedIn=$_isLoggedIn');
 
     return MaterialApp(
       title: 'قهرمان درون',
@@ -79,8 +115,14 @@ class _HeroAppState extends State<HeroApp> {
       home: _isLoggedIn
           ? Consumer<SyncProvider>(
               builder: (context, syncProvider, child) {
-                // ✅ اگر SyncProvider هنوز مقداردهی نشده، لودینگ نشون بده
+                print(
+                  '🟢 [APP] Consumer builder called, syncProvider.isInitialized=${syncProvider.isInitialized}',
+                );
+
                 if (!syncProvider.isInitialized) {
+                  print(
+                    '🟡 [APP] SyncProvider not initialized, showing loading',
+                  );
                   return const Scaffold(
                     body: Center(
                       child: Column(
@@ -97,6 +139,8 @@ class _HeroAppState extends State<HeroApp> {
                     ),
                   );
                 }
+
+                print('🟢 [APP] SyncProvider initialized, showing MainScreen');
                 return const MainScreen();
               },
             )

@@ -41,12 +41,10 @@ class LocalStorageService {
     try {
       await Hive.initFlutter();
 
-      // ✅ ثبت Adapterها با مدیریت خطا
+      // ثبت Adapterها
       try {
         Hive.registerAdapter(HabitAdapter());
-      } catch (e) {
-        // Adapter قبلاً ثبت شده
-      }
+      } catch (e) {}
       try {
         Hive.registerAdapter(TaskAdapter());
       } catch (e) {}
@@ -66,16 +64,82 @@ class LocalStorageService {
         Hive.registerAdapter(OfflineOperationAdapter());
       } catch (e) {}
 
-      // باز کردن Boxها
-      _habitsBox = await Hive.openBox(_habitsBoxName);
-      _tasksBox = await Hive.openBox(_tasksBoxName);
-      _questsBox = await Hive.openBox(_questsBoxName);
-      _packagesBox = await Hive.openBox(_packagesBoxName);
-      _settingsBox = await Hive.openBox(_settingsBoxName);
-      _userProfileBox = await Hive.openBox(_userProfileBoxName);
-      _offlineBox = await Hive.openBox(_offlineBoxName);
-      _challengesBox = await Hive.openBox(_challengesBoxName);
-      _userChallengesBox = await Hive.openBox(_userChallengesBoxName);
+      // باز کردن Boxها با مدیریت خطا
+      try {
+        _habitsBox = await Hive.openBox(_habitsBoxName);
+      } catch (e) {
+        print('⚠️ Error opening habits box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_habitsBoxName);
+        _habitsBox = await Hive.openBox(_habitsBoxName);
+      }
+
+      try {
+        _tasksBox = await Hive.openBox(_tasksBoxName);
+      } catch (e) {
+        print('⚠️ Error opening tasks box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_tasksBoxName);
+        _tasksBox = await Hive.openBox(_tasksBoxName);
+      }
+
+      try {
+        _questsBox = await Hive.openBox(_questsBoxName);
+      } catch (e) {
+        print('⚠️ Error opening quests box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_questsBoxName);
+        _questsBox = await Hive.openBox(_questsBoxName);
+      }
+
+      try {
+        _packagesBox = await Hive.openBox(_packagesBoxName);
+      } catch (e) {
+        print('⚠️ Error opening packages box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_packagesBoxName);
+        _packagesBox = await Hive.openBox(_packagesBoxName);
+      }
+
+      try {
+        _settingsBox = await Hive.openBox(_settingsBoxName);
+      } catch (e) {
+        print('⚠️ Error opening settings box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_settingsBoxName);
+        _settingsBox = await Hive.openBox(_settingsBoxName);
+      }
+
+      try {
+        _userProfileBox = await Hive.openBox(_userProfileBoxName);
+      } catch (e) {
+        print('⚠️ Error opening user_profile box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_userProfileBoxName);
+        _userProfileBox = await Hive.openBox(_userProfileBoxName);
+      }
+
+      try {
+        _offlineBox = await Hive.openBox(_offlineBoxName);
+      } catch (e) {
+        print(
+          '⚠️ Error opening offline_operations box, deleting and recreating...',
+        );
+        await Hive.deleteBoxFromDisk(_offlineBoxName);
+        _offlineBox = await Hive.openBox(_offlineBoxName);
+      }
+
+      try {
+        _challengesBox = await Hive.openBox(_challengesBoxName);
+      } catch (e) {
+        print('⚠️ Error opening challenges box, deleting and recreating...');
+        await Hive.deleteBoxFromDisk(_challengesBoxName);
+        _challengesBox = await Hive.openBox(_challengesBoxName);
+      }
+
+      try {
+        _userChallengesBox = await Hive.openBox(_userChallengesBoxName);
+      } catch (e) {
+        print(
+          '⚠️ Error opening user_challenges box, deleting and recreating...',
+        );
+        await Hive.deleteBoxFromDisk(_userChallengesBoxName);
+        _userChallengesBox = await Hive.openBox(_userChallengesBoxName);
+      }
 
       _isInitialized = true;
       print('✅ LocalStorageService initialized successfully');

@@ -20,18 +20,20 @@ class SupabaseService {
 
   SupabaseClient get client => Supabase.instance.client;
 
-  // ✅ متد بررسی آنلاین بودن - اصلاح شده برای وب
   Future<bool> isOnline() async {
+    print('🔵 [Supabase] isOnline() called');
     try {
       // ✅ در وب، همیشه آنلاین فرض کن
       if (kIsWeb) {
+        print('🔵 [Supabase] isOnline() - Web platform, returning true');
         return true;
       }
 
-      // ✅ در موبایل و دسکتاپ، واقعی چک کن
-      return await InternetConnectionChecker().hasConnection;
+      final result = await InternetConnectionChecker().hasConnection;
+      print('🔵 [Supabase] isOnline() - Result: $result');
+      return result;
     } catch (e) {
-      // اگر خطا داشت، آنلاین فرض کن
+      print('🟡 [Supabase] isOnline() - Error, returning true: $e');
       return true;
     }
   }
