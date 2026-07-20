@@ -29,6 +29,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   final Map<String, Animation<double>> _animations = {};
   void refreshData() {
     if (!_isLoading) {
+      // ✅ ریفرش کامل
       _loadHabits();
     }
   }
@@ -36,7 +37,10 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _loadHabits();
+    // ✅ بارگذاری با کمی تأخیر
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadHabits();
+    });
   }
 
   @override

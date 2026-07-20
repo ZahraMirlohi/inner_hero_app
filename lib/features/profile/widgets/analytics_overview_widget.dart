@@ -1,8 +1,10 @@
 // lib/features/profile/widgets/analytics_overview_widget.dart
 
+import 'dart:math';
 import 'package:flutter/material.dart';
 import '/services/supabase_service.dart';
-// ✅ حذف import های استفاده نشده
+import '/features/arena/models/habit_model.dart';
+import '/features/explore/models/quest_model.dart';
 
 class AnalyticsOverviewWidget extends StatefulWidget {
   final String userId;
@@ -19,7 +21,8 @@ class AnalyticsOverviewWidget extends StatefulWidget {
       AnalyticsOverviewWidgetState();
 }
 
-class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
+class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
+    with SingleTickerProviderStateMixin {
   final SupabaseService _supabase = SupabaseService();
 
   // آمار امروز
@@ -39,13 +42,34 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
   bool _isLoading = true;
   bool _isRefreshing = false;
 
+  // ✅ انیمیشن‌های لودینگ ساده
+  late AnimationController _loadingController;
+  late Animation<double> _rotationAnimation;
+
   @override
   void initState() {
     super.initState();
+    _initLoadingAnimation();
     _loadStats();
   }
 
-  // ✅ متد عمومی برای ریفرش از بیرون
+  void _initLoadingAnimation() {
+    _loadingController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat();
+
+    _rotationAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _loadingController, curve: Curves.linear),
+    );
+  }
+
+  @override
+  void dispose() {
+    _loadingController.dispose();
+    super.dispose();
+  }
+
   void refreshData() {
     if (!_isRefreshing) {
       _isRefreshing = true;
@@ -55,9 +79,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
     }
   }
 
-  // ✅ متد بارگذاری آمار با کش
   Future<void> _loadStats() async {
-    // اگر در حال بارگذاری است، از بارگذاری مجدد جلوگیری کن
     if (_isLoading && _isRefreshing) return;
 
     setState(() {
@@ -67,16 +89,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
     try {
       final today = DateTime.now();
 
-      // دریافت عادت‌ها
       final allHabits = await _supabase.getHabits(widget.userId);
-
-      // دریافت تسک‌ها
       final allTasks = await _supabase.getTasks(widget.userId);
-
-      // دریافت چالش‌های کاربر
       final userChallenges = await _supabase.getUserChallenges(widget.userId);
-
-      // دریافت ماموریت‌های کاربر
       final userQuests = await _supabase.getUserQuests(widget.userId);
 
       // ==================== محاسبه آمار امروز ====================
@@ -120,18 +135,40 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
       int todayChallengesCompleted = 0;
 
       final activeChallenges = userChallenges
-          .where((c) => c['is_active'] == true && c['is_completed'] == false)
+          .where(
+            (c) =>
+                (c['is_completed'] == false || c['is_completed'] == null) &&
+                c['status'] != 'failed',
+          )
           .toList();
+
+      todayChallenges = activeChallenges.length;
 
       for (var challenge in activeChallenges) {
         final challengeId = challenge['id'];
-        final challengeHabits = allHabits
+        final challengeTitle = challenge['title'] ?? '';
+
+        List<Habit> challengeHabits = allHabits
             .where((h) => h.challengeId == challengeId)
             .toList();
 
-        if (challengeHabits.isEmpty) continue;
+        if (challengeHabits.isEmpty) {
+          final foundHabit = allHabits.firstWhere(
+            (h) => h.title.contains(challengeTitle) || h.title.contains('🏆'),
+            orElse: () => Habit(
+              id: '',
+              userId: '',
+              title: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+          if (foundHabit.id.isNotEmpty) {
+            challengeHabits.add(foundHabit);
+          }
+        }
 
-        todayChallenges++;
+        if (challengeHabits.isEmpty) continue;
 
         bool allDone = true;
         for (var habit in challengeHabits) {
@@ -145,6 +182,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
             break;
           }
         }
+
         if (allDone) {
           todayChallengesCompleted++;
         }
@@ -158,14 +196,49 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
           .where((uq) => uq.isActive && !uq.isCompleted)
           .toList();
 
+      todayQuests = activeQuests.length;
+
+      final allQuests = await _supabase.getQuests();
+
       for (var userQuest in activeQuests) {
-        final questHabits = allHabits
+        List<Habit> questHabits = allHabits
             .where((h) => h.questId == userQuest.questId)
             .toList();
 
-        if (questHabits.isEmpty) continue;
+        if (questHabits.isEmpty) {
+          final questData = allQuests.firstWhere(
+            (q) => q.id == userQuest.questId,
+            orElse: () => Quest(
+              id: '',
+              title: '',
+              description: '',
+              icon: '',
+              color: '',
+              xpReward: 0,
+              badge: '',
+              targetCount: 0,
+              createdAt: DateTime.now(),
+            ),
+          );
+          if (questData.id.isNotEmpty) {
+            final foundHabit = allHabits.firstWhere(
+              (h) =>
+                  h.title.contains(questData.title) || h.title.contains('🎯'),
+              orElse: () => Habit(
+                id: '',
+                userId: '',
+                title: '',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ),
+            );
+            if (foundHabit.id.isNotEmpty) {
+              questHabits.add(foundHabit);
+            }
+          }
+        }
 
-        todayQuests++;
+        if (questHabits.isEmpty) continue;
 
         bool allDone = true;
         for (var habit in questHabits) {
@@ -179,6 +252,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
             break;
           }
         }
+
         if (allDone) {
           todayQuestsCompleted++;
         }
@@ -214,6 +288,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
         });
       }
     } catch (e) {
+      // ignore: avoid_print
       print('❌ Error loading stats: $e');
       if (mounted) {
         setState(() {
@@ -274,19 +349,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
           const SizedBox(height: 16),
 
           if (_isLoading)
-            const Center(
-              child: SizedBox(
-                height: 100,
-                child: CircularProgressIndicator(color: Color(0xFF2563EB)),
-              ),
-            )
+            _buildModernLoadingIndicator()
           else ...[
-            // نرخ تکمیل کلی
             _buildCompletionRateCard(),
-
             const SizedBox(height: 16),
-
-            // آمار در ۴ ردیف
             _buildStatRow(
               icon: Icons.fitness_center,
               label: 'عادت‌ها',
@@ -295,7 +361,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
               color: const Color(0xFF4A90E2),
             ),
             const SizedBox(height: 10),
-
             _buildStatRow(
               icon: Icons.assignment,
               label: 'تسک‌ها',
@@ -304,7 +369,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
               color: const Color(0xFFFFA500),
             ),
             const SizedBox(height: 10),
-
             _buildStatRow(
               icon: Icons.flag,
               label: 'چالش‌ها',
@@ -313,7 +377,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
               color: const Color(0xFF7C3AED),
             ),
             const SizedBox(height: 10),
-
             _buildStatRow(
               icon: Icons.stars,
               label: 'ماموریت‌ها',
@@ -321,16 +384,102 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget> {
               completed: _todayQuestsCompleted,
               color: const Color(0xFF2ECC71),
             ),
-
             const SizedBox(height: 16),
-
-            // پیام تشویقی
             _buildMotivationalMessage(),
           ],
         ],
       ),
     );
   }
+
+  // ==================== لودینگ ساده و مدرن ====================
+
+  Widget _buildModernLoadingIndicator() {
+    return SizedBox(
+      height: 140,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ✅ حلقه چرخان ساده با گرادیانت
+            AnimatedBuilder(
+              animation: _rotationAnimation,
+              builder: (context, child) {
+                return Transform.rotate(
+                  angle: _rotationAnimation.value * 2 * pi,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade200, width: 3),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF4A90E2), Color(0xFF7C3AED)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // ✅ متن لودینگ با سه نقطه
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'در حال بارگذاری',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                _buildDot(0),
+                _buildDot(1),
+                _buildDot(2),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDot(int index) {
+    return AnimatedBuilder(
+      animation: _loadingController,
+      builder: (context, child) {
+        final delay = index * 0.2;
+        final value = ((_loadingController.value + delay) % 1.0);
+        final opacity = value > 0.5 ? (1.0 - value) * 2 : value * 2;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(
+              0xFF4A90E2,
+            ).withValues(alpha: opacity.clamp(0.2, 1.0)),
+          ),
+        );
+      },
+    );
+  }
+
+  // ==================== بقیه ویجت‌ها ====================
 
   Widget _buildCompletionRateCard() {
     final percent = (_completionRate * 100).toInt();

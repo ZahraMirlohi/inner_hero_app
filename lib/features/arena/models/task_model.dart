@@ -54,7 +54,19 @@ class Task {
     };
   }
 
+  // lib/features/arena/models/task_model.dart
+
   factory Task.fromMap(String id, Map<String, dynamic> map) {
+    DateTime parseDate(String? dateStr) {
+      if (dateStr == null || dateStr.isEmpty) return DateTime.now();
+      try {
+        return DateTime.parse(dateStr);
+      } catch (e) {
+        print('⚠️ Error parsing date: $dateStr');
+        return DateTime.now();
+      }
+    }
+
     return Task(
       id: id,
       userId: map['userId'] ?? '',
@@ -62,14 +74,13 @@ class Task {
       description: map['description'] ?? '',
       subTasks: List<String>.from(map['subTasks'] ?? []),
       completedSubTasks: List<String>.from(map['completedSubTasks'] ?? []),
-      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
+      dueDate: map['dueDate'] != null ? parseDate(map['dueDate']) : null,
       isCompleted: map['isCompleted'] ?? false,
       xpReward: map['xpReward'] ?? 10,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: parseDate(map['createdAt']),
+      updatedAt: parseDate(map['updatedAt']),
     );
   }
-
   int get completedCount => completedSubTasks.length;
 
   double get progressPercent =>

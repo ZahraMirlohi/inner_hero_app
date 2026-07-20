@@ -1,8 +1,9 @@
+// lib/features/chat/screens/chat_screen.dart
+
 import 'package:flutter/material.dart';
-import '/features/chat/models/chat_models.dart';
-import '/features/chat/screens/buddy_chat_screen.dart';
-import '/features/chat/screens/squad_chat_screen.dart';
-import '/features/chat/screens/arena_chat_screen.dart';
+import '/services/chat_service.dart';
+import '/features/chat/models/conversation_model.dart';
+import 'ai_chat_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -14,51 +15,15 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<ConversationModel> _conversations = [];
+  final ChatService _chatService = ChatService();
+  List<Conversation> _conversations = [];
   bool _isLoading = true;
-
-  // نمونه دیتا
-  final List<ConversationModel> _sampleConversations = [
-    ConversationModel(
-      id: '1',
-      name: 'سپیده صبحگاهی',
-      type: ChatType.buddy,
-      avatarUrl: null,
-      lastMessage: 'عالی بود! امروز هم تمرین کردم 💪',
-      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 5)),
-      unreadCount: 2,
-      participants: ['user1', 'user2'],
-      isAiAvailable: true,
-    ),
-    ConversationModel(
-      id: '2',
-      name: 'اژدهایان سپیده‌دم',
-      type: ChatType.squad,
-      lastMessage: 'الناز امروز استریک ۳۰ روزه‌اش رو کامل کرد! 🎉',
-      lastMessageTime: DateTime.now().subtract(const Duration(hours: 2)),
-      unreadCount: 0,
-      participants: ['user1', 'user2', 'user3', 'user4'],
-      squadId: 'squad_1',
-      weeklyProgress: 0.75,
-      maxMembers: 8,
-    ),
-    ConversationModel(
-      id: '3',
-      name: 'چالش صبح قهرمانانه',
-      type: ChatType.arena,
-      lastMessage: '🔥 کاربر رضا رتبه اول امروز رو گرفت!',
-      lastMessageTime: DateTime.now().subtract(const Duration(hours: 5)),
-      unreadCount: 15,
-      participants: [],
-      challengeId: 'challenge_1',
-    ),
-  ];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadConversations();
+    _loadData();
   }
 
   @override
@@ -67,18 +32,25 @@ class _ChatScreenState extends State<ChatScreen>
     super.dispose();
   }
 
-  Future<void> _loadConversations() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() {
-      _conversations = _sampleConversations;
-      _isLoading = false;
-    });
+  Future<void> _loadData() async {
+    final user = await _chatService.getCurrentUser();
+    if (user != null) {
+      final conversations = await _chatService.getUserConversations(user.id);
+      setState(() {
+        _conversations = conversations;
+        _isLoading = false;
+      });
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text('گپ و گفتگو'),
         backgroundColor: Colors.white,
@@ -91,18 +63,25 @@ class _ChatScreenState extends State<ChatScreen>
           labelColor: const Color(0xFF4A90E2),
           unselectedLabelColor: Colors.grey.shade500,
           tabs: const [
-            Tab(text: 'گفتگوها'),
-            Tab(text: 'همراهان'),
-            Tab(text: 'میدان'),
+            Tab(text: 'هم‌مسیرها'),
+            Tab(text: 'گروه‌ها'),
+            Tab(text: 'کانال‌ها'),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildConversationsList(),
-          _buildBuddyList(),
-          _buildArenaChallengesList(),
+          // ✅ بخش پین شده: چت با هوش مصنوعی
+          _buildAIChatCard(),
+          const SizedBox(height: 8),
+
+          // ✅ تب‌ها
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildBuddyTab(), _buildSquadTab(), _buildArenaTab()],
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -113,83 +92,241 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  Widget _buildConversationsList() {
+  // ==================== کارت چت با AI (پین شده در بالا) ====================
+
+  Widget _buildAIChatCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AIChatScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF9B59B6), Color(0xFF7C3AED)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF9B59B6).withValues(alpha: 0.2),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // آواتار AI
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: const Center(
+                child: Text('🤖', style: TextStyle(fontSize: 28)),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // اطلاعات
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'مربی هوش مصنوعی',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text(
+                          'آنلاین',
+                          style: TextStyle(fontSize: 10, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'برای دریافت برنامه، انگیزه و راهنمایی کلیک کنید',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+
+            // نشانگر
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.chevron_right,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== تب هم‌مسیرها ====================
+
+  Widget _buildBuddyTab() {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
       );
     }
 
-    if (_conversations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'هنوز گفتگویی ندارید',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'یک همراه پیدا کنید یا به گروه بپیوندید',
-              style: TextStyle(color: Colors.grey.shade400),
-            ),
-          ],
-        ),
+    final buddyConversations = _conversations
+        .where((c) => c.type == ConversationType.buddy)
+        .toList();
+
+    if (buddyConversations.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.people_outline,
+        title: 'هنوز هم‌مسیری ندارید',
+        subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
+        buttonText: 'پیدا کردن هم‌مسیر',
+        onPressed: _showBuddyFinder,
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(12),
-      itemCount: _conversations.length,
+      itemCount: buddyConversations.length,
       itemBuilder: (context, index) {
-        final conv = _conversations[index];
+        final conv = buddyConversations[index];
         return _buildConversationItem(conv);
       },
     );
   }
 
-  Widget _buildConversationItem(ConversationModel conv) {
+  // ==================== تب گروه‌ها ====================
+
+  Widget _buildSquadTab() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+      );
+    }
+
+    final squadConversations = _conversations
+        .where((c) => c.type == ConversationType.squad)
+        .toList();
+
+    if (squadConversations.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.group_outlined,
+        title: 'هنوز گروهی ندارید',
+        subtitle: 'یک گروه بسازید یا به گروهی بپیوندید',
+        buttonText: 'ساخت گروه جدید',
+        onPressed: _showCreateSquadDialog,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: squadConversations.length,
+      itemBuilder: (context, index) {
+        final conv = squadConversations[index];
+        return _buildConversationItem(conv, isSquad: true);
+      },
+    );
+  }
+
+  // ==================== تب کانال‌ها ====================
+
+  Widget _buildArenaTab() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+      );
+    }
+
+    final arenaConversations = _conversations
+        .where((c) => c.type == ConversationType.arena)
+        .toList();
+
+    if (arenaConversations.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.stadium_outlined,
+        title: 'کانال فعالی وجود ندارد',
+        subtitle: 'با شرکت در چالش‌ها، کانال‌های جدید فعال می‌شوند',
+        buttonText: 'مشاهده چالش‌ها',
+        onPressed: () {
+          // رفتن به صفحه اکسپلور
+        },
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: arenaConversations.length,
+      itemBuilder: (context, index) {
+        final conv = arenaConversations[index];
+        return _buildConversationItem(conv, isArena: true);
+      },
+    );
+  }
+
+  // ==================== ویجت گفتگو ====================
+
+  Widget _buildConversationItem(
+    Conversation conv, {
+    bool isSquad = false,
+    bool isArena = false,
+  }) {
     return GestureDetector(
       onTap: () {
-        if (conv.type == ChatType.buddy) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BuddyChatScreen(conversation: conv),
-            ),
-          );
-        } else if (conv.type == ChatType.squad) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SquadChatScreen(conversation: conv),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ArenaChatScreen(conversation: conv),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('گفتگو با ${conv.displayName}'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -198,170 +335,103 @@ class _ChatScreenState extends State<ChatScreen>
         child: Row(
           children: [
             // آواتار
-            Stack(
-              children: [
-                Container(
-                  width: 55,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    color:
-                        (conv.type == ChatType.buddy
-                                ? const Color(0xFF4A90E2)
-                                : conv.type == ChatType.squad
-                                ? const Color(0xFF9B59B6)
-                                : const Color(0xFFFFA500))
-                            .withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      conv.type == ChatType.buddy
-                          ? Icons.person
-                          : conv.type == ChatType.squad
-                          ? Icons.group
-                          : Icons.stadium,
-                      color: conv.type == ChatType.buddy
-                          ? const Color(0xFF4A90E2)
-                          : conv.type == ChatType.squad
-                          ? const Color(0xFF9B59B6)
-                          : const Color(0xFFFFA500),
-                      size: 28,
-                    ),
-                  ),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color:
+                    (isSquad
+                            ? const Color(0xFF9B59B6)
+                            : isArena
+                            ? const Color(0xFFFFA500)
+                            : const Color(0xFF4A90E2))
+                        .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Center(
+                child: Text(
+                  conv.iconEmoji,
+                  style: const TextStyle(fontSize: 24),
                 ),
-                if (conv.unreadCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      child: Text(
-                        conv.unreadCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
             const SizedBox(width: 12),
+
             // اطلاعات
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        conv.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (conv.type == ChatType.squad &&
-                          conv.weeklyProgress != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${(conv.weeklyProgress! * 100).toInt()}%',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
                   Text(
-                    conv.lastMessage,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: conv.unreadCount > 0
-                          ? const Color(0xFF1A1A2E)
-                          : Colors.grey.shade500,
-                      fontWeight: conv.unreadCount > 0
-                          ? FontWeight.w500
-                          : FontWeight.normal,
+                    conv.displayName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A1A2E),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatTime(conv.lastMessageTime),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    conv.lastMessage ?? 'شروع گفتگو',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            if (conv.type == ChatType.buddy && conv.isAiAvailable)
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF9B59B6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: Color(0xFF9B59B6),
-                ),
-              ),
+
+            // زمان
+            Text(
+              _formatTime(conv.lastMessageAt),
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBuddyList() {
+  // ==================== حالت خالی ====================
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String buttonText,
+    required VoidCallback onPressed,
+  }) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 80, color: Colors.grey.shade300),
+          Icon(icon, size: 72, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          const Text(
-            'به زودی...',
-            style: TextStyle(fontSize: 18, color: Color(0xFF1A1A2E)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A2E),
+            ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'سیستم پیشنهاد همراه در حال توسعه',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
+          Text(subtitle, style: TextStyle(color: Colors.grey.shade500)),
           const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.search),
-            label: const Text('پیدا کردن همراه'),
+          ElevatedButton(
+            onPressed: onPressed,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90E2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text(
+              buttonText,
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -369,73 +439,13 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  Widget _buildArenaChallengesList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFFFF6B6B).withOpacity(0.9),
-                const Color(0xFFFFA500).withOpacity(0.9),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.emoji_events, color: Colors.white, size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'چالش صبح قهرمانانه',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '۲۳۴ نفر شرکت‌کننده | ۵ روز باقی‌مانده',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: 0.7,
-                      backgroundColor: Colors.white.withOpacity(0.3),
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.chevron_right, color: Colors.white),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // ==================== دیالوگ‌ها ====================
 
   void _showNewConversationDialog() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return Container(
@@ -461,10 +471,10 @@ class _ChatScreenState extends State<ChatScreen>
               const SizedBox(height: 20),
               _buildOptionTile(
                 icon: Icons.person_add,
-                title: 'همراه جدید',
-                subtitle: 'یک همراه مسئولیت‌پذیر پیدا کنید',
+                title: 'هم‌مسیر جدید',
+                subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
                 color: const Color(0xFF4A90E2),
-                onTap: () {},
+                onTap: _showBuddyFinder,
               ),
               const SizedBox(height: 12),
               _buildOptionTile(
@@ -472,7 +482,7 @@ class _ChatScreenState extends State<ChatScreen>
                 title: 'ساخت گروه جدید',
                 subtitle: 'با دوستانتان یک گروه بسازید',
                 color: const Color(0xFF9B59B6),
-                onTap: () {},
+                onTap: _showCreateSquadDialog,
               ),
               const SizedBox(height: 12),
               _buildOptionTile(
@@ -480,7 +490,7 @@ class _ChatScreenState extends State<ChatScreen>
                 title: 'پیوستن به گروه',
                 subtitle: 'با کد دعوت وارد شوید',
                 color: const Color(0xFFFFA500),
-                onTap: () {},
+                onTap: _showJoinSquadDialog,
               ),
               const SizedBox(height: 20),
             ],
@@ -501,7 +511,7 @@ class _ChatScreenState extends State<ChatScreen>
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color),
@@ -512,6 +522,38 @@ class _ChatScreenState extends State<ChatScreen>
       onTap: onTap,
     );
   }
+
+  void _showBuddyFinder() {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('سیستم پیدا کردن هم‌مسیر به زودی اضافه می‌شود'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _showCreateSquadDialog() {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('ساخت گروه به زودی اضافه می‌شود'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _showJoinSquadDialog() {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('پیوستن به گروه با کد دعوت به زودی اضافه می‌شود'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  // ==================== کمکی ====================
 
   String _formatTime(DateTime time) {
     final now = DateTime.now();

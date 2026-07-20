@@ -7,7 +7,8 @@ class StreakCardWidget extends StatelessWidget {
   final int currentStreak;
   final int bestStreak;
   final int weeklyStreak;
-  final List<bool> weekDays;
+  final List<bool>
+  weekDays; // ✅ این لیست باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
 
   const StreakCardWidget({
     super.key,
@@ -22,12 +23,16 @@ class StreakCardWidget extends StatelessWidget {
     final bool isOnFire = currentStreak >= 7;
     final String streakEmoji = _getStreakEmoji(currentStreak);
 
-    // ✅ روزهای هفته شمسی (شنبه تا جمعه)
+    // ✅ روزهای هفته شمسی (شنبه تا جمعه) - مرتبط با index 0 تا 6
     final weekDaysLabels = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
     // ✅ محاسبه روز امروز در تقویم شمسی
     final jalaliToday = Jalali.fromDateTime(DateTime.now());
     final todayIndex = jalaliToday.weekDay - 1; // 0=شنبه, 1=یکشنبه, ..., 6=جمعه
+
+    // ✅ لاگ برای دیباگ
+    print('📅 Today Index: $todayIndex (${weekDaysLabels[todayIndex]})');
+    print('📊 WeekDays status: $weekDays');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -158,11 +163,12 @@ class StreakCardWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ✅ روزهای هفته شمسی
+          // ✅ نمایش روزهای هفته شمسی با تطابق ایندکس
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(7, (index) {
-              final bool isActive = weekDays[index];
+              // ✅ weekDays باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
+              final bool isActive = weekDays.length > index && weekDays[index];
               final bool isToday = index == todayIndex;
 
               return Column(

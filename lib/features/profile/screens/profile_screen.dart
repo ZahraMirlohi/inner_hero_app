@@ -12,6 +12,7 @@ import '../widgets/terms_and_conditions_screen.dart';
 import '../widgets/settings_screen.dart';
 import '../widgets/streak_card_widget.dart';
 import '/../providers/sync_provider.dart';
+import 'package:shamsi_date/shamsi_date.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -97,6 +98,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== متد اصلی بارگذاری پروفایل ====================
 
+  // lib/features/profile/screens/profile_screen.dart
+
   Future<void> _loadProfile() async {
     if (_isLoadingInProgress) {
       print('⏭️ Skip loading: already in progress');
@@ -115,7 +118,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ اگر آفلاین هستیم، فقط از LocalStorage بخوان
       if (!syncProvider.isOnline) {
         print('📱 OFFLINE - Loading from LocalStorage...');
         final success = await _loadFromLocal(syncProvider);
@@ -129,19 +131,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // ✅ اگر آنلاین هستیم، از سرور بگیر
       print('🌐 Online - loading from Supabase...');
       final success = await _loadFromSupabase(syncProvider);
       if (success) {
         _isLoadingInProgress = false;
-        await _calculateWeeklyStreak();
+
+        // ✅ محاسبه مجدد استریک هفتگی از دیتابیس
+        await _recalculateWeeklyStreak();
+
         if (mounted) {
           setState(() {});
         }
         return;
       }
 
-      // ✅ اگر از سرور خطا خورد، از LocalStorage بخوان
       print('📱 Loading from LocalStorage...');
       final localSuccess = await _loadFromLocal(syncProvider);
 
@@ -167,6 +170,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } finally {
       _isLoadingInProgress = false;
+    }
+  }
+
+  // ✅ متد جدید برای محاسبه مجدد استریک هفتگی
+  Future<void> _recalculateWeeklyStreak() async {
+    try {
+      if (_profile == null) return;
+
+      final now = DateTime.now();
+      final jalaliToday = Jalali.fromDateTime(now);
+      final daysToSubtract = jalaliToday.weekDay - 1; // 0=شنبه
+      final weekStart = now.subtract(Duration(days: daysToSubtract));
+
+      int newWeeklyStreak = 0;
+      List<bool> weekStatus = [];
+
+      for (int i = 0; i < 7; i++) {
+        final date = weekStart.add(Duration(days: i));
+        final dateStr = date.toIso8601String().split('T').first;
+
+        final activity = await _supabase.client
+            .from('user_daily_activity')
+            .select('is_active')
+            .eq('user_id', _profile!.userId)
+            .eq('activity_date', dateStr)
+            .maybeSingle();
+
+        final isActive = activity != null && activity['is_active'] == true;
+        weekStatus.add(isActive);
+
+        if (isActive) {
+          newWeeklyStreak++;
+        }
+      }
+
+      print('📊 Recalculated weekStatus: $weekStatus');
+      print('📊 New weeklyStreak: $newWeeklyStreak');
+
+      // ✅ به‌روزرسانی در دیتابیس
+      if (_profile!.weeklyStreak != newWeeklyStreak) {
+        await _supabase.client
+            .from('profiles')
+            .update({'weekly_streak': newWeeklyStreak})
+            .eq('user_id', _profile!.userId);
+
+        setState(() {
+          _weeklyStreak = newWeeklyStreak;
+          _profile = UserProfile(
+            userId: _profile!.userId,
+            name: _profile!.name,
+            phone: _profile!.phone,
+            email: _profile!.email,
+            birthDate: _profile!.birthDate,
+            realAge: _profile!.realAge,
+            gender: _profile!.gender,
+            registeredAt: _profile!.registeredAt,
+            avatarStyle: _profile!.avatarStyle,
+            skinColor: _profile!.skinColor,
+            hairStyle: _profile!.hairStyle,
+            hairColor: _profile!.hairColor,
+            eyeStyle: _profile!.eyeStyle,
+            eyeColor: _profile!.eyeColor,
+            mouthStyle: _profile!.mouthStyle,
+            accessoryType: _profile!.accessoryType,
+            outfitStyle: _profile!.outfitStyle,
+            backgroundStyle: _profile!.backgroundStyle,
+            totalXp: _profile!.totalXp,
+            weeklyStreak: newWeeklyStreak,
+            lastStreakUpdate: DateTime.now(),
+            currentStreak: _profile!.currentStreak,
+            bestStreak: _profile!.bestStreak,
+          );
+        });
+      }
+    } catch (e) {
+      print('⚠️ Error recalculating weekly streak: $e');
     }
   }
   // ==================== بارگذاری از LocalStorage ====================
@@ -583,9 +662,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== محتوای اصلی پروفایل ====================
 
   Widget _buildProfileContent() {
-    final List<bool> weekDays = List.generate(7, (index) {
-      return index < _weeklyStreak;
-    });
+    final List<bool> weekDays = List.filled(7, false);
+
+    for (int i = 0; i < _weeklyStreak && i < 7; i++) {
+      weekDays[i] = true;
+    }
+
+    // ✅ لاگ دقیق‌تر
+    print('📊 Profile weekDays: $weekDays');
+    print('📊 Profile weeklyStreak: $_weeklyStreak');
+    print('📊 _currentStreak: $_currentStreak');
+    print('📊 _bestStreak: $_bestStreak');
+
+    final jalaliToday = Jalali.fromDateTime(DateTime.now());
+    final todayIndex = jalaliToday.weekDay - 1;
+    print('📅 Today index: $todayIndex (${jalaliToday.weekDay})');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -596,11 +687,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildUserInfoSection(),
           const SizedBox(height: 24),
 
+          // ✅ ویجت استریک با weekDays اصلاح شده
           StreakCardWidget(
             currentStreak: _currentStreak,
             bestStreak: _bestStreak,
             weeklyStreak: _weeklyStreak,
-            weekDays: weekDays,
+            weekDays: weekDays, // ✅ ارسال weekDays اصلاح شده
           ),
           const SizedBox(height: 24),
 
@@ -613,7 +705,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // ✅ اضافه کردن key برای ریفرش
           AnalyticsOverviewWidget(
-            key: _analyticsKey, // ✅ اضافه کردن key
+            key: _analyticsKey,
             userId: _profile!.userId,
             onTapMore: () {
               Navigator.push(
@@ -630,6 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildTermsButton(),
           const SizedBox(height: 12),
           _buildSettingsButton(),
+          const SizedBox(height: 20),
           const SizedBox(height: 20),
         ],
       ),

@@ -26,127 +26,193 @@ class SyncProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   SyncProvider() {
-    print('🟣 [SyncProvider] Constructor called');
     _init();
   }
 
   Future<void> _init() async {
-    print('🟣 [SyncProvider] _init started');
-
     try {
-      // ✅ مرحله 1: مقداردهی LocalStorage
-      print('🟣 [SyncProvider] Initializing LocalStorage...');
       await _localStorage.init();
-      print('✅ [SyncProvider] LocalStorage initialized');
+      print('✅ LocalStorage initialized');
 
-      // ✅ مرحله 2: دریافت userId از SharedPreferences
-      print('🟣 [SyncProvider] Getting userId from SharedPreferences...');
       final prefs = await SharedPreferences.getInstance();
       _currentUserId = prefs.getString('user_id');
-      print('👤 [SyncProvider] Current user: $_currentUserId');
+      print('👤 Current user: $_currentUserId');
 
-      // ✅ مرحله 3: بررسی داده‌های محلی
-      final hasLocalData =
-          _localStorage.getHabits().isNotEmpty ||
-          _localStorage.getTasks().isNotEmpty ||
-          _localStorage.getUserProfile() != null;
-
-      print('🟣 [SyncProvider] Has local data: $hasLocalData');
-
-      // ✅ مرحله 4: مقداردهی کامل - مهم: همیشه true کن
       _isInitialized = true;
       notifyListeners();
-      print('✅ [SyncProvider] Initialized successfully (isInitialized = true)');
 
-      // ✅ مرحله 5: بررسی اتصال اینترنت
-      await _checkConnectivity();
+      _checkConnectivity();
 
-      // ✅ مرحله 6: اگر آنلاین هستیم و کاربر داریم، داده‌ها رو همگام‌سازی کن
       if (_isOnline && _currentUserId != null) {
-        print('🟣 [SyncProvider] Starting data sync...');
         _syncAllData();
-      } else if (_currentUserId != null && hasLocalData) {
-        print('🟢 [SyncProvider] Offline mode - using local data');
-        // حتی اگر آفلاین باشیم، داده‌های محلی رو داریم
-      } else {
-        print('🟡 [SyncProvider] No user or no local data');
       }
-    } catch (e, stackTrace) {
-      print('🔴 [SyncProvider] Init error: $e');
-      print('🔴 [SyncProvider] StackTrace: $stackTrace');
-      // ✅ حتی در صورت خطا، مقداردهی رو کامل کن
+    } catch (e) {
+      print('❌ Init error: $e');
       _isInitialized = true;
       notifyListeners();
     }
   }
 
-  Future<void> _checkConnectivity() async {
-    print('🟣 [SyncProvider] _checkConnectivity called');
+  // ✅ ریفرش اجباری داده‌ها از دیتابیس
+  Future<void> forceRefresh() async {
+    if (_currentUserId == null) return;
 
-    if (kIsWeb) {
-      print('🟣 [SyncProvider] Running on Web - setting isOnline = true');
-      _isOnline = true;
-      notifyListeners();
-      return;
-    }
-
-    try {
-      final isOnline = await InternetConnectionChecker().hasConnection;
-      print('🟣 [SyncProvider] InternetConnectionChecker result: $isOnline');
-      _isOnline = isOnline;
-      notifyListeners();
-    } catch (e) {
-      print('🟡 [SyncProvider] Connectivity check error: $e');
-      _isOnline = true;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _syncAllData() async {
-    if (_isSyncing || _currentUserId == null || !_isOnline) {
-      print(
-        '🟡 [SyncProvider] Skipping sync: isSyncing=$_isSyncing, userId=$_currentUserId, isOnline=$_isOnline',
-      );
-      return;
-    }
-
-    print('🟣 [SyncProvider] _syncAllData started');
     _isSyncing = true;
     notifyListeners();
 
     try {
-      print('🟣 [SyncProvider] Syncing offline operations...');
-      await _syncOfflineOperations();
-
-      print('🟣 [SyncProvider] Fetching habits...');
+      // دریافت مجدد همه داده‌ها از دیتابیس
       final habits = await _supabase.getHabits(_currentUserId!);
-      print('🟣 [SyncProvider] Got ${habits.length} habits');
       if (habits.isNotEmpty) {
         await _localStorage.saveHabits(habits);
       }
 
-      print('🟣 [SyncProvider] Fetching tasks...');
       final tasks = await _supabase.getTasks(_currentUserId!);
-      print('🟣 [SyncProvider] Got ${tasks.length} tasks');
       if (tasks.isNotEmpty) {
         await _localStorage.saveTasks(tasks);
       }
 
-      print('🟣 [SyncProvider] Fetching quests...');
+      final challenges = await _supabase.getChallenges();
+      if (challenges.isNotEmpty) {
+        await _localStorage.saveChallenges(challenges);
+      }
+
+      final userChallenges = await _supabase.getUserChallenges(_currentUserId!);
+      if (userChallenges.isNotEmpty) {
+        await _localStorage.saveUserChallenges(userChallenges);
+      }
+
       final quests = await _supabase.getQuests();
-      print('🟣 [SyncProvider] Got ${quests.length} quests');
       if (quests.isNotEmpty) {
         await _localStorage.saveQuests(quests);
       }
 
-      print('🟣 [SyncProvider] Fetching packages...');
       final packages = await _supabase.getPackages();
-      print('🟣 [SyncProvider] Got ${packages.length} packages');
       if (packages.isNotEmpty) {
         await _localStorage.savePackages(packages);
       }
 
-      print('🟣 [SyncProvider] Fetching profile...');
+      print('✅ Force refresh completed');
+    } catch (e) {
+      print('❌ Force refresh error: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  // ✅ حذف عادت‌های یک چالش از کش
+  void removeHabitsByChallengeId(String challengeId) {
+    try {
+      final currentHabits = _localStorage.getHabits();
+      final updatedHabits = currentHabits
+          .where((habit) => habit.challengeId != challengeId)
+          .toList();
+      _localStorage.saveHabits(updatedHabits);
+      notifyListeners();
+      print(
+        '🗑️ Removed ${currentHabits.length - updatedHabits.length} habits for challenge: $challengeId',
+      );
+    } catch (e) {
+      print('❌ Error removing habits by challengeId: $e');
+    }
+  }
+
+  // ✅ حذف یک چالش کاربر از کش
+  void removeUserChallenge(String challengeId) {
+    try {
+      final currentChallenges = _localStorage.getUserChallenges();
+      final updatedChallenges = currentChallenges
+          .where((challenge) => challenge['id'] != challengeId)
+          .toList();
+      _localStorage.saveUserChallenges(updatedChallenges);
+      notifyListeners();
+      print('🗑️ Removed user challenge: $challengeId');
+    } catch (e) {
+      print('❌ Error removing user challenge: $e');
+    }
+  }
+
+  // ✅ حذف عادت‌های یک بسته از کش
+  void removePackageHabits(String packageId) {
+    try {
+      final currentHabits = _localStorage.getHabits();
+      final updatedHabits = currentHabits
+          .where(
+            (habit) =>
+                habit.title.startsWith('📦') == false ||
+                !habit.title.contains(packageId),
+          )
+          .toList();
+      _localStorage.saveHabits(updatedHabits);
+      notifyListeners();
+    } catch (e) {
+      print('❌ Error removing package habits: $e');
+    }
+  }
+
+  void _checkConnectivity() {
+    if (kIsWeb) {
+      _isOnline = true;
+      notifyListeners();
+      if (_currentUserId != null) {
+        _syncAllData();
+      }
+      return;
+    }
+
+    try {
+      InternetConnectionChecker().onStatusChange.listen((status) {
+        final isOnline = status == InternetConnectionStatus.connected;
+        if (_isOnline != isOnline) {
+          _isOnline = isOnline;
+          notifyListeners();
+          if (_isOnline && _currentUserId != null) {
+            _syncAllData();
+          }
+        }
+      });
+    } catch (e) {
+      print('⚠️ Connectivity check error: $e');
+      _isOnline = true;
+      notifyListeners();
+      if (_currentUserId != null) {
+        _syncAllData();
+      }
+    }
+  }
+
+  Future<void> _syncAllData() async {
+    if (_isSyncing || _currentUserId == null || !_isOnline) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      print('🔄 Syncing data...');
+
+      await _syncOfflineOperations();
+
+      final habits = await _supabase.getHabits(_currentUserId!);
+      if (habits.isNotEmpty) {
+        await _localStorage.saveHabits(habits);
+      }
+
+      final tasks = await _supabase.getTasks(_currentUserId!);
+      if (tasks.isNotEmpty) {
+        await _localStorage.saveTasks(tasks);
+      }
+
+      final quests = await _supabase.getQuests();
+      if (quests.isNotEmpty) {
+        await _localStorage.saveQuests(quests);
+      }
+
+      final packages = await _supabase.getPackages();
+      if (packages.isNotEmpty) {
+        await _localStorage.savePackages(packages);
+      }
+
       try {
         final profile = await _supabase.client
             .from('profiles')
@@ -155,29 +221,24 @@ class SyncProvider extends ChangeNotifier {
             .maybeSingle();
         if (profile != null) {
           await _localStorage.saveUserProfile(profile);
-          print('✅ [SyncProvider] Profile saved');
         }
       } catch (e) {
-        print('🟡 [SyncProvider] Profile sync error: $e');
+        print('⚠️ Profile sync error: $e');
       }
 
-      print('🟣 [SyncProvider] Fetching challenges...');
       final challenges = await _supabase.getChallenges();
-      print('🟣 [SyncProvider] Got ${challenges.length} challenges');
       if (challenges.isNotEmpty) {
         await _localStorage.saveChallenges(challenges);
       }
 
-      print('🟣 [SyncProvider] Fetching user challenges...');
       final userChallenges = await _supabase.getUserChallenges(_currentUserId!);
-      print('🟣 [SyncProvider] Got ${userChallenges.length} user challenges');
       if (userChallenges.isNotEmpty) {
         await _localStorage.saveUserChallenges(userChallenges);
       }
 
-      print('✅ [SyncProvider] Sync completed successfully');
+      print('✅ Sync completed');
     } catch (e) {
-      print('🔴 [SyncProvider] Sync error: $e');
+      print('⚠️ Sync error: $e');
     } finally {
       _isSyncing = false;
       notifyListeners();
@@ -185,27 +246,20 @@ class SyncProvider extends ChangeNotifier {
   }
 
   Future<void> _syncOfflineOperations() async {
-    print('🟣 [SyncProvider] _syncOfflineOperations started');
     final operations = _localStorage.getOfflineOperations();
-    if (operations.isEmpty) {
-      print('🟣 [SyncProvider] No offline operations to sync');
-      return;
-    }
+    if (operations.isEmpty) return;
 
-    print(
-      '🟣 [SyncProvider] Syncing ${operations.length} offline operations...',
-    );
+    print('🔄 Syncing ${operations.length} offline operations...');
 
     for (var operation in operations) {
       try {
         await _executeOfflineOperation(operation);
         await _localStorage.removeOfflineOperation(operation.id);
       } catch (e) {
-        print('🔴 [SyncProvider] Failed to sync operation: $e');
+        print('⚠️ Failed to sync operation: $e');
         if (e.toString().contains('SocketException')) break;
       }
     }
-    print('✅ [SyncProvider] Offline operations sync completed');
   }
 
   Future<void> _executeOfflineOperation(OfflineOperation operation) async {

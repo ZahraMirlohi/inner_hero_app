@@ -125,6 +125,30 @@ class LocalStorageService {
 
   bool get isInitialized => _isInitialized;
 
+  // lib/services/local_storage_service.dart
+
+  // ✅ متد کمکی برای تبدیل ایمن تاریخ
+  DateTime? _safeParseDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      print('⚠️ Error parsing date: $dateStr');
+      return null;
+    }
+  }
+
+  // ✅ متد کمکی برای تبدیل ایمن تاریخ با مقدار پیش‌فرض
+  DateTime _safeParseDateWithDefault(String? dateStr, DateTime defaultValue) {
+    if (dateStr == null || dateStr.isEmpty) return defaultValue;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      print('⚠️ Error parsing date: $dateStr, using default');
+      return defaultValue;
+    }
+  }
+
   // ==================== Habit Operations ====================
 
   Future<void> saveHabits(List<Habit> habits) async {
@@ -524,6 +548,23 @@ class LocalStorageService {
     } catch (e) {
       print('❌ Error clearing data: $e');
       rethrow;
+    }
+  }
+
+  Future<void> resetDatabase() async {
+    try {
+      await Hive.deleteBoxFromDisk(_habitsBoxName);
+      await Hive.deleteBoxFromDisk(_tasksBoxName);
+      await Hive.deleteBoxFromDisk(_questsBoxName);
+      await Hive.deleteBoxFromDisk(_packagesBoxName);
+      await Hive.deleteBoxFromDisk(_settingsBoxName);
+      await Hive.deleteBoxFromDisk(_userProfileBoxName);
+      await Hive.deleteBoxFromDisk(_offlineBoxName);
+      await Hive.deleteBoxFromDisk(_challengesBoxName);
+      await Hive.deleteBoxFromDisk(_userChallengesBoxName);
+      print('✅ Database reset successfully');
+    } catch (e) {
+      print('❌ Error resetting database: $e');
     }
   }
 

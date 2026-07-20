@@ -224,7 +224,20 @@ class Habit {
     };
   }
 
+  // lib/features/arena/models/habit_model.dart
+
   factory Habit.fromMap(String id, Map<String, dynamic> map) {
+    // ✅ تاریخ‌ها رو با ایمنی بخوان
+    DateTime parseDate(String? dateStr) {
+      if (dateStr == null || dateStr.isEmpty) return DateTime.now();
+      try {
+        return DateTime.parse(dateStr);
+      } catch (e) {
+        print('⚠️ Error parsing date: $dateStr');
+        return DateTime.now();
+      }
+    }
+
     return Habit(
       id: id,
       userId: map['userId'] ?? '',
@@ -253,23 +266,34 @@ class Habit {
       monthlyIntervalMonths: map['monthlyIntervalMonths'] ?? 1,
       timeOfDay: map['timeOfDay'] ?? 'morning',
       reminders:
-          (map['reminders'] as List?)
-              ?.map(
-                (r) => Reminder.fromMap(jsonDecode(r) as Map<String, dynamic>),
-              )
-              .toList() ??
+          (map['reminders'] as List?)?.map((r) {
+            if (r is String) {
+              try {
+                return Reminder.fromMap(jsonDecode(r) as Map<String, dynamic>);
+              } catch (e) {
+                return Reminder(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  hour: 8,
+                  minute: 0,
+                );
+              }
+            }
+            return Reminder(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              hour: 8,
+              minute: 0,
+            );
+          }).toList() ??
           [],
       xpReward: map['xpReward'] ?? 10,
       currentStreak: map['currentStreak'] ?? 0,
       bestStreak: map['bestStreak'] ?? 0,
       isActive: map['isActive'] ?? true,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: parseDate(map['createdAt']),
+      updatedAt: parseDate(map['updatedAt']),
       groupId: map['groupId'],
-      startDate: map['startDate'] != null
-          ? DateTime.parse(map['startDate'])
-          : null,
-      endDate: map['endDate'] != null ? DateTime.parse(map['endDate']) : null,
+      startDate: map['startDate'] != null ? parseDate(map['startDate']) : null,
+      endDate: map['endDate'] != null ? parseDate(map['endDate']) : null,
       challengeId: map['challengeId'],
       questId: map['questId'],
     );

@@ -78,11 +78,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   bool _initialCountSet = false;
 
   // ==================== متدهای چرخه حیات ====================
-  void refreshData() {
-    if (!_isLoading) {
-      _loadData();
-    }
-  }
 
   @override
   void initState() {
@@ -95,7 +90,22 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     _initialCountSet = false;
     _hasShownCongratulationToday = false;
     _lastCheckDate = '';
-    _loadData();
+
+    // ✅ بارگذاری با کمی تأخیر برای اطمینان از آماده بودن SyncProvider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
+  }
+
+  // ✅ متد ریفرش عمومی
+  void refreshData() {
+    if (!_isLoading) {
+      // ✅ ریفرش کامل با پاک کردن کش
+      _cacheTime = null;
+      _cachedHabits = null;
+      _cachedTasks = null;
+      _loadData();
+    }
   }
 
   @override
@@ -171,11 +181,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
     if (_lastCheckDate == today && _hasShownCongratulationToday) return;
 
+    // ✅ فقط عادت‌ها و تسک‌ها رو بررسی کن (چالش‌ها عادت دارن)
     final hadAnyTaskForToday = _initialTodayItemsCount > 0;
     final allPendingEmpty = _todayHabits.isEmpty && _todayTasks.isEmpty;
     final hasFailedItems = _failedHabits.isNotEmpty || _failedTasks.isNotEmpty;
 
     if (hadAnyTaskForToday && allPendingEmpty && !hasFailedItems) {
+      final hasAnyCompleted =
+          _completedHabits.isNotEmpty || _completedTasks.isNotEmpty;
+      if (!hasAnyCompleted) {
+        print('📊 No completed activities - skipping congratulation');
+        return;
+      }
+
       int todayXP = 0;
       for (var habit in _completedHabits) {
         todayXP += habit.xpReward;
@@ -206,6 +224,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       });
     }
+  }
+
+  int _calculateTodayXP() {
+    int totalXP = 0;
+    for (var habit in _completedHabits) {
+      totalXP += habit.xpReward;
+    }
+    for (var task in _completedTasks) {
+      totalXP += task.xpReward;
+    }
+    return totalXP;
   }
 
   // ==================== بارگذاری داده‌ها ====================
@@ -320,10 +349,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // ==================== متدهای عمومی برای ریفرش ====================
 
+  // lib/features/arena/screens/today_tab.dart
+
   Future<void> _markHabitCompleted(Habit habit) async {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // ✅ 1. به‌روزرسانی فوری UI (همیشه اولین کار)
     setState(() {
       _habitCompletionStatus[habit.id] = true;
       _habitFailedStatus[habit.id] = false;
@@ -335,7 +365,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    // ✅ 2. اجرای عملیات‌های دیتابیس در پس‌زمینه با Future.microtask
     Future.microtask(() async {
       try {
         if (syncProvider.isOnline) {
@@ -347,24 +376,35 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               true,
             ),
             _supabase.addXP(_currentUserId!, habit.xpReward),
-            _supabase.recordDailyActivity(
-              userId: _currentUserId!,
-              date: widget.selectedDate,
-              habitsCompleted: 1,
-              xpEarned: habit.xpReward,
-              isActive: true,
-            ),
           ]);
 
-          // ✅ فقط یکبار ریفرش
+          // ✅ ثبت فعالیت روزانه با isActive = true
+          await _supabase.recordDailyActivity(
+            userId: _currentUserId!,
+            date: widget.selectedDate,
+            habitsCompleted: _completedHabits.length,
+            tasksCompleted: _completedTasks.length,
+            xpEarned: _calculateTodayXP(),
+            isActive: true,
+          );
+
           _scheduleProfileRefresh();
 
-          // ✅ بررسی ماموریت (با تاخیر)
+          // ✅ اگر عادت مربوط به چالش است، روز چالش رو ثبت کن
+          if (habit.challengeId != null) {
+            print('📝 Recording challenge day for: ${habit.challengeId}');
+            await _supabase.completeChallengeDay(
+              userId: _currentUserId!,
+              challengeId: habit.challengeId!,
+              date: widget.selectedDate,
+            );
+
+            // ✅ بعد از ثبت روز چالش، چک کن که چالش کامل شده یا نه
+            unawaited(_handleChallengeCompletion(habit));
+          }
+
           if (habit.questId != null) {
             unawaited(_handleQuestCompletion(habit));
-          }
-          if (habit.challengeId != null) {
-            unawaited(_handleChallengeCompletion(habit));
           }
 
           if (mounted) {
@@ -378,7 +418,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             );
           }
         } else {
-          // ✅ آفلاین
           await syncProvider.addOfflineOperation(
             type: OperationType.completeHabit,
             data: {
@@ -401,7 +440,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
         _checkAllCompletedAndShowCongratulation();
       } catch (e) {
-        // ❌ برگرداندن وضعیت در صورت خطا
         if (mounted) {
           setState(() {
             _habitCompletionStatus[habit.id] = false;
@@ -457,24 +495,45 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  // ✅ متد جداگانه برای چالش (با تایم‌اوت)
+  // lib/features/arena/screens/today_tab.dart
+
   Future<void> _handleChallengeCompletion(Habit habit) async {
     try {
+      print('🔍 Checking challenge completion for habit: ${habit.id}');
+      print('📝 Challenge ID: ${habit.challengeId}');
+
+      if (habit.challengeId == null) return;
+
+      // ✅ اول روز چالش رو ثبت کن
+      await _supabase.completeChallengeDay(
+        userId: _currentUserId!,
+        challengeId: habit.challengeId!,
+        date: widget.selectedDate,
+      );
+
+      // ✅ بعد چک کن که چالش کامل شده یا نه
       final completedChallenge = await _supabase
           .checkAndCompleteChallenge(_currentUserId!, habit.challengeId!)
           .timeout(const Duration(seconds: 5));
 
       if (completedChallenge != null && mounted) {
-        final startDate = DateTime.parse(completedChallenge['start_date']);
-        final endDate = DateTime.parse(completedChallenge['end_date']);
-        final totalDays = endDate.difference(startDate).inDays + 1;
+        print('✅ Challenge completed: ${completedChallenge['title']}');
+
+        // دریافت تعداد روزهای تکمیل شده
+        final progress = await _supabase.getUserChallengeProgressDetails(
+          _currentUserId!,
+          habit.challengeId!,
+        );
+
+        final completedDays = progress['completedDays'] ?? 0;
+        final totalDays = progress['totalDays'] ?? 3;
 
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ChallengeCompletionScreen(
               challenge: completedChallenge,
-              completedDays: totalDays,
+              completedDays: completedDays,
               totalDays: totalDays,
             ),
           ),
@@ -483,27 +542,27 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         _hasShownCongratulationToday = false;
         _initialCountSet = false;
         await _loadData();
+      } else {
+        // ✅ حتی اگر چالش کامل نشده، پیشرفت رو به‌روزرسانی کن
+        print('📊 Challenge progress updated but not completed yet');
+        await _loadData();
       }
     } catch (e) {
-      // خطا را نادیده بگیر
+      print('⚠️ Challenge completion error: $e');
     }
   }
 
   DateTime? _lastRefreshTime;
   static const _minRefreshInterval = Duration(milliseconds: 500);
 
+  // ✅ ریفرش پروفایل
   void _scheduleProfileRefresh() {
     final now = DateTime.now();
     if (_lastRefreshTime == null ||
         now.difference(_lastRefreshTime!) > _minRefreshInterval) {
       _lastRefreshTime = now;
-
-      // ✅ ارسال سیگنال ریفرش با مقدار جدید
       if (widget.profileRefreshNotifier != null) {
         widget.profileRefreshNotifier!.value++;
-        print(
-          '🔄 Profile refresh triggered: ${widget.profileRefreshNotifier!.value}',
-        );
       }
     }
   }
@@ -531,11 +590,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // lib/features/arena/screens/today_tab.dart
 
-  // ✅ اصلاح متد _unmarkHabit - با استفاده از Future.microtask
   Future<void> _unmarkHabit(Habit habit) async {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // ✅ 1. به‌روزرسانی فوری UI (همیشه اولین کار)
     setState(() {
       _habitCompletionStatus[habit.id] = false;
       _habitFailedStatus[habit.id] = false;
@@ -548,19 +605,73 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
-    // ✅ 2. اجرای عملیات‌های دیتابیس در پس‌زمینه
     Future.microtask(() async {
       try {
         if (syncProvider.isOnline) {
-          await Future.wait([
-            _supabase.markHabitCompletedOnDate(
-              habit.id,
+          // ✅ 1. لغو تکمیل عادت
+          await _supabase.markHabitCompletedOnDate(
+            habit.id,
+            _currentUserId!,
+            widget.selectedDate,
+            false,
+          );
+          await _supabase.removeXP(_currentUserId!, habit.xpReward);
+
+          // ✅ 2. اگر عادت مربوط به چالش است، روز چالش رو لغو کن
+          if (habit.challengeId != null) {
+            print('📝 Removing challenge day for: ${habit.challengeId}');
+
+            // حذف روز چالش از challenge_completions
+            await _supabase.removeChallengeDay(
+              userId: _currentUserId!,
+              challengeId: habit.challengeId!,
+              date: widget.selectedDate,
+            );
+
+            // به‌روزرسانی progress چالش
+            await _supabase.updateChallengeProgress(
               _currentUserId!,
-              widget.selectedDate,
-              false,
-            ),
-            _supabase.removeXP(_currentUserId!, habit.xpReward),
-          ]);
+              habit.challengeId!,
+            );
+          }
+
+          // ✅ 3. بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
+          final hasOtherActivities = await _checkIfTodayHasOtherActivities();
+
+          print('📊 Has other activities: $hasOtherActivities');
+          print('📊 Completed habits: ${_completedHabits.length}');
+          print('📊 Completed tasks: ${_completedTasks.length}');
+
+          if (!hasOtherActivities) {
+            // ✅ اگر فعالیت دیگه‌ای نبود، is_active رو false کن
+            print('📊 No activities left - setting isActive = false');
+            await _supabase.recordDailyActivity(
+              userId: _currentUserId!,
+              date: widget.selectedDate,
+              habitsCompleted: 0,
+              tasksCompleted: 0,
+              xpEarned: 0,
+              isActive: false,
+            );
+
+            // ✅ استریک رو مجبور به بازمحاسبه کن
+            await _supabase.updateUserStreak(_currentUserId!);
+
+            // ✅ ریفرش پروفایل
+            _scheduleProfileRefresh();
+          } else {
+            // ✅ اگر فعالیت دیگه‌ای هست، فقط آمار رو به‌روزرسانی کن
+            print('📊 Other activities exist - keeping isActive = true');
+            await _supabase.recordDailyActivity(
+              userId: _currentUserId!,
+              date: widget.selectedDate,
+              habitsCompleted: _completedHabits.length,
+              tasksCompleted: _completedTasks.length,
+              xpEarned: _calculateTodayXP(),
+              isActive: true,
+            );
+          }
+
           _scheduleProfileRefresh();
         } else {
           await syncProvider.addOfflineOperation(
@@ -569,6 +680,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               'habitId': habit.id,
               'date': widget.selectedDate.toIso8601String(),
               'xpReward': habit.xpReward,
+              'challengeId': habit.challengeId,
             },
           );
         }
@@ -579,17 +691,104 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
         _hasShownCongratulationToday = false;
         _checkAllCompletedAndShowCongratulation();
+
+        // ✅ ریفرش کامل داده‌ها برای به‌روزرسانی UI
+        await _loadData();
       } catch (e) {
-        // برگرداندن وضعیت در صورت خطا
         if (mounted) {
           setState(() {
             _habitCompletionStatus[habit.id] = true;
             _completedHabits.add(habit);
             _todayHabits.remove(habit);
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطا: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
     });
+  }
+
+  // lib/features/arena/screens/today_tab.dart
+
+  Future<bool> _checkIfTodayHasOtherActivities() async {
+    final hasCompletedHabits = _completedHabits.isNotEmpty;
+    final hasCompletedTasks = _completedTasks.isNotEmpty;
+
+    // ✅ اگر در حافظه چیزی هست، true برگردان
+    if (hasCompletedHabits || hasCompletedTasks) {
+      print('📊 Has completed habits or tasks in memory');
+      return true;
+    }
+
+    // ✅ اگر در حافظه چیزی نیست، از دیتابیس چک کن
+    try {
+      final todayStr = widget.selectedDate.toIso8601String().split('T').first;
+
+      // 1. چک کردن habit_completions (فقط عادت‌های معمولی، نه چالش‌ها)
+      final habitCompletions = await _supabase.client
+          .from('habit_completions')
+          .select('id, habit_id')
+          .eq('user_id', _currentUserId!)
+          .eq('date', todayStr);
+
+      if (habitCompletions.isNotEmpty) {
+        // ✅ بررسی کن که آیا این عادت‌ها مربوط به چالش هستند یا نه
+        for (var completion in habitCompletions) {
+          final habitId = completion['habit_id'];
+          // دریافت عادت از دیتابیس
+          final habit = await _supabase.client
+              .from('habits')
+              .select('challenge_id, quest_id')
+              .eq('id', habitId)
+              .maybeSingle();
+
+          // ✅ اگر عادت مربوط به چالش یا ماموریت نبود، true برگردان
+          if (habit != null &&
+              habit['challenge_id'] == null &&
+              habit['quest_id'] == null) {
+            print('📊 Found regular habit completion in database');
+            return true;
+          }
+        }
+      }
+
+      // 2. چک کردن tasks (تسک‌های کامل شده)
+      final tasks = await _supabase.client
+          .from('tasks')
+          .select('id')
+          .eq('user_id', _currentUserId!)
+          .eq('is_completed', true)
+          .eq('due_date', todayStr)
+          .limit(1);
+
+      if (tasks.isNotEmpty) {
+        print('📊 Found completed tasks in database');
+        return true;
+      }
+
+      // 3. ✅ چک کردن challenge_completions
+      final challengeCompletions = await _supabase.client
+          .from('challenge_completions')
+          .select('id')
+          .eq('user_id', _currentUserId!)
+          .eq('date', todayStr)
+          .limit(1);
+
+      if (challengeCompletions.isNotEmpty) {
+        print('📊 Found challenge completions in database');
+        return true;
+      }
+
+      print('📊 No regular activities found in database');
+      return false;
+    } catch (e) {
+      print('⚠️ Error checking activities: $e');
+      return false;
+    }
   }
 
   /// محاسبه مجدد پیشرفت ماموریت از صفر
@@ -708,6 +907,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     _checkAllCompletedAndShowCongratulation();
   }
 
+  // lib/features/arena/screens/today_tab.dart
+
   Future<void> _unmarkTask(Task task) async {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
@@ -741,6 +942,41 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       if (syncProvider.isOnline) {
         await _supabase.updateTask(updatedTask);
         await _supabase.removeXP(_currentUserId!, task.xpReward);
+
+        // ✅ بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
+        final hasOtherActivities = await _checkIfTodayHasOtherActivities();
+
+        print('📊 Has other activities: $hasOtherActivities');
+        print('📊 Completed habits: ${_completedHabits.length}');
+        print('📊 Completed tasks: ${_completedTasks.length}');
+
+        if (!hasOtherActivities) {
+          print('📊 No activities left - setting isActive = false');
+          await _supabase.recordDailyActivity(
+            userId: _currentUserId!,
+            date: widget.selectedDate,
+            habitsCompleted: 0,
+            tasksCompleted: 0,
+            xpEarned: 0,
+            isActive: false,
+          );
+
+          // ✅ استریک رو مجبور به بازمحاسبه کن
+          await _supabase.updateUserStreak(_currentUserId!);
+
+          _scheduleProfileRefresh();
+        } else {
+          print('📊 Other activities exist - keeping isActive = true');
+          await _supabase.recordDailyActivity(
+            userId: _currentUserId!,
+            date: widget.selectedDate,
+            habitsCompleted: _completedHabits.length,
+            tasksCompleted: _completedTasks.length,
+            xpEarned: _calculateTodayXP(),
+            isActive: true,
+          );
+        }
+
         _scheduleProfileRefresh();
       } else {
         await syncProvider.addOfflineOperation(
@@ -751,7 +987,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             'xpReward': updatedTask.xpReward,
           },
         );
-        print('📝 Task uncompleted saved offline: ${task.title}');
       }
 
       _hasShownCongratulationToday = false;

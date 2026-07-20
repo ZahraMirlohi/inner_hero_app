@@ -26,6 +26,7 @@ void main() async {
     print('✅ [MAIN] Supabase initialized');
 
     print('🔵 [MAIN] Initializing LocalStorage...');
+    await LocalStorageService().resetDatabase();
     await LocalStorageService().init();
     print('✅ [MAIN] LocalStorage initialized');
 

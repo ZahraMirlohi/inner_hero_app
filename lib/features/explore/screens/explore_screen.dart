@@ -9,7 +9,6 @@ import '../models/user_quest_model.dart';
 import 'challenges_tab.dart';
 import 'packages_tab.dart';
 import 'quests_tab.dart';
-import 'quest_completion_screen.dart';
 import 'cosmetics_tab.dart';
 import 'leaderboard_tab.dart';
 import '/providers/sync_provider.dart'; // ✅ اضافه کردن import
@@ -84,6 +83,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ==================== بارگذاری داده‌ها با پشتیبانی از آفلاین ====================
 
   Future<void> _loadData() async {
+    // ✅ جلوگیری از اجرای همزمان
     if (_isInitialized || _isLoadingInProgress) {
       print('⏭️ _loadData: Skip - already initialized or in progress');
       return;
@@ -105,6 +105,11 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final currentUser = await _supabase.getCurrentUser();
+
+      // ✅ بررسی و بروزرسانی وضعیت چالش‌های کاربر
+      if (_currentUserId.isNotEmpty) {
+        await _supabase.checkAndUpdateUserChallenges(_currentUserId);
+      }
 
       if (currentUser == null) {
         print('⚠️ _loadData: No user logged in');
@@ -249,13 +254,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ✅ پردازش چالش‌ها
   void _processChallenges() {
     final now = DateTime.now();
     for (int i = 0; i < _challenges.length; i++) {
       final challenge = _challenges[i];
       final challengeId = challenge['id'];
 
+      // ✅ بررسی تاریخ ثبت‌نام
       if (challenge['registration_end_date'] != null) {
         try {
           final registrationEnd = DateTime.parse(
@@ -272,9 +277,26 @@ class _ExploreScreenState extends State<ExploreScreen>
         _challenges[i]['isRegistrationClosed'] = false;
       }
 
-      _challenges[i]['isJoined'] = _myChallenges.any(
-        (c) => c['id'] == challengeId,
-      );
+      // ✅ بررسی وضعیت عضویت - با بررسی دقیق‌تر
+      final isJoined = _myChallenges.any((c) => c['id'] == challengeId);
+      _challenges[i]['isJoined'] = isJoined;
+
+      // ✅ اگر کاربر عضو هست، وضعیت رو از _myChallenges بگیر
+      if (isJoined) {
+        final userChallenge = _myChallenges.firstWhere(
+          (c) => c['id'] == challengeId,
+          orElse: () => {},
+        );
+        if (userChallenge.isNotEmpty) {
+          _challenges[i]['isCompleted'] = userChallenge['isCompleted'] ?? false;
+          _challenges[i]['status'] = userChallenge['status'] ?? 'active';
+          _challenges[i]['progress'] = userChallenge['progress'] ?? 0;
+        }
+      } else {
+        _challenges[i]['isCompleted'] = false;
+        _challenges[i]['status'] = null;
+        _challenges[i]['progress'] = 0;
+      }
     }
   }
 
@@ -284,6 +306,9 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   // ==================== متدهای چالش ====================
+
+  // lib/features/explore/screens/explore_screen.dart
+
   Future<void> _joinChallenge(Map<String, dynamic> challenge) async {
     if (challenge['isRegistrationClosed'] == true) {
       if (mounted) {
@@ -304,16 +329,46 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final currentUser = await _supabase.getCurrentUser();
       if (currentUser != null) {
+        // ✅ 1. ثبت در دیتابیس
         await _supabase.joinChallenge(currentUser.id, challenge['id']);
+
+        // ✅ 2. به‌روزرسانی فوری لیست محلی
+        final newChallenge = Map<String, dynamic>.from(challenge);
+        newChallenge['isJoined'] = true;
+        newChallenge['isCompleted'] = false;
+        newChallenge['status'] = 'active';
+        newChallenge['is_active'] = true;
+
+        setState(() {
+          _myChallenges.add(newChallenge);
+          _challenges.removeWhere((c) => c['id'] == challenge['id']);
+          _challenges.add(newChallenge);
+        });
+
+        // ✅ 3. ریفرش SyncProvider و LocalStorage
+        final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+        // ریفرش کامل داده‌ها از دیتابیس
+        await syncProvider.manualSync();
+
+        // ریفرش پروفایل
+        if (widget.refreshNotifier != null) {
+          widget.refreshNotifier!.value++;
+        }
+
+        // ✅ 4. ریفرش کامل صفحه
         _isInitialized = false;
         _isLoadingInProgress = false;
         await _loadData();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('به چالش پیوستید! 🎉'),
+              content: Text(
+                'به چالش پیوستید! عادت‌های چالش به لیست شما اضافه شد 🎉',
+              ),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: Duration(seconds: 3),
             ),
           );
         }
@@ -332,6 +387,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  // lib/features/explore/screens/explore_screen.dart
+
   Future<void> _leaveChallenge(Map<String, dynamic> challenge) async {
     _isLoadingInProgress = true;
     if (mounted) setState(() => _isLoading = true);
@@ -339,14 +396,47 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final currentUser = await _supabase.getCurrentUser();
       if (currentUser != null) {
+        // ✅ 1. حذف کامل از دیتابیس
         await _supabase.leaveChallenge(currentUser.id, challenge['id']);
+
+        // ✅ 2. حذف از لیست محلی (فوری)
+        setState(() {
+          _myChallenges.removeWhere((c) => c['id'] == challenge['id']);
+          _challenges.removeWhere((c) => c['id'] == challenge['id']);
+
+          // ✅ چالش رو با isJoined = false دوباره به لیست اضافه کن
+          final updatedChallenge = Map<String, dynamic>.from(challenge);
+          updatedChallenge['isJoined'] = false;
+          updatedChallenge['isCompleted'] = false;
+          updatedChallenge['status'] = null;
+          updatedChallenge['is_active'] = false;
+          _challenges.add(updatedChallenge);
+        });
+
+        // ✅ 3. به‌روزرسانی کش
+        _challengeDetailsCache.remove(challenge['id']);
+
+        // ✅ 4. ریفرش داده‌های SyncProvider
+        if (mounted) {
+          final syncProvider = Provider.of<SyncProvider>(
+            context,
+            listen: false,
+          );
+          // حذف عادت‌های چالش از کش
+          syncProvider.removeHabitsByChallengeId(challenge['id']);
+          // حذف از userChallenges
+          syncProvider.removeUserChallenge(challenge['id']);
+        }
+
+        // ✅ 5. ریفرش کامل
         _isInitialized = false;
         _isLoadingInProgress = false;
         await _loadData();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('از چالش ${challenge['title']} انصراف دادید'),
+              content: Text('از چالش "${challenge['title']}" انصراف دادید'),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 2),
             ),
