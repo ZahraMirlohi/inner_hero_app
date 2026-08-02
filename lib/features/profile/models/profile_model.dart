@@ -3,6 +3,7 @@
 class UserProfile {
   final String userId;
   String name;
+  String? uniqueId; // ✅ اضافه کردن uniqueId
   String? phone;
   String? email;
   DateTime? birthDate;
@@ -32,6 +33,7 @@ class UserProfile {
   UserProfile({
     required this.userId,
     required this.name,
+    this.uniqueId, // ✅ اضافه شده
     this.phone,
     this.email,
     this.birthDate,
@@ -55,25 +57,21 @@ class UserProfile {
     this.bestStreak = 0,
   });
 
-  // ✅ محاسبه لول بر اساس کل XP (هر ۱۰۰ XP یک لول)
   int get level {
     return (totalXp / 100).floor() + 1;
   }
 
-  // ✅ محاسبه XP مورد نیاز برای لول بعدی
   int get xpNeededForNextLevel {
     final currentLevelXp = (level - 1) * 100;
     return currentLevelXp + 100 - totalXp;
   }
 
-  // ✅ درصد پیشرفت به لول بعدی
   double get levelProgress {
     final currentLevelXp = (level - 1) * 100;
     final xpInCurrentLevel = totalXp - currentLevelXp;
     return xpInCurrentLevel / 100;
   }
 
-  // محاسبه سن آواتار (بر اساس تاریخ ثبت‌نام)
   int get avatarAge {
     final now = DateTime.now();
     final days = now.difference(registeredAt).inDays;
@@ -83,6 +81,7 @@ class UserProfile {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
+      'unique_id': uniqueId, // ✅ اضافه شده
       'phone': phone,
       'email': email,
       'birth_date': birthDate?.toIso8601String().split('T').first,
@@ -113,6 +112,7 @@ class UserProfile {
     return UserProfile(
       userId: userId,
       name: map['name'] ?? 'کاربر',
+      uniqueId: map['unique_id'], // ✅ اضافه شده
       phone: map['phone'],
       email: map['email'],
       birthDate: map['birth_date'] != null

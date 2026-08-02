@@ -13,6 +13,9 @@ import '../widgets/settings_screen.dart';
 import '../widgets/streak_card_widget.dart';
 import '/../providers/sync_provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import 'package:flutter/services.dart';
+import '/../utils/unique_id_generator.dart';
+import 'personality_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -172,15 +175,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _isLoadingInProgress = false;
     }
   }
+  // ==================== به‌روزرسانی استریک هفتگی ====================
 
-  // ✅ متد جدید برای محاسبه مجدد استریک هفتگی
   Future<void> _recalculateWeeklyStreak() async {
     try {
       if (_profile == null) return;
 
       final now = DateTime.now();
       final jalaliToday = Jalali.fromDateTime(now);
-      final daysToSubtract = jalaliToday.weekDay - 1; // 0=شنبه
+      final daysToSubtract = jalaliToday.weekDay - 1;
       final weekStart = now.subtract(Duration(days: daysToSubtract));
 
       int newWeeklyStreak = 0;
@@ -208,7 +211,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('📊 Recalculated weekStatus: $weekStatus');
       print('📊 New weeklyStreak: $newWeeklyStreak');
 
-      // ✅ به‌روزرسانی در دیتابیس
+      // ✅ ذخیره در کش
+      _cachedWeekDays = weekStatus;
+
       if (_profile!.weeklyStreak != newWeeklyStreak) {
         await _supabase.client
             .from('profiles')
@@ -289,7 +294,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<bool> _loadFromSupabase(SyncProvider syncProvider) async {
     try {
       final currentUser = await _supabase.getCurrentUser();
-
       if (currentUser == null) {
         print('⚠️ No user logged in');
         if (mounted) {
@@ -310,18 +314,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .maybeSingle();
 
       if (response != null) {
+        // ✅ اگر unique_id وجود نداشت، تولید کن
+        if (response['unique_id'] == null || response['unique_id'].isEmpty) {
+          final newUniqueId = UniqueIdGenerator.generateSecure();
+          await _supabase.client
+              .from('profiles')
+              .update({'unique_id': newUniqueId})
+              .eq('user_id', currentUser.id);
+
+          // ✅ به‌روزرسانی response
+          response['unique_id'] = newUniqueId;
+          print('✅ Unique ID generated for user: $newUniqueId');
+        }
+
         _profile = UserProfile.fromMap(response, currentUser.id);
         _currentStreak = response['current_streak'] ?? 0;
         _bestStreak = response['best_streak'] ?? 0;
         _weeklyStreak = response['weekly_streak'] ?? 0;
 
-        // ✅ ذخیره در LocalStorage
+        _cachedWeekDays = await _calculateWeekDaysFromDatabase(currentUser.id);
+
         await syncProvider.saveProfileToLocal(response);
 
         print('✅ Profile loaded from SUPABASE');
         print('   - Name: ${_profile?.name}');
         print('   - XP: ${_profile?.totalXp}');
         print('   - Streak: $_currentStreak');
+        print('   - Unique ID: ${_profile?.uniqueId}');
 
         if (mounted) {
           setState(() {
@@ -331,7 +350,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return true;
       }
 
-      // ✅ پروفایل وجود ندارد - یک پروفایل جدید بساز
       print('🆕 No profile found, creating new...');
       await _createNewProfile();
       return true;
@@ -341,7 +359,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // ✅ کش برای weekDays
+  List<bool>? _cachedWeekDays;
+
+  // ✅ متد محاسبه weekDays از دیتابیس (با await)
+  Future<List<bool>> _calculateWeekDaysFromDatabase(String userId) async {
+    List<bool> weekDays = List.filled(7, false);
+
+    try {
+      final now = DateTime.now();
+      final jalaliNow = Jalali.fromDateTime(now);
+      final daysToSubtract = jalaliNow.weekDay - 1;
+      final weekStart = now.subtract(Duration(days: daysToSubtract));
+
+      // دریافت فعالیت‌های هفته
+      for (int i = 0; i < 7; i++) {
+        final date = weekStart.add(Duration(days: i));
+        final dateStr = date.toIso8601String().split('T').first;
+
+        final activity = await _supabase.client
+            .from('user_daily_activity')
+            .select('is_active')
+            .eq('user_id', userId)
+            .eq('activity_date', dateStr)
+            .maybeSingle();
+
+        weekDays[i] = activity != null && activity['is_active'] == true;
+      }
+
+      return weekDays;
+    } catch (e) {
+      print('⚠️ Error calculating weekDays: $e');
+      return weekDays;
+    }
+  }
+
   // ==================== ساخت پروفایل جدید ====================
+
+  // lib/features/profile/screens/profile_screen.dart
 
   Future<void> _createNewProfile() async {
     try {
@@ -356,21 +411,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
+      // ✅ تولید ID یکتا
+      final uniqueId = UniqueIdGenerator.generateSecure();
+
       final newProfile = UserProfile(
         userId: currentUser.id,
         name: currentUser.email?.split('@').first.isNotEmpty == true
             ? currentUser.email!.split('@').first
             : 'کاربر',
+        uniqueId: uniqueId, // ✅ اضافه کردن uniqueId
         email: currentUser.email,
         registeredAt: DateTime.now(),
         totalXp: 0,
       );
 
-      // ✅ ذخیره در Supabase
+      // ✅ ذخیره در Supabase با unique_id
       await _supabase.client.from('profiles').insert({
         'user_id': currentUser.id,
         'name': newProfile.name,
         'email': newProfile.email,
+        'unique_id': uniqueId, // ✅ ذخیره unique_id
         'total_xp': 0,
         'current_streak': 0,
         'best_streak': 0,
@@ -395,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       profileMap['weekly_streak'] = 0;
       await syncProvider.saveProfileToLocal(profileMap);
 
-      print('✅ New profile created successfully');
+      print('✅ New profile created with Unique ID: $uniqueId');
 
       if (mounted) {
         setState(() {
@@ -404,11 +464,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       print('❌ Error creating profile: $e');
-      // ✅ در صورت خطا، یک پروفایل پیش‌فرض بساز
       await _createFallbackProfile();
     }
   }
-
   // ==================== پروفایل پیش‌فرض (Fallback) ====================
 
   Future<void> _createFallbackProfile() async {
@@ -660,15 +718,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==================== محتوای اصلی پروفایل ====================
+  // در بخش دکمه‌های profile_screen.dart
+
+  Widget _buildPersonalityButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PersonalityScreen()),
+          ).then((_) => _loadProfile());
+        },
+        icon: const Icon(Icons.person_outline, size: 20),
+        label: const Text(
+          'شخصیت من',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF1A1A2E),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+
+  // ==================== محتوای اصلی پروفایل ====================
 
   Widget _buildProfileContent() {
-    final List<bool> weekDays = List.filled(7, false);
+    // ✅ استفاده از cached weekDays (اگر null باشد، همه false)
+    final weekDays = _cachedWeekDays ?? List.filled(7, false);
 
-    for (int i = 0; i < _weeklyStreak && i < 7; i++) {
-      weekDays[i] = true;
-    }
-
-    // ✅ لاگ دقیق‌تر
     print('📊 Profile weekDays: $weekDays');
     print('📊 Profile weeklyStreak: $_weeklyStreak');
     print('📊 _currentStreak: $_currentStreak');
@@ -687,12 +773,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildUserInfoSection(),
           const SizedBox(height: 24),
 
-          // ✅ ویجت استریک با weekDays اصلاح شده
           StreakCardWidget(
             currentStreak: _currentStreak,
             bestStreak: _bestStreak,
             weeklyStreak: _weeklyStreak,
-            weekDays: weekDays, // ✅ ارسال weekDays اصلاح شده
+            weekDays: weekDays, // ✅ ارسال weekDays واقعی از کش
           ),
           const SizedBox(height: 24),
 
@@ -703,7 +788,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
 
-          // ✅ اضافه کردن key برای ریفرش
           AnalyticsOverviewWidget(
             key: _analyticsKey,
             userId: _profile!.userId,
@@ -719,6 +803,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
 
+          _buildPersonalityButton(),
+          const SizedBox(height: 12),
+
           _buildTermsButton(),
           const SizedBox(height: 12),
           _buildSettingsButton(),
@@ -727,6 +814,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  // ✅ متد جدید برای دریافت weekDays از دیتابیس
+  List<bool> _getWeekDaysFromDatabase() {
+    // مقدار پیش‌فرض (همه false)
+    List<bool> weekDays = List.filled(7, false);
+
+    try {
+      final now = DateTime.now();
+      final jalaliNow = Jalali.fromDateTime(now);
+      final daysToSubtract = jalaliNow.weekDay - 1; // 0=شنبه
+      final weekStart = now.subtract(Duration(days: daysToSubtract));
+
+      // دریافت فعالیت‌های هفته از دیتابیس
+      // این کار باید به صورت async انجام شود، اما در build نمی‌توانیم async باشیم
+      // بنابراین از داده‌های موجود در _profile استفاده می‌کنیم
+
+      // روش 1: اگر weeklyStreak داریم، به ترتیب از شنبه شروع می‌کنیم
+      // اما این روش دقیق نیست چون فقط تعداد روزها را می‌دانیم نه اینکه کدام روزها
+
+      // روش 2: استفاده از داده‌های cached شده
+      // بهتر است weekDays را در یک متغیر کش نگه داریم
+
+      // فعلاً از روش ساده استفاده می‌کنیم:
+      // اگر weeklyStreak > 0 باشد، از امروز به عقب پر می‌کنیم
+      if (_weeklyStreak > 0) {
+        int remaining = _weeklyStreak;
+        for (int i = 0; i < 7 && remaining > 0; i++) {
+          // از امروز به عقب برو
+          final date = now.subtract(Duration(days: i));
+          final jalaliDate = Jalali.fromDateTime(date);
+          final weekdayIndex = jalaliDate.weekDay - 1;
+          weekDays[weekdayIndex] = true;
+          remaining--;
+        }
+      }
+
+      print('📊 Generated weekDays: $weekDays');
+      return weekDays;
+    } catch (e) {
+      print('⚠️ Error getting weekDays: $e');
+      return weekDays;
+    }
   }
 
   // ==================== بخش آواتار ====================
@@ -819,6 +949,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== بخش اطلاعات کاربر ====================
 
+  // lib/features/profile/screens/profile_screen.dart
+
+  // ✅ در بخش _buildUserInfoSection، ID یکتا را نمایش دهید
+
   Widget _buildUserInfoSection() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -827,7 +961,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -856,10 +990,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.06),
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: const Color(0xFF2563EB).withOpacity(0.1),
+                      color: const Color(0xFF2563EB).withValues(alpha: 0.1),
                       width: 1,
                     ),
                   ),
@@ -887,6 +1021,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 18),
 
+          // ✅ نمایش ID یکتا
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.fingerprint,
+                    size: 16,
+                    color: Color(0xFF2563EB),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'ID یکتا',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            _profile?.uniqueId ?? '---',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _profile?.uniqueId != null
+                                  ? const Color(0xFF2563EB)
+                                  : Colors.grey.shade400,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // ✅ دکمه کپی
+                          if (_profile?.uniqueId != null)
+                            GestureDetector(
+                              onTap: () {
+                                _copyToClipboard(_profile!.uniqueId!);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF2563EB,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.copy,
+                                      size: 12,
+                                      color: Color(0xFF2563EB),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'کپی',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFF2563EB),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // ✅ دکمه اشتراک‌گذاری
+                if (_profile?.uniqueId != null)
+                  GestureDetector(
+                    onTap: () {
+                      _shareUniqueId(_profile!.uniqueId!);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.share_outlined,
+                        size: 18,
+                        color: Color(0xFF2563EB),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // سایر اطلاعات کاربر
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -954,6 +1209,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  // ✅ متد کپی کردن ID
+  void _copyToClipboard(String text) {
+    // استفاده از Clipboard
+    Clipboard.setData(ClipboardData(text: text));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ ID یکتا کپی شد'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  // ✅ متد اشتراک‌گذاری ID
+  void _shareUniqueId(String uniqueId) {
+    // کپی کردن ID
+    _copyToClipboard(uniqueId);
+
+    // همچنین می‌توانید از share_plus استفاده کنید
+    // برای سادگی، پیام کپی نمایش داده می‌شود
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('📤 ID یکتا برای اشتراک‌گذاری کپی شد'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
   }
 
   // ==================== ویجت آیتم اطلاعات مینیمال ====================

@@ -61,8 +61,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    if (_animationController.isAnimating) {
+      _animationController.stop();
+    }
     _animationController.dispose();
-    widget.refreshNotifier?.removeListener(_onRefreshTriggered);
     super.dispose();
   }
 
@@ -173,8 +175,15 @@ class _ExploreScreenState extends State<ExploreScreen>
       _processCompletedQuests();
 
       print('🎬 _loadData: Starting animation...');
-      if (!_animationController.isAnimating) {
-        _animationController.forward();
+      if (mounted &&
+          !_animationController.isAnimating &&
+          !_animationController.isCompleted) {
+        try {
+          _animationController.forward();
+        } catch (e) {
+          // اگر controller dispose شده بود، نادیده بگیر
+          print('⚠️ Animation controller error: $e');
+        }
       }
 
       if (mounted) {

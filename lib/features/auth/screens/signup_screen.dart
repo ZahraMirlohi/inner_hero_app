@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/services/supabase_service.dart'; // ← تغییر
 import '/features/home/screens/main_screen.dart';
+import '/../../utils/unique_id_generator.dart';
 import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -51,22 +52,25 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
+      // ✅ تولید ID یکتا
+      final uniqueId = UniqueIdGenerator.generateSecure();
+      print('🔑 Generated Unique ID: $uniqueId');
+
       final response = await _supabase.signup(
-        // ← تغییر
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
       );
 
       if (mounted && response.user != null) {
-        // ایجاد پروفایل در Supabase
+        // ✅ ایجاد پروفایل با unique_id
         await _supabase.createProfile(
           response.user!.id,
           _emailController.text.trim(),
           _nameController.text.trim(),
         );
 
-        // ایجاد رکورد user_progress
+        // ✅ ایجاد user_progress
         await _supabase.createUserProgress(response.user!.id);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,29 +87,7 @@ class _SignupScreenState extends State<SignupScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        String errorMessage = e.toString().replaceFirst('Exception: ', '');
-
-        // ترجمه خطاهای رایج
-        if (errorMessage.contains('user already exists')) {
-          errorMessage = 'این ایمیل قبلاً ثبت‌نام کرده است';
-        } else if (errorMessage.contains('invalid email')) {
-          errorMessage = 'ایمیل وارد شده معتبر نیست';
-        } else if (errorMessage.contains('weak password')) {
-          errorMessage = 'رمز عبور بسیار ضعیف است';
-        } else if (errorMessage.contains('email_address_invalid')) {
-          errorMessage =
-              'فرمت ایمیل وارد شده معتبر نیست. لطفاً یک ایمیل معتبر وارد کنید.';
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا در ثبت‌نام: $errorMessage'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      // ... مدیریت خطا
     } finally {
       if (mounted) {
         setState(() {

@@ -10,6 +10,7 @@ import '/features/explore/models/quest_model.dart';
 import '/features/explore/models/user_quest_model.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'local_storage_service.dart';
+import '../utils/unique_id_generator.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,10 +50,17 @@ class SupabaseService {
     String password,
     String name,
   ) async {
+    // ✅ تولید ID یکتا قبل از ثبت‌نام
+    final uniqueId = UniqueIdGenerator.generateSecure();
+
     return await client.auth.signUp(
       email: email,
       password: password,
-      data: {'name': name, 'email': email},
+      data: {
+        'name': name,
+        'email': email,
+        'unique_id': uniqueId, // ✅ ارسال unique_id به Supabase
+      },
     );
   }
 
@@ -125,10 +133,14 @@ class SupabaseService {
   // ==================== Profiles ====================
 
   Future<void> createProfile(String userId, String email, String name) async {
+    // ✅ تولید ID یکتا برای پروفایل
+    final uniqueId = UniqueIdGenerator.generateSecure();
+
     await client.from('profiles').insert({
       'user_id': userId,
       'email': email,
       'name': name,
+      'unique_id': uniqueId, // ✅ ذخیره unique_id
       'total_xp': 0,
     });
   }

@@ -22,7 +22,9 @@ dependencies:
   hive: 2.2.3          
   hive_flutter: 1.1.0   
   internet_connection_checker: ^1.0.0+1
-  #connectivity_plus: 5.0.0 
+  share_plus: ^10.0.0
+  image_picker: ^1.0.4
+  mime: ^1.0.4
   http: ^1.1.0
   flutter_localizations:
     sdk: flutter

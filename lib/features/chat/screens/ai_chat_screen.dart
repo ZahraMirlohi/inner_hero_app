@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../services/chat_service.dart';
-import '../../../services/ai_service.dart';
-import '../../../providers/sync_provider.dart';
-import '../models/message_model.dart';
-import '../models/conversation_model.dart';
+import '/services/chat_service.dart';
+import '/services/ai_service.dart';
+import '/providers/sync_provider.dart';
+import '/features/chat/models/message_model.dart';
+import '/features/chat/models/conversation_model.dart';
 
 class AIChatScreen extends StatefulWidget {
   const AIChatScreen({super.key});
@@ -22,9 +22,11 @@ class _AIChatScreenState extends State<AIChatScreen>
   late AIService _aiService;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
 
   List<ChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _isTyping = false;
   String? _conversationId;
   String? _userId;
 
@@ -42,6 +44,14 @@ class _AIChatScreenState extends State<AIChatScreen>
     super.initState();
     _chatService = ChatService();
     _aiService = AIService();
+
+    // گوش دادن به تغییرات فوکوس برای مدیریت کیبورد
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
+      }
+    });
+
     _initChat();
   }
 
@@ -49,6 +59,7 @@ class _AIChatScreenState extends State<AIChatScreen>
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -118,6 +129,8 @@ class _AIChatScreenState extends State<AIChatScreen>
     if (text.isEmpty || _conversationId == null || _userId == null) return;
 
     _messageController.clear();
+    _focusNode.unfocus(); // بستن کیبورد بعد از ارسال
+
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -177,6 +190,7 @@ class _AIChatScreenState extends State<AIChatScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
+      resizeToAvoidBottomInset: true, // ✅ مهم: برای مدیریت کیبورد
       appBar: AppBar(
         title: Row(
           children: [
@@ -219,14 +233,17 @@ class _AIChatScreenState extends State<AIChatScreen>
           // Quick Suggestions
           _buildQuickSuggestions(),
 
-          // Messages
+          // Messages - با Expanded برای پر کردن فضا
           Expanded(
             child: _messages.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     controller: _scrollController,
                     reverse: true,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[_messages.length - 1 - index];
@@ -235,7 +252,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                   ),
           ),
 
-          // Input
+          // ✅ Input Bar با SafeArea در پایین
           _buildInputBar(),
         ],
       ),
@@ -244,8 +261,8 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   Widget _buildQuickSuggestions() {
     return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _quickSuggestions.length,
@@ -279,7 +296,7 @@ class _AIChatScreenState extends State<AIChatScreen>
 
     if (isSystem) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
@@ -304,9 +321,9 @@ class _AIChatScreenState extends State<AIChatScreen>
     return Align(
       alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
+        margin: const EdgeInsets.symmetric(vertical: 4),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         child: Column(
           crossAxisAlignment: isAI
@@ -327,9 +344,9 @@ class _AIChatScreenState extends State<AIChatScreen>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -338,11 +355,11 @@ class _AIChatScreenState extends State<AIChatScreen>
                 style: TextStyle(
                   color: isAI ? const Color(0xFF1A1A2E) : Colors.white,
                   fontSize: 14,
-                  height: 1.4,
+                  height: 1.5,
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               _formatTime(message.createdAt),
               style: const TextStyle(fontSize: 10, color: Colors.grey),
@@ -379,79 +396,103 @@ class _AIChatScreenState extends State<AIChatScreen>
               color: Color(0xFF1A1A2E),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             'برنامه‌ریزی، انگیزه و راهنمایی شخصی',
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
           ),
         ],
       ),
     );
   }
 
+  // ✅ Input Bar با SafeArea و مدیریت کیبورد
   Widget _buildInputBar() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'پیام خود را بنویسید...',
-                border: OutlineInputBorder(
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
                 ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
+                child: TextField(
+                  controller: _messageController,
+                  focusNode: _focusNode,
+                  decoration: InputDecoration(
+                    hintText: 'پیام خود را بنویسید...',
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade500,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
                 ),
               ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _sendMessage(),
             ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: _isLoading
-                  ? Colors.grey.shade300
-                  : const Color(0xFF9B59B6),
-              shape: BoxShape.circle,
+            const SizedBox(width: 10),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _isLoading
+                    ? Colors.grey.shade300
+                    : const Color(0xFF9B59B6),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                onPressed: _isLoading ? null : _sendMessage,
+                icon: _isLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send, color: Colors.white, size: 22),
+              ),
             ),
-            child: IconButton(
-              onPressed: _isLoading ? null : _sendMessage,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.send, color: Colors.white),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    final now = DateTime.now();
+    final diff = now.difference(time);
+
+    if (diff.inDays > 0) {
+      return '${diff.inDays} روز پیش';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours} ساعت پیش';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes} دقیقه پیش';
+    } else {
+      return 'لحظاتی پیش';
+    }
   }
 }
