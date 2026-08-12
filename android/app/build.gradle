@@ -1,35 +1,14 @@
 // android/app/build.gradle
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file('local.properties')
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.withReader('UTF-8') { reader ->
-        localProperties.load(reader)
-    }
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
 }
-
-def flutterRoot = localProperties.getProperty('flutter.sdk')
-if (flutterRoot == null) {
-    throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
-}
-
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
-}
-
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdk 34 
-    
+    compileSdk 34
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -46,9 +25,9 @@ android {
     defaultConfig {
         applicationId "com.example.inner_hero_app"
         minSdk 21
-        targetSdk 34  // ✅ استفاده از 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
         multiDexEnabled true
     }
 
@@ -62,11 +41,10 @@ android {
     }
 }
 
-flutter {
-    source '../..'
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.multidex:multidex:2.0.1'
+flutter {
+    source '../..'
 }
