@@ -55,4 +55,5 @@ flutter:
 
 dependency_overrides:
   flutter_web_auth_2: ^5.0.0
-  app_links: ^3.5.0
+  app_links: ^3.4.0  
+  geolocator_android: ^4.6.2 
