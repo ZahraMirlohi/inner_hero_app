@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:location/location.dart'; // ✅ جایگزین geolocator
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 
@@ -17,15 +17,12 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  // ✅ MapController را به صورت nullable تعریف کنید
   MapController? _mapController;
   final Completer<MapController> _controllerCompleter = Completer();
 
-  // ✅ موقعیت‌ها
   LatLng? _currentPosition;
   LatLng? _selectedPosition;
 
-  // ✅ نشانگرها
   final List<Marker> _markers = [];
 
   bool _isLoading = true;
@@ -33,8 +30,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _errorMessage = '';
   String _address = '';
 
-  // ✅ موقعیت پیش‌فرض (تهران)
   static const LatLng _defaultPosition = LatLng(35.6892, 51.3890);
+
+  final Location _location = Location(); // ✅ استفاده از Location
 
   @override
   void initState() {
@@ -42,7 +40,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     _initializeLocation();
   }
 
-  // ✅ مقداردهی اولیه موقعیت
   Future<void> _initializeLocation() async {
     setState(() {
       _isLoading = true;
@@ -50,7 +47,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
 
     try {
-      // ✅ بررسی دسترسی‌ها
       final status = await Permission.location.request();
       if (status.isDenied) {
         setState(() {
@@ -68,23 +64,28 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return;
       }
 
-      // ✅ دریافت موقعیت فعلی
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      // ✅ دریافت موقعیت فعلی با Location
+      final locationData = await _location.getLocation();
 
-      setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
-        _selectedPosition = _currentPosition;
-        _isLoading = false;
-        _isLocationSelected = true;
-      });
+      if (locationData.latitude != null && locationData.longitude != null) {
+        setState(() {
+          _currentPosition = LatLng(
+            locationData.latitude!,
+            locationData.longitude!,
+          );
+          _selectedPosition = _currentPosition;
+          _isLoading = false;
+          _isLocationSelected = true;
+        });
 
-      // ✅ دریافت آدرس موقعیت
-      await _getAddress(_currentPosition!);
-
-      // ✅ افزودن نشانگر
-      _addMarker(_currentPosition!);
+        await _getAddress(_currentPosition!);
+        _addMarker(_currentPosition!);
+      } else {
+        setState(() {
+          _errorMessage = 'موقعیت مکانی پیدا نشد';
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _errorMessage = 'خطا در دریافت موقعیت: ${e.toString()}';
@@ -93,7 +94,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  // ✅ دریافت آدرس از مختصات
+  // ✅ بقیه متدها به همین صورت باقی می‌مانند
   Future<void> _getAddress(LatLng position) async {
     try {
       final url = Uri.parse(
@@ -119,28 +120,22 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  // ✅ حرکت به موقعیت مشخص
   void _moveToLocation(LatLng position) {
     if (_mapController != null && _controllerCompleter.isCompleted) {
       _mapController!.move(position, 16);
     }
   }
 
-  // ✅ انتخاب موقعیت با کلیک روی نقشه
   void _onMapTap(TapPosition tapPosition, LatLng position) {
     setState(() {
       _selectedPosition = position;
       _isLocationSelected = true;
     });
 
-    // ✅ افزودن نشانگر
     _addMarker(position);
-
-    // ✅ دریافت آدرس
     _getAddress(position);
   }
 
-  // ✅ افزودن نشانگر
   void _addMarker(LatLng position) {
     setState(() {
       _markers.clear();
@@ -155,12 +150,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
-  // ✅ ارسال لوکیشن
   void _sendLocation() {
     if (_selectedPosition == null) return;
 
-    final locationText =
-        '''
+    final locationText = '''
 📍 موقعیت مکانی
 ━━━━━━━━━━━━━━━━━━━━
 📌 آدرس: ${_address.isNotEmpty ? _address : 'نامشخص'}
@@ -204,8 +197,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       body: _isLoading
           ? _buildLoadingState()
           : _errorMessage.isNotEmpty
-          ? _buildErrorState()
-          : _buildMapContent(),
+              ? _buildErrorState()
+              : _buildMapContent(),
     );
   }
 
@@ -260,7 +253,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Widget _buildMapContent() {
     return Column(
       children: [
-        // ✅ نمایش آدرس انتخاب شده
         if (_address.isNotEmpty)
           Container(
             width: double.infinity,
@@ -282,7 +274,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 Expanded(
                   child: Text(
                     _address,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -290,8 +285,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ],
             ),
           ),
-
-        // ✅ نقشه با flutter_map
         Expanded(
           child: FlutterMap(
             mapController: _mapController,
@@ -305,13 +298,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.inner_hero_app',
               ),
-              // ✅ نشانگرها
               MarkerLayer(markers: _markers),
             ],
           ),
         ),
-
-        // ✅ دکمه‌های پایین
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -326,7 +316,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           ),
           child: Row(
             children: [
-              // ✅ دکمه موقعیت فعلی
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
@@ -353,8 +342,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // ✅ دکمه ارسال
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
