@@ -670,6 +670,10 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
   // ==================== کارت چالش عمومی ====================
 
+  // lib/features/explore/screens/challenges_tab.dart
+
+  // ✅ بخش _buildChallengeCard - اصلاح کامل Row
+
   Widget _buildChallengeCard(
     Map<String, dynamic> challenge, {
     String status = 'new',
@@ -694,7 +698,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
       onTap: () => widget.showChallengeDetails(challenge),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16), // ✅ افزایش padding
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(16),
@@ -852,92 +856,84 @@ class _ChallengesTabState extends State<ChallengesTab> {
             ),
             const SizedBox(height: 12),
 
-            // ✅ ردیف پایین: مدت زمان، XP و دکمه (اصلاح شده با Expanded)
-            Row(
+            // ✅ ردیف پایین: مدت زمان، XP و دکمه (اصلاح شده با Wrap)
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 // مدت زمان
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isExpired
-                          ? Colors.grey.shade200
-                          : Colors.white.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.timer,
-                          size: 14,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isExpired
+                        ? Colors.grey.shade200
+                        : Colors.white.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.timer,
+                        size: 14,
+                        color: isExpired
+                            ? Colors.grey.shade500
+                            : Colors.grey.shade700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${challenge['challenge_duration'] ?? 7} روزه',
+                        style: TextStyle(
+                          fontSize: 11,
                           color: isExpired
                               ? Colors.grey.shade500
                               : Colors.grey.shade700,
                         ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            '${challenge['challenge_duration'] ?? 7} روزه',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isExpired
-                                  ? Colors.grey.shade500
-                                  : Colors.grey.shade700,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
                 // XP
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isExpired
-                          ? Colors.grey.shade200
-                          : Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.stars,
-                          size: 14,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isExpired
+                        ? Colors.grey.shade200
+                        : Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.stars,
+                        size: 14,
+                        color: isExpired
+                            ? Colors.grey.shade500
+                            : const Color(0xFFFFA500),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '+${challenge['xp_reward'] ?? 0}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                           color: isExpired
                               ? Colors.grey.shade500
                               : const Color(0xFFFFA500),
                         ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            '+${challenge['xp_reward'] ?? 0}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isExpired
-                                  ? Colors.grey.shade500
-                                  : const Color(0xFFFFA500),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 // دکمه جزئیات
                 SizedBox(
                   height: 32,

@@ -8,6 +8,7 @@ import '../features/explore/models/package_model.dart';
 import '../features/explore/models/package_habit_model.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/offline_operation.dart';
+import '../features/arena/models/timer_setting.dart';
 
 class LocalStorageService {
   static final LocalStorageService _instance = LocalStorageService._internal();
@@ -586,12 +587,40 @@ class LocalStorageService {
 
 // ==================== Hive Adapters ====================
 
+// lib/services/local_storage_service.dart
+
 class HabitAdapter extends TypeAdapter<Habit> {
   @override
   final int typeId = 0;
 
   @override
   Habit read(BinaryReader reader) {
+    DateTime parseDate(String dateStr) {
+      try {
+        if (dateStr.isEmpty) return DateTime.now();
+        return DateTime.parse(dateStr);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+
+    // ✅ خواندن timer_setting با تبدیل نوع
+    TimerSetting? timerSetting;
+    try {
+      final timerSettingMap = reader.readMap();
+      if (timerSettingMap.isNotEmpty) {
+        // ✅ تبدیل Map<dynamic, dynamic> به Map<String, dynamic>
+        final Map<String, dynamic> convertedMap = {};
+        timerSettingMap.forEach((key, value) {
+          convertedMap[key.toString()] = value;
+        });
+        timerSetting = TimerSetting.fromMap(convertedMap);
+      }
+    } catch (e) {
+      // اگر timerSetting وجود نداشت، نادیده بگیر
+      print('⚠️ Error reading timer_setting: $e');
+    }
+
     return Habit(
       id: reader.readString(),
       userId: reader.readString(),
@@ -614,17 +643,18 @@ class HabitAdapter extends TypeAdapter<Habit> {
       currentStreak: reader.readInt(),
       bestStreak: reader.readInt(),
       isActive: reader.readBool(),
-      createdAt: DateTime.parse(reader.readString()),
-      updatedAt: DateTime.parse(reader.readString()),
+      createdAt: parseDate(reader.readString()),
+      updatedAt: parseDate(reader.readString()),
       groupId: reader.readString().isEmpty ? null : reader.readString(),
       startDate: reader.readString().isEmpty
           ? null
-          : DateTime.parse(reader.readString()),
+          : parseDate(reader.readString()),
       endDate: reader.readString().isEmpty
           ? null
-          : DateTime.parse(reader.readString()),
+          : parseDate(reader.readString()),
       challengeId: reader.readString().isEmpty ? null : reader.readString(),
       questId: reader.readString().isEmpty ? null : reader.readString(),
+      timerSetting: timerSetting,
     );
   }
 
@@ -658,6 +688,13 @@ class HabitAdapter extends TypeAdapter<Habit> {
     writer.writeString(obj.endDate?.toIso8601String() ?? '');
     writer.writeString(obj.challengeId ?? '');
     writer.writeString(obj.questId ?? '');
+
+    // ✅ نوشتن timer_setting
+    if (obj.timerSetting != null) {
+      writer.writeMap(obj.timerSetting!.toMap());
+    } else {
+      writer.writeMap({});
+    }
   }
 }
 

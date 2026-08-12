@@ -7,45 +7,30 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'providers/sync_provider.dart';
 import 'services/local_storage_service.dart';
+import 'services/audio_player_service.dart'; // ✅ جایگزین global_audio_service.dart
 
 void main() async {
-  print('🔵 [MAIN] Application starting...');
   WidgetsFlutterBinding.ensureInitialized();
-  print('🔵 [MAIN] WidgetsFlutterBinding ensured');
 
   try {
-    print('🔵 [MAIN] Loading .env file...');
     await dotenv.load(fileName: ".env");
-    print('✅ [MAIN] .env loaded successfully');
-
-    print('🔵 [MAIN] Initializing Supabase...');
     await Supabase.initialize(
       url: dotenv.env['SUPABASE_URL']!,
       anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
     );
-    print('✅ [MAIN] Supabase initialized');
-
-    print('🔵 [MAIN] Initializing LocalStorage...');
-    await LocalStorageService().resetDatabase();
     await LocalStorageService().init();
-    print('✅ [MAIN] LocalStorage initialized');
 
-    print('🔵 [MAIN] Running app...');
     runApp(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(
-            create: (context) => SyncProvider(),
-            lazy: false,
-          ),
+          ChangeNotifierProvider(create: (_) => SyncProvider()),
+          // ✅ استفاده از سرویس جدید
+          ChangeNotifierProvider(create: (_) => AudioPlayerService()),
         ],
         child: const HeroApp(),
       ),
     );
-    print('✅ [MAIN] App is running');
   } catch (e) {
-    print('🔴 [MAIN] Critical error: $e');
-    // اجرای اپلیکیشن با یک صفحه خطا
     runApp(
       MaterialApp(
         home: Scaffold(

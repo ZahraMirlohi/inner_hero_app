@@ -468,6 +468,7 @@ class ChatService {
       rethrow;
     }
   }
+
   // ==================== پیام‌ها ====================
 
   Future<void> sendMessage({
@@ -477,29 +478,113 @@ class ChatService {
     String type = 'text',
     Map<String, dynamic>? metadata,
     String? replyToId,
-    String? senderName, // ✅ اضافه کنید
+    String? senderName,
   }) async {
     try {
-      final data = {
+      final Map<String, dynamic> data = {
         'conversation_id': conversationId,
         'sender_id': senderId,
-        'sender_name': senderName, // ✅ اضافه کنید
+        'sender_name': senderName,
         'content': content,
         'type': type,
         'metadata': metadata ?? {},
         'reply_to_id': replyToId,
+        'status': 'sent', // ✅ وضعیت اولیه sent
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      await _client.from('messages').insert(data);
+      print('📤 [CHAT_SERVICE] Sending message...');
+      print('   - type: $type');
+      print('   - status: sent');
+
+      final response = await _client.from('messages').insert(data).select();
+      print('✅ [CHAT_SERVICE] Message inserted successfully!');
 
       await _client
           .from('conversations')
           .update({'last_message_at': DateTime.now().toIso8601String()})
           .eq('id', conversationId);
     } catch (e) {
-      print('❌ Error sending message: $e');
+      print('🔴 [CHAT_SERVICE] Error inserting message: $e');
       rethrow;
+    }
+  }
+
+  // ✅ پین کردن پیام
+  Future<void> pinMessage({
+    required String messageId,
+    required String userId,
+  }) async {
+    try {
+      // ✅ ابتدا پین قبلی را بردارید (فقط یک پیام می‌تواند پین شود)
+      await _client
+          .from('messages')
+          .update({'is_pinned': false, 'pinned_at': null, 'pinned_by': null})
+          .eq('conversation_id', await _getConversationIdByMessage(messageId))
+          .eq('is_pinned', true);
+
+      // ✅ پین کردن پیام جدید
+      await _client
+          .from('messages')
+          .update({
+            'is_pinned': true,
+            'pinned_at': DateTime.now().toIso8601String(),
+            'pinned_by': userId,
+          })
+          .eq('id', messageId);
+
+      print('📌 Message pinned: $messageId');
+    } catch (e) {
+      print('❌ Error pinning message: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ لغو پین پیام
+  Future<void> unpinMessage({required String messageId}) async {
+    try {
+      await _client
+          .from('messages')
+          .update({'is_pinned': false, 'pinned_at': null, 'pinned_by': null})
+          .eq('id', messageId);
+
+      print('📌 Message unpinned: $messageId');
+    } catch (e) {
+      print('❌ Error unpinning message: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ دریافت conversationId از messageId
+  Future<String> _getConversationIdByMessage(String messageId) async {
+    try {
+      final response = await _client
+          .from('messages')
+          .select('conversation_id')
+          .eq('id', messageId)
+          .maybeSingle();
+
+      return response?['conversation_id'] as String? ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // ✅ دریافت پیام پین شده یک گفتگو
+  Future<ChatMessage?> getPinnedMessage(String conversationId) async {
+    try {
+      final response = await _client
+          .from('messages')
+          .select()
+          .eq('conversation_id', conversationId)
+          .eq('is_pinned', true)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return ChatMessage.fromMap(response);
+    } catch (e) {
+      print('❌ Error getting pinned message: $e');
+      return null;
     }
   }
 
@@ -513,6 +598,7 @@ class ChatService {
           .from('messages')
           .select()
           .eq('conversation_id', conversationId)
+          .eq('is_deleted', false) // ✅ فقط پیام‌های حذف نشده
           .order('created_at', ascending: false)
           .limit(limit);
 
@@ -542,7 +628,6 @@ class ChatService {
     }
   }
 
-  // ✅ دریافت پیام‌ها به صورت Stream - با مدیریت خطا
   Stream<List<ChatMessage>> getMessages(
     String conversationId, {
     String? userId,
@@ -552,6 +637,8 @@ class ChatService {
           .from('messages')
           .stream(primaryKey: ['id'])
           .map((data) {
+            print('📊 [STREAM] Received ${data.length} messages from Realtime');
+
             final List<ChatMessage> messages = [];
             for (var item in data) {
               final convId = item['conversation_id'] as String?;
@@ -559,6 +646,9 @@ class ChatService {
                 final msg = ChatMessage.fromMap(item);
                 if (userId == null || !msg.hiddenFor.contains(userId)) {
                   messages.add(msg);
+                  print(
+                    '📊 [STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
+                  );
                 }
               }
             }
@@ -566,7 +656,6 @@ class ChatService {
             return _populateReplyTo(messages);
           })
           .handleError((error) {
-            // ✅ مدیریت خطا - فقط لاگ کن و Stream خالی برگردان
             print('⚠️ Realtime stream error: $error');
             return <ChatMessage>[];
           });
@@ -947,7 +1036,9 @@ class ChatService {
     }
   }
 
-  // ✅ علامت‌گذاری همه پیام‌های یک گفتگو به عنوان خوانده شده
+  // lib/services/chat_service.dart
+
+  /// ✅ علامت‌گذاری همه پیام‌های یک گفتگو به عنوان خوانده شده - نسخه اصلاح شده
   Future<void> markAllMessagesAsRead({
     required String conversationId,
     required String userId,
@@ -955,6 +1046,70 @@ class ChatService {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
 
+      // ✅ فقط پیام‌هایی که توسط کاربر مقابل ارسال شده و هنوز seen نشده‌اند
+      final result = await _client
+          .from('messages')
+          .update({'status': 'seen', 'read_at': now})
+          .eq('conversation_id', conversationId)
+          .neq('sender_id', userId)
+          .neq('status', 'seen');
+
+      // ✅ بررسی اینکه result لیست است یا نه
+      if (result != null && result is List) {
+        print('✅ All messages in conversation $conversationId marked as read');
+        print('📊 Updated ${result.length} messages');
+      } else {
+        // اگر result null بود یا لیست نبود، اما خطایی رخ نداده، یعنی موفق بوده
+        print('✅ All messages in conversation $conversationId marked as read');
+        print('📊 Update completed successfully (no detailed count)');
+      }
+    } catch (e) {
+      print('❌ Error marking all messages as read: $e');
+      // خطا را نادیده بگیر و ادامه بده
+      // چون ممکن است جدول messages خالی باشد یا محدودیت‌های RLS مانع شود
+    }
+  }
+
+  // lib/services/chat_service.dart
+
+  /// ✅ علامت‌گذاری همه پیام‌ها با RPC (روش مطمئن‌تر)
+  Future<int> markAllMessagesAsReadRPC({
+    required String conversationId,
+    required String userId,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'mark_messages_as_read',
+        params: {'p_conversation_id': conversationId, 'p_user_id': userId},
+      );
+
+      // نتیجه می‌تواند int یا Map باشد
+      int count = 0;
+      if (result is int) {
+        count = result;
+      } else if (result is Map) {
+        count = result['count'] ?? 0;
+      }
+
+      print('✅ $count messages marked as read via RPC');
+      return count;
+    } catch (e) {
+      print('❌ Error marking messages as read via RPC: $e');
+      return 0;
+    }
+  }
+
+  // lib/services/chat_service.dart
+
+  /// ✅ روش جایگزین بدون RPC - با تعریف متغیر now
+  Future<void> markAllMessagesAsReadSafe({
+    required String conversationId,
+    required String userId,
+  }) async {
+    try {
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      // ✅ به‌روزرسانی مستقیم
       await _client
           .from('messages')
           .update({'status': 'seen', 'read_at': now})
@@ -962,9 +1117,31 @@ class ChatService {
           .neq('sender_id', userId)
           .neq('status', 'seen');
 
-      print('✅ All messages in conversation $conversationId marked as read');
+      print('✅ All messages marked as read (safe method)');
     } catch (e) {
-      print('❌ Error marking all messages as read: $e');
+      print('⚠️ Safe method failed, trying individual updates...');
+
+      // اگر خطا داد، تک تک پیام‌ها را به‌روزرسانی کن
+      try {
+        final now2 = DateTime.now().toUtc().toIso8601String();
+
+        final unread = await _client
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .neq('sender_id', userId)
+            .neq('status', 'seen');
+
+        for (var msg in unread) {
+          await _client
+              .from('messages')
+              .update({'status': 'seen', 'read_at': now2})
+              .eq('id', msg['id']);
+        }
+        print('✅ ${unread.length} messages marked as read individually');
+      } catch (e2) {
+        print('❌ Error marking messages individually: $e2');
+      }
     }
   }
 

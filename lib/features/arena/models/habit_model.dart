@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shamsi_date/shamsi_date.dart';
+import 'timer_setting.dart'; // یا مسیر درست
 
 class Habit {
   String id;
@@ -35,6 +36,9 @@ class Habit {
   String? challengeId;
   String? questId;
 
+  // ✅ اضافه کردن timerSetting
+  TimerSetting? timerSetting;
+
   Habit({
     required this.id,
     required this.userId,
@@ -64,6 +68,7 @@ class Habit {
     this.endDate,
     this.challengeId,
     this.questId,
+    this.timerSetting, // ✅ اضافه کردن
   });
 
   // بررسی اینکه عادت هنوز منقضی نشده است
@@ -221,13 +226,22 @@ class Habit {
       'end_date': endDate?.toIso8601String(),
       'challenge_id': challengeId,
       'quest_id': questId,
+      // ✅ اضافه کردن timer_setting
+      'timer_setting': timerSetting?.toMap(),
     };
   }
 
-  // lib/features/arena/models/habit_model.dart
-
   factory Habit.fromMap(String id, Map<String, dynamic> map) {
-    // ✅ تاریخ‌ها رو با ایمنی بخوان
+    // ✅ خواندن timer_setting
+    TimerSetting? timerSetting;
+    if (map['timer_setting'] != null) {
+      try {
+        timerSetting = TimerSetting.fromMap(map['timer_setting']);
+      } catch (e) {
+        print('⚠️ Error parsing timer_setting: $e');
+      }
+    }
+
     DateTime parseDate(String? dateStr) {
       if (dateStr == null || dateStr.isEmpty) return DateTime.now();
       try {
@@ -296,6 +310,7 @@ class Habit {
       endDate: map['endDate'] != null ? parseDate(map['endDate']) : null,
       challengeId: map['challengeId'],
       questId: map['questId'],
+      timerSetting: timerSetting, // ✅ اضافه کردن
     );
   }
 

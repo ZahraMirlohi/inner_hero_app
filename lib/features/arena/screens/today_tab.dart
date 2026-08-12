@@ -1,3 +1,6 @@
+// lib/features/arena/screens/today_tab.dart
+
+// ✅ حذف importهای تکراری - فقط اینها را نگه دارید
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -13,9 +16,13 @@ import '/features/explore/models/quest_model.dart';
 import '/features/explore/models/user_quest_model.dart';
 import '/features/explore/screens/quest_completion_screen.dart';
 import '/features/explore/screens/challenge_completion_screen.dart';
-import '/../providers/sync_provider.dart';
+import '/providers/sync_provider.dart';
 import 'dart:async';
 import '/models/offline_operation.dart';
+import '../models/habit_time_tracking.dart'; // ✅ اضافه کنید
+import '../widgets/habit_timer_widget.dart'; // ✅ اضافه کنید
+import '../models/timer_setting.dart'; // اگر نیاز دارید
+import '../widgets/timer_picker_widget.dart';
 
 class TodayTab extends StatefulWidget {
   final DateTime selectedDate;
@@ -555,14 +562,22 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   DateTime? _lastRefreshTime;
   static const _minRefreshInterval = Duration(milliseconds: 500);
 
-  // ✅ ریفرش پروفایل
+  // lib/features/arena/screens/today_tab.dart
+
+  // ✅ ریفرش پروفایل با اطمینان از اجرا
   void _scheduleProfileRefresh() {
     final now = DateTime.now();
     if (_lastRefreshTime == null ||
         now.difference(_lastRefreshTime!) > _minRefreshInterval) {
       _lastRefreshTime = now;
       if (widget.profileRefreshNotifier != null) {
+        // ✅ مقدار notifier را افزایش بده
         widget.profileRefreshNotifier!.value++;
+        print(
+          '🔄 Profile refresh triggered with value: ${widget.profileRefreshNotifier!.value}',
+        );
+      } else {
+        print('⚠️ profileRefreshNotifier is null!');
       }
     }
   }
@@ -608,6 +623,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     Future.microtask(() async {
       try {
         if (syncProvider.isOnline) {
+          print('🗑️ Unmarking habit: ${habit.title}');
+
           // ✅ 1. لغو تکمیل عادت
           await _supabase.markHabitCompletedOnDate(
             habit.id,
@@ -615,35 +632,32 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             widget.selectedDate,
             false,
           );
-          await _supabase.removeXP(_currentUserId!, habit.xpReward);
 
-          // ✅ 2. اگر عادت مربوط به چالش است، روز چالش رو لغو کن
+          // ✅ 2. کم کردن XP
+          await _supabase.removeXP(_currentUserId!, habit.xpReward);
+          print('🗑️ XP removed: ${habit.xpReward} from habit: ${habit.title}');
+
+          // ✅ 3. اگر عادت مربوط به چالش است، روز چالش رو لغو کن
           if (habit.challengeId != null) {
             print('📝 Removing challenge day for: ${habit.challengeId}');
-
-            // حذف روز چالش از challenge_completions
             await _supabase.removeChallengeDay(
               userId: _currentUserId!,
               challengeId: habit.challengeId!,
               date: widget.selectedDate,
             );
-
-            // به‌روزرسانی progress چالش
             await _supabase.updateChallengeProgress(
               _currentUserId!,
               habit.challengeId!,
             );
           }
 
-          // ✅ 3. بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
+          // ✅ 4. بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
           final hasOtherActivities = await _checkIfTodayHasOtherActivities();
-
           print('📊 Has other activities: $hasOtherActivities');
           print('📊 Completed habits: ${_completedHabits.length}');
           print('📊 Completed tasks: ${_completedTasks.length}');
 
           if (!hasOtherActivities) {
-            // ✅ اگر فعالیت دیگه‌ای نبود، is_active رو false کن
             print('📊 No activities left - setting isActive = false');
             await _supabase.recordDailyActivity(
               userId: _currentUserId!,
@@ -653,14 +667,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               xpEarned: 0,
               isActive: false,
             );
-
-            // ✅ استریک رو مجبور به بازمحاسبه کن
             await _supabase.updateUserStreak(_currentUserId!);
-
-            // ✅ ریفرش پروفایل
             _scheduleProfileRefresh();
           } else {
-            // ✅ اگر فعالیت دیگه‌ای هست، فقط آمار رو به‌روزرسانی کن
             print('📊 Other activities exist - keeping isActive = true');
             await _supabase.recordDailyActivity(
               userId: _currentUserId!,
@@ -672,8 +681,23 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             );
           }
 
+          // ✅ 5. ریفرش پروفایل (با تاخیر برای اطمینان از ذخیره شدن)
           _scheduleProfileRefresh();
+
+          // ✅ 6. یک بار دیگر ریفرش با تاخیر بیشتر
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              _scheduleProfileRefresh();
+            }
+          });
+
+          _hasShownCongratulationToday = false;
+          _checkAllCompletedAndShowCongratulation();
+
+          // ✅ 7. بارگذاری مجدد داده‌ها برای به‌روزرسانی UI
+          await _loadData();
         } else {
+          // ✅ حالت آفلاین
           await syncProvider.addOfflineOperation(
             type: OperationType.uncompleteHabit,
             data: {
@@ -688,13 +712,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         if (habit.questId != null && syncProvider.isOnline) {
           unawaited(_recalculateQuestProgress(_currentUserId!, habit.questId!));
         }
-
-        _hasShownCongratulationToday = false;
-        _checkAllCompletedAndShowCongratulation();
-
-        // ✅ ریفرش کامل داده‌ها برای به‌روزرسانی UI
-        await _loadData();
       } catch (e) {
+        print('❌ Error unmarking habit: $e');
         if (mounted) {
           setState(() {
             _habitCompletionStatus[habit.id] = true;
@@ -711,8 +730,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       }
     });
   }
-
-  // lib/features/arena/screens/today_tab.dart
 
   Future<bool> _checkIfTodayHasOtherActivities() async {
     final hasCompletedHabits = _completedHabits.isNotEmpty;
@@ -1844,6 +1861,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
+  // lib/features/arena/screens/today_tab.dart
+
   Widget _buildHabitItem(Habit habit) {
     // ✅ تشخیص عادت چالش (با 🏆 شروع میشه)
     final isChallengeHabit = habit.title.startsWith('🏆');
@@ -1957,6 +1976,45 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
+                    // ✅ نمایش زمان ثبت شده امروز
+                    FutureBuilder<HabitTimeTracking?>(
+                      future: _getHabitTimeToday(habit.id),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData && snapshot.data != null) {
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4A90E2).withAlpha(25),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.timer,
+                                  size: 12,
+                                  color: Color(0xFF4A90E2),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  snapshot.data!.formattedTime,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF4A90E2),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -2025,6 +2083,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                             icon: Icons.info_outline,
                             onTap: () => _showHabitDetailsDialog(habit),
                           ),
+                          // ✅ دکمه تایمر - فقط برای عادت‌های قابل ویرایش
+                          if (!isChallengeHabit && !isQuestHabit)
+                            _buildActionButton(
+                              icon: Icons.timer,
+                              onTap: () => _showTimerDialog(habit),
+                            ),
                           // ✅ دکمه ویرایش - برای چالش‌ها و ماموریت‌ها غیرفعال
                           _buildActionButton(
                             icon: Icons.edit,
@@ -2108,6 +2172,213 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  // lib/features/arena/screens/today_tab.dart
+
+  // ✅ متد دریافت زمان امروز عادت
+  Future<HabitTimeTracking?> _getHabitTimeToday(String habitId) async {
+    try {
+      final user = await _supabase.getCurrentUser();
+      if (user == null) return null;
+
+      final today = DateTime.now().toIso8601String().split('T').first;
+
+      final response = await _supabase.client
+          .from('habit_time_tracking')
+          .select()
+          .eq('habit_id', habitId)
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .maybeSingle();
+
+      if (response != null) {
+        return HabitTimeTracking.fromMap(response);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting habit time: $e');
+      return null;
+    }
+  }
+
+  // lib/features/arena/screens/today_tab.dart
+
+  // ✅ متد _showTimerDialog
+  void _showTimerDialog(Habit habit) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    '⏱️ تایمر عادت',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    habit.title,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ✅ ویجت تایمر
+                  HabitTimerWidget(
+                    habitId: habit.id,
+                    habitTitle: habit.title,
+                    onTimeSaved: () {
+                      Navigator.pop(context);
+                      // ✅ ریفرش صفحه
+                      if (mounted) {
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ زمان با موفقیت ثبت شد!'),
+                            backgroundColor: Colors.green,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('بستن'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ✅ متد ذخیره تنظیمات تایمر با دقیقه و ثانیه
+  void _saveTimerSetting(
+    String habitId,
+    int minutes,
+    int seconds,
+    bool isCountdown,
+  ) async {
+    try {
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      final habits = syncProvider.habits;
+      final index = habits.indexWhere((h) => h.id == habitId);
+
+      if (index == -1) return;
+
+      final habit = habits[index];
+
+      // ✅ ایجاد TimerSetting جدید با دقیقه و ثانیه
+      final timerSetting = TimerSetting(
+        habitId: habitId,
+        minutes: minutes,
+        seconds: seconds,
+        isCountdown: isCountdown,
+        isEnabled: true,
+      );
+
+      final updatedHabit = Habit(
+        id: habit.id,
+        userId: habit.userId,
+        title: habit.title,
+        description: habit.description,
+        subHabits: habit.subHabits,
+        completedSubHabits: habit.completedSubHabits,
+        iconName: habit.iconName,
+        iconColor: habit.iconColor,
+        backgroundColor: habit.backgroundColor,
+        frequencyType: habit.frequencyType,
+        dailyIntervalDays: habit.dailyIntervalDays,
+        weeklyDays: habit.weeklyDays,
+        weeklyIntervalWeeks: habit.weeklyIntervalWeeks,
+        monthlyDays: habit.monthlyDays,
+        monthlyIntervalMonths: habit.monthlyIntervalMonths,
+        timeOfDay: habit.timeOfDay,
+        reminders: habit.reminders,
+        xpReward: habit.xpReward,
+        currentStreak: habit.currentStreak,
+        bestStreak: habit.bestStreak,
+        isActive: habit.isActive,
+        createdAt: habit.createdAt,
+        updatedAt: DateTime.now(),
+        groupId: habit.groupId,
+        startDate: habit.startDate,
+        endDate: habit.endDate,
+        challengeId: habit.challengeId,
+        questId: habit.questId,
+        timerSetting: timerSetting,
+      );
+
+      final supabase = SupabaseService();
+      await supabase.updateHabit(updatedHabit);
+      await syncProvider.saveHabitToLocal(updatedHabit);
+
+      if (mounted) {
+        setState(() {
+          final habitIndex = _todayHabits.indexWhere((h) => h.id == habitId);
+          if (habitIndex != -1) {
+            _todayHabits[habitIndex] = updatedHabit;
+          }
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ تنظیمات تایمر ذخیره شد'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error saving timer setting: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showCompleteHabitDialog(Habit habit) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('🎉 تایمر به پایان رسید!'),
+        content: Text('آیا عادت "${habit.title}" را انجام دادید؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('هنوز نه'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _markHabitCompleted(habit);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('بله، انجام شد ✅'),
+          ),
+        ],
       ),
     );
   }
@@ -2672,6 +2943,132 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// lib/features/arena/screens/today_tab.dart
+
+// ✅ اصلاح کامل بخش _TimerDialogContent
+class _TimerDialogContent extends StatefulWidget {
+  final Habit habit;
+  final int initialMinutes;
+  final int initialSeconds;
+  final Function(int, int, bool) onSave;
+  final VoidCallback onComplete;
+
+  const _TimerDialogContent({
+    required this.habit,
+    required this.initialMinutes,
+    required this.initialSeconds,
+    required this.onSave,
+    required this.onComplete,
+  });
+
+  @override
+  State<_TimerDialogContent> createState() => _TimerDialogContentState();
+}
+
+class _TimerDialogContentState extends State<_TimerDialogContent> {
+  late int _minutes;
+  late int _seconds;
+  late bool _isCountdown;
+
+  @override
+  void initState() {
+    super.initState();
+    _minutes = widget.initialMinutes;
+    _seconds = widget.initialSeconds;
+    _isCountdown = widget.habit.timerSetting?.isCountdown ?? true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            '⏱️ تایمر عادت',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.habit.title,
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+
+          // ✅ انتخاب دقیقه و ثانیه
+          TimerPickerWidget(
+            initialMinutes: _minutes,
+            initialSeconds: _seconds,
+            onMinutesChanged: (value) {
+              setState(() {
+                _minutes = value;
+              });
+            },
+            onSecondsChanged: (value) {
+              setState(() {
+                _seconds = value;
+              });
+            },
+          ),
+
+          const SizedBox(height: 16),
+
+          // ✅ نمایش زمان کل
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${_minutes.toString().padLeft(2, '0')}:${_seconds.toString().padLeft(2, '0')}',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4A90E2),
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ✅ ویجت تایمر با پارامترهای جدید
+          HabitTimerWidget(
+            habitId: widget.habit.id,
+            habitTitle: widget.habit.title,
+            onTimeSaved: () {
+              Navigator.pop(context);
+              widget.onComplete();
+            },
+          ),
+
+          const SizedBox(height: 8),
+
+          // ✅ دکمه ذخیره تنظیمات تایمر (اختیاری)
+          ElevatedButton.icon(
+            onPressed: () {
+              widget.onSave(_minutes, _seconds, _isCountdown);
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.save, size: 18),
+            label: const Text('ذخیره تنظیمات تایمر'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A90E2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

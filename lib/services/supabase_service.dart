@@ -130,6 +130,57 @@ class SupabaseService {
     _userCacheTime = null;
   }
 
+  // lib/services/supabase_service.dart
+
+  /// ✅ اضافه کردن متد برای رفرش توکن
+  Future<bool> refreshSession() async {
+    try {
+      final session = client.auth.currentSession;
+      if (session == null) {
+        print('⚠️ No active session to refresh');
+        return false;
+      }
+
+      // ✅ تلاش برای رفرش توکن
+      await client.auth.refreshSession();
+      print('✅ Session refreshed successfully');
+      return true;
+    } catch (e) {
+      print('❌ Error refreshing session: $e');
+      return false;
+    }
+  }
+
+  /// ✅ متد بررسی و رفرش توکن در صورت نیاز
+  Future<bool> ensureValidSession() async {
+    try {
+      final session = client.auth.currentSession;
+      if (session == null) {
+        print('⚠️ No active session');
+        return false;
+      }
+
+      // ✅ بررسی انقضای توکن (5 دقیقه قبل از انقضا)
+      final expiresAt = session.expiresAt;
+      if (expiresAt != null) {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final timeLeft = expiresAt - now;
+
+        if (timeLeft < 300) {
+          // کمتر از 5 دقیقه
+          print('⏰ Token expires soon, refreshing...');
+          await client.auth.refreshSession();
+          print('✅ Token refreshed');
+        }
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ Error ensuring valid session: $e');
+      return false;
+    }
+  }
+
   // ==================== Profiles ====================
 
   Future<void> createProfile(String userId, String email, String name) async {
@@ -442,8 +493,13 @@ class SupabaseService {
     }
   }
 
+  // lib/services/supabase_service.dart
+
   Future<void> removeXP(String userId, int amount) async {
     try {
+      print('🗑️ Removing $amount XP from user: $userId');
+
+      // ✅ 1. به‌روزرسانی در user_progress
       final response = await client
           .from('user_progress')
           .select('id, total_xp')
@@ -452,6 +508,8 @@ class SupabaseService {
       if (response.isNotEmpty) {
         final currentXP = response[0]['total_xp'] ?? 0;
         final newXP = (currentXP - amount).clamp(0, double.infinity).toInt();
+
+        print('📊 Current XP: $currentXP, New XP: $newXP');
 
         await client
             .from('user_progress')
@@ -464,6 +522,7 @@ class SupabaseService {
         });
       }
 
+      // ✅ 2. به‌روزرسانی در profiles
       try {
         final profileResponse = await client
             .from('profiles')
@@ -473,15 +532,21 @@ class SupabaseService {
         if (profileResponse.isNotEmpty) {
           final currentXP = profileResponse[0]['total_xp'] ?? 0;
           final newXP = (currentXP - amount).clamp(0, double.infinity).toInt();
+
+          print('📊 Profile XP: $currentXP -> $newXP');
+
           await client
               .from('profiles')
               .update({'total_xp': newXP})
               .eq('user_id', userId);
         }
       } catch (e) {
-        // ignore
+        print('⚠️ Error updating profile XP: $e');
       }
+
+      print('✅ XP removed successfully');
     } catch (e) {
+      print('❌ Error removing XP: $e');
       rethrow;
     }
   }

@@ -65,6 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  // lib/features/profile/screens/profile_screen.dart
+
   void _onRefreshTriggered() {
     print(
       '🔄 Profile refresh triggered from notifier: ${widget.refreshNotifier?.value}',
@@ -86,9 +88,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _isRefreshing = true;
     print('🔄 Refreshing profile...');
 
+    // ✅ فقط کش weekDays را پاک کن (چون _cachedHabits و _cachedTasks وجود ندارند)
+    _cachedWeekDays = null;
+
+    // ✅ اجباری کردن بارگذاری از دیتابیس
+    _isLoadingInProgress = false;
+
     _loadProfile()
         .then((_) {
-          // ✅ بعد از بارگذاری پروفایل، آنالytics را هم ریفرش کن
+          // ✅ ریفرش آنالytics
           _analyticsKey.currentState?.refreshData();
           _isRefreshing = false;
           print('✅ Profile refresh completed');
@@ -98,7 +106,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isRefreshing = false;
         });
   }
-
   // ==================== متد اصلی بارگذاری پروفایل ====================
 
   // lib/features/profile/screens/profile_screen.dart
@@ -121,33 +128,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      if (!syncProvider.isOnline) {
-        print('📱 OFFLINE - Loading from LocalStorage...');
-        final success = await _loadFromLocal(syncProvider);
-        if (!success && mounted) {
-          setState(() {
-            _errorMessage = 'برای بارگذاری اطلاعات به اتصال اینترنت نیاز دارید';
-            _isLoading = false;
-          });
+      // ✅ همیشه از دیتابیس بخوان
+      if (syncProvider.isOnline) {
+        print('🌐 Online - loading from Supabase...');
+        final success = await _loadFromSupabase(syncProvider);
+        if (success) {
+          _isLoadingInProgress = false;
+          await _recalculateWeeklyStreak();
+          if (mounted) {
+            setState(() {});
+          }
+          return;
         }
-        _isLoadingInProgress = false;
-        return;
       }
 
-      print('🌐 Online - loading from Supabase...');
-      final success = await _loadFromSupabase(syncProvider);
-      if (success) {
-        _isLoadingInProgress = false;
-
-        // ✅ محاسبه مجدد استریک هفتگی از دیتابیس
-        await _recalculateWeeklyStreak();
-
-        if (mounted) {
-          setState(() {});
-        }
-        return;
-      }
-
+      // اگر آنلاین نبود، از localStorage بخوان
       print('📱 Loading from LocalStorage...');
       final localSuccess = await _loadFromLocal(syncProvider);
 
@@ -255,6 +250,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   // ==================== بارگذاری از LocalStorage ====================
 
+  // lib/features/profile/screens/profile_screen.dart
+
   Future<bool> _loadFromLocal(SyncProvider syncProvider) async {
     try {
       final localProfile = syncProvider.profile;
@@ -267,6 +264,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _currentStreak = localProfile['current_streak'] ?? 0;
         _bestStreak = localProfile['best_streak'] ?? 0;
         _weeklyStreak = localProfile['weekly_streak'] ?? 0;
+
+        // ✅ اطمینان از اینکه total_xp از localStorage صحیح است
+        _profile!.totalXp = localProfile['total_xp'] ?? 0;
+        print(
+          '📊 Profile loaded from LOCAL storage with XP: ${_profile!.totalXp}',
+        );
 
         print('✅ Profile loaded from LOCAL storage');
         print('   - Name: ${_profile?.name}');
@@ -291,6 +294,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== بارگذاری از Supabase ====================
 
+  // lib/features/profile/screens/profile_screen.dart
+
   Future<bool> _loadFromSupabase(SyncProvider syncProvider) async {
     try {
       final currentUser = await _supabase.getCurrentUser();
@@ -307,6 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       print('👤 Loading profile for user: ${currentUser.id}');
 
+      // ✅ دریافت پروفایل با XP از دیتابیس
       final response = await _supabase.client
           .from('profiles')
           .select()
@@ -314,33 +320,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .maybeSingle();
 
       if (response != null) {
-        // ✅ اگر unique_id وجود نداشت، تولید کن
+        // ✅ اطمینان از وجود unique_id
         if (response['unique_id'] == null || response['unique_id'].isEmpty) {
           final newUniqueId = UniqueIdGenerator.generateSecure();
           await _supabase.client
               .from('profiles')
               .update({'unique_id': newUniqueId})
               .eq('user_id', currentUser.id);
-
-          // ✅ به‌روزرسانی response
           response['unique_id'] = newUniqueId;
           print('✅ Unique ID generated for user: $newUniqueId');
         }
 
+        // ✅ دریافت XP از user_progress (منبع اصلی)
+        int totalXP = response['total_xp'] ?? 0;
+        try {
+          final progressResponse = await _supabase.client
+              .from('user_progress')
+              .select('total_xp')
+              .eq('user_id', currentUser.id)
+              .maybeSingle();
+
+          if (progressResponse != null) {
+            final progressXP = progressResponse['total_xp'] as int? ?? 0;
+            // ✅ از user_progress استفاده کن چون منبع اصلی است
+            totalXP = progressXP;
+            print('📊 XP from user_progress: $totalXP');
+
+            // ✅ اگر profiles با user_progress هماهنگ نیست، آن را به‌روزرسانی کن
+            if (response['total_xp'] != totalXP) {
+              await _supabase.client
+                  .from('profiles')
+                  .update({'total_xp': totalXP})
+                  .eq('user_id', currentUser.id);
+              print('📊 Profile XP updated to match user_progress: $totalXP');
+            }
+          }
+        } catch (e) {
+          print('⚠️ Error getting user_progress: $e');
+        }
+
+        // ✅ ساخت پروفایل با XP صحیح
         _profile = UserProfile.fromMap(response, currentUser.id);
         _currentStreak = response['current_streak'] ?? 0;
         _bestStreak = response['best_streak'] ?? 0;
         _weeklyStreak = response['weekly_streak'] ?? 0;
 
+        // ✅ تنظیم total_xp با مقدار صحیح
+        _profile!.totalXp = totalXP;
+        print('📊 Profile XP set to: ${_profile!.totalXp}');
+
         _cachedWeekDays = await _calculateWeekDaysFromDatabase(currentUser.id);
 
-        await syncProvider.saveProfileToLocal(response);
+        // ✅ ذخیره در LocalStorage با مقدار صحیح
+        final profileMap = _profile!.toMap();
+        profileMap['user_id'] = currentUser.id;
+        profileMap['current_streak'] = _currentStreak;
+        profileMap['best_streak'] = _bestStreak;
+        profileMap['weekly_streak'] = _weeklyStreak;
+        profileMap['total_xp'] = totalXP;
+        await syncProvider.saveProfileToLocal(profileMap);
 
         print('✅ Profile loaded from SUPABASE');
         print('   - Name: ${_profile?.name}');
         print('   - XP: ${_profile?.totalXp}');
         print('   - Streak: $_currentStreak');
-        print('   - Unique ID: ${_profile?.uniqueId}');
 
         if (mounted) {
           setState(() {

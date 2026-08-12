@@ -2,7 +2,16 @@
 
 import 'package:flutter/material.dart';
 
-enum MessageType { text, image, sticker, gif, file, system }
+enum MessageType {
+  text,
+  image,
+  sticker,
+  gif,
+  file,
+  system,
+  progress,
+  achievement,
+}
 
 enum MessageStatus { sending, sent, delivered, seen, failed }
 
@@ -25,9 +34,13 @@ class ChatMessage {
   final DateTime? editedAt;
   final DateTime? deletedAt;
   final bool isTemp;
-  // ✅ اضافه کردن لیست واکنش‌ها (برای نمایش در UI)
   final List<MessageReaction>? reactions;
   final List<String> hiddenFor;
+
+  // ✅ اضافه کردن فیلد isPinned
+  final bool isPinned;
+  final DateTime? pinnedAt;
+  final String? pinnedBy;
 
   ChatMessage({
     required this.id,
@@ -50,6 +63,9 @@ class ChatMessage {
     this.deletedAt,
     this.isTemp = false,
     this.hiddenFor = const [],
+    this.isPinned = false, // ✅ اضافه شده
+    this.pinnedAt, // ✅ اضافه شده
+    this.pinnedBy, // ✅ اضافه شده
   });
 
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
@@ -75,7 +91,7 @@ class ChatMessage {
       isDeleted: map['is_deleted'] ?? false,
       replyToId: map['reply_to_id'],
       replyTo: null,
-      reactions: null, // در آینده از جدول جداگانه پر میشود
+      reactions: null,
       createdAt: DateTime.parse(map['created_at']),
       editedAt: map['edited_at'] != null
           ? DateTime.parse(map['edited_at'])
@@ -83,6 +99,12 @@ class ChatMessage {
       deletedAt: map['deleted_at'] != null
           ? DateTime.parse(map['deleted_at'])
           : null,
+      // ✅ اضافه شده
+      isPinned: map['is_pinned'] ?? false,
+      pinnedAt: map['pinned_at'] != null
+          ? DateTime.parse(map['pinned_at'])
+          : null,
+      pinnedBy: map['pinned_by'],
     );
   }
 
@@ -105,6 +127,10 @@ class ChatMessage {
       'created_at': createdAt.toIso8601String(),
       'edited_at': editedAt?.toIso8601String(),
       'deleted_at': deletedAt?.toIso8601String(),
+      // ✅ اضافه شده
+      'is_pinned': isPinned,
+      'pinned_at': pinnedAt?.toIso8601String(),
+      'pinned_by': pinnedBy,
     };
   }
 

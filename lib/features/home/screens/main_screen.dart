@@ -32,10 +32,14 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          ArenaScreen(profileRefreshNotifier: _profileRefreshNotifier),
+          ArenaScreen(
+            profileRefreshNotifier: _profileRefreshNotifier,
+          ), // ✅ درست ارسال شده
           const ChatScreen(),
           ExploreScreen(refreshNotifier: _exploreRefreshNotifier),
-          ProfileScreen(refreshNotifier: _profileRefreshNotifier),
+          ProfileScreen(
+            refreshNotifier: _profileRefreshNotifier,
+          ), // ✅ درست ارسال شده
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

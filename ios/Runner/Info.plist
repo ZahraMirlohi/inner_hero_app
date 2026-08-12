@@ -47,6 +47,21 @@
 			</array>
 		</dict>
 	</dict>
+    <!-- ✅ دسترسی‌های موقعیت -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>برای نمایش موقعیت شما روی نقشه</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>برای نمایش موقعیت شما روی نقشه</string>
+	    <!-- ✅ دسترسی به مخاطبان -->
+    <key>NSContactsUsageDescription</key>
+    <string>برای ارسال شماره تماس به دوستان</string>
+    
+    <!-- ✅ دسترسی به فایل‌ها -->
+    <key>UIFileSharingEnabled</key>
+    <true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key>
+    <true/>
+	
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
