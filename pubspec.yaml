@@ -30,7 +30,8 @@ dependencies:
     sdk: flutter
   flutter_map: ^7.0.0
   latlong2: ^0.9.1
-  geolocator: ^12.0.0  # ✅ برگشت به 12.0.0
+  # ❌ geolocator: ^12.0.0  # حذف
+  location: ^7.0.0  # ✅ جایگزین
   permission_handler: ^11.3.1
   linkify: ^5.0.0
   file_picker: ^8.0.0
@@ -56,4 +57,3 @@ flutter:
 dependency_overrides:
   flutter_web_auth_2: ^5.0.0
   app_links: ^3.4.0
-  geolocator_android: ^4.6.2
