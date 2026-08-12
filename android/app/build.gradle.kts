@@ -7,8 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36  // ✅ اینجا را به 36 تغییر دهید (قبلاً 34 بود)
-    
+    compileSdk = 36  // ✅ مطمئن شوید 36 است
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -16,10 +15,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = flutter.minSdkVersion
-        targetSdk = 36  // ✅ اینجا را هم به 36 تغییر دهید
+        minSdk = flutter.minSdkVersion  // ✅ به جای flutter.minSdkVersion
+        targetSdk = 36  // ✅ 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
@@ -50,7 +53,4 @@ flutter {
 
 dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
-    // ✅ اضافه کردن برای رفع خطای Play Store
-    implementation("com.google.android.play:app-update:2.1.0")
-    implementation("com.google.android.play:app-update-ktx:2.1.0")
 }
