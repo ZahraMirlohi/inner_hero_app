@@ -40,6 +40,7 @@ dependencies:
   universal_html: ^2.2.4
   url_launcher: ^6.2.1
   open_file: ^3.4.0
+  app_links: ^6.4.1
 
 dev_dependencies:
   flutter_test:
