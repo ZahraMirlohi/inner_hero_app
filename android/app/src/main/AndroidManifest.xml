@@ -1,6 +1,7 @@
 <!-- android/app/src/main/AndroidManifest.xml -->
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.inner_hero_app">
     
     <!-- ✅ مجوزها - باید OUTSIDE <application> باشند -->
     <uses-permission android:name="android.permission.INTERNET" />
