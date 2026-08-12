@@ -1,3 +1,5 @@
+// android/app/build.gradle.kts
+
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
@@ -13,20 +15,24 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true  // ✅ اضافه کنید
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true  // ✅ اضافه کنید
-            isShrinkResources = true  // ✅ اضافه کنید
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -35,16 +41,10 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-
 flutter {
     source = "../.."
 }
 
 dependencies {
-    implementation("androidx.multidex:multidex:2.0.1")  // ✅ اضافه کنید
+    implementation("androidx.multidex:multidex:2.0.1")
 }
