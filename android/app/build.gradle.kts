@@ -7,8 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36  // ✅ این باید 36 باشد
-    ndkVersion = "27.0.12077973"  // ✅ اضافه کنید
+    compileSdk = 36
+    ndkVersion = "28.2.13676358"  // ✅ 27.0.12077973 → 28.2.13676358
     
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
