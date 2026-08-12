@@ -1,3 +1,5 @@
+// android/app/build.gradle.kts
+
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
@@ -5,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36
+    compileSdk = 36  // ✅ اینجا را به 36 تغییر دهید (قبلاً 34 بود)
     
     ndkVersion = flutter.ndkVersion
 
@@ -17,17 +19,17 @@ android {
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
         minSdk = flutter.minSdkVersion
-        targetSdk = 36
+        targetSdk = 36  // ✅ اینجا را هم به 36 تغییر دهید
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true  // ✅ اضافه کنید
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true  // ✅ اضافه کنید
-            isShrinkResources = true  // ✅ اضافه کنید
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -48,4 +50,7 @@ flutter {
 
 dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
+    // ✅ اضافه کردن برای رفع خطای Play Store
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 }

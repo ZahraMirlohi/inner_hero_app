@@ -1,5 +1,15 @@
 # proguard-rules.pro
 
+# ✅ اضافه کنید - برای رفع خطای Missing classes
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
+# ✅ نگه داشتن کلاس‌های Play Core
+-keep class com.google.android.play.core.** { *; }
+-keep interface com.google.android.play.core.** { *; }
+
 # Flutter specific
 -keep class io.flutter.app.** { *; }
 -keep class io.flutter.plugin.**  { *; }
@@ -42,6 +52,9 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
+
+# Keep all classes in your app package
+-keep class com.example.inner_hero_app.** { *; }
 
 # Keep all classes that are used in Gson
 -keep class com.google.gson.** { *; }
@@ -120,35 +133,5 @@
 # Keep all classes that are used in URL Launcher
 -keep class com.url_launcher.** { *; }
 
-# Keep all classes that are used in Contacts Service
--keep class com.contacts_service.** { *; }
-
 # Keep all classes that are used in Flutter Contacts
 -keep class com.flutter_contacts.** { *; }
-
-# Keep all classes that are used in Universal HTML
--keep class com.universal_html.** { *; }
-
-# Keep all classes that are used in Build Runner
--keep class com.build_runner.** { *; }
-
-# Keep all classes that are used in Hive Generator
--keep class com.hive_generator.** { *; }
-
-# Optional: Keep all classes in your app package
--keep class com.example.inner_hero_app.** { *; }
-
-# Optional: Keep all classes in your app package (for testing)
--keep class com.example.inner_hero_app.test.** { *; }
-
-# Optional: Keep all classes in your app package (for release)
--keep class com.example.inner_hero_app.release.** { *; }
-
-# Keep all classes in your app package (for debug)
--keep class com.example.inner_hero_app.debug.** { *; }
-
-# Keep all classes in your app package (for profile)
--keep class com.example.inner_hero_app.profile.** { *; }
-
-# Optional: Keep all classes in your app package (for any)
--keep class com.example.inner_hero_app.** { *; }
