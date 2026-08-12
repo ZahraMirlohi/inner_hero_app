@@ -17,7 +17,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.29.0'  # ✅ 3.24.0 → 3.29.0
+        flutter-version: '3.24.0'
         channel: 'stable'
         cache: false
     
@@ -43,7 +43,7 @@ jobs:
       run: flutter pub get
     
     - name: Build APK
-      run: flutter build apk --release --android-skip-build-dependency-validation
+      run: flutter build apk --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
