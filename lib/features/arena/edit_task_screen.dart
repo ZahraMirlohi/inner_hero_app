@@ -79,9 +79,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   void _showJalaliDatePicker() {
-    final now = _dueDate != null
-        ? Jalali.fromDateTime(_dueDate!)
-        : Jalali.now();
+    final now =
+        _dueDate != null ? Jalali.fromDateTime(_dueDate!) : Jalali.now();
     int selectedYear = now.year;
     int selectedMonth = now.month;
     int selectedDay = now.day;
@@ -107,7 +106,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            initialValue: selectedYear,
+                            value: selectedYear,
                             decoration: const InputDecoration(
                               labelText: 'سال',
                               border: OutlineInputBorder(),
@@ -131,7 +130,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            initialValue: selectedMonth,
+                            value: selectedMonth,
                             decoration: const InputDecoration(
                               labelText: 'ماه',
                               border: OutlineInputBorder(),
@@ -156,9 +155,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
-                      initialValue: selectedDay > daysInMonth
-                          ? daysInMonth
-                          : selectedDay,
+                      value:
+                          selectedDay > daysInMonth ? daysInMonth : selectedDay,
                       decoration: const InputDecoration(
                         labelText: 'روز',
                         border: OutlineInputBorder(),
@@ -326,9 +324,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               subtitle: Text(
                 _getDisplayDate(),
                 style: TextStyle(
-                  color: _dueDate != null
-                      ? const Color(0xFF1A1A2E)
-                      : Colors.grey,
+                  color:
+                      _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
                 ),
               ),
               onTap: _selectDate,

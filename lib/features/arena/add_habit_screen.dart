@@ -131,9 +131,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   }
 
   void _showJalaliDatePickerForHabit() {
-    final now = _startDate != null
-        ? Jalali.fromDateTime(_startDate!)
-        : Jalali.now();
+    final now =
+        _startDate != null ? Jalali.fromDateTime(_startDate!) : Jalali.now();
     int selectedYear = now.year;
     int selectedMonth = now.month;
     int selectedDay = now.day;
@@ -159,7 +158,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            initialValue: selectedYear,
+                            value: selectedYear,
                             decoration: const InputDecoration(
                               labelText: 'سال',
                               border: OutlineInputBorder(),
@@ -183,7 +182,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            initialValue: selectedMonth,
+                            value: selectedMonth,
                             decoration: const InputDecoration(
                               labelText: 'ماه',
                               border: OutlineInputBorder(),
@@ -208,9 +207,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
-                      initialValue: selectedDay > daysInMonth
-                          ? daysInMonth
-                          : selectedDay,
+                      value:
+                          selectedDay > daysInMonth ? daysInMonth : selectedDay,
                       decoration: const InputDecoration(
                         labelText: 'روز',
                         border: OutlineInputBorder(),
@@ -424,9 +422,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                     ),
                     child: Icon(
                       icon['icon'],
-                      color: isSelected
-                          ? Color(_selectedIconColor)
-                          : Colors.grey,
+                      color:
+                          isSelected ? Color(_selectedIconColor) : Colors.grey,
                       size: 28,
                     ),
                   ),
@@ -551,9 +548,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? const Color(0xFF4A90E2)
-                  : Colors.grey.shade600,
+              color:
+                  isSelected ? const Color(0xFF4A90E2) : Colors.grey.shade600,
             ),
           ),
         ),
@@ -630,9 +626,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                       child: Text(
                         _weekdayLetters[index],
                         style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade600,
+                          color:
+                              isSelected ? Colors.white : Colors.grey.shade600,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -712,9 +707,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                       child: Text(
                         day.toString(),
                         style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade600,
+                          color:
+                              isSelected ? Colors.white : Colors.grey.shade600,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1131,17 +1125,14 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           iconColor: _selectedIconColor,
           backgroundColor: _selectedBgColor,
           frequencyType: _frequencyType,
-          dailyIntervalDays: _frequencyType == 'daily'
-              ? [_dailyIntervalDays]
-              : null,
+          dailyIntervalDays:
+              _frequencyType == 'daily' ? [_dailyIntervalDays] : null,
           weeklyDays: _frequencyType == 'weekly' ? _weeklyDays : null,
-          weeklyIntervalWeeks: _frequencyType == 'weekly'
-              ? _weeklyIntervalWeeks
-              : 1,
+          weeklyIntervalWeeks:
+              _frequencyType == 'weekly' ? _weeklyIntervalWeeks : 1,
           monthlyDays: _frequencyType == 'monthly' ? _monthlyDays : null,
-          monthlyIntervalMonths: _frequencyType == 'monthly'
-              ? _monthlyIntervalMonths
-              : 1,
+          monthlyIntervalMonths:
+              _frequencyType == 'monthly' ? _monthlyIntervalMonths : 1,
           timeOfDay: _timeOfDay,
           reminders: _reminders,
           startDate: _startDate,
