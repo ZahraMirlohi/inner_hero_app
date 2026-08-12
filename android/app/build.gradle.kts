@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36  // ✅ این درست است
+    compileSdk = 36
     
     ndkVersion = flutter.ndkVersion
 
@@ -18,21 +18,20 @@ android {
 
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = 23  // ✅ minSdk را کمی افزایش دهید
+        minSdk = 23
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true  // ✅ اضافه کنید
+        multiDexEnabled = true
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            // ✅ اضافه کنید
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android.txt"),
+                getDefaultProguardFile("proguard-android-optimize.txt"),  // ✅ اینجا تغییر
                 "proguard-rules.pro"
             )
         }
@@ -50,6 +49,5 @@ flutter {
 }
 
 dependencies {
-    // ✅ اضافه کنید
     implementation("androidx.multidex:multidex:2.0.1")
 }
