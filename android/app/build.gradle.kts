@@ -3,6 +3,7 @@
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
+    id("org.jetbrains.kotlin.android") version "2.0.21" apply true  // ✅ اضافه کنید
 }
 
 android {
@@ -37,9 +38,10 @@ android {
     }
 }
 
+// ✅ kotlinOptions با سینتکس ساده
 kotlin {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
