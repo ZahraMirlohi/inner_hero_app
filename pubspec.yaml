@@ -35,8 +35,8 @@ dependencies:
   linkify: ^5.0.0
 
 
-  file_picker: ^8.0.0  # برای انتخاب فایل و موزیک
-  contacts_service: ^0.6.3  # برای دسترسی به مخاطبان
+  file_picker: ^8.0.0  
+  flutter_contacts: ^1.1.9
   path_provider: ^2.1.0
   just_audio: ^0.9.37 
   universal_html: ^2.2.4

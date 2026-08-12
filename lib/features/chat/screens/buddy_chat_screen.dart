@@ -12,7 +12,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import 'package:linkify/linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -659,35 +659,37 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد ارسال شماره تماس - اصلاح شده برای Web
+  // ✅ متد ارسال شماره تماس - با flutter_contacts
   Future<void> _sendContact() async {
     // ✅ تشخیص Web
     final bool isWeb = kIsWeb;
 
     if (isWeb) {
-      // ✅ در Web: یک دیالوگ ساده برای وارد کردن شماره تماس نمایش بده
       _showContactInputDialog();
       return;
     }
 
-    // ✅ در موبایل/دسکتاپ: از contacts_service استفاده کن
-    final status = await Permission.contacts.request();
-    if (!status.isGranted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('برای ارسال شماره تماس به دسترسی مخاطبان نیاز است'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
-
+    // ✅ در موبایل/دسکتاپ: از flutter_contacts استفاده کن
     try {
-      final contacts = await ContactsService.getContacts();
+      // ✅ درخواست دسترسی
+      final hasPermission = await FlutterContacts.requestPermission();
+      if (!hasPermission) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('برای ارسال شماره تماس به دسترسی مخاطبان نیاز است'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // ✅ دریافت مخاطبان
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
 
       if (!mounted) return;
 
@@ -753,9 +755,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                         itemBuilder: (context, index) {
                           final contact = contacts[index];
                           final displayName = contact.displayName ?? 'بدون نام';
-                          final phones =
-                              contact.phones?.map((p) => p.value).toList() ??
-                              [];
+                          final phones = contact.phones
+                              .map((p) => p.number)
+                              .toList();
 
                           return ListTile(
                             leading: CircleAvatar(
@@ -778,7 +780,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                             ),
                             subtitle: phones.isNotEmpty
                                 ? Text(
-                                    phones.first ?? 'شماره موجود نیست',
+                                    phones.first,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey.shade600,
@@ -799,10 +801,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       if (selectedContact != null && mounted) {
-        final phones =
-            selectedContact.phones?.map((p) => p.value).toList() ?? [];
+        final phones = selectedContact.phones.map((p) => p.number).toList();
         final phoneNumber = phones.isNotEmpty
-            ? (phones.first ?? 'شماره موجود نیست')
+            ? phones.first
             : 'شماره موجود نیست';
         final displayName = selectedContact.displayName ?? 'کاربر';
 
