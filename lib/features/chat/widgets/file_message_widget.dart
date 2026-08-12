@@ -1,14 +1,10 @@
 // lib/features/chat/widgets/file_message_widget.dart
 
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html;
-import 'dart:js' as js;
 import 'package:open_file/open_file.dart';
 
 import '/services/audio_player_service.dart';
@@ -48,20 +44,12 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   Duration _duration = Duration.zero;
 
   bool _isDisposed = false;
-  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _audioService = Provider.of<AudioPlayerService>(context, listen: false);
-
-    if (kIsWeb) {
-      _isDownloaded = true;
-      _localFilePath = widget.fileUrl;
-    } else {
-      _checkIfDownloaded();
-    }
-
+    _checkIfDownloaded();
     _audioService.addListener(_onAudioServiceChanged);
   }
 
@@ -99,7 +87,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
           _position = Duration.zero;
         }
       }
-      _isInitialized = true;
     });
   }
 
@@ -108,7 +95,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   }
 
   Future<void> _checkIfDownloaded() async {
-    if (_isDisposed || kIsWeb) return;
+    if (_isDisposed) return;
 
     try {
       final directory = await getApplicationDocumentsDirectory();
@@ -151,7 +138,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
   }
 
-  // ✅ متد دانلود برای موبایل/دسکتاپ
+  // ✅ دانلود فایل
   Future<void> _downloadFile() async {
     if (_isDownloading || _isDisposed) {
       debugPrint('⚠️ Download skipped: isDownloading=$_isDownloading');
@@ -159,11 +146,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
 
     debugPrint('📥 Starting download for: ${widget.fileName}');
-
-    if (kIsWeb) {
-      _downloadFileWeb();
-      return;
-    }
 
     setState(() {
       _isDownloading = true;
@@ -219,118 +201,24 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
   }
 
-  // ✅ متد دانلود برای Web
-  void _downloadFileWeb() async {
-    try {
-      debugPrint('🌐 Downloading on Web: ${widget.fileName}');
-
-      try {
-        final response = await http.get(Uri.parse(widget.fileUrl));
-        if (response.statusCode == 200) {
-          final bytes = response.bodyBytes;
-          final blob = html.Blob([bytes]);
-          final url = html.Url.createObjectUrlFromBlob(blob);
-
-          final anchor = html.AnchorElement(href: url)
-            ..setAttribute('download', widget.fileName)
-            ..style.display = 'none';
-
-          html.document.body?.append(anchor);
-          anchor.click();
-          anchor.remove();
-          html.Url.revokeObjectUrl(url);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('✅ ${widget.fileName} دانلود شد'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-          return;
-        }
-      } catch (e) {
-        debugPrint('⚠️ Blob download failed: $e');
-      }
-
-      // روش جایگزین
-      final script =
-          '''
-        (function() {
-          var link = document.createElement('a');
-          link.href = '${widget.fileUrl}';
-          link.download = '${widget.fileName}';
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        })();
-      ''';
-      js.context.callMethod('eval', [script]);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('⬇️ دانلود ${widget.fileName} شروع شد'),
-            backgroundColor: Colors.blue,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('❌ Web download error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ خطا در دانلود: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  // ✅ متد باز کردن فایل - جدید
+  // ✅ باز کردن فایل
   Future<void> _openFile() async {
     try {
       debugPrint('📂 Opening file: ${widget.fileName}');
 
-      // ✅ اگر فایل دانلود نشده، اول دانلود کن
       if (!_isDownloaded) {
         await _downloadFile();
-        // اگر بعد از دانلود، فایل هنوز دانلود نشده، خطا بده
         if (!_isDownloaded) {
           _showMessage('فایل دانلود نشد');
           return;
         }
       }
 
-      // ✅ در Web
-      if (kIsWeb) {
-        // در Web، فایل را در تب جدید باز کن
-        final script =
-            '''
-          (function() {
-            var win = window.open('${widget.fileUrl}', '_blank');
-            if (!win) {
-              alert('لطفاً pop-up را فعال کنید');
-            }
-          })();
-        ''';
-        js.context.callMethod('eval', [script]);
-        return;
-      }
-
-      // ✅ در موبایل/دسکتاپ با OpenFile
       if (_localFilePath != null) {
         final file = File(_localFilePath!);
         if (await file.exists()) {
           final result = await OpenFile.open(_localFilePath!);
-          if (result.type == ResultType.done) {
-            debugPrint('✅ File opened successfully');
-          } else {
+          if (result.type != ResultType.done) {
             _showMessage('خطا در باز کردن فایل: ${result.message}');
           }
         } else {
@@ -390,6 +278,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     _audioService.seek(newPosition);
   }
 
+  // ==================== متدهای نمایشی ====================
+
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
@@ -401,6 +291,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
+
+  // ==================== Build ====================
 
   @override
   Widget build(BuildContext context) {
@@ -414,11 +306,10 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       return _buildAudioPlayer();
     }
 
-    // ✅ برای فایل‌های غیر صوتی (PDF, Document, Image, etc)
     return _buildFileCard();
   }
 
-  // ✅ کارت فایل معمولی - با قابلیت کلیک برای باز کردن
+  // ✅ کارت فایل معمولی
   Widget _buildFileCard() {
     return GestureDetector(
       onTap: _openFile,
@@ -435,7 +326,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         ),
         child: Row(
           children: [
-            // ✅ آیکون فایل
             Container(
               width: 44,
               height: 44,
@@ -446,8 +336,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
               child: Icon(_getFileIcon(), color: _getFileColor(), size: 24),
             ),
             const SizedBox(width: 12),
-
-            // ✅ اطلاعات فایل
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,8 +357,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 ],
               ),
             ),
-
-            // ✅ دکمه دانلود (بدون تغییر)
             GestureDetector(
               onTap: _downloadFile,
               child: Container(
@@ -493,7 +379,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ کارت دانلود (فایل دانلود نشده)
+  // ✅ کارت دانلود
   Widget _buildDownloadCard() {
     return GestureDetector(
       onTap: _downloadFile,
@@ -653,7 +539,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
 
     return GestureDetector(
-      onTap: _openFile, // ✅ کلیک روی حباب آهنگ، فایل را باز می‌کند
+      onTap: _openFile,
       child: Container(
         width: 280,
         padding: const EdgeInsets.all(12),
@@ -697,7 +583,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         ),
                 ),
                 const SizedBox(width: 10),
-
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,8 +607,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                     ],
                   ),
                 ),
-
-                // ✅ دکمه دانلود
                 GestureDetector(
                   onTap: _downloadFile,
                   child: Container(
@@ -784,9 +667,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                           ),
                   ),
                 ),
-
                 const SizedBox(width: 10),
-
                 Expanded(
                   child: Column(
                     children: [
