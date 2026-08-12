@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36
+    compileSdk = 36  // ✅ این درست است
     
     ndkVersion = flutter.ndkVersion
 
@@ -18,15 +18,23 @@ android {
 
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23  // ✅ minSdk را کمی افزایش دهید
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true  // ✅ اضافه کنید
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
+            // ✅ اضافه کنید
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
@@ -39,4 +47,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ✅ اضافه کنید
+    implementation("androidx.multidex:multidex:2.0.1")
 }
