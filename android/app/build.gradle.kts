@@ -1,5 +1,3 @@
-// android/app/build.gradle.kts
-
 plugins {
     id("com.android.application")
     id("dev.flutter.flutter-gradle-plugin")
@@ -8,31 +6,28 @@ plugins {
 android {
     namespace = "com.example.inner_hero_app"
     compileSdk = 36
-    ndkVersion = "28.2.13676358"  // ✅ 27.0.12077973 → 28.2.13676358
     
+    ndkVersion = flutter.ndkVersion
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        multiDexEnabled = true
+        multiDexEnabled = true  // ✅ اضافه کنید
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = true  // ✅ اضافه کنید
+            isShrinkResources = true  // ✅ اضافه کنید
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

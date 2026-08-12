@@ -1,5 +1,3 @@
-// android/build.gradle.kts
-
 allprojects {
     repositories {
         google()
@@ -7,30 +5,16 @@ allprojects {
     }
 }
 
-// ✅ اضافه کردن buildscript با نسخه‌های جدید
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:8.9.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")
-    }
-}
-
-val newBuildDir: java.io.File = rootProject.layout.buildDirectory
-    .dir("../../build")
-    .get()
-    .asFile
-
-rootProject.layout.buildDirectory.set(newBuildDir)
+val newBuildDir: Directory =
+    rootProject.layout.buildDirectory
+        .dir("../../build")
+        .get()
+rootProject.layout.buildDirectory.value(newBuildDir)
 
 subprojects {
-    val newSubprojectBuildDir: java.io.File = newBuildDir.resolve(project.name)
-    project.layout.buildDirectory.set(newSubprojectBuildDir)
+    val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
+    project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
-
 subprojects {
     project.evaluationDependsOn(":app")
 }
