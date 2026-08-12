@@ -10,7 +10,8 @@ if (localPropertiesFile.exists()) {
 
 def flutterRoot = localProperties.getProperty('flutter.sdk')
 if (flutterRoot == null) {
-    throw new GradleException("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
+    // ✅ استفاده از Exception ساده
+    throw new Exception("Flutter SDK not found. Define location with flutter.sdk in the local.properties file.")
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -28,7 +29,7 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdkVersion 36  // ✅ به‌روزرسانی به 36
+    compileSdk 36
     
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -45,8 +46,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.inner_hero_app"
-        minSdkVersion 21
-        targetSdkVersion 36  // ✅ به‌روزرسانی به 36
+        minSdk 21
+        targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
