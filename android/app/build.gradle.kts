@@ -15,10 +15,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlin {
-        compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-        }
+    // ✅ kotlinOptions با سینتکس قدیمی (برای newDsl=false)
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     defaultConfig {

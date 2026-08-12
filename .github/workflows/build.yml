@@ -27,21 +27,6 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
     
-    # ✅ این مرحله را اضافه کنید
-    - name: Debug - Show Gradle files
-      run: |
-        echo "=== android/app/build.gradle.kts ==="
-        cat android/app/build.gradle.kts
-        echo ""
-        echo "=== android/build.gradle.kts ==="
-        cat android/build.gradle.kts
-        echo ""
-        echo "=== android/gradle.properties ==="
-        cat android/gradle.properties 2>/dev/null || echo "File not found"
-        echo ""
-        echo "=== gradle/wrapper/gradle-wrapper.properties ==="
-        cat android/gradle/wrapper/gradle-wrapper.properties
-    
     - name: Create .env file from secrets
       run: |
         echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
