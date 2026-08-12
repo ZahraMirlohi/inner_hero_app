@@ -7,13 +7,16 @@ plugins {
 
 android {
     namespace = "com.example.inner_hero_app"
-    compileSdk = 36
+    compileSdk = 36  // ✅ این باید 36 باشد
+    ndkVersion = "27.0.12077973"  // ✅ اضافه کنید
     
-    ndkVersion = flutter.ndkVersion
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -32,7 +35,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"  // ✅ این فایل الان وجود دارد
+                "proguard-rules.pro"
             )
         }
     }
