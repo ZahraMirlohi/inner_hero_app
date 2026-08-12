@@ -17,7 +17,7 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.27.0'  # ✅ 3.27.0 (Dart 3.6.0)
+        flutter-version: '3.24.0'  # ✅ 3.27.0 → 3.24.0
         channel: 'stable'
         cache: false
     
@@ -27,15 +27,21 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
     
+    - name: Clean all caches
+      run: |
+        flutter clean
+        rm -rf ~/.gradle/caches/
+        rm -rf android/.gradle
+        rm -rf android/app/build
+        rm -rf build
+    
     - name: Create .env file from secrets
       run: |
         echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
         echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
     
-    - name: Clean and Get dependencies
-      run: |
-        flutter clean
-        flutter pub get
+    - name: Get dependencies
+      run: flutter pub get
     
     - name: Build APK
       run: flutter build apk --release --android-skip-build-dependency-validation
