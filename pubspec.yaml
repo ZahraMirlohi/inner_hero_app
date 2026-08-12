@@ -55,7 +55,7 @@ flutter:
   assets:
     - .env
 
-# ✅ تغییر به نسخه پایدار
+# ✅ استفاده از نسخه موجود
 dependency_overrides:
-  flutter_web_auth_2: 4.1.2
-  flutter_web_auth_2_platform_interface: 4.0.1
+  flutter_web_auth_2: 4.0.0
+  flutter_web_auth_2_platform_interface: 4.0.0
