@@ -31,8 +31,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),  // ✅ اینجا تغییر
-                "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"  // ✅ این فایل الان وجود دارد
             )
         }
     }
