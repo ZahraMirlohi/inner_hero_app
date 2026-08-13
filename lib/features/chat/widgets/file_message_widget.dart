@@ -112,6 +112,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
   }
 
+// lib/features/chat/widgets/file_message_widget.dart
+
   Future<void> _downloadFile() async {
     if (_isDownloading || _isDisposed) return;
 
@@ -129,12 +131,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     await _downloadService.downloadFile(
       url: widget.fileUrl,
       fileName: widget.fileName,
-      onStart: () {
-        print('📥 Download started: ${widget.fileName}');
-      },
-      onProgress: () {
-        // وضعیت به‌روزرسانی می‌شود
-      },
       onComplete: () {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -317,16 +313,12 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     return _buildFileCard();
   }
 
-  // lib/features/chat/widgets/file_message_widget.dart
-
-// ✅ بخش _buildFileCard - با نمایش وضعیت دانلود
+// lib/features/chat/widgets/file_message_widget.dart
 
   Widget _buildFileCard() {
     final bool isDownloading = _downloadService.isDownloading(widget.fileUrl);
     final bool isDownloaded = _downloadService.isDownloaded(widget.fileUrl);
     final double progress = _downloadService.getProgress(widget.fileUrl);
-    final bool hasError =
-        _downloadService.getErrorMessage(widget.fileUrl) != null;
 
     return GestureDetector(
       onTap: isDownloaded ? _openFile : null,
@@ -337,73 +329,42 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
           color: widget.isMe ? Colors.blue.shade50 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isDownloaded
-                ? Colors.green.shade300
-                : widget.isMe
-                    ? Colors.blue.shade200
-                    : Colors.grey.shade300,
-            width: isDownloaded ? 2 : 1,
+            color: widget.isMe ? Colors.blue.shade200 : Colors.grey.shade300,
+            width: 1, // ✅ بدون تغییر رنگ و ضخامت
           ),
         ),
         child: Row(
           children: [
-            // ✅ آیکون فایل با وضعیت دانلود
-            Stack(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isDownloading
-                        ? Colors.blue.withValues(alpha: 0.2)
-                        : isDownloaded
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : _getFileColor().withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: isDownloading
-                      ? const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          isDownloaded ? Icons.check_circle : _getFileIcon(),
-                          color: isDownloaded ? Colors.green : _getFileColor(),
-                          size: 24,
-                        ),
-                ),
-                // ✅ نشان درصد برای دانلود
-                if (isDownloading)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${(progress * 100).toInt()}%',
-                        style: const TextStyle(
-                          fontSize: 8,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+            // ✅ آیکون فایل
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDownloading
+                    ? Colors.blue.withValues(alpha: 0.2)
+                    : _getFileColor().withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: isDownloading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.blue,
                         ),
                       ),
+                    )
+                  : Icon(
+                      _getFileIcon(),
+                      color: _getFileColor(),
+                      size: 24,
                     ),
-                  ),
-              ],
             ),
             const SizedBox(width: 12),
 
-            // ✅ اطلاعات فایل
+            // ✅ اطلاعات فایل (بدون تغییر رنگ و خط کشیدگی)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,13 +374,9 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isDownloaded
-                          ? Colors.green.shade700
-                          : widget.isMe
-                              ? Colors.black87
-                              : Colors.black87,
-                      decoration:
-                          isDownloaded ? TextDecoration.lineThrough : null,
+                      color: widget.isMe ? Colors.black87 : Colors.black87,
+                      // ❌ بدون خط کشیدگی
+                      // ❌ بدون تغییر رنگ
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -427,16 +384,10 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                   Text(
                     isDownloading
                         ? 'در حال دانلود... ${(progress * 100).toInt()}%'
-                        : isDownloaded
-                            ? '✅ دانلود شده'
-                            : _formatFileSize(widget.fileSize),
+                        : _formatFileSize(widget.fileSize),
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDownloading
-                          ? Colors.blue
-                          : isDownloaded
-                              ? Colors.green
-                              : Colors.grey.shade600,
+                      color: isDownloading ? Colors.blue : Colors.grey.shade600,
                       fontWeight:
                           isDownloading ? FontWeight.w600 : FontWeight.normal,
                     ),
@@ -445,7 +396,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
               ),
             ),
 
-            // ✅ دکمه دانلود
+            // ✅ دکمه دانلود (بدون تغییر)
             GestureDetector(
               onTap: isDownloading ? null : _downloadFile,
               child: Container(
@@ -453,16 +404,12 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 decoration: BoxDecoration(
                   color: isDownloading
                       ? Colors.grey.shade300
-                      : isDownloaded
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : Colors.blue.withValues(alpha: 0.1),
+                      : Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: isDownloading
                         ? Colors.grey.shade400
-                        : isDownloaded
-                            ? Colors.green.withValues(alpha: 0.2)
-                            : Colors.blue.withValues(alpha: 0.2),
+                        : Colors.blue.withValues(alpha: 0.2),
                   ),
                 ),
                 child: isDownloading
@@ -474,11 +421,9 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                           color: Colors.grey,
                         ),
                       )
-                    : Icon(
-                        isDownloaded
-                            ? Icons.check_circle
-                            : Icons.download_rounded,
-                        color: isDownloaded ? Colors.green : Colors.blue,
+                    : const Icon(
+                        Icons.download_rounded,
+                        color: Colors.blue,
                         size: 18,
                       ),
               ),

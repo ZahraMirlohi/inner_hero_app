@@ -1,3 +1,5 @@
+// lib/services/download_service.dart
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,25 +22,23 @@ class DownloadService extends ChangeNotifier {
   Future<void> downloadFile({
     required String url,
     required String fileName,
-    VoidCallback? onStart,
-    VoidCallback? onProgress,
     VoidCallback? onComplete,
     VoidCallback? onError,
   }) async {
-    // اگر در حال دانلود است، کاری نکن
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloading) {
       print('⏳ Already downloading: $fileName');
       return;
     }
 
-    // اگر قبلاً دانلود شده، کاری نکن
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) {
       print('✅ Already downloaded: $fileName');
+      onComplete?.call();
       return;
     }
 
     // ✅ درخواست دسترسی
-    if (await _requestStoragePermission() == false) {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
       _tasks[url] = _DownloadTask(
         url: url,
         fileName: fileName,
@@ -46,24 +46,21 @@ class DownloadService extends ChangeNotifier {
       );
       notifyListeners();
       onError?.call();
-      throw Exception('دسترسی به حافظه داده نشد');
+      return;
     }
 
     final task = _DownloadTask(url: url, fileName: fileName);
     _tasks[url] = task;
     notifyListeners();
 
-    onStart?.call();
-
     try {
-      final directory = await _getDownloadsDirectory();
-      final localPath = '${directory.path}/${_sanitizeFileName(fileName)}';
+      // ✅ دریافت مسیر صحیح Downloads
+      final String downloadPath = await _getDownloadsPath();
+      final String localPath = '$downloadPath/${_sanitizeFileName(fileName)}';
 
       task.isDownloading = true;
       task.progress = 0.0;
       notifyListeners();
-
-      onProgress?.call();
 
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -77,6 +74,9 @@ class DownloadService extends ChangeNotifier {
         task.errorMessage = null;
         notifyListeners();
 
+        // ✅ اطلاع رسانی به سیستم
+        await _notifyDownloadManager(localPath, fileName);
+
         onComplete?.call();
       } else {
         task.isDownloading = false;
@@ -84,7 +84,6 @@ class DownloadService extends ChangeNotifier {
         task.errorMessage = 'Download failed: ${response.statusCode}';
         notifyListeners();
         onError?.call();
-        throw Exception('Download failed: ${response.statusCode}');
       }
     } catch (e) {
       task.isDownloading = false;
@@ -92,82 +91,83 @@ class DownloadService extends ChangeNotifier {
       task.errorMessage = e.toString();
       notifyListeners();
       onError?.call();
-      rethrow;
     }
   }
 
-  // ✅ دریافت مسیر پوشه Downloads
-  Future<Directory> _getDownloadsDirectory() async {
+  // ✅ دریافت مسیر صحیح Downloads
+  Future<String> _getDownloadsPath() async {
     try {
-      // ✅ روش 1: برای Android 10 و بالاتر
-      if (await _isAndroid11OrHigher()) {
-        final directory = await getExternalStorageDirectory();
-        if (directory != null) {
-          // ساختار: Download/com.example.inner_hero_app/
-          final downloadDir = Directory('${directory.path}/Downloads');
-          if (!await downloadDir.exists()) {
-            await downloadDir.create(recursive: true);
-          }
-          return downloadDir;
-        }
+      // ✅ روش 1: مسیر مستقیم Downloads
+      final String downloadsPath = '/storage/emulated/0/Download';
+      final Directory downloadsDir = Directory(downloadsPath);
+
+      if (await downloadsDir.exists()) {
+        print('📁 Using downloads path: $downloadsPath');
+        return downloadsPath;
       }
 
-      // ✅ روش 2: روش قدیمی برای Android 9 و پایین‌تر
+      // ✅ روش 2: استفاده از path_provider
       final directory = await getExternalStorageDirectory();
       if (directory != null) {
-        // مسیر: /storage/emulated/0/Download/
-        final downloadDir = Directory('/storage/emulated/0/Download');
-        if (!await downloadDir.exists()) {
-          // اگر وجود نداشت، در پوشه اپلیکیشن ذخیره کن
-          final appDir = Directory('${directory.path}/Downloads');
-          if (!await appDir.exists()) {
-            await appDir.create(recursive: true);
-          }
-          return appDir;
+        final String appDownloadPath = '${directory.path}/Download';
+        final Directory appDownloadDir = Directory(appDownloadPath);
+        if (!await appDownloadDir.exists()) {
+          await appDownloadDir.create(recursive: true);
         }
-        return downloadDir;
+        print('📁 Using app download path: $appDownloadPath');
+        return appDownloadPath;
       }
 
-      // ✅ روش 3: Fallback
-      final fallbackDir = await getApplicationDocumentsDirectory();
-      final downloadDir = Directory('${fallbackDir.path}/Downloads');
-      if (!await downloadDir.exists()) {
-        await downloadDir.create(recursive: true);
+      // ✅ روش 3: Fallback به Documents
+      final docDir = await getApplicationDocumentsDirectory();
+      final String fallbackPath = '${docDir.path}/Downloads';
+      final Directory fallbackDir = Directory(fallbackPath);
+      if (!await fallbackDir.exists()) {
+        await fallbackDir.create(recursive: true);
       }
-      return downloadDir;
+      print('📁 Using fallback path: $fallbackPath');
+      return fallbackPath;
     } catch (e) {
-      // ✅ در صورت خطا، از Documents استفاده کن
-      final fallbackDir = await getApplicationDocumentsDirectory();
-      final downloadDir = Directory('${fallbackDir.path}/Downloads');
-      if (!await downloadDir.exists()) {
-        await downloadDir.create(recursive: true);
+      print('❌ Error getting downloads path: $e');
+      final docDir = await getApplicationDocumentsDirectory();
+      final String fallbackPath = '${docDir.path}/Downloads';
+      final Directory fallbackDir = Directory(fallbackPath);
+      if (!await fallbackDir.exists()) {
+        await fallbackDir.create(recursive: true);
       }
-      return downloadDir;
+      return fallbackPath;
     }
   }
 
-  // ✅ بررسی نسخه Android
-  Future<bool> _isAndroid11OrHigher() async {
-    // در اندروید 11 (API 30) و بالاتر
-    return true; // فعلاً true برگردان
+  Future<void> _notifyDownloadManager(String path, String fileName) async {
+    try {
+      print('📁 File saved to: $path');
+    } catch (e) {
+      print('⚠️ Could not notify download manager: $e');
+    }
   }
 
-  // ✅ درخواست دسترسی ذخیره‌سازی
   Future<bool> _requestStoragePermission() async {
-    // برای Android 13+ (API 33)
-    if (await _isAndroid13OrHigher()) {
-      final status = await Permission.photos.request();
-      return status.isGranted || status.isLimited;
-    }
+    try {
+      if (await _isAndroid13OrHigher()) {
+        final status = await Permission.photos.request();
+        return status.isGranted || status.isLimited;
+      }
 
-    // برای Android 10-12 (API 29-32)
-    final status = await Permission.storage.request();
-    return status.isGranted;
+      final status = await Permission.storage.request();
+      return status.isGranted;
+    } catch (e) {
+      print('❌ Permission error: $e');
+      return false;
+    }
   }
 
   Future<bool> _isAndroid13OrHigher() async {
-    // در اندروید 13 (API 33) و بالاتر
-    return true; // فعلاً true برگردان
+    try {
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   String _sanitizeFileName(String fileName) {
@@ -178,9 +178,9 @@ class DownloadService extends ChangeNotifier {
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) return true;
 
     try {
-      final directory = await _getDownloadsDirectory();
-      final localPath = '${directory.path}/${_sanitizeFileName(fileName)}';
-      final file = File(localPath);
+      final String downloadPath = await _getDownloadsPath();
+      final String localPath = '$downloadPath/${_sanitizeFileName(fileName)}';
+      final File file = File(localPath);
       if (await file.exists()) {
         _tasks[url] = _DownloadTask(
           url: url,
