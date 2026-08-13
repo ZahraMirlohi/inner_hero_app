@@ -28,7 +28,13 @@ void main() async {
     }
 
     print('🔑 SUPABASE_URL: $supabaseUrl');
-    print('🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, 20)}...');
+
+    // ✅ اصلاح: بررسی طول رشته قبل از substring
+    if (supabaseAnonKey.length >= 20) {
+      print('🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, 20)}...');
+    } else {
+      print('🔑 SUPABASE_ANON_KEY: $supabaseAnonKey');
+    }
 
     await Supabase.initialize(
       url: supabaseUrl,
