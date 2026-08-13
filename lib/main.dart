@@ -8,6 +8,7 @@ import 'app.dart';
 import 'providers/sync_provider.dart';
 import 'services/local_storage_service.dart';
 import 'services/audio_player_service.dart';
+import 'services/download_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,8 @@ void main() async {
         providers: [
           ChangeNotifierProvider(create: (_) => SyncProvider()),
           ChangeNotifierProvider(create: (_) => AudioPlayerService()),
+          ChangeNotifierProvider(
+              create: (_) => DownloadService()), // ✅ اضافه کنید
         ],
         child: const HeroApp(),
       ),

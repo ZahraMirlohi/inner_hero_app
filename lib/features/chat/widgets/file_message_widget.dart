@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:open_file/open_file.dart';
 
 import '/services/audio_player_service.dart';
+import '/services/download_service.dart';
 
 class FileMessageWidget extends StatefulWidget {
   final String fileUrl;
@@ -31,7 +33,9 @@ class FileMessageWidget extends StatefulWidget {
 
 class _FileMessageWidgetState extends State<FileMessageWidget> {
   late AudioPlayerService _audioService;
+  late DownloadService _downloadService;
 
+  // ✅ وضعیت‌های محلی
   bool _isDownloaded = false;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
@@ -44,11 +48,20 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   Duration _duration = Duration.zero;
 
   bool _isDisposed = false;
+  bool _isInitialized = false;
+
+  // ✅ برای جلوگیری از حلقه بی‌نهایت
+  bool _isUpdating = false;
 
   @override
   void initState() {
     super.initState();
     _audioService = Provider.of<AudioPlayerService>(context, listen: false);
+    _downloadService = Provider.of<DownloadService>(context, listen: false);
+
+    // ✅ گوش دادن به تغییرات دانلود
+    _downloadService.addListener(_onDownloadServiceChanged);
+
     _checkIfDownloaded();
     _audioService.addListener(_onAudioServiceChanged);
   }
@@ -56,8 +69,68 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   @override
   void dispose() {
     _isDisposed = true;
+    _downloadService.removeListener(_onDownloadServiceChanged);
     _audioService.removeListener(_onAudioServiceChanged);
     super.dispose();
+  }
+
+  // ✅ گوش دادن به تغییرات دانلود
+  void _onDownloadServiceChanged() {
+    if (_isDisposed || !mounted) return;
+
+    final isDownloading = _downloadService.isDownloading(widget.fileUrl);
+    final isDownloaded = _downloadService.isDownloaded(widget.fileUrl);
+    final progress = _downloadService.getProgress(widget.fileUrl);
+    final localPath = _downloadService.getLocalPath(widget.fileUrl);
+
+    setState(() {
+      _isDownloading = isDownloading;
+      _isDownloaded = isDownloaded;
+      _downloadProgress = progress;
+      if (localPath != null) {
+        _localFilePath = localPath;
+      }
+    });
+  }
+
+  // ✅ بررسی وجود فایل
+  Future<void> _checkIfDownloaded() async {
+    if (_isDisposed || kIsWeb) return;
+
+    final isDownloaded = await _downloadService.checkIfDownloaded(
+      widget.fileUrl,
+      widget.fileName,
+    );
+
+    if (mounted) {
+      setState(() {
+        _isDownloaded = isDownloaded;
+        if (isDownloaded) {
+          _localFilePath = _downloadService.getLocalPath(widget.fileUrl);
+        }
+      });
+    }
+  }
+
+  // ✅ دانلود فایل با استفاده از DownloadService
+  Future<void> _downloadFile() async {
+    if (_isDownloading || _isDownloaded || _isDisposed) return;
+
+    await _downloadService.downloadFile(
+      url: widget.fileUrl,
+      fileName: widget.fileName,
+      onComplete: () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ ${widget.fileName} دانلود شد'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      },
+    );
   }
 
   void _onAudioServiceChanged() {
@@ -94,37 +167,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     return _localFilePath ?? widget.fileUrl;
   }
 
-  Future<void> _checkIfDownloaded() async {
-    if (_isDisposed) return;
-
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = _getLocalFileName(widget.fileUrl);
-      final localPath = '${directory.path}/$fileName';
-      final file = File(localPath);
-
-      if (await file.exists()) {
-        setState(() {
-          _isDownloaded = true;
-          _localFilePath = localPath;
-        });
-        debugPrint('✅ File already downloaded: $localPath');
-        _updateStateFromService();
-      } else {
-        setState(() {
-          _isDownloaded = false;
-          _localFilePath = null;
-        });
-        debugPrint('📥 File not downloaded: $fileName');
-      }
-    } catch (e) {
-      debugPrint('❌ Error checking file: $e');
-      setState(() {
-        _isDownloaded = false;
-      });
-    }
-  }
-
   String _getLocalFileName(String url) {
     try {
       final uri = Uri.parse(url);
@@ -135,69 +177,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       return widget.fileName;
     } catch (e) {
       return widget.fileName;
-    }
-  }
-
-  // ✅ دانلود فایل
-  Future<void> _downloadFile() async {
-    if (_isDownloading || _isDisposed) {
-      debugPrint('⚠️ Download skipped: isDownloading=$_isDownloading');
-      return;
-    }
-
-    debugPrint('📥 Starting download for: ${widget.fileName}');
-
-    setState(() {
-      _isDownloading = true;
-      _downloadProgress = 0.0;
-    });
-
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = _getLocalFileName(widget.fileUrl);
-      final localPath = '${directory.path}/$fileName';
-
-      final response = await http.get(Uri.parse(widget.fileUrl));
-      if (response.statusCode == 200) {
-        final file = File(localPath);
-        await file.writeAsBytes(response.bodyBytes);
-
-        setState(() {
-          _isDownloaded = true;
-          _localFilePath = localPath;
-          _isDownloading = false;
-          _downloadProgress = 1.0;
-        });
-
-        debugPrint('✅ File downloaded successfully: $localPath');
-        _updateStateFromService();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ ${widget.fileName} دانلود شد'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } else {
-        throw Exception('Download failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('❌ Download error: $e');
-      setState(() {
-        _isDownloading = false;
-        _downloadProgress = 0.0;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ خطا در دانلود: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -628,7 +607,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
               ],
             ),
             const SizedBox(height: 8),
-
             Row(
               children: [
                 GestureDetector(
@@ -640,8 +618,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                       color: showLoading
                           ? Colors.grey.shade400
                           : isThisPlaying
-                          ? Colors.purple
-                          : Colors.purple,
+                              ? Colors.purple
+                              : Colors.purple,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
@@ -692,14 +670,14 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         child: Slider(
                           value: displayDuration.inMilliseconds > 0
                               ? (displayPosition.inMilliseconds /
-                                        displayDuration.inMilliseconds)
-                                    .clamp(0.0, 1.0)
+                                      displayDuration.inMilliseconds)
+                                  .clamp(0.0, 1.0)
                               : 0.0,
                           onChanged: showLoading
                               ? null
                               : (displayDuration.inMilliseconds > 0
-                                    ? _seekTo
-                                    : null),
+                                  ? _seekTo
+                                  : null),
                           min: 0,
                           max: 1,
                         ),
@@ -734,7 +712,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 ),
               ],
             ),
-
             if (showLoading)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
