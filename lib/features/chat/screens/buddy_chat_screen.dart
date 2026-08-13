@@ -1764,7 +1764,8 @@ ${data.completionMessage}
     }
   }
 
-  /// ✅ روش جایگزین آپلود با http
+  // lib/features/chat/screens/buddy_chat_screen.dart
+
   Future<String> _uploadFileToStorageHttp({
     required Uint8List fileBytes,
     required String fileName,
@@ -1783,10 +1784,9 @@ ${data.completionMessage}
         return '';
       }
 
-      // ✅ فقط پسوند فایل را نگه دار
       final extension = fileName.contains('.')
           ? fileName.substring(fileName.lastIndexOf('.'))
-          : '.mp3';
+          : '.jpg';
 
       final simpleFileName =
           '${DateTime.now().millisecondsSinceEpoch}$extension';
@@ -1797,18 +1797,31 @@ ${data.completionMessage}
 
       print('📤 Uploading to (HTTP): $storageUrl');
 
+      // ✅ تشخیص contentType
+      String contentType = 'application/octet-stream';
+      if (extension == '.jpg' || extension == '.jpeg') {
+        contentType = 'image/jpeg';
+      } else if (extension == '.png') {
+        contentType = 'image/png';
+      } else if (extension == '.gif') {
+        contentType = 'image/gif';
+      } else if (extension == '.mp3') {
+        contentType = 'audio/mpeg';
+      } else if (extension == '.pdf') {
+        contentType = 'application/pdf';
+      }
+
       final response = await http.put(
         Uri.parse(storageUrl),
         headers: {
           'Authorization': 'Bearer ${session.accessToken}',
-          'Content-Type': 'audio/mpeg', // ✅ برای MP3
-          'x-upsert': 'true', // ✅ اگر فایل وجود داشت، جایگزین کن
+          'Content-Type': contentType,
+          'x-upsert': 'true',
         },
         body: fileBytes,
       );
 
       print('📤 HTTP Response status: ${response.statusCode}');
-      print('📤 HTTP Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final publicUrl =
@@ -3941,9 +3954,11 @@ ${data.completionMessage}
 
   // ==================== ارسال عکس ====================
 
-  // ✅ انتخاب و ارسال تصویر
+// lib/features/chat/screens/buddy_chat_screen.dart
+
   Future<void> _sendImage() async {
     try {
+      // ✅ انتخاب عکس از گالری
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
@@ -3951,34 +3966,103 @@ ${data.completionMessage}
         imageQuality: 80,
       );
 
-      if (image == null) return;
+      if (image == null) {
+        print('⚠️ No image selected');
+        return;
+      }
+
+      print('📸 Image selected: ${image.path}');
+
+      // ✅ ایجاد پیام موقت
+      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      final tempMessage = ChatMessage(
+        id: tempMessageId,
+        conversationId: widget.conversation.id,
+        senderId: _userId!,
+        senderName: _myName,
+        senderAvatar: null,
+        content: '🖼️ در حال آپلود تصویر...',
+        type: MessageType.text,
+        status: MessageStatus.sending,
+        metadata: {
+          'type': 'image',
+          'is_uploading': true,
+          'platform': kIsWeb ? 'web' : 'mobile',
+        },
+        isRead: false,
+        isEdited: false,
+        isDeleted: false,
+        createdAt: DateTime.now(),
+        isTemp: true,
+        hiddenFor: [],
+      );
 
       setState(() {
+        _messages.insert(0, tempMessage);
         _isSending = true;
       });
 
-      // آپلود عکس
-      final file = File(image.path);
-      final imageUrl = await _chatService.uploadImage(file);
+      _scrollToBottom();
 
-      if (imageUrl != null) {
-        await _sendMessage(
-          text: imageUrl,
-          type: MessageType.image,
-          metadata: {'width': 1024, 'height': 1024},
+      // ✅ آپلود عکس
+      final String imageUrl = await _uploadImage(image);
+
+      if (imageUrl.isEmpty) {
+        setState(() {
+          final index = _messages.indexWhere((msg) => msg.id == tempMessageId);
+          if (index != -1) {
+            _messages[index].status = MessageStatus.failed;
+          }
+          _isSending = false;
+        });
+        _showSnackBar('خطا در آپلود عکس');
+        return;
+      }
+
+      print('✅ Image uploaded successfully: $imageUrl');
+
+      // ✅ ارسال پیام عکس
+      final Map<String, dynamic> metadata = {
+        'type': 'image',
+        'width': 1024,
+        'height': 1024,
+        'is_uploading': false,
+      };
+
+      await _chatService.sendMessage(
+        conversationId: widget.conversation.id,
+        senderId: _userId!,
+        content: imageUrl, // ✅ URL عکس به عنوان محتوا ارسال می‌شود
+        type: 'image', // ✅ نوع image
+        metadata: metadata,
+        senderName: _myName,
+      );
+
+      print('✅ Image message sent to database');
+
+      // ✅ حذف پیام موقت
+      setState(() {
+        _messages.removeWhere((msg) => msg.id == tempMessageId);
+        _isSending = false;
+      });
+
+      // ✅ بارگذاری مجدد پیام‌ها
+      await _loadMessages();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🖼️ عکس با موفقیت ارسال شد'),
+            duration: Duration(seconds: 1),
+          ),
         );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('خطا در آپلود عکس'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     } catch (e) {
-      print('❌ Error picking image: $e');
+      print('❌ Error in _sendImage: $e');
+      setState(() {
+        _isSending = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -3987,12 +4071,31 @@ ${data.completionMessage}
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-        });
-      }
+    }
+  }
+
+  // lib/features/chat/screens/buddy_chat_screen.dart
+
+  Future<String> _uploadImage(XFile imageFile) async {
+    try {
+      // ✅ خواندن فایل عکس
+      final File file = File(imageFile.path);
+      final bytes = await file.readAsBytes();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      print('📸 Uploading image: $fileName');
+
+      // ✅ آپلود به Supabase Storage
+      final String fileUrl = await _uploadFileToStorageHttp(
+        fileBytes: bytes,
+        fileName: fileName,
+        folder: 'chat_images',
+      );
+
+      return fileUrl;
+    } catch (e) {
+      print('❌ Error uploading image: $e');
+      return '';
     }
   }
 
@@ -5880,6 +5983,23 @@ ${message.content}
               size: 50,
               color: Colors.grey,
             ),
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF4A90E2),
+                  ),
+                ),
+              );
+            },
           ),
         );
 
