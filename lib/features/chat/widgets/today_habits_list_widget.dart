@@ -185,37 +185,6 @@ class TodayHabitsListWidget extends StatelessWidget {
             const SizedBox(height: 8),
           ],
 
-          // ==================== پیام انگیزشی ====================
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isMe
-                  ? Colors.white.withValues(alpha: 0.12)
-                  : _getRateColor(rate).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _getMotivationIcon(rate),
-                  size: 16,
-                  color: isMe ? Colors.white : _getRateColor(rate),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
           // ==================== فوتر ====================
           const SizedBox(height: 4),
           Row(
@@ -327,8 +296,8 @@ class TodayHabitsListWidget extends StatelessWidget {
               color: isCompleted
                   ? Colors.green
                   : (isMe
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.grey.shade200),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.grey.shade200),
             ),
             child: isCompleted
                 ? const Icon(Icons.check, size: 12, color: Colors.white)
@@ -386,8 +355,8 @@ class TodayHabitsListWidget extends StatelessWidget {
               color: isCompleted
                   ? Colors.green
                   : (isMe
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.grey.shade200),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.grey.shade200),
             ),
             child: isCompleted
                 ? const Icon(Icons.check, size: 12, color: Colors.white)
@@ -465,8 +434,8 @@ class TodayHabitsListWidget extends StatelessWidget {
               color: isCompleted
                   ? Colors.green
                   : (isMe
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.grey.shade200),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.grey.shade200),
             ),
             child: isCompleted
                 ? const Icon(Icons.check, size: 12, color: Colors.white)
@@ -544,8 +513,8 @@ class TodayHabitsListWidget extends StatelessWidget {
               color: isCompleted
                   ? Colors.green
                   : (isMe
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.grey.shade200),
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : Colors.grey.shade200),
             ),
             child: isCompleted
                 ? const Icon(Icons.check, size: 12, color: Colors.white)

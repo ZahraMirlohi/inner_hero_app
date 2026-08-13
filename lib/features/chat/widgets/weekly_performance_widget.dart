@@ -132,11 +132,11 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                                     : FontWeight.normal,
                                 color: isToday
                                     ? (isMe
-                                          ? Colors.white
-                                          : const Color(0xFF4A90E2))
+                                        ? Colors.white
+                                        : const Color(0xFF4A90E2))
                                     : (isMe
-                                          ? Colors.white70
-                                          : Colors.grey.shade500),
+                                        ? Colors.white70
+                                        : Colors.grey.shade500),
                               ),
                             ),
                           ),
@@ -182,15 +182,15 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                                     shape: BoxShape.circle,
                                     color: isActive
                                         ? (isMe
-                                              ? Colors.white
-                                              : const Color(0xFF4A90E2))
+                                            ? Colors.white
+                                            : const Color(0xFF4A90E2))
                                         : isToday
-                                        ? (isMe
-                                              ? Colors.white.withValues(
-                                                  alpha: 0.2,
-                                                )
-                                              : Colors.grey.shade300)
-                                        : Colors.transparent,
+                                            ? (isMe
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.2,
+                                                  )
+                                                : Colors.grey.shade300)
+                                            : Colors.transparent,
                                     border: isToday && !isActive
                                         ? Border.all(
                                             color: isMe
@@ -209,17 +209,17 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                                               : Colors.white,
                                         )
                                       : isToday
-                                      ? Container(
-                                          width: 4,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: isMe
-                                                ? Colors.white70
-                                                : const Color(0xFF4A90E2),
-                                            shape: BoxShape.circle,
-                                          ),
-                                        )
-                                      : null,
+                                          ? Container(
+                                              width: 4,
+                                              height: 4,
+                                              decoration: BoxDecoration(
+                                                color: isMe
+                                                    ? Colors.white70
+                                                    : const Color(0xFF4A90E2),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            )
+                                          : null,
                                 ),
                               ),
                             );
@@ -234,39 +234,6 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           ],
 
           const SizedBox(height: 10),
-
-          // ==================== پیام انگیزشی ====================
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isMe
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : _getMotivationColor(successPercent).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _getMotivationIcon(successPercent),
-                  size: 16,
-                  color: isMe
-                      ? Colors.white
-                      : _getMotivationColor(successPercent),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    motivationalMessage,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
           // ==================== فوتر ====================
           const SizedBox(height: 4),
@@ -302,9 +269,8 @@ class WeeklyPerformanceWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
         decoration: BoxDecoration(
-          color: isMe
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.grey.shade100,
+          color:
+              isMe ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

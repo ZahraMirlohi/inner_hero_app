@@ -279,9 +279,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       // ✅ پیدا کردن buddyId
       String buddyId = '';
       if (widget.conversation.memberIds.isNotEmpty) {
-        final others = widget.conversation.memberIds
-            .where((id) => id != user.id)
-            .toList();
+        final others =
+            widget.conversation.memberIds.where((id) => id != user.id).toList();
         if (others.isNotEmpty) {
           buddyId = others.first;
         }
@@ -358,59 +357,59 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       _messageSubscription = _chatService
           .getMessages(widget.conversation.id, userId: _userId)
           .listen((newMessages) async {
-            if (!mounted) return;
+        if (!mounted) return;
 
-            try {
-              final messagesWithReactions = await _loadReactionsForMessages(
-                newMessages,
-              );
+        try {
+          final messagesWithReactions = await _loadReactionsForMessages(
+            newMessages,
+          );
 
-              if (mounted) {
-                // ✅ تعداد پیام‌های قبلی را ذخیره کن
-                final oldMessageCount = _messages.length;
+          if (mounted) {
+            // ✅ تعداد پیام‌های قبلی را ذخیره کن
+            final oldMessageCount = _messages.length;
 
-                setState(() {
-                  _messages = messagesWithReactions.reversed.toList();
-                  // ✅ بروزرسانی پیام پین شده
-                  try {
-                    _pinnedMessage = _messages.firstWhere((m) => m.isPinned);
-                  } catch (e) {
-                    _pinnedMessage = null;
-                  }
-                });
-
-                // ✅ پیام‌های جدید را به عنوان خوانده شده علامت بزن
-                await _markMessagesAsRead();
-
-                // ✅ اگر پیام جدید از طرف مقابل رسیده، اسکرول به پایین
-                if (_messages.length > oldMessageCount) {
-                  final lastMessage = _messages.first;
-                  if (lastMessage.senderId != _userId) {
-                    _scrollToBottom();
-                  }
-                }
+            setState(() {
+              _messages = messagesWithReactions.reversed.toList();
+              // ✅ بروزرسانی پیام پین شده
+              try {
+                _pinnedMessage = _messages.firstWhere((m) => m.isPinned);
+              } catch (e) {
+                _pinnedMessage = null;
               }
-            } catch (e) {
-              print('❌ Error in realtime update: $e');
+            });
+
+            // ✅ پیام‌های جدید را به عنوان خوانده شده علامت بزن
+            await _markMessagesAsRead();
+
+            // ✅ اگر پیام جدید از طرف مقابل رسیده، اسکرول به پایین
+            if (_messages.length > oldMessageCount) {
+              final lastMessage = _messages.first;
+              if (lastMessage.senderId != _userId) {
+                _scrollToBottom();
+              }
             }
-          });
+          }
+        } catch (e) {
+          print('❌ Error in realtime update: $e');
+        }
+      });
       // ✅ تنظیمات Realtime برای وضعیت تایپ
       _typingSubscription = _chatService
           .getTypingStatus(widget.conversation.id)
           .listen((typingData) {
-            if (!mounted || _buddyId == null) return;
+        if (!mounted || _buddyId == null) return;
 
-            try {
-              final isTyping = typingData[_buddyId] == true;
-              if (mounted && isTyping != _isBuddyTyping) {
-                setState(() {
-                  _isBuddyTyping = isTyping;
-                });
-              }
-            } catch (e) {
-              print('❌ Error in typing status: $e');
-            }
-          });
+        try {
+          final isTyping = typingData[_buddyId] == true;
+          if (mounted && isTyping != _isBuddyTyping) {
+            setState(() {
+              _isBuddyTyping = isTyping;
+            });
+          }
+        } catch (e) {
+          print('❌ Error in typing status: $e');
+        }
+      });
     } catch (e) {
       print('❌ Critical error in _initChat: $e');
       if (mounted) {
@@ -519,11 +518,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       controller: scrollController,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 5, // ✅ ۵ آیکون در هر ردیف
-                            childAspectRatio: 1.0, // ✅ مربعی
-                            crossAxisSpacing: 8,
-                            mainAxisSpacing: 8,
-                          ),
+                        crossAxisCount: 5, // ✅ ۵ آیکون در هر ردیف
+                        childAspectRatio: 1.0, // ✅ مربعی
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
                       itemCount: _getMediaMenuItems().length,
                       itemBuilder: (context, index) {
                         final item = _getMediaMenuItems()[index];
@@ -755,9 +754,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                         itemBuilder: (context, index) {
                           final contact = contacts[index];
                           final displayName = contact.displayName ?? 'بدون نام';
-                          final phones = contact.phones
-                              .map((p) => p.number)
-                              .toList();
+                          final phones =
+                              contact.phones.map((p) => p.number).toList();
 
                           return ListTile(
                             leading: CircleAvatar(
@@ -802,13 +800,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (selectedContact != null && mounted) {
         final phones = selectedContact.phones.map((p) => p.number).toList();
-        final phoneNumber = phones.isNotEmpty
-            ? phones.first
-            : 'شماره موجود نیست';
+        final phoneNumber =
+            phones.isNotEmpty ? phones.first : 'شماره موجود نیست';
         final displayName = selectedContact.displayName ?? 'کاربر';
 
-        final contactText =
-            '''
+        final contactText = '''
 📞 شماره تماس
 ━━━━━━━━━━━━━━━━━━━━
 👤 نام: $displayName
@@ -926,8 +922,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
               Navigator.pop(context);
 
-              final contactText =
-                  '''
+              final contactText = '''
 📞 شماره تماس
 ━━━━━━━━━━━━━━━━━━━━
 👤 نام: ${name.isNotEmpty ? name : 'کاربر'}
@@ -951,7 +946,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     );
   }
 
-  // ✅ متد ارسال فایل - اصلاح شده
+// lib/features/chat/screens/buddy_chat_screen.dart
+
   Future<void> _sendFile() async {
     try {
       print('📁 _sendFile called!');
@@ -969,9 +965,43 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       final file = result.files.first;
       final fileName = file.name;
       final fileSize = file.size ?? 0;
-      final fileBytes = file.bytes;
+
+      // ✅ روش صحیح برای دریافت bytes در همه پلتفرم‌ها
+      Uint8List? fileBytes;
+
+      // ✅ روش 1: اگر bytes موجود است
+      if (file.bytes != null) {
+        fileBytes = file.bytes;
+      }
+      // ✅ روش 2: اگر path موجود است (موبایل)
+      else if (file.path != null && file.path!.isNotEmpty) {
+        try {
+          final File fileObj = File(file.path!);
+          fileBytes = await fileObj.readAsBytes();
+          print('📁 File read from path: ${file.path}');
+        } catch (e) {
+          print('❌ Error reading file from path: $e');
+        }
+      }
+      // ✅ روش 3: برای Web، استفاده از FileReader (در صورت نیاز)
+      else if (kIsWeb) {
+        // در Web، معمولاً bytes در دسترس نیست
+        // باید از روش جایگزین استفاده کنیم
+        print('⚠️ Web file picker: bytes not available, trying alternative...');
+
+        // برای Web، می‌توانیم از `file.path` (که URL است) استفاده کنیم
+        if (file.path != null) {
+          // در Web، file.path یک URL است
+          final response = await http.get(Uri.parse(file.path!));
+          if (response.statusCode == 200) {
+            fileBytes = response.bodyBytes;
+            print('✅ File downloaded from URL: ${file.path}');
+          }
+        }
+      }
 
       if (fileBytes == null) {
+        print('❌ Could not read file bytes');
         _showSnackBar('فایل قابل خواندن نیست');
         return;
       }
@@ -1042,9 +1072,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         'is_uploading': false,
       };
 
-      // ✅ ساخت متن پیام با لینک فایل
-      final fileText =
-          '''
+      final fileText = '''
 📁 فایل ارسال شد
 ━━━━━━━━━━━━━━━━━━━━
 📄 نام فایل: $fileName
@@ -1052,7 +1080,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
-      // ✅ ارسال پیام به دیتابیس
       await _chatService.sendMessage(
         conversationId: widget.conversation.id,
         senderId: _userId!,
@@ -1064,13 +1091,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       print('✅ File message sent to database');
 
-      // ✅ حذف پیام موقت
       setState(() {
         _messages.removeWhere((msg) => msg.id == tempMessageId);
         _isSending = false;
       });
 
-      // ✅ بارگذاری مجدد پیام‌ها برای نمایش فایل
       await _loadMessages();
 
       if (mounted) {
@@ -1114,14 +1139,35 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       final file = result.files.first;
       final fileName = file.name;
       final fileSize = file.size ?? 0;
-      final fileBytes = file.bytes;
 
-      print('🎵 Music file selected:');
-      print('   - Name: $fileName');
-      print('   - Size: $fileSize');
+      // ✅ روش صحیح برای دریافت bytes
+      Uint8List? fileBytes;
+
+      if (file.bytes != null) {
+        fileBytes = file.bytes;
+      } else if (file.path != null && file.path!.isNotEmpty) {
+        try {
+          final File fileObj = File(file.path!);
+          fileBytes = await fileObj.readAsBytes();
+          print('🎵 File read from path: ${file.path}');
+        } catch (e) {
+          print('❌ Error reading file from path: $e');
+        }
+      } else if (kIsWeb && file.path != null) {
+        try {
+          final response = await http.get(Uri.parse(file.path!));
+          if (response.statusCode == 200) {
+            fileBytes = response.bodyBytes;
+            print('✅ Music downloaded from URL: ${file.path}');
+          }
+        } catch (e) {
+          print('❌ Error downloading music from URL: $e');
+        }
+      }
 
       if (fileBytes == null) {
-        _showSnackBar('فایل قابل خواندن نیست');
+        print('❌ Could not read music file bytes');
+        _showSnackBar('فایل موزیک قابل خواندن نیست');
         return;
       }
 
@@ -1210,8 +1256,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         'is_uploading': false,
       };
 
-      final musicText =
-          '''
+      final musicText = '''
 🎵 فایل موزیک
 ━━━━━━━━━━━━━━━━━━━━
 🎶 نام: $fileName
@@ -1393,8 +1438,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       final successPercent = (performance.successRate * 100).toInt();
       final motivationalMessage = performance.getMotivationalMessage();
 
-      final String widgetText =
-          '''
+      final String widgetText = '''
 📊 عملکرد هفتگی عادت‌ها
 ━━━━━━━━━━━━━━━━━━━━
 ✅ انجام شده: ${performance.completedHabits} از ${performance.totalHabits}
@@ -1492,8 +1536,7 @@ $motivationalMessage
       final jalaliDate = Jalali.fromDateTime(data.date);
       final dateString = '${jalaliDate.day} ${_getMonthName(jalaliDate.month)}';
 
-      final String widgetText =
-          '''
+      final String widgetText = '''
 📋 لیست امروز (${dateString})
 ━━━━━━━━━━━━━━━━━━━━
 ✅ انجام شده: ${data.completedItems} از ${data.totalItems}
@@ -1709,9 +1752,8 @@ ${data.completionMessage}
           .from('chat_files')
           .uploadBinary(path, fileBytes);
 
-      final String publicUrl = _supabase.client.storage
-          .from('chat_files')
-          .getPublicUrl(path);
+      final String publicUrl =
+          _supabase.client.storage.from('chat_files').getPublicUrl(path);
 
       print('✅ Uploaded: $publicUrl');
       return publicUrl;
@@ -1769,9 +1811,8 @@ ${data.completionMessage}
       print('📤 HTTP Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final publicUrl = _supabase.client.storage
-            .from('chat_files')
-            .getPublicUrl(path);
+        final publicUrl =
+            _supabase.client.storage.from('chat_files').getPublicUrl(path);
         print('✅ Uploaded (HTTP): $publicUrl');
         return publicUrl;
       } else {
@@ -1808,8 +1849,7 @@ ${data.completionMessage}
   void _sendReminder(String challengeTitle) async {
     if (_userId == null || _buddyId == null) return;
 
-    final reminderText =
-        '''
+    final reminderText = '''
 ⏰ یادآوری چالش
 ━━━━━━━━━━━━━━━━━━━━
 🏆 چالش: $challengeTitle
@@ -1921,8 +1961,7 @@ ${data.completionMessage}
       _weekDays = weekDays;
 
       // ✅ ارسال کارت پیشرفت
-      final String progressText =
-          '''
+      final String progressText = '''
 📊 کارت پیشرفت روزانه
 ━━━━━━━━━━━━━━━━━━━━
 ✅ عادت‌های انجام شده: $_todayHabitsCompleted
@@ -2671,9 +2710,8 @@ ${data.completionMessage}
                               isMe ? 'من' : '👤',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isMe
-                                    ? Colors.white
-                                    : Colors.grey.shade600,
+                                color:
+                                    isMe ? Colors.white : Colors.grey.shade600,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2931,8 +2969,7 @@ ${data.completionMessage}
     // ✅ پیدا کردن پیام‌های خوانده نشده
     final unreadMessages = _messages.where((msg) {
       final isFromOther = msg.senderId != _userId;
-      final isUnread =
-          msg.status != MessageStatus.seen &&
+      final isUnread = msg.status != MessageStatus.seen &&
           msg.status != MessageStatus.delivered;
       final isNotDeleted = !msg.isDeleted;
       return isFromOther && isUnread && isNotDeleted;
@@ -3113,8 +3150,7 @@ ${data.completionMessage}
                 itemCount: _popularReactions.length,
                 itemBuilder: (context, index) {
                   final emoji = _popularReactions[index];
-                  final isSelected =
-                      message.reactions?.any(
+                  final isSelected = message.reactions?.any(
                         (r) => r.emoji == emoji && r.userId == _userId,
                       ) ??
                       false;
@@ -3896,8 +3932,7 @@ ${data.completionMessage}
       final now = DateTime.now().toUtc().toIso8601String();
       await _chatService.client
           .from('profiles')
-          .update({'last_seen_at': now})
-          .eq('user_id', userId);
+          .update({'last_seen_at': now}).eq('user_id', userId);
       print('📊 Updated last_seen_at for user $userId to $now');
     } catch (e) {
       print('⚠️ Error updating last_seen: $e');
@@ -4260,8 +4295,7 @@ ${data.completionMessage}
       // ✅ اگر پیام تصویر است
       if (message.type == MessageType.image) {
         // اشتراک‌گذاری با لینک تصویر
-        final String shareText =
-            '''
+        final String shareText = '''
 📷 ${message.senderName ?? 'کاربر'} یک تصویر ارسال کرده:
 
 🔗 مشاهده تصویر: ${message.content}
@@ -4275,8 +4309,7 @@ ${data.completionMessage}
         await Share.share(shareText);
       } else {
         // ✅ اشتراک‌گذاری متن معمولی
-        final String shareText =
-            '''
+        final String shareText = '''
 📩 ${message.senderName ?? 'کاربر'} نوشته:
 
 "${message.content}"
@@ -4492,9 +4525,8 @@ ${data.completionMessage}
                         color: isUserReacted
                             ? const Color(0xFF4A90E2) // ✅ آبی برای کاربر
                             : Colors.grey.shade600, // ✅ خاکستری برای دیگران
-                        fontWeight: isUserReacted
-                            ? FontWeight.bold
-                            : FontWeight.w500,
+                        fontWeight:
+                            isUserReacted ? FontWeight.bold : FontWeight.w500,
                       ),
                     ),
                   ],
@@ -4711,8 +4743,7 @@ ${data.completionMessage}
     final String appLink = 'https://innerhero.app/download';
     final String appName = 'قهرمان درون';
 
-    final String copyText =
-        '''
+    final String copyText = '''
 ${message.content}
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -4808,9 +4839,8 @@ ${message.content}
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: Column(
-            crossAxisAlignment: isMe
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               GestureDetector(
@@ -4872,8 +4902,9 @@ ${message.content}
                     border: message.isPinned
                         ? Border.all(color: Colors.orange, width: 2)
                         : _highlightedMessageId == message.id
-                        ? Border.all(color: const Color(0xFFFFA500), width: 2)
-                        : null,
+                            ? Border.all(
+                                color: const Color(0xFFFFA500), width: 2)
+                            : null,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -5296,15 +5327,14 @@ ${message.content}
         .eq('user_id', userId)
         .maybeSingle()
         .then((profile) {
-          if (profile != null && profile['name'] != null && mounted) {
-            setState(() {
-              _userNameCache[userId] = profile['name'] as String;
-            });
-          }
-        })
-        .catchError((e) {
-          print('⚠️ Error loading sender name: $e');
+      if (profile != null && profile['name'] != null && mounted) {
+        setState(() {
+          _userNameCache[userId] = profile['name'] as String;
         });
+      }
+    }).catchError((e) {
+      print('⚠️ Error loading sender name: $e');
+    });
   }
 
   Future<String> _getSenderNameFromDatabase(String userId) async {
@@ -6473,8 +6503,8 @@ ${message.content}
                         color: isActive
                             ? Colors.white
                             : isToday
-                            ? Colors.white.withValues(alpha: 0.3)
-                            : Colors.white.withValues(alpha: 0.1),
+                                ? Colors.white.withValues(alpha: 0.3)
+                                : Colors.white.withValues(alpha: 0.1),
                         border: isToday && !isActive
                             ? Border.all(color: Colors.white, width: 1.5)
                             : null,
@@ -6492,9 +6522,8 @@ ${message.content}
                       weekDayLetters[index],
                       style: TextStyle(
                         fontSize: 8,
-                        fontWeight: isActive
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        fontWeight:
+                            isActive ? FontWeight.bold : FontWeight.normal,
                         color: isActive
                             ? Colors.white
                             : Colors.white.withValues(alpha: 0.5),
@@ -6649,8 +6678,7 @@ ${message.content}
           final centerY = position.dy + (size.height / 2);
 
           // موقعیت هدف برای قرار دادن پیام در مرکز
-          final targetScrollOffset =
-              centerY -
+          final targetScrollOffset = centerY -
               (screenHeight / 2) +
               (appBarHeight / 2) +
               (bottomBarHeight / 2);
@@ -6945,9 +6973,8 @@ ${message.content}
   /// ✅ نمایش گزینه‌های لینک
   void _showLinkOptions(String url, bool isMe) {
     final bool isLocationLink = _isLocationLink(url);
-    final String displayUrl = url.length > 50
-        ? '${url.substring(0, 50)}...'
-        : url;
+    final String displayUrl =
+        url.length > 50 ? '${url.substring(0, 50)}...' : url;
 
     showModalBottomSheet(
       context: context,
@@ -6982,7 +7009,6 @@ ${message.content}
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-
                 if (isLocationLink)
                   _buildLinkOption(
                     icon: Icons.map,
@@ -6994,7 +7020,6 @@ ${message.content}
                       _openInMap(url);
                     },
                   ),
-
                 _buildLinkOption(
                   icon: Icons.open_in_browser,
                   title: 'باز کردن در مرورگر',
@@ -7005,7 +7030,6 @@ ${message.content}
                     _launchUrl(url);
                   },
                 ),
-
                 _buildLinkOption(
                   icon: Icons.copy,
                   title: 'کپی لینک',
@@ -7016,7 +7040,6 @@ ${message.content}
                     _copyLink(url);
                   },
                 ),
-
                 _buildLinkOption(
                   icon: Icons.share,
                   title: 'اشتراک‌گذاری',
@@ -7027,7 +7050,6 @@ ${message.content}
                     _shareLink(url);
                   },
                 ),
-
                 const SizedBox(height: 8),
               ],
             ),
@@ -7072,9 +7094,8 @@ ${message.content}
           .from('chat_files')
           .uploadBinary(path, bytes!);
 
-      final String fileUrl = _supabase.client.storage
-          .from('chat_files')
-          .getPublicUrl(path);
+      final String fileUrl =
+          _supabase.client.storage.from('chat_files').getPublicUrl(path);
 
       print('📤 فایل آپلود شد: $fileUrl');
 
@@ -7289,8 +7310,7 @@ ${message.content}
   // ✅ اشتراک‌گذاری لینک
   void _shareLink(String url) async {
     try {
-      final shareText =
-          '''
+      final shareText = '''
 📍 لینک موقعیت مکانی
 ━━━━━━━━━━━━━━━━━━━━
 🔗 $url
@@ -7653,7 +7673,6 @@ ${message.content}
         children: [
           if (_showStickerPicker) _buildStickerPicker(),
           if (_showGifPicker) _buildGifPicker(),
-
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -7757,13 +7776,13 @@ ${message.content}
                           maxLines: 4,
                           minLines: 1,
                           maxLength: 500,
-                          buildCounter:
-                              (
-                                BuildContext context, {
-                                required int currentLength,
-                                required bool isFocused,
-                                required int? maxLength,
-                              }) => null,
+                          buildCounter: (
+                            BuildContext context, {
+                            required int currentLength,
+                            required bool isFocused,
+                            required int? maxLength,
+                          }) =>
+                              null,
                         ),
                       ),
                     ),
@@ -7775,8 +7794,7 @@ ${message.content}
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color:
-                            _isSending ||
+                        color: _isSending ||
                                 (_messageController.text.isEmpty &&
                                     _replyToMessage == null)
                             ? Colors.grey.shade300
@@ -7785,8 +7803,7 @@ ${message.content}
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        onPressed:
-                            _isSending ||
+                        onPressed: _isSending ||
                                 (_messageController.text.isEmpty &&
                                     _replyToMessage == null)
                             ? null
@@ -7839,9 +7856,8 @@ ${message.content}
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: _selectedMessageIds.isEmpty
-                ? null
-                : _deleteSelectedMessages,
+            onPressed:
+                _selectedMessageIds.isEmpty ? null : _deleteSelectedMessages,
           ),
         ],
       );
@@ -8015,43 +8031,43 @@ ${message.content}
                           child: _isLoading
                               ? _buildLoadingState()
                               : _messages.isEmpty
-                              ? _buildEmptyState()
-                              : ListView.builder(
-                                  controller: _scrollController,
-                                  reverse: true,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  itemCount: _messages.length,
-                                  itemBuilder: (context, index) {
-                                    final message =
-                                        _messages[_messages.length - 1 - index];
-                                    final widgets = <Widget>[];
+                                  ? _buildEmptyState()
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      reverse: true,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      itemCount: _messages.length,
+                                      itemBuilder: (context, index) {
+                                        final message = _messages[
+                                            _messages.length - 1 - index];
+                                        final widgets = <Widget>[];
 
-                                    if (index == _messages.length - 1) {
-                                      widgets.add(
-                                        _buildDateMarker(message.createdAt),
-                                      );
-                                    } else {
-                                      final nextMessage =
-                                          _messages[_messages.length -
-                                              2 -
-                                              index];
-                                      if (!_isSameDay(
-                                        message.createdAt,
-                                        nextMessage.createdAt,
-                                      )) {
-                                        widgets.add(
-                                          _buildDateMarker(message.createdAt),
-                                        );
-                                      }
-                                    }
+                                        if (index == _messages.length - 1) {
+                                          widgets.add(
+                                            _buildDateMarker(message.createdAt),
+                                          );
+                                        } else {
+                                          final nextMessage = _messages[
+                                              _messages.length - 2 - index];
+                                          if (!_isSameDay(
+                                            message.createdAt,
+                                            nextMessage.createdAt,
+                                          )) {
+                                            widgets.add(
+                                              _buildDateMarker(
+                                                  message.createdAt),
+                                            );
+                                          }
+                                        }
 
-                                    widgets.add(_buildMessageBubble(message));
-                                    return Column(children: widgets);
-                                  },
-                                ),
+                                        widgets
+                                            .add(_buildMessageBubble(message));
+                                        return Column(children: widgets);
+                                      },
+                                    ),
                         ),
                         _buildInputBar(),
                       ],
@@ -8399,12 +8415,11 @@ class _MusicPlayerWidgetState extends State<_MusicPlayerWidget> {
                       child: Slider(
                         value: _duration.inMilliseconds > 0
                             ? (_position.inMilliseconds /
-                                      _duration.inMilliseconds)
-                                  .clamp(0.0, 1.0)
+                                    _duration.inMilliseconds)
+                                .clamp(0.0, 1.0)
                             : 0.0,
-                        onChanged: _duration.inMilliseconds > 0
-                            ? _seekTo
-                            : null,
+                        onChanged:
+                            _duration.inMilliseconds > 0 ? _seekTo : null,
                         min: 0,
                         max: 1,
                       ),

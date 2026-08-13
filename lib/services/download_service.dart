@@ -1,5 +1,3 @@
-// lib/services/download_service.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,17 +15,37 @@ class DownloadService extends ChangeNotifier {
   double getProgress(String url) => _tasks[url]?.progress ?? 0.0;
   bool isDownloaded(String url) => _tasks[url]?.isDownloaded ?? false;
   String? getLocalPath(String url) => _tasks[url]?.localPath;
+  String? getErrorMessage(String url) => _tasks[url]?.errorMessage;
 
   Future<void> downloadFile({
     required String url,
     required String fileName,
+    VoidCallback? onStart,
+    VoidCallback? onProgress,
     VoidCallback? onComplete,
+    VoidCallback? onError,
   }) async {
-    if (_tasks.containsKey(url) && _tasks[url]!.isDownloading) return;
-    if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) return;
+    // اگر در حال دانلود است، کاری نکن
+    if (_tasks.containsKey(url) && _tasks[url]!.isDownloading) {
+      print('⏳ Already downloading: $fileName');
+      return;
+    }
 
-    // ✅ درخواست دسترسی برای Android 13+
+    // اگر قبلاً دانلود شده، کاری نکن
+    if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) {
+      print('✅ Already downloaded: $fileName');
+      return;
+    }
+
+    // ✅ درخواست دسترسی
     if (await _requestStoragePermission() == false) {
+      _tasks[url] = _DownloadTask(
+        url: url,
+        fileName: fileName,
+        errorMessage: 'دسترسی به حافظه داده نشد',
+      );
+      notifyListeners();
+      onError?.call();
       throw Exception('دسترسی به حافظه داده نشد');
     }
 
@@ -35,13 +53,17 @@ class DownloadService extends ChangeNotifier {
     _tasks[url] = task;
     notifyListeners();
 
+    onStart?.call();
+
     try {
-      // ✅ دریافت مسیر پوشه Downloads
       final directory = await _getDownloadsDirectory();
       final localPath = '${directory.path}/${_sanitizeFileName(fileName)}';
 
       task.isDownloading = true;
+      task.progress = 0.0;
       notifyListeners();
+
+      onProgress?.call();
 
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -52,19 +74,24 @@ class DownloadService extends ChangeNotifier {
         task.isDownloaded = true;
         task.localPath = localPath;
         task.progress = 1.0;
+        task.errorMessage = null;
         notifyListeners();
 
         onComplete?.call();
       } else {
         task.isDownloading = false;
         task.progress = 0.0;
+        task.errorMessage = 'Download failed: ${response.statusCode}';
         notifyListeners();
+        onError?.call();
         throw Exception('Download failed: ${response.statusCode}');
       }
     } catch (e) {
       task.isDownloading = false;
       task.progress = 0.0;
+      task.errorMessage = e.toString();
       notifyListeners();
+      onError?.call();
       rethrow;
     }
   }
@@ -184,6 +211,7 @@ class _DownloadTask {
   bool isDownloaded;
   double progress;
   String? localPath;
+  String? errorMessage;
 
   _DownloadTask({
     required this.url,
@@ -192,5 +220,6 @@ class _DownloadTask {
     this.isDownloaded = false,
     this.progress = 0.0,
     this.localPath,
+    this.errorMessage,
   });
 }

@@ -31,9 +31,8 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
   Widget build(BuildContext context) {
     // ✅ تشخیص درست کاربران
     final isCreator = widget.challenge.creatorId == widget.currentUserId;
-    final opponentId = isCreator
-        ? widget.challenge.opponentId
-        : widget.challenge.creatorId;
+    final opponentId =
+        isCreator ? widget.challenge.opponentId : widget.challenge.creatorId;
     final opponentName = isCreator
         ? widget.challenge.opponentName
         : widget.challenge.creatorName;
@@ -347,58 +346,6 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
             ],
           ),
 
-          // ==================== پیام انگیزشی ====================
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: _getMotivationColor(
-                myCompletedDays,
-                opponentCompletedDays,
-                totalDays,
-              ).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _getMotivationColor(
-                  myCompletedDays,
-                  opponentCompletedDays,
-                  totalDays,
-                ).withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _getMotivationIcon(
-                    myCompletedDays,
-                    opponentCompletedDays,
-                    totalDays,
-                  ),
-                  size: 18,
-                  color: _getMotivationColor(
-                    myCompletedDays,
-                    opponentCompletedDays,
-                    totalDays,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.challenge.getMotivationalMessage(
-                      widget.currentUserId,
-                      opponentId,
-                    ),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: const Color(0xFF1A1A2E),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
           // ==================== دکمه‌های اقدام ====================
           Row(
             children: [
@@ -472,8 +419,8 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
         child: isCompleted
             ? Icon(Icons.check, size: 14, color: Colors.white)
             : isMe && canToggle
-            ? Icon(Icons.add, size: 14, color: Colors.grey.shade400)
-            : null,
+                ? Icon(Icons.add, size: 14, color: Colors.grey.shade400)
+                : null,
       ),
     );
   }
@@ -495,11 +442,11 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
       decoration: BoxDecoration(
         color: isMe
             ? (isCompleted
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.blue.withValues(alpha: 0.05))
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.blue.withValues(alpha: 0.05))
             : (isCompleted
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.grey.shade50),
+                ? Colors.green.withValues(alpha: 0.1)
+                : Colors.grey.shade50),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isMe
