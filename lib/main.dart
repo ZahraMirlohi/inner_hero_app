@@ -17,24 +17,28 @@ void main() async {
     String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
     String supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
 
+    print('🎯 SUPABASE_URL from dart-define: "$supabaseUrl"');
+    print('🎯 SUPABASE_ANON_KEY length: ${supabaseAnonKey.length}');
+
     // ✅ اگر dart-define خالی بود، از .env استفاده کن
     if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      print('📄 Trying to load .env file...');
       await dotenv.load(fileName: ".env");
       supabaseUrl = dotenv.env['SUPABASE_URL']!;
       supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']!;
-      print('📄 Using .env file');
+      print('📄 Loaded from .env');
     } else {
-      print('🎯 Using dart-define');
+      print('🎯 Using dart-define values');
+    }
+
+    // ✅ بررسی نهایی
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      throw Exception('SUPABASE_URL or SUPABASE_ANON_KEY is empty!');
     }
 
     print('🔑 SUPABASE_URL: $supabaseUrl');
-
-    // ✅ اصلاح: بررسی طول رشته قبل از substring
-    if (supabaseAnonKey.length >= 20) {
-      print('🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, 20)}...');
-    } else {
-      print('🔑 SUPABASE_ANON_KEY: $supabaseAnonKey');
-    }
+    print(
+        '🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, supabaseAnonKey.length > 20 ? 20 : supabaseAnonKey.length)}...');
 
     await Supabase.initialize(
       url: supabaseUrl,
@@ -53,29 +57,35 @@ void main() async {
       ),
     );
   } catch (e) {
+    print('❌ Error: $e');
     runApp(
       MaterialApp(
         home: Scaffold(
           body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  'خطا در اجرای اپلیکیشن',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Text(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'خطا در اجرای اپلیکیشن',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
                     e.toString(),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey.shade600),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => main(),
+                    child: const Text('تلاش مجدد'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
