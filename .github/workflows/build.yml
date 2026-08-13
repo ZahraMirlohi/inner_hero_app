@@ -36,9 +36,11 @@ jobs:
     
     - name: Create .env file from secrets
       run: |
-        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" > .env
-        echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
-    
+        echo "SUPABASE_URL=$SUPABASE_URL" > .env
+        echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+      env:
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     - name: Get dependencies
       run: flutter pub get
     
