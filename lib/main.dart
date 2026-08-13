@@ -7,24 +7,40 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'providers/sync_provider.dart';
 import 'services/local_storage_service.dart';
-import 'services/audio_player_service.dart'; // ✅ جایگزین global_audio_service.dart
+import 'services/audio_player_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await dotenv.load(fileName: ".env");
+    // ✅ اولویت اول: dart-define
+    String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
+    String supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
+
+    // ✅ اگر dart-define خالی بود، از .env استفاده کن
+    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+      await dotenv.load(fileName: ".env");
+      supabaseUrl = dotenv.env['SUPABASE_URL']!;
+      supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']!;
+      print('📄 Using .env file');
+    } else {
+      print('🎯 Using dart-define');
+    }
+
+    print('🔑 SUPABASE_URL: $supabaseUrl');
+    print('🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, 20)}...');
+
     await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL']!,
-      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
     );
+
     await LocalStorageService().init();
 
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => SyncProvider()),
-          // ✅ استفاده از سرویس جدید
           ChangeNotifierProvider(create: (_) => AudioPlayerService()),
         ],
         child: const HeroApp(),
