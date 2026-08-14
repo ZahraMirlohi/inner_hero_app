@@ -113,7 +113,16 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       final today = DateTime.now();
       final dateStr = today.toIso8601String().split('T').first;
 
-      await _supabase.client.from('habit_time_tracking').upsert({
+      // ✅ حذف رکورد قبلی
+      await _supabase.client
+          .from('habit_time_tracking')
+          .delete()
+          .eq('habit_id', widget.habitId)
+          .eq('user_id', user.id)
+          .eq('date', dateStr);
+
+      // ✅ درج رکورد جدید
+      await _supabase.client.from('habit_time_tracking').insert({
         'habit_id': widget.habitId,
         'user_id': user.id,
         'date': dateStr,
@@ -158,7 +167,6 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       ),
       child: Column(
         children: [
-          // ✅ عنوان عادت
           Text(
             widget.habitTitle,
             style: const TextStyle(
@@ -170,8 +178,6 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),
-
-          // ✅ نمایش زمان
           Text(
             timeString,
             style: TextStyle(
@@ -181,10 +187,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
               fontFamily: 'monospace',
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // ✅ وضعیت
           if (_isSaved)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -230,14 +233,10 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 ),
               ),
             ),
-
           const SizedBox(height: 12),
-
-          // ✅ دکمه‌های کنترل
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // دکمه شروع
               if (!_isRunning && !_isPaused && !_isSaved)
                 _buildControlButton(
                   icon: Icons.play_arrow,
@@ -245,8 +244,6 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   color: Colors.green,
                   onTap: _startTimer,
                 ),
-
-              // دکمه مکث
               if (_isRunning)
                 _buildControlButton(
                   icon: Icons.pause,
@@ -254,8 +251,6 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   color: Colors.orange,
                   onTap: _pauseTimer,
                 ),
-
-              // دکمه ادامه
               if (_isPaused)
                 _buildControlButton(
                   icon: Icons.play_arrow,
@@ -263,10 +258,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   color: Colors.green,
                   onTap: _resumeTimer,
                 ),
-
               const SizedBox(width: 8),
-
-              // دکمه بازنشانی
               if (!_isSaved && (_isRunning || _isPaused || _elapsedSeconds > 0))
                 _buildControlButton(
                   icon: Icons.refresh,
@@ -274,10 +266,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   color: Colors.grey,
                   onTap: _resetTimer,
                 ),
-
               const SizedBox(width: 8),
-
-              // ✅ دکمه ذخیره زمان
               if (!_isSaved && _elapsedSeconds > 0 && !_isRunning)
                 _buildControlButton(
                   icon: Icons.save,

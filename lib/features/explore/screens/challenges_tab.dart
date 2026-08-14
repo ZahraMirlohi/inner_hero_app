@@ -175,16 +175,6 @@ class _ChallengesTabState extends State<ChallengesTab> {
         .where((c) => c['isJoined'] == true && c['isCompleted'] == true)
         .toList();
 
-    // ✅ چالش‌های ناموفق (کاربر ثبت‌نام کرده ولی موفق نشده)
-    final failedChallenges = widget.challenges
-        .where(
-          (c) =>
-              c['isJoined'] == true &&
-              c['isCompleted'] == false &&
-              c['status'] == 'failed',
-        )
-        .toList();
-
     // ✅ چالش‌های فعال (کاربر ثبت‌نام کرده و در حال انجام)
     final activeChallenges = widget.challenges
         .where(
@@ -196,9 +186,8 @@ class _ChallengesTabState extends State<ChallengesTab> {
         .toList();
 
     // ✅ چالش‌های جدید (کاربر ثبت‌نام نکرده)
-    final otherChallenges = widget.challenges
-        .where((c) => c['isJoined'] != true)
-        .toList();
+    final otherChallenges =
+        widget.challenges.where((c) => c['isJoined'] != true).toList();
 
     // ✅ تفکیک چالش‌های جدید به دو دسته:
     // 1. چالش‌های با مهلت ثبت‌نام فعال (رنگی)
@@ -235,10 +224,6 @@ class _ChallengesTabState extends State<ChallengesTab> {
           const DailySpark(),
           const SizedBox(height: 20),
 
-          // ✅ پیام‌های سیستم (چالش‌های شکست خورده)
-          _buildSystemMessages(),
-          const SizedBox(height: 12),
-
           // ✅ چالش‌های موفق
           if (successfulChallenges.isNotEmpty) ...[
             _buildSectionHeader(
@@ -251,23 +236,6 @@ class _ChallengesTabState extends State<ChallengesTab> {
               (challenge) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildChallengeCard(challenge, status: 'success'),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-
-          // ✅ چالش‌های ناموفق
-          if (failedChallenges.isNotEmpty) ...[
-            _buildSectionHeader(
-              icon: Icons.cancel,
-              title: '⛔ چالش‌های ناموفق',
-              color: Colors.red,
-            ),
-            const SizedBox(height: 12),
-            ...failedChallenges.map(
-              (challenge) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildChallengeCard(challenge, status: 'failed'),
               ),
             ),
             const SizedBox(height: 24),
@@ -337,104 +305,6 @@ class _ChallengesTabState extends State<ChallengesTab> {
           _buildPersonalityTestCard(),
         ],
       ),
-    );
-  }
-
-  // ==================== ویجت پیام‌های سیستم ====================
-
-  Widget _buildSystemMessages() {
-    // ✅ دریافت چالش‌هایی که اخیراً شکست خورده‌اند
-    final failedChallenges = widget.challenges
-        .where(
-          (c) =>
-              c['isJoined'] == true &&
-              c['status'] == 'failed' &&
-              c['isCompleted'] == false,
-        )
-        .toList();
-
-    if (failedChallenges.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      children: failedChallenges.map((challenge) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.shade200, width: 1),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.red,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '⚠️ چالش "${challenge['title']}"',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red.shade800,
-                      ),
-                    ),
-                    Text(
-                      'به دلیل شکستن زنجیره انجام روزانه، از برنامه شما حذف شد',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red.shade600,
-                      ),
-                    ),
-                    if (challenge['isRegistrationClosed'] != true) ...[
-                      const SizedBox(height: 4),
-                      GestureDetector(
-                        onTap: () {
-                          // ✅ امکان ثبت‌نام مجدد
-                          widget.joinChallenge(challenge);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2563EB),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'ثبت‌نام مجدد',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -670,26 +540,28 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
   // ==================== کارت چالش عمومی ====================
 
-  // lib/features/explore/screens/challenges_tab.dart
-
-  // ✅ بخش _buildChallengeCard - اصلاح کامل Row
+// lib/features/explore/screens/challenges_tab.dart
 
   Widget _buildChallengeCard(
     Map<String, dynamic> challenge, {
     String status = 'new',
   }) {
-    final isRegistrationClosed = challenge['isRegistrationClosed'] ?? false;
     final isCompleted = challenge['isCompleted'] ?? false;
     final isFailed = status == 'failed';
-    final isExpired = isRegistrationClosed && !isCompleted && !isFailed;
+
+    // ✅ اگر چالش ناموفق است، هیچ چیزی نمایش نده
+    if (isFailed) {
+      return const SizedBox.shrink();
+    }
+
+    // ✅ وضعیت چالش
+    final bool isAvailable = !isCompleted && !isFailed;
 
     Color getBgColor() {
-      if (isFailed) return Colors.red.shade50;
       if (isCompleted) return Colors.green.shade50;
-      if (isExpired) return Colors.grey.shade50;
       return _parseColor(
         challenge['color'] ?? '#FFB8B8',
-      ).withValues(alpha: 0.1);
+      ).withOpacity(0.1);
     }
 
     final bgColor = getBgColor();
@@ -703,80 +575,72 @@ class _ChallengesTabState extends State<ChallengesTab> {
           color: bgColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isExpired ? Colors.grey.shade300 : Colors.grey.shade200,
-            width: 1,
+            color: isCompleted ? Colors.green.shade200 : Colors.grey.shade200,
+            width: isCompleted ? 2 : 1,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ============================================================
             // ردیف بالا: وضعیت و شرکت‌کنندگان
+            // ============================================================
             Row(
               children: [
+                // ✅ وضعیت چالش - بدون نمایش روز
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isFailed
-                        ? Colors.red.withValues(alpha: 0.15)
-                        : isCompleted
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : isExpired
-                        ? Colors.grey.withValues(alpha: 0.15)
-                        : const Color(0xFFFFA500).withValues(alpha: 0.15),
+                    color: isCompleted
+                        ? Colors.green.withOpacity(0.15)
+                        : isAvailable
+                            ? const Color(0xFFFFA500).withOpacity(0.15)
+                            : Colors.grey.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isFailed
-                            ? Icons.close
-                            : isCompleted
+                        isCompleted
                             ? Icons.check_circle
-                            : isExpired
-                            ? Icons.lock_outline
-                            : Icons.access_time,
+                            : isAvailable
+                                ? Icons.flag
+                                : Icons.lock_outline,
                         size: 14,
-                        color: isFailed
-                            ? Colors.red
-                            : isCompleted
+                        color: isCompleted
                             ? Colors.green
-                            : isExpired
-                            ? Colors.grey
-                            : const Color(0xFFFFA500),
+                            : isAvailable
+                                ? const Color(0xFFFFA500)
+                                : Colors.grey,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        isFailed
-                            ? 'ناموفق'
-                            : isCompleted
-                            ? 'موفق'
-                            : isExpired
-                            ? 'پایان ثبت‌نام'
-                            : '${challenge['daysLeft'] ?? 0} روز',
+                        isCompleted
+                            ? '✅ کامل شده'
+                            : isAvailable
+                                ? 'فعال' // ✅ به جای "999 روز"
+                                : 'غیرفعال',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isFailed
-                              ? Colors.red
-                              : isCompleted
+                          color: isCompleted
                               ? Colors.green
-                              : isExpired
-                              ? Colors.grey
-                              : const Color(0xFFFFA500),
+                              : isAvailable
+                                  ? const Color(0xFFFFA500)
+                                  : Colors.grey,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const Spacer(),
+
+                // ✅ تعداد شرکت‌کنندگان
                 FutureBuilder<int>(
                   key: ValueKey(
-                    'participants_${challenge['id']}_$_refreshCounter',
-                  ),
+                      'participants_${challenge['id']}_$_refreshCounter'),
                   future: _getCachedParticipants(challenge['id']),
                   builder: (context, snapshot) {
                     final count = snapshot.data ?? 0;
@@ -786,9 +650,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: isExpired
-                            ? Colors.grey.shade200
-                            : Colors.white.withValues(alpha: 0.6),
+                        color: Colors.white.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -797,9 +659,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                           Icon(
                             Icons.people,
                             size: 14,
-                            color: isExpired
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade700,
+                            color: Colors.grey.shade700,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -807,9 +667,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isExpired
-                                  ? Colors.grey.shade500
-                                  : Colors.grey.shade700,
+                              color: Colors.grey.shade700,
                             ),
                           ),
                         ],
@@ -819,21 +677,22 @@ class _ChallengesTabState extends State<ChallengesTab> {
                 ),
               ],
             ),
+
             const SizedBox(height: 10),
 
+            // ============================================================
             // عنوان و توضیحات
+            // ============================================================
             Text(
               challenge['title'] ?? 'بدون عنوان',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isFailed
-                    ? Colors.red.shade800
-                    : isCompleted
+                color: isCompleted
                     ? Colors.green.shade800
-                    : isExpired
-                    ? Colors.grey.shade600
-                    : const Color(0xFF1A1A2E),
+                    : isAvailable
+                        ? const Color(0xFF1A1A2E)
+                        : Colors.grey.shade600,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -843,71 +702,51 @@ class _ChallengesTabState extends State<ChallengesTab> {
               challenge['description'] ?? '',
               style: TextStyle(
                 fontSize: 12,
-                color: isFailed
-                    ? Colors.red.shade600
-                    : isCompleted
+                color: isCompleted
                     ? Colors.green.shade600
-                    : isExpired
-                    ? Colors.grey.shade500
-                    : Colors.grey.shade700,
+                    : isAvailable
+                        ? Colors.grey.shade700
+                        : Colors.grey.shade500,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 12),
 
-            // ✅ ردیف پایین: مدت زمان، XP و دکمه (اصلاح شده با Wrap)
+            // ============================================================
+            // ردیف پایین: مدت زمان، XP و دکمه/مدال
+            // ============================================================
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 6,
               runSpacing: 6,
               children: [
-                // مدت زمان
+                // ❌ حذف بخش مدت زمان (روز)
+                // Container(
+                //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                //   decoration: BoxDecoration(...),
+                //   child: Row(
+                //     children: [
+                //       Icon(Icons.timer, size: 14, ...),
+                //       const SizedBox(width: 4),
+                //       Text('${challenge['challenge_duration'] ?? 7} روزه', ...),
+                //     ],
+                //   ),
+                // ),
+
+                // ✅ XP
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: isExpired
-                        ? Colors.grey.shade200
-                        : Colors.white.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.timer,
-                        size: 14,
-                        color: isExpired
-                            ? Colors.grey.shade500
-                            : Colors.grey.shade700,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${challenge['challenge_duration'] ?? 7} روزه',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isExpired
-                              ? Colors.grey.shade500
-                              : Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // XP
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isExpired
-                        ? Colors.grey.shade200
-                        : Colors.orange.withValues(alpha: 0.1),
+                    color: isCompleted
+                        ? Colors.green.withOpacity(0.1)
+                        : isAvailable
+                            ? Colors.orange.withOpacity(0.1)
+                            : Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -916,9 +755,11 @@ class _ChallengesTabState extends State<ChallengesTab> {
                       Icon(
                         Icons.stars,
                         size: 14,
-                        color: isExpired
-                            ? Colors.grey.shade500
-                            : const Color(0xFFFFA500),
+                        color: isCompleted
+                            ? Colors.green
+                            : isAvailable
+                                ? const Color(0xFFFFA500)
+                                : Colors.grey.shade500,
                       ),
                       const SizedBox(width: 4),
                       Text(
@@ -926,44 +767,109 @@ class _ChallengesTabState extends State<ChallengesTab> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isExpired
-                              ? Colors.grey.shade500
-                              : const Color(0xFFFFA500),
+                          color: isCompleted
+                              ? Colors.green
+                              : isAvailable
+                                  ? const Color(0xFFFFA500)
+                                  : Colors.grey.shade500,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // دکمه جزئیات
-                SizedBox(
-                  height: 32,
-                  child: ElevatedButton(
-                    onPressed: isExpired
-                        ? null
-                        : () => widget.showChallengeDetails(challenge),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isExpired
-                          ? Colors.grey.shade300
-                          : const Color(0xFF2563EB),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 4,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
+
+                // ✅ اگر چالش کامل شده → نمایش مدال
+                if (isCompleted) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
                     ),
-                    child: Text(
-                      isExpired ? 'پایان' : 'جزئیات',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFA500).withOpacity(0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.emoji_events,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '🏅 ${challenge['title']}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ]
+                // ✅ اگر چالش قابل انتخاب است → دکمه جزئیات
+                else if (isAvailable) ...[
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton(
+                      onPressed: () => widget.showChallengeDetails(challenge),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'جزئیات',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ]
+                // ✅ وضعیت غیرفعال
+                else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'غیرفعال',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -1173,8 +1079,8 @@ class DailySpark extends StatelessWidget {
               spark['type'] == 'quote'
                   ? Icons.format_quote
                   : spark['type'] == 'challenge'
-                  ? Icons.bolt
-                  : Icons.lightbulb,
+                      ? Icons.bolt
+                      : Icons.lightbulb,
               color: Colors.white,
               size: 28,
             ),
@@ -1188,8 +1094,8 @@ class DailySpark extends StatelessWidget {
                   spark['type'] == 'quote'
                       ? '✨ جرقه روزانه'
                       : spark['type'] == 'challenge'
-                      ? '⚡ چالش روزانه'
-                      : '💡 واقعیت علمی',
+                          ? '⚡ چالش روزانه'
+                          : '💡 واقعیت علمی',
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
                 const SizedBox(height: 4),

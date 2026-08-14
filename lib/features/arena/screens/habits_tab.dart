@@ -9,6 +9,7 @@ import '../category_selection_screen.dart';
 import '../edit_habit_screen.dart';
 import '/../providers/sync_provider.dart';
 import '/models/offline_operation.dart';
+import '/features/arena/screens/habit_detail_screen.dart';
 
 class HabitsTab extends StatefulWidget {
   const HabitsTab({super.key});
@@ -176,111 +177,16 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     }
   }
 
-  void _showHabitDetailsDialog(Habit habit) async {
-    String startDateStr = '';
-    if (habit.startDate != null) {
-      startDateStr = await DateService.formatDate(habit.startDate!);
-    }
+  // lib/features/arena/screens/habits_tab.dart
 
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+// ✅ اصلاح متد _showHabitDetailsDialog
+  void _showHabitDetailsDialog(Habit habit) {
+    // ✅ باز کردن صفحه کامل HabitDetailScreen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HabitDetailScreen(habit: habit),
       ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Color(habit.backgroundColor).withAlpha(255),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getIconData(habit.iconName),
-                      color: Color(habit.iconColor),
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          habit.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
-                          ),
-                        ),
-                        Text(
-                          habit.description.isEmpty
-                              ? 'بدون توضیحات'
-                              : habit.description,
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 32),
-              _buildDetailRow(
-                Icons.repeat,
-                'زمانبندی',
-                _getFrequencyText(habit),
-              ),
-              const SizedBox(height: 12),
-              _buildDetailRow(
-                Icons.access_time,
-                'زمان',
-                _getTimeOfDayText(habit.timeOfDay),
-              ),
-              const SizedBox(height: 12),
-              _buildDetailRow(Icons.stars, 'امتیاز', '${habit.xpReward} XP'),
-              if (habit.startDate != null) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  Icons.calendar_today,
-                  'تاریخ شروع',
-                  startDateStr,
-                ),
-              ],
-              if (habit.reminders.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  Icons.alarm,
-                  'یادآورها',
-                  '${habit.reminders.length} یادآور',
-                ),
-              ],
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -505,6 +411,8 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       floatingActionButton: FloatingActionButton(
+        // ✅ غیرفعال کردن Hero با heroTag: null
+        heroTag: null,
         onPressed: () async {
           final result = await Navigator.push(
             context,
@@ -524,39 +432,39 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                 child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
               )
             : _habits.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.fitness_center_outlined,
-                      size: 80,
-                      color: Colors.grey.shade300,
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.fitness_center_outlined,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'هیچ عادتی ندارید',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'روی دکمه + در پایین صفحه کلیک کنید',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'هیچ عادتی ندارید',
-                      style: TextStyle(color: Colors.grey.shade500),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'روی دکمه + در پایین صفحه کلیک کنید',
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _habits.length,
-                itemBuilder: (context, index) {
-                  final habit = _habits[index];
-                  return _buildHabitItem(habit);
-                },
-              ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _habits.length,
+                    itemBuilder: (context, index) {
+                      final habit = _habits[index];
+                      return _buildHabitItem(habit);
+                    },
+                  ),
       ),
     );
   }
@@ -671,7 +579,6 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
               ),
             ),
           ),
-
           if (isExpanded)
             SizeTransition(
               sizeFactor: _animations[habit.id]!,
@@ -726,7 +633,6 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                       ],
                     ),
                   ),
-
                   if (isSubExpanded && hasSubHabits)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -770,7 +676,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                             value: habit.subHabits.isEmpty
                                 ? 0
                                 : habit.completedSubHabits.length /
-                                      habit.subHabits.length,
+                                    habit.subHabits.length,
                             backgroundColor: Colors.grey.shade200,
                             color: const Color(0xFF4A90E2),
                             borderRadius: BorderRadius.circular(4),

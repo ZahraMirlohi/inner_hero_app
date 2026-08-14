@@ -351,6 +351,8 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       floatingActionButton: FloatingActionButton(
+        // ✅ غیرفعال کردن Hero با heroTag: null
+        heroTag: null,
         onPressed: () async {
           final result = await Navigator.push(
             context,
@@ -370,44 +372,42 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                 child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
               )
             : _tasks.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.assignment_outlined,
-                      size: 80,
-                      color: Colors.grey.shade300,
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.assignment_outlined,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'هیچ تسکی ندارید',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'روی دکمه + در پایین صفحه کلیک کنید',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'هیچ تسکی ندارید',
-                      style: TextStyle(color: Colors.grey.shade500),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'روی دکمه + در پایین صفحه کلیک کنید',
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _tasks.length,
-                itemBuilder: (context, index) {
-                  final task = _tasks[index];
-                  return _buildTaskItem(task);
-                },
-              ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _tasks.length,
+                    itemBuilder: (context, index) {
+                      final task = _tasks[index];
+                      return _buildTaskItem(task);
+                    },
+                  ),
       ),
     );
   }
-
-  // lib/features/arena/screens/tasks_tab.dart
 
   // ✅ حذف متدهای _markTaskCompleted و _markTaskFailed
   // ✅ حذف Dismissible از _buildTaskItem
@@ -531,7 +531,6 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
               ),
             ),
           ),
-
           if (isExpanded)
             SizeTransition(
               sizeFactor: _animations[task.id]!,
@@ -580,14 +579,12 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                         ),
                         _buildActionButton(
                           icon: Icons.delete,
-                          onTap: isChallengeTask
-                              ? null
-                              : () => _deleteTask(task),
+                          onTap:
+                              isChallengeTask ? null : () => _deleteTask(task),
                         ),
                       ],
                     ),
                   ),
-
                   if (isSubExpanded && hasSubTasks)
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -629,7 +626,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                             value: task.subTasks.isEmpty
                                 ? 0
                                 : task.completedSubTasks.length /
-                                      task.subTasks.length,
+                                    task.subTasks.length,
                             backgroundColor: Colors.grey.shade200,
                             color: const Color(0xFFFFA500),
                             borderRadius: BorderRadius.circular(4),

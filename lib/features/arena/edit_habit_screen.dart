@@ -32,6 +32,10 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
 
   late String _timeOfDay;
   late List<Reminder> _reminders;
+  late String? _targetValue;
+  late String? _fullDescription;
+  late String? _halfDescription;
+  late String? _basicDescription;
 
   late int _xpReward;
   bool _isLoading = false;
@@ -94,6 +98,10 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     _timeOfDay = widget.habit.timeOfDay;
     _reminders = List.from(widget.habit.reminders);
     _xpReward = widget.habit.xpReward;
+    _targetValue = widget.habit.targetValue;
+    _fullDescription = widget.habit.fullDescription;
+    _halfDescription = widget.habit.halfDescription;
+    _basicDescription = widget.habit.basicDescription;
   }
 
   @override
@@ -129,6 +137,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               const SizedBox(height: 16),
               _buildDescriptionField(),
               const SizedBox(height: 16),
+              _buildLevelSettingsSection(), // ✅ اضافه کنید
+              const SizedBox(height: 24),
               _buildSubHabitsSection(),
               const SizedBox(height: 24),
               _buildIconAndColorSection(),
@@ -144,6 +154,81 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               _buildSubmitButton(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+// ✅ اصلاح متد _buildLevelSettingsSection
+  Widget _buildLevelSettingsSection() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🎯 تنظیمات سطوح انجام عادت',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'این تنظیمات به کاربر کمک می‌کند بداند هر سطح به چه معناست',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+
+            // مقدار هدف
+            TextFormField(
+              initialValue: _targetValue,
+              decoration: const InputDecoration(
+                labelText: 'مقدار هدف (اختیاری)',
+                hintText: 'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _targetValue = value,
+            ),
+            const SizedBox(height: 12),
+
+            // توضیح سطح کامل
+            TextFormField(
+              initialValue: _fullDescription,
+              decoration: const InputDecoration(
+                labelText: '🌟 توضیح سطح کامل',
+                hintText: 'انجام کامل عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _fullDescription = value,
+            ),
+            const SizedBox(height: 12),
+
+            // توضیح سطح نیمه
+            TextFormField(
+              initialValue: _halfDescription,
+              decoration: const InputDecoration(
+                labelText: '⭐ توضیح سطح نیمه',
+                hintText: 'انجام نیمی از عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _halfDescription = value,
+            ),
+            const SizedBox(height: 12),
+
+            // توضیح سطح پایه
+            TextFormField(
+              initialValue: _basicDescription,
+              decoration: const InputDecoration(
+                labelText: '✨ توضیح سطح پایه',
+                hintText: 'انجام حداقل عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _basicDescription = value,
+            ),
+          ],
         ),
       ),
     );
@@ -268,9 +353,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                     ),
                     child: Icon(
                       icon['icon'],
-                      color: isSelected
-                          ? Color(_selectedIconColor)
-                          : Colors.grey,
+                      color:
+                          isSelected ? Color(_selectedIconColor) : Colors.grey,
                       size: 28,
                     ),
                   ),
@@ -395,9 +479,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? const Color(0xFF4A90E2)
-                  : Colors.grey.shade600,
+              color:
+                  isSelected ? const Color(0xFF4A90E2) : Colors.grey.shade600,
             ),
           ),
         ),
@@ -859,12 +942,12 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
+  // ✅ اصلاح متد _updateHabit
   Future<void> _updateHabit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final validCompletedSubHabits = _completedSubHabits
-        .where((c) => _subHabits.contains(c))
-        .toList();
+    final validCompletedSubHabits =
+        _completedSubHabits.where((c) => _subHabits.contains(c)).toList();
 
     setState(() {
       _isLoading = true;
@@ -882,17 +965,14 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         iconColor: _selectedIconColor,
         backgroundColor: _selectedBgColor,
         frequencyType: _frequencyType,
-        dailyIntervalDays: _frequencyType == 'daily'
-            ? [_dailyIntervalDays]
-            : null,
+        dailyIntervalDays:
+            _frequencyType == 'daily' ? [_dailyIntervalDays] : null,
         weeklyDays: _frequencyType == 'weekly' ? _weeklyDays : null,
-        weeklyIntervalWeeks: _frequencyType == 'weekly'
-            ? _weeklyIntervalWeeks
-            : 1,
+        weeklyIntervalWeeks:
+            _frequencyType == 'weekly' ? _weeklyIntervalWeeks : 1,
         monthlyDays: _frequencyType == 'monthly' ? _monthlyDays : null,
-        monthlyIntervalMonths: _frequencyType == 'monthly'
-            ? _monthlyIntervalMonths
-            : 1,
+        monthlyIntervalMonths:
+            _frequencyType == 'monthly' ? _monthlyIntervalMonths : 1,
         timeOfDay: _timeOfDay,
         reminders: _reminders,
         xpReward: _xpReward,
@@ -902,9 +982,14 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         createdAt: widget.habit.createdAt,
         updatedAt: DateTime.now(),
         groupId: widget.habit.groupId,
+        // ✅ اضافه کردن فیلدهای جدید
+        targetValue: _targetValue,
+        fullDescription: _fullDescription,
+        halfDescription: _halfDescription,
+        basicDescription: _basicDescription,
       );
 
-      await _supabase.updateHabit(updatedHabit); // ← تغییر
+      await _supabase.updateHabit(updatedHabit);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

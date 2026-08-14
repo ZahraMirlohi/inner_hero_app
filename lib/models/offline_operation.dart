@@ -13,6 +13,12 @@ enum OperationType {
   uncompleteTask,
   createProfile,
   updateProfile,
+  joinChallenge,
+  leaveChallenge,
+  completeChallengeDay,
+  uncompleteChallengeDay,
+  completeHabitWithLevel,
+  uncompleteHabitWithLevel,
 }
 
 class OfflineOperation {

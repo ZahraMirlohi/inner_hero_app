@@ -36,8 +36,11 @@ class Habit {
   String? challengeId;
   String? questId;
 
-  // ✅ اضافه کردن timerSetting
   TimerSetting? timerSetting;
+  String? targetValue; // مقدار هدف (مثلاً "۳۰ دقیقه")
+  String? fullDescription; // توضیح سطح کامل
+  String? halfDescription; // توضیح سطح نیمه
+  String? basicDescription; // توضیح سطح پایه
 
   Habit({
     required this.id,
@@ -68,7 +71,11 @@ class Habit {
     this.endDate,
     this.challengeId,
     this.questId,
-    this.timerSetting, // ✅ اضافه کردن
+    this.timerSetting,
+    this.targetValue,
+    this.fullDescription,
+    this.halfDescription,
+    this.basicDescription,
   });
 
   // بررسی اینکه عادت هنوز منقضی نشده است
@@ -185,8 +192,7 @@ class Habit {
 
         if (monthlyIntervalMonths != null && monthlyIntervalMonths! > 1) {
           final jalaliStart = Jalali.fromDateTime(startDate ?? createdAt);
-          final monthsSinceStart =
-              (jalaliDate.year - jalaliStart.year) * 12 +
+          final monthsSinceStart = (jalaliDate.year - jalaliStart.year) * 12 +
               (jalaliDate.month - jalaliStart.month);
           return monthsSinceStart % monthlyIntervalMonths! == 0;
         }
@@ -228,6 +234,10 @@ class Habit {
       'quest_id': questId,
       // ✅ اضافه کردن timer_setting
       'timer_setting': timerSetting?.toMap(),
+      'target_value': targetValue,
+      'full_description': fullDescription ?? 'انجام کامل عادت',
+      'half_description': halfDescription ?? 'انجام نیمی از عادت',
+      'basic_description': basicDescription ?? 'انجام حداقل عادت',
     };
   }
 
@@ -257,9 +267,8 @@ class Habit {
       userId: map['userId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
-      subHabits: map['subHabits'] != null
-          ? List<String>.from(map['subHabits'])
-          : [],
+      subHabits:
+          map['subHabits'] != null ? List<String>.from(map['subHabits']) : [],
       completedSubHabits: map['completedSubHabits'] != null
           ? List<String>.from(map['completedSubHabits'])
           : [],
@@ -267,20 +276,17 @@ class Habit {
       iconColor: map['iconColor'] ?? 0xFF4A90E2,
       backgroundColor: map['backgroundColor'] ?? 0xFFF5F5F5,
       frequencyType: map['frequencyType'] ?? 'daily',
-      dailyIntervalDays: map['dailyIntervalDays'] != null
-          ? [map['dailyIntervalDays']]
-          : null,
-      weeklyDays: map['weeklyDays'] != null
-          ? List<int>.from(map['weeklyDays'])
-          : null,
+      dailyIntervalDays:
+          map['dailyIntervalDays'] != null ? [map['dailyIntervalDays']] : null,
+      weeklyDays:
+          map['weeklyDays'] != null ? List<int>.from(map['weeklyDays']) : null,
       weeklyIntervalWeeks: map['weeklyIntervalWeeks'] ?? 1,
       monthlyDays: map['monthlyDays'] != null
           ? List<int>.from(map['monthlyDays'])
           : null,
       monthlyIntervalMonths: map['monthlyIntervalMonths'] ?? 1,
       timeOfDay: map['timeOfDay'] ?? 'morning',
-      reminders:
-          (map['reminders'] as List?)?.map((r) {
+      reminders: (map['reminders'] as List?)?.map((r) {
             if (r is String) {
               try {
                 return Reminder.fromMap(jsonDecode(r) as Map<String, dynamic>);
@@ -310,7 +316,11 @@ class Habit {
       endDate: map['endDate'] != null ? parseDate(map['endDate']) : null,
       challengeId: map['challengeId'],
       questId: map['questId'],
-      timerSetting: timerSetting, // ✅ اضافه کردن
+      timerSetting: timerSetting,
+      targetValue: map['targetValue'] ?? map['target_value'],
+      fullDescription: map['fullDescription'] ?? map['full_description'],
+      halfDescription: map['halfDescription'] ?? map['half_description'],
+      basicDescription: map['basicDescription'] ?? map['basic_description'],
     );
   }
 

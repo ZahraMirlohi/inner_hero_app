@@ -153,6 +153,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         print('📱 Loaded ${_quests.length} quests from LOCAL storage');
       }
 
+      if (_currentUserId.isNotEmpty) {
+        await _supabase.checkUserChallengeStreak(_currentUserId);
+      }
+
       // ✅ مرحله 2: اگر آنلاین هستیم، در پس‌زمینه به‌روزرسانی کن
       if (syncProvider.isOnline) {
         print('🌐 Online - updating data in background...');
@@ -251,9 +255,8 @@ class _ExploreScreenState extends State<ExploreScreen>
           .map((uq) => uq.questId)
           .toList();
 
-      _completedQuests = _quests
-          .where((q) => completedQuestIds.contains(q.id))
-          .toList();
+      _completedQuests =
+          _quests.where((q) => completedQuestIds.contains(q.id)).toList();
 
       print(
         '📊 Loaded from Supabase: ${_challenges.length} challenges, ${_templatePackages.length} packages, ${_quests.length} quests',
@@ -263,34 +266,25 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+// ✅ اصلاح متد _processChallenges - حذف منطق تاریخ
   void _processChallenges() {
     final now = DateTime.now();
     for (int i = 0; i < _challenges.length; i++) {
       final challenge = _challenges[i];
       final challengeId = challenge['id'];
 
-      // ✅ بررسی تاریخ ثبت‌نام
-      if (challenge['registration_end_date'] != null) {
-        try {
-          final registrationEnd = DateTime.parse(
-            challenge['registration_end_date'],
-          );
-          final daysLeft = registrationEnd.difference(now).inDays;
-          _challenges[i]['daysLeft'] = daysLeft > 0 ? daysLeft : 0;
-          _challenges[i]['isRegistrationClosed'] = daysLeft <= 0;
-        } catch (e) {
-          _challenges[i]['daysLeft'] = 0;
-          _challenges[i]['isRegistrationClosed'] = true;
-        }
-      } else {
-        _challenges[i]['isRegistrationClosed'] = false;
-      }
+      // ❌ حذف بررسی تاریخ ثبت‌نام
+      // if (challenge['registration_end_date'] != null) { ... }
 
-      // ✅ بررسی وضعیت عضویت - با بررسی دقیق‌تر
+      // ✅ همیشه قابل ثبت‌نام است (فقط is_active را چک کن)
+      _challenges[i]['isRegistrationClosed'] = false;
+      _challenges[i]['daysLeft'] = 999;
+
+      // ✅ بررسی وضعیت عضویت
       final isJoined = _myChallenges.any((c) => c['id'] == challengeId);
       _challenges[i]['isJoined'] = isJoined;
 
-      // ✅ اگر کاربر عضو هست، وضعیت رو از _myChallenges بگیر
+      // ✅ بررسی وضعیت تکمیل
       if (isJoined) {
         final userChallenge = _myChallenges.firstWhere(
           (c) => c['id'] == challengeId,
@@ -580,8 +574,8 @@ class _ExploreScreenState extends State<ExploreScreen>
               child: CircularProgressIndicator(color: Color(0xFF2563EB)),
             )
           : _errorMessage.isNotEmpty
-          ? _buildErrorState()
-          : _buildMainContent(),
+              ? _buildErrorState()
+              : _buildMainContent(),
     );
   }
 
@@ -795,8 +789,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   ) {
     try {
       final realParticipants = data['participants'] as int? ?? 0;
-      final progressData =
-          data['progress'] as Map<String, int>? ??
+      final progressData = data['progress'] as Map<String, int>? ??
           {'completedDays': 0, 'totalDays': 0};
 
       final fixedColor = const Color(0xFF2563EB);
@@ -900,33 +893,36 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     color: isCompleted
                                         ? Colors.green.withValues(alpha: 0.15)
                                         : isFailed
-                                        ? Colors.red.withValues(alpha: 0.15)
-                                        : isActive
-                                        ? fixedColor.withValues(alpha: 0.15)
-                                        : isExpired
-                                        ? Colors.grey.withValues(alpha: 0.15)
-                                        : Colors.orange.withValues(alpha: 0.15),
+                                            ? Colors.red.withValues(alpha: 0.15)
+                                            : isActive
+                                                ? fixedColor.withValues(
+                                                    alpha: 0.15)
+                                                : isExpired
+                                                    ? Colors.grey
+                                                        .withValues(alpha: 0.15)
+                                                    : Colors.orange.withValues(
+                                                        alpha: 0.15),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Icon(
                                     isCompleted
                                         ? Icons.emoji_events
                                         : isFailed
-                                        ? Icons.cancel
-                                        : challenge['is_boss'] == true
-                                        ? Icons.emoji_events
-                                        : isExpired
-                                        ? Icons.lock_outline
-                                        : Icons.flag,
+                                            ? Icons.cancel
+                                            : challenge['is_boss'] == true
+                                                ? Icons.emoji_events
+                                                : isExpired
+                                                    ? Icons.lock_outline
+                                                    : Icons.flag,
                                     color: isCompleted
                                         ? Colors.green
                                         : isFailed
-                                        ? Colors.red
-                                        : isExpired
-                                        ? Colors.grey.shade600
-                                        : isActive
-                                        ? fixedColor
-                                        : Colors.orange,
+                                            ? Colors.red
+                                            : isExpired
+                                                ? Colors.grey.shade600
+                                                : isActive
+                                                    ? fixedColor
+                                                    : Colors.orange,
                                     size: 30,
                                   ),
                                 ),
@@ -944,10 +940,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           color: isCompleted
                                               ? Colors.green
                                               : isFailed
-                                              ? Colors.red
-                                              : isExpired
-                                              ? Colors.grey.shade600
-                                              : const Color(0xFF1A1A2E),
+                                                  ? Colors.red
+                                                  : isExpired
+                                                      ? Colors.grey.shade600
+                                                      : const Color(0xFF1A1A2E),
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -958,10 +954,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           color: isCompleted
                                               ? Colors.green.shade700
                                               : isFailed
-                                              ? Colors.red.shade700
-                                              : isExpired
-                                              ? Colors.grey.shade500
-                                              : Colors.grey.shade700,
+                                                  ? Colors.red.shade700
+                                                  : isExpired
+                                                      ? Colors.grey.shade500
+                                                      : Colors.grey.shade700,
                                         ),
                                       ),
                                     ],
@@ -977,36 +973,39 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     color: isCompleted
                                         ? Colors.green.withValues(alpha: 0.1)
                                         : isFailed
-                                        ? Colors.red.withValues(alpha: 0.1)
-                                        : isExpired
-                                        ? Colors.grey.withValues(alpha: 0.1)
-                                        : isActive
-                                        ? fixedColor.withValues(alpha: 0.1)
-                                        : Colors.orange.withValues(alpha: 0.1),
+                                            ? Colors.red.withValues(alpha: 0.1)
+                                            : isExpired
+                                                ? Colors.grey
+                                                    .withValues(alpha: 0.1)
+                                                : isActive
+                                                    ? fixedColor.withValues(
+                                                        alpha: 0.1)
+                                                    : Colors.orange
+                                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
                                     isCompleted
                                         ? '✅ کامل شده'
                                         : isFailed
-                                        ? '❌ ناموفق'
-                                        : isExpired
-                                        ? '⛔ پایان ثبت‌نام'
-                                        : isActive
-                                        ? '⚡ در حال انجام'
-                                        : '🔥 جدید',
+                                            ? '❌ ناموفق'
+                                            : isExpired
+                                                ? '⛔ پایان ثبت‌نام'
+                                                : isActive
+                                                    ? '⚡ در حال انجام'
+                                                    : '🔥 جدید',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                       color: isCompleted
                                           ? Colors.green
                                           : isFailed
-                                          ? Colors.red
-                                          : isExpired
-                                          ? Colors.grey.shade600
-                                          : isActive
-                                          ? fixedColor
-                                          : Colors.orange,
+                                              ? Colors.red
+                                              : isExpired
+                                                  ? Colors.grey.shade600
+                                                  : isActive
+                                                      ? fixedColor
+                                                      : Colors.orange,
                                     ),
                                   ),
                                 ),
@@ -1025,15 +1024,15 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   color: isCompleted
                                       ? Colors.green.withValues(alpha: 0.1)
                                       : isFailed
-                                      ? Colors.red.withValues(alpha: 0.1)
-                                      : Colors.blue.withValues(alpha: 0.1),
+                                          ? Colors.red.withValues(alpha: 0.1)
+                                          : Colors.blue.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isCompleted
                                         ? Colors.green
                                         : isFailed
-                                        ? Colors.red
-                                        : fixedColor,
+                                            ? Colors.red
+                                            : fixedColor,
                                     width: 1,
                                   ),
                                 ),
@@ -1043,13 +1042,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                                       isCompleted
                                           ? Icons.check_circle
                                           : isFailed
-                                          ? Icons.cancel
-                                          : Icons.timer,
+                                              ? Icons.cancel
+                                              : Icons.timer,
                                       color: isCompleted
                                           ? Colors.green
                                           : isFailed
-                                          ? Colors.red
-                                          : fixedColor,
+                                              ? Colors.red
+                                              : fixedColor,
                                       size: 20,
                                     ),
                                     const SizedBox(width: 12),
@@ -1058,16 +1057,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         isCompleted
                                             ? '✅ چالش با موفقیت کامل شد!'
                                             : isFailed
-                                            ? '⛔ چالش ناموفق بود'
-                                            : '⏳ در حال انجام...',
+                                                ? '⛔ چالش ناموفق بود'
+                                                : '⏳ در حال انجام...',
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: isCompleted
                                               ? Colors.green
                                               : isFailed
-                                              ? Colors.red
-                                              : fixedColor,
+                                                  ? Colors.red
+                                                  : fixedColor,
                                         ),
                                       ),
                                     ),
@@ -1113,10 +1112,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                               isCompleted
                                   ? Colors.green
                                   : isFailed
-                                  ? Colors.red
-                                  : isExpired
-                                  ? Colors.grey.shade600
-                                  : fixedColor,
+                                      ? Colors.red
+                                      : isExpired
+                                          ? Colors.grey.shade600
+                                          : fixedColor,
                             ),
                             const SizedBox(height: 12),
 
@@ -1551,9 +1550,8 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       final int progress = userQuest.progress;
       final int targetCount = quest.targetCount;
-      final double progressPercent = targetCount > 0
-          ? (progress / targetCount).clamp(0.0, 1.0)
-          : 0.0;
+      final double progressPercent =
+          targetCount > 0 ? (progress / targetCount).clamp(0.0, 1.0) : 0.0;
 
       if (!mounted) return;
 
@@ -1603,21 +1601,22 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     color: isCompleted
                                         ? Colors.green.withValues(alpha: 0.2)
                                         : hasStarted
-                                        ? color.withValues(alpha: 0.2)
-                                        : Colors.grey.withValues(alpha: 0.2),
+                                            ? color.withValues(alpha: 0.2)
+                                            : Colors.grey
+                                                .withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Icon(
                                     isCompleted
                                         ? Icons.emoji_events
                                         : hasStarted
-                                        ? _getIconData(quest.icon)
-                                        : Icons.flag_outlined,
+                                            ? _getIconData(quest.icon)
+                                            : Icons.flag_outlined,
                                     color: isCompleted
                                         ? Colors.green
                                         : hasStarted
-                                        ? color
-                                        : Colors.grey.shade500,
+                                            ? color
+                                            : Colors.grey.shade500,
                                     size: 30,
                                   ),
                                 ),
@@ -1635,8 +1634,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           color: isCompleted
                                               ? Colors.green.shade700
                                               : hasStarted
-                                              ? const Color(0xFF1A1A2E)
-                                              : Colors.grey.shade700,
+                                                  ? const Color(0xFF1A1A2E)
+                                                  : Colors.grey.shade700,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -1647,8 +1646,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           color: isCompleted
                                               ? Colors.green.shade600
                                               : hasStarted
-                                              ? Colors.grey.shade700
-                                              : Colors.grey.shade500,
+                                                  ? Colors.grey.shade700
+                                                  : Colors.grey.shade500,
                                         ),
                                       ),
                                     ],
@@ -1663,10 +1662,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     color: isCompleted
                                         ? Colors.green.withValues(alpha: 0.1)
                                         : hasStarted
-                                        ? const Color(
-                                            0xFFFFA500,
-                                          ).withValues(alpha: 0.1)
-                                        : Colors.grey.withValues(alpha: 0.1),
+                                            ? const Color(
+                                                0xFFFFA500,
+                                              ).withValues(alpha: 0.1)
+                                            : Colors.grey
+                                                .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
@@ -1679,24 +1679,24 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         color: isCompleted
                                             ? Colors.green
                                             : hasStarted
-                                            ? const Color(0xFFFFA500)
-                                            : Colors.grey.shade500,
+                                                ? const Color(0xFFFFA500)
+                                                : Colors.grey.shade500,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
                                         isCompleted
                                             ? 'انجام شده'
                                             : hasStarted
-                                            ? '+${quest.xpReward} XP'
-                                            : 'شروع نشده',
+                                                ? '+${quest.xpReward} XP'
+                                                : 'شروع نشده',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                           color: isCompleted
                                               ? Colors.green
                                               : hasStarted
-                                              ? const Color(0xFFFFA500)
-                                              : Colors.grey.shade500,
+                                                  ? const Color(0xFFFFA500)
+                                                  : Colors.grey.shade500,
                                         ),
                                       ),
                                     ],
@@ -1717,15 +1717,15 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 color: isCompleted
                                     ? Colors.green.withValues(alpha: 0.1)
                                     : hasStarted
-                                    ? color.withValues(alpha: 0.1)
-                                    : Colors.grey.withValues(alpha: 0.1),
+                                        ? color.withValues(alpha: 0.1)
+                                        : Colors.grey.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isCompleted
                                       ? Colors.green
                                       : hasStarted
-                                      ? color
-                                      : Colors.grey.shade300,
+                                          ? color
+                                          : Colors.grey.shade300,
                                   width: 1,
                                 ),
                               ),
@@ -1735,13 +1735,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     isCompleted
                                         ? Icons.check_circle
                                         : hasStarted
-                                        ? Icons.timer
-                                        : Icons.flag_outlined,
+                                            ? Icons.timer
+                                            : Icons.flag_outlined,
                                     color: isCompleted
                                         ? Colors.green
                                         : hasStarted
-                                        ? color
-                                        : Colors.grey.shade500,
+                                            ? color
+                                            : Colors.grey.shade500,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
@@ -1750,16 +1750,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                                       isCompleted
                                           ? '✅ ماموریت با موفقیت کامل شد!'
                                           : hasStarted
-                                          ? '⏳ در حال انجام...'
-                                          : '📌 ماموریت جدید - آماده شروع',
+                                              ? '⏳ در حال انجام...'
+                                              : '📌 ماموریت جدید - آماده شروع',
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: isCompleted
                                             ? Colors.green
                                             : hasStarted
-                                            ? color
-                                            : Colors.grey.shade600,
+                                                ? color
+                                                : Colors.grey.shade600,
                                       ),
                                     ),
                                   ),
@@ -1788,8 +1788,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 color: isCompleted
                                     ? Colors.green.shade700
                                     : hasStarted
-                                    ? Colors.grey.shade700
-                                    : Colors.grey.shade600,
+                                        ? Colors.grey.shade700
+                                        : Colors.grey.shade600,
                                 height: 1.5,
                               ),
                             ),
@@ -2234,13 +2234,11 @@ class _ExploreScreenState extends State<ExploreScreen>
     required String value,
     bool isActive = true,
   }) {
-    final Color textColor = isActive
-        ? const Color(0xFF1A1A2E)
-        : Colors.grey.shade500;
+    final Color textColor =
+        isActive ? const Color(0xFF1A1A2E) : Colors.grey.shade500;
     final Color bgColor = isActive ? Colors.grey.shade50 : Colors.grey.shade100;
-    final Color borderColor = isActive
-        ? Colors.grey.shade200
-        : Colors.grey.shade300;
+    final Color borderColor =
+        isActive ? Colors.grey.shade200 : Colors.grey.shade300;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),

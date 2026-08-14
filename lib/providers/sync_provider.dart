@@ -11,6 +11,7 @@ import '../features/arena/models/task_model.dart';
 import '../features/explore/models/quest_model.dart';
 import '../features/explore/models/package_model.dart';
 import '../models/offline_operation.dart';
+import '../features/arena/models/habit_completion.dart';
 
 class SyncProvider extends ChangeNotifier {
   final SupabaseService _supabase = SupabaseService();
@@ -317,9 +318,88 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.updateTask(task);
         await _supabase.removeXP(operation.userId, data['xpReward']);
         break;
-      default:
+      // ✅ عملیات‌های چالش
+      case OperationType.joinChallenge:
+        await _supabase.joinChallenge(
+          operation.userId,
+          data['challengeId'],
+        );
         break;
+
+      case OperationType.leaveChallenge:
+        await _supabase.leaveChallenge(
+          operation.userId,
+          data['challengeId'],
+        );
+        break;
+
+      case OperationType.completeChallengeDay:
+        await _supabase.completeChallengeDay(
+          userId: operation.userId,
+          challengeId: data['challengeId'],
+          date: DateTime.parse(data['date']),
+        );
+        break;
+
+      case OperationType.uncompleteChallengeDay:
+        await _supabase.removeChallengeDay(
+          userId: operation.userId,
+          challengeId: data['challengeId'],
+          date: DateTime.parse(data['date']),
+        );
+        break;
+
+      case OperationType.completeHabitWithLevel:
+        final level =
+            CompletionLevelExtension.fromString(data['level'] ?? 'full');
+        await _supabase.markHabitCompletedWithLevel(
+          habitId: data['habitId'],
+          userId: operation.userId,
+          date: DateTime.parse(data['date']),
+          level: level,
+        );
+        break;
+
+      case OperationType.uncompleteHabitWithLevel:
+        // حذف تکمیل عادت با سطح
+        await _supabase.markHabitCompletedOnDate(
+          data['habitId'],
+          operation.userId,
+          DateTime.parse(data['date']),
+          false,
+        );
+        // حذف XP (با توجه به سطح)
+        final xpReward = data['xpReward'] as int? ?? 10;
+        final levelStr = data['level'] ?? 'full';
+        final level = CompletionLevelExtension.fromString(levelStr);
+        final xpToRemove = (xpReward * level.xpMultiplier / 100).round();
+        await _supabase.removeXP(operation.userId, xpToRemove);
+        break;
+      default:
     }
+  }
+
+  // ✅ متدهای کمکی برای افزودن عملیات چالش به صف
+  Future<void> addJoinChallengeOperation(String challengeId) async {
+    if (_currentUserId == null) return;
+
+    await addOfflineOperation(
+      type: OperationType.joinChallenge,
+      data: {'challengeId': challengeId},
+    );
+  }
+
+  Future<void> addCompleteChallengeDayOperation(
+      String challengeId, DateTime date) async {
+    if (_currentUserId == null) return;
+
+    await addOfflineOperation(
+      type: OperationType.completeChallengeDay,
+      data: {
+        'challengeId': challengeId,
+        'date': date.toIso8601String(),
+      },
+    );
   }
 
   Future<void> addOfflineOperation({

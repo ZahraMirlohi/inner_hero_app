@@ -47,6 +47,12 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   bool _isLoading = false;
   String _calendarType = 'jalali';
 
+  // ✅ تغییر از late به nullable با مقدار پیش‌فرض
+  String? _targetValue;
+  String? _fullDescription;
+  String? _halfDescription;
+  String? _basicDescription;
+
   final List<String> _weekdayLetters = ['د', 'س', 'چ', 'پ', 'ج', 'ش', 'ی'];
 
   final List<Map<String, dynamic>> _icons = [
@@ -82,7 +88,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     const Color(0xFFF0E8FD),
   ];
 
-  final _supabase = SupabaseService(); // ← تغییر
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -97,6 +103,12 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     if (widget.preSelectedColor != null) {
       _selectedIconColor = widget.preSelectedColor!;
     }
+
+    // ✅ مقداردهی پیش‌فرض برای فیلدهای جدید
+    _targetValue = null;
+    _fullDescription = 'انجام کامل عادت';
+    _halfDescription = 'انجام نیمی از عادت';
+    _basicDescription = 'انجام حداقل عادت';
   }
 
   Future<void> _loadCalendarType() async {
@@ -329,6 +341,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               const SizedBox(height: 16),
               _buildDescriptionField(),
               const SizedBox(height: 16),
+              _buildLevelSettingsSection(),
+              const SizedBox(height: 32),
               _buildSubHabitsSection(),
               const SizedBox(height: 24),
               _buildIconAndColorSection(),
@@ -342,10 +356,84 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               _buildRemindersSection(),
               const SizedBox(height: 24),
               _buildXPSection(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               _buildSubmitButton(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLevelSettingsSection() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '🎯 تنظیمات سطوح انجام عادت',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'این تنظیمات به کاربر کمک می‌کند بداند هر سطح به چه معناست',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ مقدار هدف
+            TextFormField(
+              initialValue: _targetValue,
+              decoration: const InputDecoration(
+                labelText: 'مقدار هدف (اختیاری)',
+                hintText: 'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _targetValue = value,
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ توضیح سطح کامل
+            TextFormField(
+              initialValue: _fullDescription,
+              decoration: const InputDecoration(
+                labelText: '🌟 توضیح سطح کامل',
+                hintText: 'انجام کامل عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _fullDescription = value,
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ توضیح سطح نیمه
+            TextFormField(
+              initialValue: _halfDescription,
+              decoration: const InputDecoration(
+                labelText: '⭐ توضیح سطح نیمه',
+                hintText: 'انجام نیمی از عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _halfDescription = value,
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ توضیح سطح پایه
+            TextFormField(
+              initialValue: _basicDescription,
+              decoration: const InputDecoration(
+                labelText: '✨ توضیح سطح پایه',
+                hintText: 'انجام حداقل عادت',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _basicDescription = value,
+            ),
+          ],
         ),
       ),
     );
@@ -1111,12 +1199,12 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = await _supabase.getCurrentUser(); // ← تغییر
+      final user = await _supabase.getCurrentUser();
 
       if (user != null && mounted) {
         final habit = Habit(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: user.id, // ← تغییر
+          userId: user.id,
           title: _titleController.text,
           description: _descriptionController.text,
           subHabits: _subHabits,
@@ -1139,9 +1227,14 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           xpReward: _xpReward,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
+          // ✅ اضافه کردن فیلدهای جدید
+          targetValue: _targetValue,
+          fullDescription: _fullDescription,
+          halfDescription: _halfDescription,
+          basicDescription: _basicDescription,
         );
 
-        await _supabase.createHabit(habit); // ← تغییر
+        await _supabase.createHabit(habit);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

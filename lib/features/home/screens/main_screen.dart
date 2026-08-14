@@ -1,6 +1,7 @@
 // lib/features/home/screens/main_screen.dart
 
 import 'package:flutter/material.dart';
+import '../../../services/supabase_service.dart';
 import '../../arena/screens/arena_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../chat/screens/chat_screen.dart';
@@ -24,6 +25,14 @@ class _MainScreenState extends State<MainScreen> {
     _profileRefreshNotifier.dispose();
     _exploreRefreshNotifier.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ بررسی روزانه در زمان بیدار شدن اپ
+    _runDailyCheck();
   }
 
   @override
@@ -84,5 +93,17 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _runDailyCheck() async {
+    try {
+      final supabase = SupabaseService();
+      final user = await supabase.getCurrentUser();
+      if (user != null) {
+        await supabase.runDailyCheck(user.id);
+      }
+    } catch (e) {
+      print('❌ Error in daily check: $e');
+    }
   }
 }

@@ -646,15 +646,18 @@ class HabitAdapter extends TypeAdapter<Habit> {
       createdAt: parseDate(reader.readString()),
       updatedAt: parseDate(reader.readString()),
       groupId: reader.readString().isEmpty ? null : reader.readString(),
-      startDate: reader.readString().isEmpty
-          ? null
-          : parseDate(reader.readString()),
-      endDate: reader.readString().isEmpty
-          ? null
-          : parseDate(reader.readString()),
+      startDate:
+          reader.readString().isEmpty ? null : parseDate(reader.readString()),
+      endDate:
+          reader.readString().isEmpty ? null : parseDate(reader.readString()),
       challengeId: reader.readString().isEmpty ? null : reader.readString(),
       questId: reader.readString().isEmpty ? null : reader.readString(),
       timerSetting: timerSetting,
+      targetValue: reader.readString().isEmpty ? null : reader.readString(),
+      fullDescription: reader.readString().isEmpty ? null : reader.readString(),
+      halfDescription: reader.readString().isEmpty ? null : reader.readString(),
+      basicDescription:
+          reader.readString().isEmpty ? null : reader.readString(),
     );
   }
 
@@ -688,6 +691,10 @@ class HabitAdapter extends TypeAdapter<Habit> {
     writer.writeString(obj.endDate?.toIso8601String() ?? '');
     writer.writeString(obj.challengeId ?? '');
     writer.writeString(obj.questId ?? '');
+    writer.writeString(obj.targetValue ?? '');
+    writer.writeString(obj.fullDescription ?? '');
+    writer.writeString(obj.halfDescription ?? '');
+    writer.writeString(obj.basicDescription ?? '');
 
     // ✅ نوشتن timer_setting
     if (obj.timerSetting != null) {
