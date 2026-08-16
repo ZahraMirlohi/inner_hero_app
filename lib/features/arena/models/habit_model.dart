@@ -37,10 +37,10 @@ class Habit {
   String? questId;
 
   TimerSetting? timerSetting;
-  String? targetValue; // مقدار هدف (مثلاً "۳۰ دقیقه")
-  String? fullDescription; // توضیح سطح کامل
-  String? halfDescription; // توضیح سطح نیمه
-  String? basicDescription; // توضیح سطح پایه
+  String? fullDescription;
+  String? halfDescription;
+  String? basicDescription;
+  String? targetValue;
 
   Habit({
     required this.id,
@@ -72,10 +72,10 @@ class Habit {
     this.challengeId,
     this.questId,
     this.timerSetting,
-    this.targetValue,
     this.fullDescription,
     this.halfDescription,
     this.basicDescription,
+    this.targetValue,
   });
 
   // بررسی اینکه عادت هنوز منقضی نشده است
@@ -90,7 +90,8 @@ class Habit {
     return DateTime.now().isBefore(endDate!);
   }
 
-  // ✅ متد جدید برای بررسی اینکه آیا ماموریت باید در یک تاریخ خاص نمایش داده شود
+// lib/features/arena/models/habit_model.dart
+
   bool shouldShowQuestOnDate(DateTime date) {
     if (questId == null) return shouldDoOnDate(date);
 
@@ -98,19 +99,15 @@ class Habit {
     if (!isActive) return false;
 
     // ✅ اگر تاریخ شروع مشخص شده، قبل از آن را نمایش نده
-    if (startDate != null && date.isBefore(startDate!)) {
-      return false;
+    if (startDate != null) {
+      final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
+      final checkDate = DateTime(date.year, date.month, date.day);
+      if (checkDate.isBefore(start)) {
+        return false;
+      }
     }
 
     // ✅ برای ماموریت‌ها، هر روز را نمایش بده (تا زمانی که کامل نشده باشد)
-    // اما اگر تاریخ شروع مشخص نشده، از امروز شروع کن
-    final effectiveStartDate = startDate ?? createdAt;
-
-    // ✅ اگر تاریخ انتخاب شده قبل از تاریخ شروع است، نمایش نده
-    if (date.isBefore(effectiveStartDate)) {
-      return false;
-    }
-
     return true;
   }
 
@@ -124,45 +121,50 @@ class Habit {
     return shouldDoOnDate(DateTime.now());
   }
 
+// lib/features/arena/models/habit_model.dart
+
   bool shouldDoOnDate(DateTime date) {
     if (!isActive) return false;
 
     // ✅ چک کردن تاریخ شروع
-    if (startDate != null && date.isBefore(startDate!)) {
-      return false;
+    if (startDate != null) {
+      final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
+      final checkDate = DateTime(date.year, date.month, date.day);
+      if (checkDate.isBefore(start)) {
+        return false;
+      }
     }
 
-    // ✅ چک کردن تاریخ پایان - برای ماموریت‌ها، تاریخ پایان را چک نکن
-    // چون می‌خواهیم تاریخچه ماموریت را نشان دهیم
-    if (challengeId != null && endDate != null && date.isAfter(endDate!)) {
-      return false; // فقط برای چالش‌ها
+    // ✅ چک کردن تاریخ پایان - برای چالش‌ها
+    if (challengeId != null && endDate != null) {
+      final end = DateTime(endDate!.year, endDate!.month, endDate!.day);
+      final checkDate = DateTime(date.year, date.month, date.day);
+      if (checkDate.isAfter(end)) {
+        return false;
+      }
     }
 
     // ✅ برای ماموریت‌ها (questId دارد)
     if (questId != null) {
-      // اگر تاریخ شروع مشخص شده، فقط از آن تاریخ به بعد نمایش بده
-      if (startDate != null && date.isBefore(startDate!)) {
-        return false;
+      // ✅ اگر تاریخ شروع مشخص شده، قبل از آن را نمایش نده
+      if (startDate != null) {
+        final start =
+            DateTime(startDate!.year, startDate!.month, startDate!.day);
+        final checkDate = DateTime(date.year, date.month, date.day);
+        if (checkDate.isBefore(start)) {
+          return false;
+        }
       }
-
-      // ✅ ماموریت‌ها را همیشه نمایش بده (حتی بعد از تکمیل)
-      // فقط اگر تاریخ پایان داشته باشد و تاریخ بعد از آن باشد، نمایش نده
-      if (endDate != null && date.isAfter(endDate!)) {
-        return false;
-      }
-
+      // ✅ ماموریت‌ها تاریخ پایان ندارند (همیشه فعال هستند تا زمانی که کامل شوند)
       return true;
     }
 
+    // ✅ ادامه کد برای عادت‌های معمولی
     switch (frequencyType) {
       case 'daily':
         if (dailyIntervalDays != null && dailyIntervalDays!.isNotEmpty) {
           final start = startDate ?? createdAt;
           final dayDiff = date.difference(start).inDays;
-          // ✅ برای ماموریت‌ها، هر روز را نمایش بده
-          if (questId != null) {
-            return dayDiff >= 0;
-          }
           return dayDiff % dailyIntervalDays!.first == 0;
         }
         return true;

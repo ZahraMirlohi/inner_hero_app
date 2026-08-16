@@ -67,6 +67,12 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     }
   }
 
+  // ✅ متد ریفرش اجباری
+  void forceRefresh() {
+    print('🔄 Force refresh habits tab');
+    _loadHabits();
+  }
+
   void _toggleExpanded(String id) {
     setState(() {
       if (_expandedItemId == id) {
@@ -104,7 +110,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
           ? syncProvider.habits
           : await _supabase.getHabits(_currentUserId!);
 
-      // ✅ نمایش همه عادت‌های فعال (شامل عادت‌های چالش)
+// ✅ نمایش همه عادت‌های فعال (شامل عادت‌های ماموریت)
       _habits = allHabits.where((h) => h.isActive && h.isNotExpired()).toList();
     }
     if (mounted) {
@@ -405,13 +411,44 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   }
 
   // ==================== Build ====================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
+      appBar: AppBar(
+        title: const Text('عادت‌ها'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          // ✅ دکمه ریفرش دستی
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFF4A90E2)),
+            onPressed: () async {
+              // ✅ ریفرش با SyncProvider
+              try {
+                final syncProvider =
+                    Provider.of<SyncProvider>(context, listen: false);
+                await syncProvider.forceRefresh();
+                await _loadHabits();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ لیست عادت‌ها بروزرسانی شد'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
+              } catch (e) {
+                // اگر SyncProvider در دسترس نبود، از روش معمولی استفاده کن
+                await _loadHabits();
+              }
+            },
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
-        // ✅ غیرفعال کردن Hero با heroTag: null
         heroTag: null,
         onPressed: () async {
           final result = await Navigator.push(

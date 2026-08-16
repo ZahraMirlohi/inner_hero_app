@@ -79,6 +79,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     }
   }
 
+  // lib/features/profile/widgets/analytics_overview_widget.dart
+
   Future<void> _loadStats() async {
     if (_isLoading && _isRefreshing) return;
 
@@ -130,17 +132,20 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         }
       }
 
-      // 3. چالش‌های امروز
+      // 3. چالش‌های امروز - ✅ فقط چالش‌های فعال و کامل نشده
       int todayChallenges = 0;
       int todayChallengesCompleted = 0;
 
-      final activeChallenges = userChallenges
-          .where(
-            (c) =>
-                (c['is_completed'] == false || c['is_completed'] == null) &&
-                c['status'] != 'failed',
-          )
-          .toList();
+      // ✅ فقط چالش‌هایی که کامل نشده‌اند و فعال هستند
+      final activeChallenges = userChallenges.where((c) {
+        // ❌ چالش‌های کامل شده را حذف کن
+        if (c['is_completed'] == true) return false;
+        // ❌ چالش‌های ناموفق را حذف کن
+        if (c['status'] == 'failed') return false;
+        // ❌ چالش‌های غیرفعال را حذف کن
+        if (c['is_active'] == false) return false;
+        return true;
+      }).toList();
 
       todayChallenges = activeChallenges.length;
 
@@ -148,9 +153,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         final challengeId = challenge['id'];
         final challengeTitle = challenge['title'] ?? '';
 
-        List<Habit> challengeHabits = allHabits
-            .where((h) => h.challengeId == challengeId)
-            .toList();
+        // دریافت عادت‌های این چالش
+        List<Habit> challengeHabits =
+            allHabits.where((h) => h.challengeId == challengeId).toList();
 
         if (challengeHabits.isEmpty) {
           final foundHabit = allHabits.firstWhere(
@@ -188,22 +193,21 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         }
       }
 
-      // 4. ماموریت‌های امروز
+      // 4. ماموریت‌های امروز - ✅ فقط ماموریت‌های فعال و کامل نشده
       int todayQuests = 0;
       int todayQuestsCompleted = 0;
 
-      final activeQuests = userQuests
-          .where((uq) => uq.isActive && !uq.isCompleted)
-          .toList();
+      // ✅ فقط ماموریت‌هایی که کامل نشده‌اند و فعال هستند
+      final activeQuests =
+          userQuests.where((uq) => uq.isActive && !uq.isCompleted).toList();
 
       todayQuests = activeQuests.length;
 
       final allQuests = await _supabase.getQuests();
 
       for (var userQuest in activeQuests) {
-        List<Habit> questHabits = allHabits
-            .where((h) => h.questId == userQuest.questId)
-            .toList();
+        List<Habit> questHabits =
+            allHabits.where((h) => h.questId == userQuest.questId).toList();
 
         if (questHabits.isEmpty) {
           final questData = allQuests.firstWhere(
@@ -261,15 +265,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
       // ==================== محاسبه نرخ تکمیل ====================
       final totalItems =
           todayHabits + todayTasks + todayChallenges + todayQuests;
-      final totalCompleted =
-          todayHabitsCompleted +
+      final totalCompleted = todayHabitsCompleted +
           todayTasksCompleted +
           todayChallengesCompleted +
           todayQuestsCompleted;
 
-      final double completionRate = totalItems > 0
-          ? (totalCompleted / totalItems).toDouble()
-          : 0.0;
+      final double completionRate =
+          totalItems > 0 ? (totalCompleted / totalItems).toDouble() : 0.0;
 
       if (mounted) {
         setState(() {
@@ -288,7 +290,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         });
       }
     } catch (e) {
-      // ignore: avoid_print
       print('❌ Error loading stats: $e');
       if (mounted) {
         setState(() {
@@ -493,8 +494,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           colors: isExcellent
               ? [const Color(0xFF2ECC71), const Color(0xFF27AE60)]
               : isGood
-              ? [const Color(0xFF4A90E2), const Color(0xFF7C3AED)]
-              : [const Color(0xFFFFA500), const Color(0xFFE74C3C)],
+                  ? [const Color(0xFF4A90E2), const Color(0xFF7C3AED)]
+                  : [const Color(0xFFFFA500), const Color(0xFFE74C3C)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -546,6 +547,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     );
   }
 
+// lib/features/profile/widgets/analytics_overview_widget.dart
+
   Widget _buildStatRow({
     required IconData icon,
     required String label,
@@ -559,9 +562,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.12), width: 1),
+        border: Border.all(color: color.withOpacity(0.12), width: 1),
       ),
       child: Row(
         children: [
@@ -569,7 +572,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),
@@ -599,8 +602,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: allDone
-                    ? Colors.green.withValues(alpha: 0.12)
-                    : color.withValues(alpha: 0.12),
+                    ? Colors.green.withOpacity(0.12)
+                    : color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(

@@ -1,7 +1,7 @@
 // lib/features/explore/screens/explore_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // ✅ اضافه کردن import
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '../models/package_model.dart';
 import '../models/quest_model.dart';
@@ -11,7 +11,9 @@ import 'packages_tab.dart';
 import 'quests_tab.dart';
 import 'cosmetics_tab.dart';
 import 'leaderboard_tab.dart';
-import '/providers/sync_provider.dart'; // ✅ اضافه کردن import
+import '/providers/sync_provider.dart';
+import '/services/local_storage_service.dart';
+import 'dart:async';
 
 class ExploreScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -310,20 +312,28 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ==================== متدهای چالش ====================
 
-  // lib/features/explore/screens/explore_screen.dart
-
+  // ✅ اصلاح متد _joinChallenge - بدون await غیرضروری
   Future<void> _joinChallenge(Map<String, dynamic> challenge) async {
-    if (challenge['isRegistrationClosed'] == true) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('مهلت ثبت‌نام این چالش به اتمام رسیده است'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
+    // ✅ نمایش پیام فوری
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('در حال ثبت‌نام در چالش...'),
+            ],
           ),
-        );
-      }
-      return;
+          backgroundColor: Color(0xFF4A90E2),
+          duration: Duration(seconds: 1),
+        ),
+      );
     }
 
     _isLoadingInProgress = true;
@@ -342,42 +352,42 @@ class _ExploreScreenState extends State<ExploreScreen>
         newChallenge['status'] = 'active';
         newChallenge['is_active'] = true;
 
-        setState(() {
-          _myChallenges.add(newChallenge);
-          _challenges.removeWhere((c) => c['id'] == challenge['id']);
-          _challenges.add(newChallenge);
-        });
+        if (mounted) {
+          setState(() {
+            _myChallenges.add(newChallenge);
+            _challenges.removeWhere((c) => c['id'] == challenge['id']);
+            _challenges.add(newChallenge);
+          });
+        }
 
-        // ✅ 3. ریفرش SyncProvider و LocalStorage
+        // ✅ 3. ریفرش در پس‌زمینه (بدون await)
         final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+        unawaited(syncProvider.manualSync());
 
-        // ریفرش کامل داده‌ها از دیتابیس
-        await syncProvider.manualSync();
-
-        // ریفرش پروفایل
+        // ✅ 4. ریفرش پروفایل
         if (widget.refreshNotifier != null) {
           widget.refreshNotifier!.value++;
         }
 
-        // ✅ 4. ریفرش کامل صفحه
+        // ✅ 5. ریفرش صفحه (بدون بارگذاری مجدد کامل)
         _isInitialized = false;
         _isLoadingInProgress = false;
-        await _loadData();
+        unawaited(_loadData());
 
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'به چالش پیوستید! عادت‌های چالش به لیست شما اضافه شد 🎉',
-              ),
+              content: Text('✅ به چالش پیوستید! 🎉'),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: Duration(seconds: 2),
             ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا: ${e.toString()}'),
@@ -390,11 +400,32 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // lib/features/explore/screens/explore_screen.dart
-
+  // ✅ اصلاح متد _leaveChallenge
   Future<void> _leaveChallenge(Map<String, dynamic> challenge) async {
     _isLoadingInProgress = true;
     if (mounted) setState(() => _isLoading = true);
+
+    // ✅ نمایش پیام فوری
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('در حال انصراف از چالش...'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
 
     try {
       final currentUser = await _supabase.getCurrentUser();
@@ -403,40 +434,39 @@ class _ExploreScreenState extends State<ExploreScreen>
         await _supabase.leaveChallenge(currentUser.id, challenge['id']);
 
         // ✅ 2. حذف از لیست محلی (فوری)
-        setState(() {
-          _myChallenges.removeWhere((c) => c['id'] == challenge['id']);
-          _challenges.removeWhere((c) => c['id'] == challenge['id']);
+        if (mounted) {
+          setState(() {
+            _myChallenges.removeWhere((c) => c['id'] == challenge['id']);
+            _challenges.removeWhere((c) => c['id'] == challenge['id']);
 
-          // ✅ چالش رو با isJoined = false دوباره به لیست اضافه کن
-          final updatedChallenge = Map<String, dynamic>.from(challenge);
-          updatedChallenge['isJoined'] = false;
-          updatedChallenge['isCompleted'] = false;
-          updatedChallenge['status'] = null;
-          updatedChallenge['is_active'] = false;
-          _challenges.add(updatedChallenge);
-        });
+            final updatedChallenge = Map<String, dynamic>.from(challenge);
+            updatedChallenge['isJoined'] = false;
+            updatedChallenge['isCompleted'] = false;
+            updatedChallenge['status'] = null;
+            updatedChallenge['is_active'] = false;
+            _challenges.add(updatedChallenge);
+          });
+        }
 
         // ✅ 3. به‌روزرسانی کش
         _challengeDetailsCache.remove(challenge['id']);
 
-        // ✅ 4. ریفرش داده‌های SyncProvider
+        // ✅ 4. ریفرش در پس‌زمینه
         if (mounted) {
-          final syncProvider = Provider.of<SyncProvider>(
-            context,
-            listen: false,
-          );
-          // حذف عادت‌های چالش از کش
+          final syncProvider =
+              Provider.of<SyncProvider>(context, listen: false);
           syncProvider.removeHabitsByChallengeId(challenge['id']);
-          // حذف از userChallenges
           syncProvider.removeUserChallenge(challenge['id']);
+          unawaited(syncProvider.manualSync());
         }
 
-        // ✅ 5. ریفرش کامل
+        // ✅ 5. ریفرش صفحه
         _isInitialized = false;
         _isLoadingInProgress = false;
-        await _loadData();
+        unawaited(_loadData());
 
         if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('از چالش "${challenge['title']}" انصراف دادید'),
@@ -448,6 +478,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا: ${e.toString()}'),
@@ -461,6 +492,8 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   // ==================== متدهای ماموریت ====================
+  // lib/features/explore/screens/explore_screen.dart
+
   Future<void> _startQuest(Quest quest) async {
     if (!mounted) return;
 
@@ -481,7 +514,28 @@ class _ExploreScreenState extends State<ExploreScreen>
         return;
       }
 
+      // ✅ شروع ماموریت
       await _supabase.startQuest(currentUser.id, quest);
+
+      // ✅ ریفرش فوری داده‌های محلی
+      try {
+        final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+        await syncProvider.manualSync();
+      } catch (e) {
+        // اگر SyncProvider در دسترس نبود، از LocalStorage استفاده کن
+        try {
+          final habits = await _supabase.getHabits(currentUser.id);
+          final localStorage = LocalStorageService();
+          await localStorage.saveHabits(habits);
+        } catch (e2) {
+          print('⚠️ Error updating LocalStorage: $e2');
+        }
+      }
+
+      // ✅ ریفرش داده‌های صفحه
+      _isInitialized = false;
+      _isLoadingInProgress = false;
+      await _loadData();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -491,9 +545,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             duration: const Duration(seconds: 2),
           ),
         );
-        _isInitialized = false;
-        _isLoadingInProgress = false;
-        await _loadData();
       }
     } catch (e) {
       print('❌ Error in _startQuest: $e');
@@ -514,6 +565,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+// lib/features/explore/screens/explore_screen.dart
+
   Future<void> _cancelQuest(Quest quest) async {
     _isLoadingInProgress = true;
     if (mounted) setState(() => _isLoading = true);
@@ -521,10 +574,31 @@ class _ExploreScreenState extends State<ExploreScreen>
     try {
       final currentUser = await _supabase.getCurrentUser();
       if (currentUser != null) {
+        // ✅ 1. انصراف از ماموریت
         await _supabase.cancelQuest(currentUser.id, quest.id);
+
+        // ✅ 2. ریفرش فوری داده‌های محلی از طریق LocalStorage
+        try {
+          final localStorage = LocalStorageService(); // ✅ درست
+          final habits = localStorage.getHabits();
+          final updatedHabits =
+              habits.where((h) => h.questId != quest.id).toList();
+          await localStorage.saveHabits(updatedHabits);
+          print('✅ LocalStorage updated after quest cancellation');
+        } catch (e) {
+          print('⚠️ Error updating LocalStorage: $e');
+        }
+
+        // ✅ 3. ریفرش داده‌های صفحه
         _isInitialized = false;
         _isLoadingInProgress = false;
         await _loadData();
+
+        // ✅ 4. ریفرش Arena (از طریق notifier)
+        if (widget.refreshNotifier != null) {
+          widget.refreshNotifier!.value++;
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -548,7 +622,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   // ==================== Widgetهای اصلی ====================
 
   @override
@@ -689,6 +762,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+// lib/features/explore/screens/explore_screen.dart
+
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'fitness_center':
@@ -713,6 +788,8 @@ class _ExploreScreenState extends State<ExploreScreen>
         return Icons.flare;
       case 'star':
         return Icons.star;
+      case 'flag':
+        return Icons.flag;
       default:
         return Icons.stars;
     }
@@ -1119,20 +1196,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                             ),
                             const SizedBox(height: 12),
 
-                            _buildDetailRowFixed(
-                              Icons.calendar_today,
-                              'تاریخ شروع',
-                              _formatDate(startDate),
-                              isExpired ? Colors.grey.shade600 : fixedColor,
-                            ),
-                            const SizedBox(height: 12),
-
-                            _buildDetailRowFixed(
-                              Icons.event,
-                              'تاریخ پایان',
-                              _formatDate(endDate),
-                              isExpired ? Colors.grey.shade600 : fixedColor,
-                            ),
                             const SizedBox(height: 12),
 
                             // ==================== نوار پیشرفت (فقط برای چالش‌های فعال) ====================
@@ -1519,7 +1582,8 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ✅ متد کامل نمایش جزئیات ماموریت با تفکیک وضعیت‌ها
+// lib/features/explore/screens/explore_screen.dart
+
   void _showQuestDetailDialog(Quest quest) async {
     try {
       final color = _parseColor(quest.color);
@@ -1528,27 +1592,26 @@ class _ExploreScreenState extends State<ExploreScreen>
       final userQuests = await _supabase.getUserQuests(_currentUserId);
 
       // ✅ جستجوی دقیق برای ماموریت
-      final userQuest = userQuests.firstWhere(
-        (uq) => uq.questId == quest.id,
-        orElse: () => UserQuest(
-          id: '',
-          userId: _currentUserId,
-          questId: quest.id,
-          progress: 0,
-          isCompleted: false,
-          isActive: false, // ✅ مهم: برای ماموریت‌های جدید false است
-          startedAt: DateTime.now(),
-          createdAt: DateTime.now(),
-        ),
-      );
+      UserQuest? userQuest;
+      for (var uq in userQuests) {
+        if (uq.questId == quest.id) {
+          userQuest = uq;
+          break;
+        }
+      }
 
       // ✅ تشخیص دقیق وضعیت ماموریت
-      final bool hasStarted =
-          userQuest.isActive == true && userQuest.isCompleted == false;
-      final bool isCompleted = userQuest.isCompleted == true;
+      final bool hasStarted = userQuest != null &&
+          userQuest.isActive == true &&
+          userQuest.isCompleted == false;
+
+      final bool isCompleted =
+          userQuest != null && userQuest.isCompleted == true;
+
       final bool isNew = !hasStarted && !isCompleted;
 
-      final int progress = userQuest.progress;
+      // ✅ دریافت progress
+      final int progress = userQuest?.progress ?? 0;
       final int targetCount = quest.targetCount;
       final double progressPercent =
           targetCount > 0 ? (progress / targetCount).clamp(0.0, 1.0) : 0.0;
@@ -1573,7 +1636,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ✅ نشانگر کشیدن
+                    // نشانگر کشیدن
                     Center(
                       child: Container(
                         width: 60,
@@ -1599,11 +1662,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   height: 60,
                                   decoration: BoxDecoration(
                                     color: isCompleted
-                                        ? Colors.green.withValues(alpha: 0.2)
+                                        ? Colors.green.withOpacity(0.2)
                                         : hasStarted
-                                            ? color.withValues(alpha: 0.2)
-                                            : Colors.grey
-                                                .withValues(alpha: 0.2),
+                                            ? color.withOpacity(0.2)
+                                            : Colors.grey.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Icon(
@@ -1660,13 +1722,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   ),
                                   decoration: BoxDecoration(
                                     color: isCompleted
-                                        ? Colors.green.withValues(alpha: 0.1)
+                                        ? Colors.green.withOpacity(0.1)
                                         : hasStarted
-                                            ? const Color(
-                                                0xFFFFA500,
-                                              ).withValues(alpha: 0.1)
-                                            : Colors.grey
-                                                .withValues(alpha: 0.1),
+                                            ? const Color(0xFFFFA500)
+                                                .withOpacity(0.1)
+                                            : Colors.grey.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(
@@ -1707,7 +1767,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
                             const SizedBox(height: 16),
 
-                            // ==================== وضعیت ماموریت (با رنگ‌های متفاوت) ====================
+                            // ==================== وضعیت ماموریت ====================
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -1715,10 +1775,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                               decoration: BoxDecoration(
                                 color: isCompleted
-                                    ? Colors.green.withValues(alpha: 0.1)
+                                    ? Colors.green.withOpacity(0.1)
                                     : hasStarted
-                                        ? color.withValues(alpha: 0.1)
-                                        : Colors.grey.withValues(alpha: 0.1),
+                                        ? color.withOpacity(0.1)
+                                        : Colors.grey.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isCompleted
@@ -1881,14 +1941,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: Colors.orange.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: Colors.orange.withValues(
-                                            alpha: 0.2,
-                                          ),
+                                          color: Colors.orange.withOpacity(0.2),
                                         ),
                                       ),
                                       child: Row(
@@ -1970,9 +2026,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: Colors.green.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
@@ -2043,9 +2097,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: Colors.blue.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
@@ -2075,16 +2127,15 @@ class _ExploreScreenState extends State<ExploreScreen>
 
                             const SizedBox(height: 24),
 
-                            // ==================== دکمه‌های اقدام (متفاوت برای هر وضعیت) ====================
+                            // ==================== دکمه‌های اقدام ====================
                             if (isCompleted) ...[
-                              // ✅ دکمه برای ماموریت کامل شده
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: Colors.green.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: Colors.green,
@@ -2112,7 +2163,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 ),
                               ),
                             ] else if (hasStarted) ...[
-                              // ✅ دکمه انصراف برای ماموریت در حال انجام
                               SizedBox(
                                 width: double.infinity,
                                 child: OutlinedButton(
@@ -2121,9 +2171,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                       context: context,
                                       builder: (context) => AlertDialog(
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(16),
                                         ),
                                         title: const Text('انصراف از ماموریت'),
                                         content: Text(
@@ -2173,7 +2222,6 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 ),
                               ),
                             ] else ...[
-                              // ✅ دکمه شروع برای ماموریت جدید
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -2228,6 +2276,8 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   // ==================== ویجت کمکی برای اطلاعات ماموریت (با پارامتر isActive) ====================
 
+  // lib/features/explore/screens/explore_screen.dart
+
   Widget _buildQuestInfoItem({
     required IconData icon,
     required String label,
@@ -2276,10 +2326,8 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
     );
   }
-
   // ==================== ویجت کمکی برای نمایش جزئیات ====================
 
-  // ✅ متدهای کمکی که در این متد استفاده شده‌اند
   Widget _buildDetailRowFixed(
     IconData icon,
     String label,

@@ -1,3 +1,5 @@
+// lib/features/explore/models/user_quest_model.dart
+
 class UserQuest {
   final String id;
   final String userId;

@@ -10,6 +10,10 @@ class Task {
   int xpReward;
   DateTime createdAt;
   DateTime updatedAt;
+  String? fullDescription;
+  String? halfDescription;
+  String? basicDescription;
+  String? targetValue;
 
   Task({
     required this.id,

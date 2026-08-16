@@ -1,5 +1,7 @@
 import '../../arena/models/habit_model.dart';
 
+// lib/features/explore/models/package_habit_model.dart
+
 class PackageHabit {
   final String id;
   final String title;
@@ -15,6 +17,12 @@ class PackageHabit {
   final int xpReward;
   final List<String> subHabits;
 
+  // ✅ فیلدهای جدید برای سطوح
+  final String? fullDescription;
+  final String? halfDescription;
+  final String? basicDescription;
+  final String? targetValue;
+
   PackageHabit({
     required this.id,
     required this.title,
@@ -29,12 +37,15 @@ class PackageHabit {
     this.timeOfDay = 'morning',
     this.xpReward = 10,
     this.subHabits = const [],
+    this.fullDescription,
+    this.halfDescription,
+    this.basicDescription,
+    this.targetValue,
   });
 
   factory PackageHabit.fromMap(Map<String, dynamic> map) {
     return PackageHabit(
-      id:
-          map['id']?.toString() ??
+      id: map['id']?.toString() ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       title: map['title']?.toString() ?? '',
       description: map['description']?.toString() ?? '',
@@ -51,9 +62,12 @@ class PackageHabit {
       dailyIntervalDays: map['daily_interval_days'],
       timeOfDay: map['time_of_day']?.toString() ?? 'morning',
       xpReward: map['xp_reward'] ?? 10,
-      subHabits: map['sub_habits'] != null
-          ? List<String>.from(map['sub_habits'])
-          : [],
+      subHabits:
+          map['sub_habits'] != null ? List<String>.from(map['sub_habits']) : [],
+      fullDescription: map['full_description']?.toString(),
+      halfDescription: map['half_description']?.toString(),
+      basicDescription: map['basic_description']?.toString(),
+      targetValue: map['target_value']?.toString(),
     );
   }
 
@@ -72,6 +86,10 @@ class PackageHabit {
       'time_of_day': timeOfDay,
       'xp_reward': xpReward,
       'sub_habits': subHabits,
+      'full_description': fullDescription,
+      'half_description': halfDescription,
+      'basic_description': basicDescription,
+      'target_value': targetValue,
     };
   }
 
@@ -87,9 +105,8 @@ class PackageHabit {
       iconColor: iconColor,
       backgroundColor: backgroundColor,
       frequencyType: frequencyType,
-      dailyIntervalDays: dailyIntervalDays != null
-          ? [dailyIntervalDays!]
-          : null,
+      dailyIntervalDays:
+          dailyIntervalDays != null ? [dailyIntervalDays!] : null,
       weeklyDays: weeklyDays,
       weeklyIntervalWeeks: 1,
       monthlyDays: monthlyDays,
@@ -106,6 +123,12 @@ class PackageHabit {
       startDate: null,
       endDate: null,
       challengeId: null,
+      questId: null,
+      // ✅ اضافه کردن فیلدهای سطح
+      fullDescription: fullDescription ?? 'انجام کامل عادت',
+      halfDescription: halfDescription ?? 'انجام نیمی از عادت',
+      basicDescription: basicDescription ?? 'انجام حداقل عادت',
+      targetValue: targetValue,
     );
   }
 }

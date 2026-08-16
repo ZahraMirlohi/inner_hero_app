@@ -89,13 +89,206 @@ class HabitDetailScreen extends StatelessWidget {
     }
   }
 
-  bool _hasLevelSettings() {
-    return (habit.fullDescription != null &&
-            habit.fullDescription!.isNotEmpty) ||
-        (habit.halfDescription != null && habit.halfDescription!.isNotEmpty) ||
-        (habit.basicDescription != null && habit.basicDescription!.isNotEmpty);
+// lib/features/arena/screens/habit_detail_screen.dart
+
+// ==================== تنظیمات سطوح ====================
+
+  Widget _buildLevelSettingsCard() {
+    final hasLevelSettings = _hasLevelSettings();
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  '🎯 سطوح انجام عادت',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                if (habit.targetValue != null && habit.targetValue!.isNotEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A90E2).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF4A90E2).withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.flag,
+                          size: 14,
+                          color: Color(0xFF4A90E2),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'هدف: ${habit.targetValue}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF4A90E2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasLevelSettings
+                  ? 'سطوح زیر برای این عادت تعریف شده است:'
+                  : 'تنظیمات سطح خاصی تعریف نشده است. از سطوح پیش‌فرض استفاده می‌شود.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ✅ سطح کامل
+            _buildLevelRow(
+              '🌟 کامل',
+              habit.fullDescription ?? 'انجام کامل عادت',
+              CompletionLevel.full,
+              showValue: true,
+              targetValue: habit.targetValue,
+              multiplier: 100,
+              xpReward: habit.xpReward,
+              isCustom: habit.fullDescription != null &&
+                  habit.fullDescription != 'انجام کامل عادت',
+            ),
+
+            const SizedBox(height: 12),
+
+            // ✅ سطح نیمه
+            _buildLevelRow(
+              '⭐ نیمه',
+              habit.halfDescription ?? 'انجام نیمی از عادت',
+              CompletionLevel.half,
+              showValue: true,
+              targetValue: habit.targetValue,
+              multiplier: 50,
+              xpReward: habit.xpReward,
+              isCustom: habit.halfDescription != null &&
+                  habit.halfDescription != 'انجام نیمی از عادت',
+            ),
+
+            const SizedBox(height: 12),
+
+            // ✅ سطح پایه
+            _buildLevelRow(
+              '✨ پایه',
+              habit.basicDescription ?? 'انجام حداقل عادت',
+              CompletionLevel.basic,
+              showValue: true,
+              targetValue: habit.targetValue,
+              multiplier: 25,
+              xpReward: habit.xpReward,
+              isCustom: habit.basicDescription != null &&
+                  habit.basicDescription != 'انجام حداقل عادت',
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
+  String? _calculateLevelValue(String targetValue, CompletionLevel level) {
+    if (targetValue.isEmpty) return null;
+
+    // پشتیبانی از فرمت‌های مختلف: "۳۰ دقیقه", "۸ لیوان", "۱۰۰ حرکت"
+    final numberMatch = RegExp(r'(\d+)').firstMatch(targetValue);
+    if (numberMatch == null) {
+      // اگر عددی نبود، همان مقدار هدف را برگردان
+      return targetValue;
+    }
+
+    final int number = int.parse(numberMatch.group(1)!);
+    final String unit = targetValue.replaceAll(RegExp(r'[\d\s]+'), '').trim();
+
+    int result;
+    String prefix;
+
+    switch (level) {
+      case CompletionLevel.full:
+        result = number;
+        prefix = '';
+        break;
+      case CompletionLevel.half:
+        result = (number / 2).ceil();
+        prefix = '~';
+        break;
+      case CompletionLevel.basic:
+        result = (number / 4).ceil();
+        prefix = '~';
+        break;
+    }
+
+    // اگر واحد داشت، برگردان
+    if (unit.isNotEmpty) {
+      return '$prefix$result $unit';
+    }
+
+    return '$prefix$result';
+  }
+
+// lib/features/arena/screens/habit_detail_screen.dart
+
+  bool _hasLevelSettings() {
+    // ✅ برای ماموریت‌ها (questId != null)
+    if (habit.questId != null) {
+      // اگر حداقل یکی از توضیحات سطح با مقدار پیش‌فرض متفاوت باشد
+      final hasCustomFull = habit.fullDescription != null &&
+          habit.fullDescription!.isNotEmpty &&
+          habit.fullDescription != 'انجام کامل ماموریت';
+
+      final hasCustomHalf = habit.halfDescription != null &&
+          habit.halfDescription!.isNotEmpty &&
+          habit.halfDescription != 'انجام نیمی از ماموریت';
+
+      final hasCustomBasic = habit.basicDescription != null &&
+          habit.basicDescription!.isNotEmpty &&
+          habit.basicDescription != 'انجام حداقل ماموریت';
+
+      final hasTargetValue =
+          habit.targetValue != null && habit.targetValue!.isNotEmpty;
+
+      return hasCustomFull || hasCustomHalf || hasCustomBasic || hasTargetValue;
+    }
+
+    // ✅ برای عادت‌های معمولی و چالش‌ها
+    final hasCustomFull = habit.fullDescription != null &&
+        habit.fullDescription!.isNotEmpty &&
+        habit.fullDescription != 'انجام کامل عادت';
+
+    final hasCustomHalf = habit.halfDescription != null &&
+        habit.halfDescription!.isNotEmpty &&
+        habit.halfDescription != 'انجام نیمی از عادت';
+
+    final hasCustomBasic = habit.basicDescription != null &&
+        habit.basicDescription!.isNotEmpty &&
+        habit.basicDescription != 'انجام حداقل عادت';
+
+    final hasTargetValue =
+        habit.targetValue != null && habit.targetValue!.isNotEmpty;
+
+    return hasCustomFull || hasCustomHalf || hasCustomBasic || hasTargetValue;
+  }
   // ==================== Build ====================
 
   @override
@@ -111,7 +304,6 @@ class HabitDetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // ریفرش صفحه
               (context as Element).reassemble();
             },
           ),
@@ -148,6 +340,92 @@ class HabitDetailScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+// ==================== ✅ نمودار پیشرفت ====================
+
+  Widget _buildChartSection() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _supabase.getHabitChartData(
+        habitId: habit.id,
+        userId: habit.userId,
+      ),
+      builder: (context, snapshot) {
+        // ✅ حالت بارگذاری
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 250,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(strokeWidth: 2),
+                  SizedBox(height: 12),
+                  Text('در حال بارگذاری نمودار...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // ✅ حالت خطا
+        if (snapshot.hasError) {
+          print('❌ Error loading chart data: ${snapshot.error}');
+          return const SizedBox.shrink();
+        }
+
+        // ✅ حالت بدون داده
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            height: 200,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.show_chart, size: 48, color: Colors.grey),
+                  SizedBox(height: 12),
+                  Text(
+                    'هنوز داده‌ای برای نمایش وجود ندارد',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  Text(
+                    'با انجام عادت و انتخاب سطح، نمودار ساخته می‌شود',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // ✅ نمایش نمودار
+        return Padding(
+          padding: const EdgeInsets.only(top: 0),
+          child: HabitChartWidget(
+            data: snapshot.data!,
+            habitTitle: habit.title,
+            targetValue: habit.targetValue,
+          ),
+        );
+      },
     );
   }
 
@@ -314,150 +592,153 @@ class HabitDetailScreen extends StatelessWidget {
 
   // ==================== تنظیمات سطوح ====================
 
-  Widget _buildLevelSettingsCard() {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '🎯 سطوح انجام عادت',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (habit.fullDescription != null &&
-                habit.fullDescription!.isNotEmpty)
-              _buildLevelRow('🌟 کامل', habit.fullDescription!),
-            if (habit.halfDescription != null &&
-                habit.halfDescription!.isNotEmpty)
-              _buildLevelRow('⭐ نیمه', habit.halfDescription!),
-            if (habit.basicDescription != null &&
-                habit.basicDescription!.isNotEmpty)
-              _buildLevelRow('✨ پایه', habit.basicDescription!),
-          ],
+  Widget _buildLevelRow(
+    String label,
+    String description,
+    CompletionLevel level, {
+    bool showValue = false,
+    String? targetValue,
+    int multiplier = 100,
+    int xpReward = 10,
+    bool isCustom = false,
+  }) {
+    final xpEarned = (xpReward * multiplier / 100).round();
+
+    // ✅ محاسبه مقدار هدف برای هر سطح
+    String? levelValue;
+    if (showValue && targetValue != null && targetValue.isNotEmpty) {
+      levelValue = _calculateLevelValue(targetValue, level);
+    }
+
+    // ✅ برچسب نوع (عادت/ماموریت/چالش)
+    String typeLabel = '';
+    if (habit.questId != null) {
+      typeLabel = 'ماموریت';
+    } else if (habit.challengeId != null) {
+      typeLabel = 'چالش';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isCustom ? level.color.withOpacity(0.08) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isCustom ? level.color.withOpacity(0.2) : Colors.grey.shade200,
+          width: isCustom ? 1.5 : 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildLevelRow(String label, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              description,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade700,
+          Row(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isCustom ? FontWeight.bold : FontWeight.w600,
+                  color: level.color,
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== ✅ نمودار پیشرفت ====================
-
-  Widget _buildChartSection() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _supabase.getHabitChartData(
-        habitId: habit.id,
-        userId: habit.userId,
-        // ✅ حذف پارامتر days - خود متد محاسبه می‌کند
-      ),
-      builder: (context, snapshot) {
-        // ✅ حالت بارگذاری
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            height: 250,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(strokeWidth: 2),
-                  SizedBox(height: 12),
-                  Text('در حال بارگذاری نمودار...'),
-                ],
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: level.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '+$xpEarned XP',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: level.color,
+                  ),
+                ),
               ),
-            ),
-          );
-        }
-
-        // ✅ حالت خطا
-        if (snapshot.hasError) {
-          print('❌ Error loading chart data: ${snapshot.error}');
-          return const SizedBox.shrink();
-        }
-
-        // ✅ حالت بدون داده
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Container(
-            height: 200,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+              if (isCustom) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4A90E2).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    typeLabel.isNotEmpty ? 'سفارشی $typeLabel' : 'سفارشی',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF4A90E2),
+                    ),
+                  ),
                 ),
               ],
-            ),
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.show_chart, size: 48, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text(
-                    'هنوز داده‌ای برای نمایش وجود ندارد',
-                    style: TextStyle(color: Colors.grey),
+              if (!isCustom && typeLabel.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Text(
+                    'پیش‌فرض $typeLabel',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 13,
+              color: isCustom ? Colors.grey.shade800 : Colors.grey.shade600,
+            ),
+          ),
+          if (levelValue != null) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: level.color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: level.color.withOpacity(0.1),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.flag,
+                    size: 12,
+                    color: level.color,
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    'با انجام عادت و انتخاب سطح، نمودار ساخته می‌شود',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                    'مقدار هدف: $levelValue',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: level.color,
+                    ),
                   ),
                 ],
               ),
             ),
-          );
-        }
-
-        // ✅ نمایش نمودار
-        return Padding(
-          padding: const EdgeInsets.only(top: 0),
-          child: HabitChartWidget(
-            data: snapshot.data!,
-            habitTitle: habit.title,
-            targetValue: habit.targetValue,
-          ),
-        );
-      },
+          ],
+        ],
+      ),
     );
   }
 

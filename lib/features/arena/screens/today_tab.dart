@@ -285,16 +285,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       // ✅ پردازش عادت‌ها
       final List<Habit> pendingHabits = [];
       final List<Habit> completedHabits = [];
-      // ❌ حذف failedHabits
 
       for (var habit in allHabits) {
         if (!habit.isActive) continue;
 
+        // ✅ برای ماموریت‌ها از متد shouldShowQuestOnDate استفاده کن
         if (habit.questId != null) {
           if (!habit.shouldShowQuestOnDate(widget.selectedDate)) {
             continue;
           }
         } else {
+          // ✅ برای عادت‌های معمولی و چالش‌ها
           if (!habit.shouldDoOnDate(widget.selectedDate)) {
             continue;
           }
@@ -351,41 +352,69 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // ==================== متدهای عمومی برای ریفرش ====================
 
-  // lib/features/arena/screens/today_tab.dart
-
   Future<void> _markHabitCompleted(Habit habit) async {
-    if (!mounted) return;
+    if (!mounted) {
+      print('❌ Widget not mounted, cannot show dialog');
+      return;
+    }
 
-    // ✅ نمایش دیالوگ انتخاب سطح
+    // ✅ تشخیص نوع عادت
+    final bool isQuest = habit.questId != null;
+    final bool isChallenge = habit.challengeId != null;
+
+    // ✅ نمایش دیالوگ انتخاب سطح با اطلاعات واقعی
     final level = await showDialog<CompletionLevel>(
       context: context,
       barrierDismissible: true,
       builder: (context) => CompletionLevelPicker(
         habitTitle: habit.title,
         habitXpReward: habit.xpReward,
+        habitId: habit.id,
+        isQuest: isQuest,
+        isChallenge: isChallenge,
+        // ✅ ارسال اطلاعات واقعی سطح
+        fullDescription: habit.fullDescription,
+        halfDescription: habit.halfDescription,
+        basicDescription: habit.basicDescription,
+        targetValue: habit.targetValue,
         onSelected: (selectedLevel) {
           Navigator.pop(context, selectedLevel);
         },
       ),
     );
 
-    if (level == null || !mounted) return;
+    if (level == null) {
+      print('❌ User cancelled habit completion');
+      return;
+    }
+
+    if (!mounted) {
+      print('❌ Widget unmounted after dialog');
+      return;
+    }
+
+    print('✅ Level selected: ${level.displayName}');
 
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // ✅ **STEP 1: به‌روزرسانی فوری UI (قبل از هر عملیات دیتابیس)**
-    setState(() {
-      _habitCompletionStatus[habit.id] = true;
-      _todayHabits.remove(habit);
-      if (!_completedHabits.contains(habit)) {
-        _completedHabits.add(habit);
-      }
-      _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
-    });
+    // ============================================================
+    // STEP 1: به‌روزرسانی فوری UI
+    // ============================================================
+    if (mounted) {
+      setState(() {
+        _habitCompletionStatus[habit.id] = true;
+        _todayHabits.remove(habit);
+        if (!_completedHabits.contains(habit)) {
+          _completedHabits.add(habit);
+        }
+        _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
+      });
+    }
 
-    // ✅ **STEP 2: محاسبه XP و نمایش پیام فوری**
+    // ============================================================
+    // STEP 2: نمایش پیام فوری
+    // ============================================================
     final xpEarned = (habit.xpReward * level.xpMultiplier / 100).round();
-
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -397,34 +426,78 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       );
     }
 
-    // ✅ **STEP 3: انجام عملیات دیتابیس در پس‌زمینه (بدون منتظر ماندن)**
+    // ============================================================
+    // STEP 3: اجرای عملیات دیتابیس در پس‌زمینه (بدون await)
+    // ============================================================
+
+    // ✅ ریفرش پروفایل فوری
+    _scheduleProfileRefresh();
+
+    // ✅ اجرای عملیات دیتابیس به صورت پس‌زمینه
+    _performDatabaseOperations(habit, level, xpEarned);
+  }
+
+// ✅ متد جداگانه برای عملیات دیتابیس
+  Future<void> _performDatabaseOperations(
+      Habit habit, CompletionLevel level, int xpEarned) async {
+    final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
     try {
       if (syncProvider.isOnline) {
-        // ✅ اجرای بدون await برای عدم تاخیر
-        _supabase
-            .markHabitCompletedWithLevel(
-          habitId: habit.id,
-          userId: _currentUserId!,
-          date: widget.selectedDate,
-          level: level,
-        )
-            .then((_) async {
-          // ✅ بعد از ثبت، استریک و پروفایل را به‌روزرسانی کن
-          await _supabase.recordDailyActivity(
+        // ✅ اجرای موازی با Future.wait
+        await Future.wait([
+          _supabase.markHabitCompletedWithLevel(
+            habitId: habit.id,
+            userId: _currentUserId!,
+            date: widget.selectedDate,
+            level: level,
+          ),
+          _supabase.recordDailyActivity(
             userId: _currentUserId!,
             date: widget.selectedDate,
             habitsCompleted: _completedHabits.length,
             tasksCompleted: _completedTasks.length,
             xpEarned: _calculateTodayXP(),
             isActive: true,
-          );
-          _scheduleProfileRefresh();
-        }).catchError((e) {
-          print('❌ Error completing habit in background: $e');
-        });
+          ),
+        ]);
+
+        // ✅ اگر عادت مربوط به چالش است - اجرای موازی
+        if (habit.challengeId != null) {
+          print('📝 Processing challenge: ${habit.challengeId}');
+
+          // ✅ اجرای موازی عملیات چالش
+          await Future.wait([
+            _supabase.completeChallengeDay(
+              userId: _currentUserId!,
+              challengeId: habit.challengeId!,
+              date: widget.selectedDate,
+            ),
+            _supabase.updateChallengeProgress(
+              _currentUserId!,
+              habit.challengeId!,
+            ),
+          ]);
+
+          // ✅ ریفرش اکسپلور
+          if (widget.profileRefreshNotifier != null) {
+            widget.profileRefreshNotifier!.value++;
+          }
+
+          // ✅ بررسی کامل شدن چالش (بدون تایم‌اوت)
+          unawaited(_checkAndCompleteChallenge(habit));
+        }
+
+        // ✅ اگر عادت مربوط به ماموریت است
+        if (habit.questId != null) {
+          unawaited(_handleQuestCompletion(habit));
+        }
+
+        // ✅ ریفرش پروفایل دوباره
+        _scheduleProfileRefresh();
       } else {
         // ✅ حالت آفلاین
-        syncProvider.addOfflineOperation(
+        await syncProvider.addOfflineOperation(
           type: OperationType.completeHabitWithLevel,
           data: {
             'habitId': habit.id,
@@ -433,9 +506,22 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             'level': level.toString().split('.').last,
           },
         );
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ انجام شد (آفلاین)'),
+              backgroundColor: Colors.orange,
+              duration: Duration(milliseconds: 600),
+            ),
+          );
+        }
       }
+
+      // ✅ بررسی تکمیل همه و نمایش تبریک
+      _checkAllCompletedAndShowCongratulation();
     } catch (e) {
-      // ✅ در صورت خطا، وضعیت را برگردان
+      print('❌ Error in database operations: $e');
       if (mounted) {
         setState(() {
           _habitCompletionStatus[habit.id] = false;
@@ -445,6 +531,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             _todayHabits.add(habit);
           }
         });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا: ${e.toString()}'),
@@ -454,9 +541,54 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         );
       }
     }
+  }
 
-    // ✅ **STEP 4: بررسی تکمیل همه و نمایش تبریک (بدون await)**
-    _checkAllCompletedAndShowCongratulation();
+  // ✅ متد جداگانه برای بررسی کامل شدن چالش (بدون تایم‌اوت)
+  Future<void> _checkAndCompleteChallenge(Habit habit) async {
+    try {
+      print('🔍 Checking challenge completion for habit: ${habit.id}');
+
+      final completedChallenge = await _supabase.checkAndCompleteChallenge(
+          _currentUserId!, habit.challengeId!);
+
+      if (completedChallenge != null && mounted) {
+        print('✅ Challenge completed: ${completedChallenge['title']}');
+
+        // ✅ ریفرش فوری اکسپلور
+        if (widget.profileRefreshNotifier != null) {
+          widget.profileRefreshNotifier!.value++;
+        }
+
+        final progress = await _supabase.getUserChallengeProgressDetails(
+          _currentUserId!,
+          habit.challengeId!,
+        );
+
+        final completedDays = progress['completedDays'] ?? 0;
+        final totalDays = progress['totalDays'] ?? 3;
+
+        // ✅ نمایش صفحه تبریک
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChallengeCompletionScreen(
+              challenge: completedChallenge,
+              completedDays: completedDays,
+              totalDays: totalDays,
+            ),
+          ),
+        );
+
+        _hasShownCongratulationToday = false;
+        _initialCountSet = false;
+
+        if (mounted) {
+          await _loadData();
+        }
+      }
+    } catch (e) {
+      print('⚠️ Challenge completion check error: $e');
+    }
   }
 
   Future<void> _markHabitCompletedWithLevel(
@@ -554,19 +686,28 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
+// lib/features/arena/screens/today_tab.dart
+
+// ✅ در متد _handleQuestCompletion
   Future<void> _handleQuestCompletion(Habit habit) async {
     try {
       print('🔍 Checking quest completion for habit: ${habit.id}');
 
-      final completedQuest = await _supabase
-          .updateQuestProgress(_currentUserId!, habit.id)
-          .timeout(const Duration(seconds: 3));
+      if (habit.questId == null) return;
+
+      // ✅ به‌روزرسانی پیشرفت ماموریت
+      final completedQuest =
+          await _supabase.updateQuestProgress(_currentUserId!, habit.id);
 
       if (completedQuest != null && mounted) {
         print('✅ Quest completed: ${completedQuest.title}');
 
-        // ✅ به‌روزرسانی UI
+        // ✅ ریفرش فوری داده‌ها
         await _loadData();
+
+        // ✅ ریفرش SyncProvider
+        final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+        await syncProvider.forceRefresh();
 
         // ✅ نمایش صفحه تبریک
         await Navigator.push(
@@ -580,15 +721,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         );
 
         if (mounted) {
-          _loadData();
+          await _loadData();
         }
       }
     } catch (e) {
       print('⚠️ Quest completion error: $e');
     }
   }
-
-  // lib/features/arena/screens/today_tab.dart
 
   Future<void> _handleChallengeCompletion(Habit habit) async {
     try {
@@ -597,48 +736,82 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       if (habit.challengeId == null) return;
 
-      // ✅ اول روز چالش رو ثبت کن
+      // ✅ 1. ثبت روز چالش
       await _supabase.completeChallengeDay(
         userId: _currentUserId!,
         challengeId: habit.challengeId!,
         date: widget.selectedDate,
       );
 
-      // ✅ بعد چک کن که چالش کامل شده یا نه
-      final completedChallenge = await _supabase
-          .checkAndCompleteChallenge(_currentUserId!, habit.challengeId!)
-          .timeout(const Duration(seconds: 5));
+      // ✅ 2. به‌روزرسانی پیشرفت
+      await _supabase.updateChallengeProgress(
+        _currentUserId!,
+        habit.challengeId!,
+      );
 
-      if (completedChallenge != null && mounted) {
-        print('✅ Challenge completed: ${completedChallenge['title']}');
+      // ✅ 3. ریفرش اکسپلور
+      if (widget.profileRefreshNotifier != null) {
+        widget.profileRefreshNotifier!.value++;
+      }
 
-        // دریافت تعداد روزهای تکمیل شده
-        final progress = await _supabase.getUserChallengeProgressDetails(
+      // ✅ 4. بررسی کامل شدن چالش - با تایم‌اوت بیشتر
+      try {
+        final completedChallenge = await _supabase
+            .checkAndCompleteChallenge(_currentUserId!, habit.challengeId!)
+            .timeout(const Duration(seconds: 10)); // ✅ افزایش به ۱۰ ثانیه
+
+        if (completedChallenge != null && mounted) {
+          print('✅ Challenge completed: ${completedChallenge['title']}');
+
+          // ✅ ریفرش صفحه برای نمایش تغییرات
+          await _loadData();
+
+          // ✅ نمایش صفحه تبریک
+          final progress = await _supabase.getUserChallengeProgressDetails(
+            _currentUserId!,
+            habit.challengeId!,
+          );
+
+          final completedDays = progress['completedDays'] ?? 0;
+          final totalDays = progress['totalDays'] ?? 3;
+
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChallengeCompletionScreen(
+                challenge: completedChallenge,
+                completedDays: completedDays,
+                totalDays: totalDays,
+              ),
+            ),
+          );
+
+          _hasShownCongratulationToday = false;
+          _initialCountSet = false;
+
+          if (mounted) {
+            await _loadData();
+          }
+        }
+      } on TimeoutException {
+        // ✅ اگر تایم‌اوت شد، باز هم ریفرش کن
+        print('⏰ Challenge check timeout, forcing refresh...');
+
+        // ✅ حذف دستی عادت‌های چالش از localStorage
+        await _supabase.removeChallengeHabitByChallengeId(
           _currentUserId!,
           habit.challengeId!,
         );
 
-        final completedDays = progress['completedDays'] ?? 0;
-        final totalDays = progress['totalDays'] ?? 3;
-
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChallengeCompletionScreen(
-              challenge: completedChallenge,
-              completedDays: completedDays,
-              totalDays: totalDays,
-            ),
-          ),
-        );
-
-        _hasShownCongratulationToday = false;
-        _initialCountSet = false;
-        await _loadData();
-      } else {
-        // ✅ حتی اگر چالش کامل نشده، پیشرفت رو به‌روزرسانی کن
-        print('📊 Challenge progress updated but not completed yet');
-        await _loadData();
+        // ✅ ریفرش صفحه
+        if (mounted) {
+          await _loadData();
+          if (widget.profileRefreshNotifier != null) {
+            widget.profileRefreshNotifier!.value++;
+          }
+        }
+      } catch (e) {
+        print('⚠️ Challenge completion error: $e');
       }
     } catch (e) {
       print('⚠️ Challenge completion error: $e');
@@ -699,11 +872,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           // ✅ 3. اگر عادت مربوط به چالش است، روز چالش رو لغو کن
           if (habit.challengeId != null) {
             print('📝 Removing challenge day for: ${habit.challengeId}');
+            print('📅 Date: ${widget.selectedDate}');
+
             await _supabase.removeChallengeDay(
               userId: _currentUserId!,
               challengeId: habit.challengeId!,
-              date: widget.selectedDate,
+              date: widget.selectedDate, // ✅ تاریخ انتخاب شده در تقویم
             );
+
             await _supabase.updateChallengeProgress(
               _currentUserId!,
               habit.challengeId!,
@@ -790,17 +966,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     });
   }
 
+  // lib/features/arena/screens/today_tab.dart
+
   Future<bool> _checkIfTodayHasOtherActivities() async {
     final hasCompletedHabits = _completedHabits.isNotEmpty;
     final hasCompletedTasks = _completedTasks.isNotEmpty;
 
-    // ✅ اگر در حافظه چیزی هست، true برگردان
     if (hasCompletedHabits || hasCompletedTasks) {
       print('📊 Has completed habits or tasks in memory');
       return true;
     }
 
-    // ✅ اگر در حافظه چیزی نیست، از دیتابیس چک کن
     try {
       final todayStr = widget.selectedDate.toIso8601String().split('T').first;
 
@@ -815,14 +991,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         // ✅ بررسی کن که آیا این عادت‌ها مربوط به چالش هستند یا نه
         for (var completion in habitCompletions) {
           final habitId = completion['habit_id'];
-          // دریافت عادت از دیتابیس
           final habit = await _supabase.client
               .from('habits')
               .select('challenge_id, quest_id')
               .eq('id', habitId)
               .maybeSingle();
 
-          // ✅ اگر عادت مربوط به چالش یا ماموریت نبود، true برگردان
           if (habit != null &&
               habit['challenge_id'] == null &&
               habit['quest_id'] == null) {
@@ -832,7 +1006,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
 
-      // 2. چک کردن tasks (تسک‌های کامل شده)
+      // 2. چک کردن challenge_completions
+      final challengeCompletions = await _supabase.client
+          .from('challenge_completions')
+          .select('id')
+          .eq('user_id', _currentUserId!)
+          .eq('date', todayStr)
+          .limit(1);
+
+      if (challengeCompletions.isNotEmpty) {
+        print('📊 Found challenge completions in database');
+        return true;
+      }
+
+      // 3. چک کردن tasks
       final tasks = await _supabase.client
           .from('tasks')
           .select('id')
@@ -843,19 +1030,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       if (tasks.isNotEmpty) {
         print('📊 Found completed tasks in database');
-        return true;
-      }
-
-      // 3. ✅ چک کردن challenge_completions
-      final challengeCompletions = await _supabase.client
-          .from('challenge_completions')
-          .select('id')
-          .eq('user_id', _currentUserId!)
-          .eq('date', todayStr)
-          .limit(1);
-
-      if (challengeCompletions.isNotEmpty) {
-        print('📊 Found challenge completions in database');
         return true;
       }
 
@@ -1887,7 +2061,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         child: const Icon(Icons.check, color: Colors.white, size: 28),
       ),
       confirmDismiss: (direction) async {
-        await _markHabitCompleted(habit);
+        // ✅ بدون await برای سرعت بیشتر
+        _markHabitCompleted(habit);
         return false;
       },
       child: Card(
@@ -2215,8 +2390,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  // lib/features/arena/screens/today_tab.dart
-
   void _showTimerDialog(Habit habit) {
     showModalBottomSheet(
       context: context,
@@ -2232,25 +2405,18 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    '⏱️ تایمر عادت',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    habit.title,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                  HabitTimerWidget(
-                    habitId: habit.id,
-                    habitTitle: habit.title,
-                    onTimeSaved: () {
-                      Navigator.pop(context);
-                      // ✅ ریفرش صفحه برای نمایش تایمر
+                  // ✅ استفاده از _TimerDialogContent
+                  _TimerDialogContent(
+                    habit: habit,
+                    initialMinutes: habit.timerSetting?.minutes ?? 10,
+                    initialSeconds: habit.timerSetting?.seconds ?? 0,
+                    onSave: (minutes, seconds, isCountdown) {
+                      _saveTimerSetting(
+                          habit.id, minutes, seconds, isCountdown);
+                    },
+                    onComplete: () {
                       if (mounted) {
                         setState(() {});
-                        // ✅ ریفرش داده‌ها
                         _loadData();
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -2261,11 +2427,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                         );
                       }
                     },
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('بستن'),
                   ),
                 ],
               ),
@@ -2447,19 +2608,38 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),
-              // ✅ **نمایش تگ سطح فقط در بخش "انجام شده"**
+              // ✅ نمایش تگ سطح فقط در بخش "انجام شده"
               FutureBuilder<CompletionLevel>(
                 future: _getHabitCompletionLevel(habit.id),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     final level = snapshot.data!;
+
+                    // ✅ نمایش توضیحات سطح
+                    String levelDescription = '';
+                    switch (level) {
+                      case CompletionLevel.full:
+                        levelDescription = habit.fullDescription ?? 'کامل';
+                        break;
+                      case CompletionLevel.half:
+                        levelDescription = habit.halfDescription ?? 'نیمه';
+                        break;
+                      case CompletionLevel.basic:
+                        levelDescription = habit.basicDescription ?? 'پایه';
+                        break;
+                    }
+
                     return Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: level.color.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: level.color.withOpacity(0.3)),
+                        border: Border.all(
+                          color: level.color.withOpacity(0.3),
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -2477,11 +2657,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                               color: level.color,
                             ),
                           ),
+                          // ✅ نمایش توضیحات سطح به صورت Tooltip
+                          Tooltip(
+                            message: levelDescription,
+                            child: const Icon(
+                              Icons.info_outline,
+                              size: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     );
                   }
-                  // ✅ اگر در حال بارگذاری است، یک placeholder کوچک نشان بده
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const SizedBox(
                       width: 16,
@@ -2520,11 +2708,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   /// ✅ دریافت سطح انجام عادت برای تاریخ انتخاب شده
   Future<CompletionLevel> _getHabitCompletionLevel(String habitId) async {
     try {
-      // تاریخ انتخاب شده در تقویم
       final date = widget.selectedDate;
       final dateStr = date.toIso8601String().split('T').first;
 
-      // دریافت سطح از دیتابیس
       final response = await _supabase.client
           .from('habit_completions')
           .select('completion_level')
@@ -2533,17 +2719,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           .eq('date', dateStr)
           .maybeSingle();
 
-      // اگر سطح وجود داشت، آن را برگردان
       if (response != null && response['completion_level'] != null) {
         final levelStr = response['completion_level'] as String;
         return CompletionLevelExtension.fromString(levelStr);
       }
 
-      // اگر سطحی وجود نداشت، مقدار پیش‌فرض "کامل" را برگردان
       return CompletionLevel.full;
     } catch (e) {
       print('❌ Error getting completion level: $e');
-      // در صورت خطا، مقدار پیش‌فرض را برگردان
       return CompletionLevel.full;
     }
   }
@@ -2895,9 +3078,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   }
 }
 
-// lib/features/arena/screens/today_tab.dart
-
-// ✅ اصلاح کامل بخش _TimerDialogContent
 class _TimerDialogContent extends StatefulWidget {
   final Habit habit;
   final int initialMinutes;
@@ -2906,6 +3086,7 @@ class _TimerDialogContent extends StatefulWidget {
   final VoidCallback onComplete;
 
   const _TimerDialogContent({
+    super.key, // ✅ تغییر به super.key
     required this.habit,
     required this.initialMinutes,
     required this.initialSeconds,

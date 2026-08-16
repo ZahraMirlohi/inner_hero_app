@@ -499,7 +499,7 @@ class _HabitChartPainter extends CustomPainter {
     ];
 
     final textStyle = TextStyle(
-      fontSize: 18,
+      fontSize: 12,
       fontWeight: FontWeight.w500,
     );
 

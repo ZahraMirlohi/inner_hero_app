@@ -54,51 +54,18 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  // ✅ ریفرش اجباری داده‌ها از دیتابیس
-  Future<void> forceRefresh() async {
-    if (_currentUserId == null) return;
-
-    _isSyncing = true;
-    notifyListeners();
-
+  /// ✅ حذف یک عادت خاص از کش
+  void removeHabit(String habitId) {
     try {
-      // دریافت مجدد همه داده‌ها از دیتابیس
-      final habits = await _supabase.getHabits(_currentUserId!);
-      if (habits.isNotEmpty) {
-        await _localStorage.saveHabits(habits);
-      }
+      final currentHabits = _localStorage.getHabits();
+      final updatedHabits =
+          currentHabits.where((habit) => habit.id != habitId).toList();
 
-      final tasks = await _supabase.getTasks(_currentUserId!);
-      if (tasks.isNotEmpty) {
-        await _localStorage.saveTasks(tasks);
-      }
-
-      final challenges = await _supabase.getChallenges();
-      if (challenges.isNotEmpty) {
-        await _localStorage.saveChallenges(challenges);
-      }
-
-      final userChallenges = await _supabase.getUserChallenges(_currentUserId!);
-      if (userChallenges.isNotEmpty) {
-        await _localStorage.saveUserChallenges(userChallenges);
-      }
-
-      final quests = await _supabase.getQuests();
-      if (quests.isNotEmpty) {
-        await _localStorage.saveQuests(quests);
-      }
-
-      final packages = await _supabase.getPackages();
-      if (packages.isNotEmpty) {
-        await _localStorage.savePackages(packages);
-      }
-
-      print('✅ Force refresh completed');
-    } catch (e) {
-      print('❌ Force refresh error: $e');
-    } finally {
-      _isSyncing = false;
+      _localStorage.saveHabits(updatedHabits);
       notifyListeners();
+      print('🗑️ Removed habit: $habitId');
+    } catch (e) {
+      print('❌ Error removing habit: $e');
     }
   }
 
@@ -183,6 +150,80 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
+  /// ✅ ریفرش اجباری داده‌ها از دیتابیس
+  Future<void> forceRefresh() async {
+    if (_currentUserId == null || !_isOnline) {
+      // اگر آفلاین هستیم، فقط از LocalStorage بخوان
+      notifyListeners();
+      return;
+    }
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      print('🔄 Force refreshing data...');
+
+      // دریافت مجدد همه داده‌ها از دیتابیس
+      final habits = await _supabase.getHabits(_currentUserId!);
+      await _localStorage.saveHabits(habits);
+
+      final tasks = await _supabase.getTasks(_currentUserId!);
+      await _localStorage.saveTasks(tasks);
+
+      final quests = await _supabase.getQuests();
+      await _localStorage.saveQuests(quests);
+
+      final packages = await _supabase.getPackages();
+      await _localStorage.savePackages(packages);
+
+      final challenges = await _supabase.getChallenges();
+      await _localStorage.saveChallenges(challenges);
+
+      final userChallenges = await _supabase.getUserChallenges(_currentUserId!);
+      await _localStorage.saveUserChallenges(userChallenges);
+
+      try {
+        final profile = await _supabase.client
+            .from('profiles')
+            .select()
+            .eq('user_id', _currentUserId!)
+            .maybeSingle();
+        if (profile != null) {
+          await _localStorage.saveUserProfile(profile);
+        }
+      } catch (e) {
+        print('⚠️ Profile sync error: $e');
+      }
+
+      print('✅ Force refresh completed');
+    } catch (e) {
+      print('❌ Force refresh error: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
+// lib/providers/sync_provider.dart
+
+  /// ✅ حذف عادت‌های یک ماموریت از کش
+  void removeQuestHabits(String questId) {
+    try {
+      // حذف از حافظه
+      final currentHabits = _localStorage.getHabits();
+      final updatedHabits =
+          currentHabits.where((habit) => habit.questId != questId).toList();
+
+      _localStorage.saveHabits(updatedHabits);
+      notifyListeners();
+      print(
+          '🗑️ Removed ${currentHabits.length - updatedHabits.length} quest habits for quest: $questId');
+    } catch (e) {
+      print('❌ Error removing quest habits: $e');
+    }
+  }
+
   Future<void> _syncAllData() async {
     if (_isSyncing || _currentUserId == null || !_isOnline) return;
 
@@ -194,6 +235,7 @@ class SyncProvider extends ChangeNotifier {
 
       await _syncOfflineOperations();
 
+      // ✅ دریافت همه عادت‌ها (شامل ماموریت‌ها)
       final habits = await _supabase.getHabits(_currentUserId!);
       if (habits.isNotEmpty) {
         await _localStorage.saveHabits(habits);
@@ -529,6 +571,17 @@ class SyncProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       // خطا رو نادیده بگیر
+    }
+  }
+
+  Future<void> saveHabits(List<Habit> habits) async {
+    try {
+      await _localStorage.saveHabits(habits);
+      notifyListeners();
+      print('✅ ${habits.length} habits saved to local storage');
+    } catch (e) {
+      print('❌ Error saving habits: $e');
+      rethrow;
     }
   }
 
