@@ -1,7 +1,9 @@
 // lib/features/arena/widgets/completion_level_picker.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/habit_completion.dart';
+import '/providers/theme_provider.dart';
 
 class CompletionLevelPicker extends StatefulWidget {
   final String habitTitle;
@@ -40,6 +42,9 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     // ✅ تشخیص نوع عادت
     final bool isQuest = widget.isQuest ?? false;
     final bool isChallenge = widget.isChallenge ?? false;
@@ -86,12 +91,12 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4A90E2).withOpacity(0.1),
+                    color: primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.emoji_events,
-                    color: Color(0xFF4A90E2),
+                    color: primaryColor,
                     size: 28,
                   ),
                 ),
@@ -151,7 +156,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                           '🎯 هدف: ${widget.targetValue}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: const Color(0xFF4A90E2),
+                            color: primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -167,6 +172,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               CompletionLevel.full,
               fullDesc,
               isCustom: isCustomFull,
+              primaryColor: primaryColor,
             ),
             const SizedBox(height: 12),
 
@@ -174,6 +180,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               CompletionLevel.half,
               halfDesc,
               isCustom: isCustomHalf,
+              primaryColor: primaryColor,
             ),
             const SizedBox(height: 12),
 
@@ -181,6 +188,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               CompletionLevel.basic,
               basicDesc,
               isCustom: isCustomBasic,
+              primaryColor: primaryColor,
             ),
 
             const SizedBox(height: 20),
@@ -195,7 +203,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                         widget.onSelected(_selectedLevel!);
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A90E2),
+                  backgroundColor: primaryColor,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -234,6 +242,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     CompletionLevel level,
     String description, {
     bool isCustom = false,
+    required Color primaryColor,
   }) {
     final isSelected = _selectedLevel == level;
     final xpEarned = (widget.habitXpReward * level.xpMultiplier / 100).round();
@@ -403,7 +412,6 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
   String? _calculateLevelValue(String targetValue, CompletionLevel level) {
     if (targetValue.isEmpty) return null;
 
-    // پشتیبانی از فرمت‌های مختلف
     final numberMatch = RegExp(r'(\d+)').firstMatch(targetValue);
     if (numberMatch == null) {
       return targetValue;

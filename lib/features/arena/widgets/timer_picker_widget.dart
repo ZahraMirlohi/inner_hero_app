@@ -1,6 +1,8 @@
 // lib/features/arena/widgets/timer_picker_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class TimerPickerWidget extends StatefulWidget {
   final int initialMinutes;
@@ -33,24 +35,27 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // ✅ انتخاب دقیقه
+        // انتخاب دقیقه
         Column(
           children: [
             const Text(
               'دقیقه',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: Color(0xFF73786B)),
             ),
             const SizedBox(height: 4),
             Container(
               width: 80,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: const Color(0xFFF7FCEB),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: const Color(0xFFE8EDF2)),
               ),
               child: ListWheelScrollView(
                 itemExtent: 40,
@@ -68,12 +73,10 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
                       index.toString().padLeft(2, '0'),
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isSelected
-                            ? const Color(0xFF4A90E2)
-                            : Colors.grey.shade600,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color:
+                            isSelected ? primaryColor : const Color(0xFF73786B),
                       ),
                     ),
                   );
@@ -85,24 +88,28 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
         const SizedBox(width: 16),
         const Text(
           ':',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF090909),
+          ),
         ),
         const SizedBox(width: 16),
-        // ✅ انتخاب ثانیه
+        // انتخاب ثانیه
         Column(
           children: [
             const Text(
               'ثانیه',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: Color(0xFF73786B)),
             ),
             const SizedBox(height: 4),
             Container(
               width: 80,
               height: 120,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: const Color(0xFFF7FCEB),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: const Color(0xFFE8EDF2)),
               ),
               child: ListWheelScrollView(
                 itemExtent: 40,
@@ -120,12 +127,10 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
                       index.toString().padLeft(2, '0'),
                       style: TextStyle(
                         fontSize: 20,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isSelected
-                            ? const Color(0xFF4A90E2)
-                            : Colors.grey.shade600,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal,
+                        color:
+                            isSelected ? primaryColor : const Color(0xFF73786B),
                       ),
                     ),
                   );

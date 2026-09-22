@@ -6,6 +6,8 @@ import '../../arena/screens/arena_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../chat/screens/chat_screen.dart';
 import '../../explore/screens/explore_screen.dart';
+import '../../../widgets/custom_bottom_nav_bar.dart';
+import '../../../config/nav_items.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -30,65 +32,54 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-
-    // ✅ بررسی روزانه در زمان بیدار شدن اپ
     _runDailyCheck();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: Stack(
         children: [
-          ArenaScreen(
-            profileRefreshNotifier: _profileRefreshNotifier,
-          ), // ✅ درست ارسال شده
-          const ChatScreen(),
-          ExploreScreen(refreshNotifier: _exploreRefreshNotifier),
-          ProfileScreen(
-            refreshNotifier: _profileRefreshNotifier,
-          ), // ✅ درست ارسال شده
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          // ✅ 1. محتوای اصلی (صفحات) - بدون Scaffold اضافی
+          IndexedStack(
+            index: _currentIndex,
+            children: [
+              ArenaScreen(
+                profileRefreshNotifier: _profileRefreshNotifier,
+              ),
+              const ChatScreen(),
+              ExploreScreen(refreshNotifier: _exploreRefreshNotifier),
+              ProfileScreen(
+                refreshNotifier: _profileRefreshNotifier,
+              ),
+            ],
+          ),
 
-          if (index == 3) {
-            _profileRefreshNotifier.value++;
-          }
-          if (index == 2) {
-            _exploreRefreshNotifier.value++;
-          }
-        },
-        selectedItemColor: const Color(0xFF4A90E2),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events_outlined),
-            activeIcon: Icon(Icons.emoji_events),
-            label: 'میدان',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_outlined),
-            activeIcon: Icon(Icons.chat),
-            label: 'گپ و گفتگو',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore),
-            label: 'اکسپلور',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'پروفایل',
+          // ✅ 2. نوار ناوبری شناور روی محتوا
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: true,
+              child: CustomBottomNavBar(
+                currentIndex: _currentIndex,
+                onTap: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+
+                  if (index == 3) {
+                    _profileRefreshNotifier.value++;
+                  }
+                  if (index == 2) {
+                    _exploreRefreshNotifier.value++;
+                  }
+                },
+                items: NavItems.items,
+              ),
+            ),
           ),
         ],
       ),

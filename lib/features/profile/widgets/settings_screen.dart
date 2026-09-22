@@ -1,8 +1,11 @@
 // lib/features/profile/widgets/settings_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/date_service.dart';
 import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
+import 'color_picker_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -29,178 +32,226 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final calendar = await DateService.getCalendarType();
-    setState(() {
-      _calendarType = calendar == 'jalali' ? 'شمسی' : 'میلادی';
-    });
+    if (mounted) {
+      setState(() {
+        _calendarType = calendar == 'jalali' ? 'شمسی' : 'میلادی';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('تنظیمات'),
-        backgroundColor: Colors.white,
+        title: Text(
+          'تنظیمات',
+          style: TextStyle(color: theme.textColor),
+        ),
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             // بخش تنظیمات عمومی
-            _buildSettingsGroup('عمومی', [
-              _buildSwitchTile(
-                icon: Icons.dark_mode,
-                title: 'حالت تاریک',
-                value: _isDarkMode,
-                onChanged: (value) {
-                  setState(() {
-                    _isDarkMode = value;
-                  });
-                },
-              ),
-              _buildSwitchTile(
-                icon: Icons.notifications,
-                title: 'اعلان‌ها',
-                value: _notificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _notificationsEnabled = value;
-                  });
-                },
-              ),
-              _buildSwitchTile(
-                icon: Icons.volume_up,
-                title: 'صدا',
-                value: _soundEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _soundEnabled = value;
-                  });
-                },
-              ),
-              _buildSwitchTile(
-                icon: Icons.vibration,
-                title: 'لرزش',
-                value: _vibrationEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    _vibrationEnabled = value;
-                  });
-                },
-              ),
-            ]),
+            _buildSettingsGroup(
+              'عمومی',
+              theme,
+              [
+                _buildSwitchTile(
+                  icon: Icons.dark_mode,
+                  title: 'حالت تاریک',
+                  value: _isDarkMode,
+                  onChanged: (value) {
+                    setState(() {
+                      _isDarkMode = value;
+                    });
+                  },
+                  primaryColor: primaryColor,
+                ),
+                _buildSwitchTile(
+                  icon: Icons.notifications,
+                  title: 'اعلان‌ها',
+                  value: _notificationsEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationsEnabled = value;
+                    });
+                  },
+                  primaryColor: primaryColor,
+                ),
+                _buildSwitchTile(
+                  icon: Icons.volume_up,
+                  title: 'صدا',
+                  value: _soundEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _soundEnabled = value;
+                    });
+                  },
+                  primaryColor: primaryColor,
+                ),
+                _buildSwitchTile(
+                  icon: Icons.vibration,
+                  title: 'لرزش',
+                  value: _vibrationEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _vibrationEnabled = value;
+                    });
+                  },
+                  primaryColor: primaryColor,
+                ),
+                // ✅ آیتم انتخاب رنگ
+                _buildColorTile(theme, primaryColor),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // بخش تنظیمات نمایش
-            _buildSettingsGroup('نمایش', [
-              _buildDropdownTile(
-                icon: Icons.calendar_today,
-                title: 'نوع تقویم',
-                value: _calendarType,
-                options: ['شمسی', 'میلادی'],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _calendarType = value;
-                      final type = value == 'شمسی' ? 'jalali' : 'gregorian';
-                      DateService.saveCalendarType(type);
-                    });
-                  }
-                },
-              ),
-              _buildDropdownTile(
-                icon: Icons.language,
-                title: 'زبان',
-                value: _language == 'fa' ? 'فارسی' : 'English',
-                options: ['فارسی', 'English'],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _language = value == 'فارسی' ? 'fa' : 'en';
-                    });
-                  }
-                },
-              ),
-            ]),
+            _buildSettingsGroup(
+              'نمایش',
+              theme,
+              [
+                _buildDropdownTile(
+                  icon: Icons.calendar_today,
+                  title: 'نوع تقویم',
+                  value: _calendarType,
+                  options: ['شمسی', 'میلادی'],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _calendarType = value;
+                        final type = value == 'شمسی' ? 'jalali' : 'gregorian';
+                        DateService.saveCalendarType(type);
+                      });
+                    }
+                  },
+                  primaryColor: primaryColor,
+                ),
+                _buildDropdownTile(
+                  icon: Icons.language,
+                  title: 'زبان',
+                  value: _language == 'fa' ? 'فارسی' : 'English',
+                  options: ['فارسی', 'English'],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _language = value == 'فارسی' ? 'fa' : 'en';
+                      });
+                    }
+                  },
+                  primaryColor: primaryColor,
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // بخش حریم خصوصی
-            _buildSettingsGroup('حریم خصوصی', [
-              _buildSwitchTile(
-                icon: Icons.lock,
-                title: 'پروفایل خصوصی',
-                value: _privateProfile,
-                onChanged: (value) {
-                  setState(() {
-                    _privateProfile = value;
-                  });
-                },
-              ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF44336).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.delete_forever,
-                    color: Color(0xFFF44336),
-                    size: 20,
-                  ),
+            _buildSettingsGroup(
+              'حریم خصوصی',
+              theme,
+              [
+                _buildSwitchTile(
+                  icon: Icons.lock,
+                  title: 'پروفایل خصوصی',
+                  value: _privateProfile,
+                  onChanged: (value) {
+                    setState(() {
+                      _privateProfile = value;
+                    });
+                  },
+                  primaryColor: primaryColor,
                 ),
-                title: const Text('حذف حساب کاربری'),
-                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                onTap: () {
-                  _showDeleteAccountDialog();
-                },
-              ),
-            ]),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF44336).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delete_forever,
+                      color: Color(0xFFF44336),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'حذف حساب کاربری',
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: theme.textSecondaryColor,
+                  ),
+                  onTap: () {
+                    _showDeleteAccountDialog(theme, primaryColor);
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             // بخش درباره
-            _buildSettingsGroup('درباره', [
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+            _buildSettingsGroup(
+              'درباره',
+              theme,
+              [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.info,
+                      color: primaryColor,
+                      size: 20,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.info,
-                    color: Color(0xFF2563EB),
-                    size: 20,
+                  title: Text(
+                    'نسخه اپلیکیشن',
+                    style: TextStyle(color: theme.textColor),
                   ),
-                ),
-                title: const Text('نسخه اپلیکیشن'),
-                trailing: const Text(
-                  '1.0.0',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.people,
-                    color: Color(0xFF7C3AED),
-                    size: 20,
+                  trailing: Text(
+                    '1.0.0',
+                    style: TextStyle(color: theme.textSecondaryColor),
                   ),
                 ),
-                title: const Text('تیم توسعه'),
-                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                onTap: () {
-                  _showTeamDialog();
-                },
-              ),
-            ]),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.people,
+                      color: primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'تیم توسعه',
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: theme.textSecondaryColor,
+                  ),
+                  onTap: () {
+                    _showTeamDialog(theme, primaryColor);
+                  },
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
 
             // دکمه خروج
@@ -258,14 +309,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingsGroup(String title, List<Widget> children) {
+  // ═══════════════════════════════════════════════════════════
+  // 📦 گروه تنظیمات
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildSettingsGroup(
+    String title,
+    ThemeProvider theme,
+    List<Widget> children,
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -278,10 +336,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(16),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
           ),
@@ -292,46 +350,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // 🎨 آیتم انتخاب رنگ
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildColorTile(ThemeProvider theme, Color primaryColor) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          Icons.color_lens,
+          color: primaryColor,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        'رنگ اپلیکیشن',
+        style: TextStyle(color: theme.textColor),
+      ),
+      subtitle: Text(
+        'انتخاب رنگ اصلی برنامه',
+        style: TextStyle(color: theme.textSecondaryColor, fontSize: 12),
+      ),
+      trailing: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: themeProvider.primaryColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: theme.textSecondaryColor,
+              ),
+            ],
+          );
+        },
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ColorPickerScreen()),
+        );
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🔘 آیتم سوییچ
+  // ═══════════════════════════════════════════════════════════
   Widget _buildSwitchTile({
     required IconData icon,
     required String title,
     required bool value,
     required Function(bool) onChanged,
+    required Color primaryColor,
   }) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF2563EB).withOpacity(0.1),
+          color: primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: const Color(0xFF2563EB), size: 20),
+        child: Icon(icon, color: primaryColor, size: 20),
       ),
       title: Text(title),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: const Color(0xFF2563EB),
-        // ✅ shape را حذف کنید
+        activeColor: primaryColor,
       ),
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // 📋 آیتم Dropdown
+  // ═══════════════════════════════════════════════════════════
   Widget _buildDropdownTile({
     required IconData icon,
     required String title,
     required String value,
     required List<String> options,
     required Function(String?) onChanged,
+    required Color primaryColor,
   }) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF7C3AED).withOpacity(0.1),
+          color: primaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: const Color(0xFF7C3AED), size: 20),
+        child: Icon(icon, color: primaryColor, size: 20),
       ),
       title: Text(title),
       trailing: DropdownButton<String>(
@@ -345,7 +467,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showDeleteAccountDialog() {
+  // ═══════════════════════════════════════════════════════════
+  // 🗑️ دیالوگ حذف حساب
+  // ═══════════════════════════════════════════════════════════
+  void _showDeleteAccountDialog(ThemeProvider theme, Color primaryColor) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -363,7 +488,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              // حذف حساب کاربری
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -385,7 +509,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showTeamDialog() {
+  // ═══════════════════════════════════════════════════════════
+  // 👥 دیالوگ تیم توسعه
+  // ═══════════════════════════════════════════════════════════
+  void _showTeamDialog(ThemeProvider theme, Color primaryColor) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -397,11 +524,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: const [
             Text('🌟 قهرمان درون'),
             SizedBox(height: 8),
-            Text('توسعه‌دهنده: تیم طراحی و توسعه'),
+            Text('Elisa :توسعه‌دهنده'),
             SizedBox(height: 4),
-            Text('طراح UI/UX: تیم طراحی'),
+            Text('Elisa : تیم طراحی'),
             SizedBox(height: 4),
-            Text('پشتیبانی: support@innerhero.com'),
+            Text('zahramirlohiiii@gmail.com : پشتیبانی'),
           ],
         ),
         actions: [

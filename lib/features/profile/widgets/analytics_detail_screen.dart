@@ -8,6 +8,7 @@ import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 
 class AnalyticsDetailScreen extends StatefulWidget {
   final String userId;
@@ -36,13 +37,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   int _currentSlide = 0;
   final CarouselSliderController _carouselController =
       CarouselSliderController();
-
-  static const List<Color> _slideColors = [
-    Color(0xFF2563EB),
-    Color(0xFF7C3AED),
-    Color(0xFFFFA500),
-    Color(0xFFE74C3C),
-  ];
 
   static const List<IconData> _slideIcons = [
     Icons.calendar_today,
@@ -80,8 +74,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       });
     }
   }
-
-  // lib/features/profile/widgets/analytics_detail_screen.dart
 
   Future<void> _loadData() async {
     _clearCache();
@@ -125,7 +117,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       _totalActiveDays = _activeDays.length;
 
-      // ✅ محاسبه استریک‌ها (به صورت await)
       await _calculateBestStreak();
       await _calculateSuccessData();
 
@@ -157,16 +148,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   Map<String, List<bool>>? _cachedWeeklyStatus;
   DateTime? _cacheTime;
-  static const Duration _cacheDuration = Duration(minutes: 1); // کش ۱ دقیقه
+  static const Duration _cacheDuration = Duration(minutes: 1);
 
-  // ✅ متد جدید برای محاسبه استریک هر عادت از دیتابیس
   Future<Map<String, int>> _calculateAllHabitsStreak() async {
     final Map<String, int> habitStreaks = {};
 
     if (_habits.isEmpty) return habitStreaks;
 
     try {
-      // ✅ دریافت تمام تکمیل‌های عادت‌ها از دیتابیس
       final habitIds = _habits.map((h) => h.id).toList();
       final response = await _supabase.client
           .from('habit_completions')
@@ -175,7 +164,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           .inFilter('habit_id', habitIds)
           .order('date', ascending: false);
 
-      // ✅ گروه‌بندی بر اساس habit_id
       final Map<String, List<DateTime>> habitCompletions = {};
       for (var item in response) {
         final habitId = item['habit_id'] as String;
@@ -183,7 +171,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         habitCompletions.putIfAbsent(habitId, () => []).add(date);
       }
 
-      // ✅ محاسبه استریک برای هر عادت
       for (var habit in _habits) {
         final completions = habitCompletions[habit.id] ?? [];
         if (completions.isEmpty) {
@@ -191,16 +178,13 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           continue;
         }
 
-        // ✅ مرتب‌سازی تاریخ‌ها (نزولی)
         final sortedDates = completions.toList()
           ..sort((a, b) => b.compareTo(a));
 
-        // ✅ محاسبه استریک جاری (از امروز به عقب)
         int streak = 0;
         DateTime checkDate = DateTime.now();
 
         for (var date in sortedDates) {
-          // ✅ فقط تاریخ‌هایی که در محدوده هستند رو بررسی کن
           if (date.year == checkDate.year &&
               date.month == checkDate.month &&
               date.day == checkDate.day) {
@@ -220,8 +204,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       return {};
     }
   }
-
-  // lib/features/profile/widgets/analytics_detail_screen.dart
 
   Future<void> _calculateBestStreak() async {
     if (_activeDays.isEmpty) return;
@@ -244,10 +226,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
     _bestStreak = maxStreak;
 
-    // ✅ محاسبه استریک هر عادت از دیتابیس
     final habitStreaks = await _calculateAllHabitsStreak();
 
-    // ✅ پیدا کردن عادت با بیشترین استریک
     _bestStreakHabit = null;
     int maxHabitStreak = 0;
 
@@ -257,10 +237,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       final streak = habitStreaks[habit.id] ?? 0;
 
-      // ✅ به‌روزرسانی bestStreak عادت در حافظه
       if (streak > habit.bestStreak) {
-        // ✅ فقط در حافظه به‌روزرسانی کن (نه در دیتابیس)
-        // این کار باعث میشه کارت درست نمایش داده بشه
         habit.bestStreak = streak;
       }
 
@@ -287,7 +264,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       return;
     }
 
-    // ✅ ساخت لیست ۲۸ روز گذشته (از امروز به عقب)
     final List<String> allDates = [];
     final List<DateTime> allDateTimes = [];
 
@@ -301,7 +277,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       '📊 Date range: ${allDates.first} to ${allDates.last} (${allDates.length} days)',
     );
 
-    // ✅ دریافت همه تکمیل‌های عادت‌ها از دیتابیس
     final habitIds = activeHabits.map((h) => h.id).toList();
     Map<String, Set<String>> completions = {};
 
@@ -331,30 +306,25 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       return;
     }
 
-    // ✅ دسته‌بندی تاریخ‌ها بر اساس روز هفته (شمسی)
     final Map<int, List<DateTime>> daysByWeekday = {
       for (int i = 0; i < 7; i++) i: [],
     };
 
     for (var date in allDateTimes) {
-      // ✅ تشخیص روز هفته به شمسی
       final jalali = Jalali.fromDateTime(date);
-      final weekday = jalali.weekDay - 1; // 0=شنبه, 1=یکشنبه, ...
+      final weekday = jalali.weekDay - 1;
       daysByWeekday[weekday]?.add(date);
     }
 
-    // ✅ محاسبه نرخ موفقیت برای هر روز هفته
     for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
       int totalItems = 0;
       int completedItems = 0;
 
-      // ✅ همه تاریخ‌هایی که این روز هفته هستند رو بررسی کن
       final dates = daysByWeekday[dayIndex] ?? [];
 
       for (var date in dates) {
         final dateStr = date.toIso8601String().split('T').first;
 
-        // ✅ عادت‌های این روز
         for (var habit in activeHabits) {
           if (!habit.shouldDoOnDate(date)) continue;
 
@@ -384,7 +354,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     });
   }
 
-  // ✅ متد کمکی برای نام روز
   String _getWeekDayName(int index) {
     const days = [
       'شنبه',
@@ -409,7 +378,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       return;
     }
 
-    // ✅ دسته‌بندی روزهای فعال بر اساس روز هفته (شمسی)
     final Map<int, int> dayCount = {for (int i = 0; i < 7; i++) i: 0};
 
     for (var date in _activeDays) {
@@ -418,14 +386,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       dayCount[weekday] = (dayCount[weekday] ?? 0) + 1;
     }
 
-    // ✅ محاسبه نرخ موفقیت
     for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
       int totalItems = 0;
       int completedItems = 0;
 
-      // ✅ ۴ هفته گذشته رو بررسی کن
       for (int week = 0; week < 4; week++) {
-        // ✅ تاریخ رو از ۲۸ روز قبل محاسبه کن
         final date = now
             .subtract(Duration(days: 27))
             .add(Duration(days: (week * 7) + dayIndex));
@@ -436,7 +401,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           if (!habit.shouldDoOnDate(date)) continue;
           totalItems++;
 
-          // ✅ بررسی کن که آیا این روز در _activeDays هست
           final isActiveDay = _activeDays.any(
             (d) =>
                 d.year == date.year &&
@@ -457,13 +421,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     });
   }
 
-  // ✅ کش برای عادت‌های تکمیل شده در تاریخ‌های خاص
   Map<String, Set<String>> _completionCache = {};
 
   DateTime _getWeekStart(DateTime date) {
     if (_calendarType == 'jalali') {
       final jalali = Jalali.fromDateTime(date);
-      // ✅ شنبه = 1، بنابراین برای رسیدن به شنبه باید (weekDay - 1) روز کم کرد
       final daysToSubtract = jalali.weekDay - 1;
       print(
         '📅 Jalali weekDay: ${jalali.weekDay}, daysToSubtract: $daysToSubtract',
@@ -472,7 +434,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       print('📅 Week start (Jalali): $result');
       return result;
     } else {
-      // ✅ میلادی: یکشنبه = 1، بنابراین باید (weekday % 7) روز کم کرد
       final daysToSubtract = date.weekday % 7;
       print(
         '📅 Gregorian weekday: ${date.weekday}, daysToSubtract: $daysToSubtract',
@@ -541,22 +502,21 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: _buildAppBar(),
+      backgroundColor: theme.backgroundColor,
+      appBar: _buildAppBar(theme, primaryColor),
       body: _isLoading
-          ? _buildLoadingState()
+          ? _buildLoadingState(primaryColor)
           : Column(
               children: [
-                // ✅ بخش هدر با راهنمای اسکرول
-                _buildSlideHeader(),
+                _buildSlideHeader(primaryColor, theme),
                 const SizedBox(height: 4),
-                // ✅ نشانگر اسلایدها (دات‌ها)
-                _buildSlideDots(),
+                _buildSlideDots(primaryColor),
                 const SizedBox(height: 12),
-                // ✅ اسلایدها
-                Expanded(child: _buildCarouselSlides()),
-                // ✅ فقط یک فضای کوچک برای فاصله از پایین
+                Expanded(child: _buildCarouselSlides(primaryColor, theme)),
                 const SizedBox(height: 16),
               ],
             ),
@@ -565,15 +525,19 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== اپبار ====================
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(ThemeProvider theme, Color primaryColor) {
     return AppBar(
-      title: const Text(
+      title: Text(
         'جزئیات پیشرفت',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: theme.textColor,
+        ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.surfaceColor,
       elevation: 0,
-      foregroundColor: const Color(0xFF1A1A2E),
+      foregroundColor: theme.textColor,
       centerTitle: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, size: 20),
@@ -581,7 +545,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.refresh, size: 22),
+          icon: Icon(Icons.refresh, size: 22, color: primaryColor),
           onPressed: _loadData,
         ),
       ],
@@ -590,37 +554,35 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== هدر اسلایدها ====================
 
-  Widget _buildSlideHeader() {
+  Widget _buildSlideHeader(Color primaryColor, ThemeProvider theme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          // ✅ آیکون اسلاید فعلی
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _slideColors[_currentSlide].withValues(alpha: 0.12),
+              color: primaryColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               _slideIcons[_currentSlide],
-              color: _slideColors[_currentSlide],
+              color: primaryColor,
               size: 22,
             ),
           ),
           const SizedBox(width: 14),
-          // ✅ عنوان و زیرعنوان
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _slideTitles[_currentSlide],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.textColor,
                   ),
                 ),
                 Text(
@@ -630,7 +592,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               ],
             ),
           ),
-          // ✅ نشانگر کشیدن به چپ و راست (راهنمای اسکرول)
           Row(
             children: [
               _buildSwipeHint(Icons.chevron_left, isLeft: true),
@@ -667,14 +628,13 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== نشانگر اسلایدها (دات‌ها) ====================
 
-  Widget _buildSlideDots() {
+  Widget _buildSlideDots(Color primaryColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(4, (index) {
           final isActive = index == _currentSlide;
-          final color = _slideColors[index];
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -682,7 +642,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             width: isActive ? 32 : 8,
             height: 4,
             decoration: BoxDecoration(
-              color: isActive ? color : Colors.grey.shade300,
+              color: isActive ? primaryColor : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
             ),
           );
@@ -693,7 +653,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== Carousel Slider ====================
 
-  Widget _buildCarouselSlides() {
+  Widget _buildCarouselSlides(Color primaryColor, ThemeProvider theme) {
     return CarouselSlider(
       carouselController: _carouselController,
       options: CarouselOptions(
@@ -709,19 +669,17 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         },
       ),
       items: [
-        _buildCalendarSlide(),
-        _buildHabitsDetailSlide(),
-        _buildRecordsSlide(),
-        _buildFailureChartSlide(),
+        _buildCalendarSlide(primaryColor, theme),
+        _buildHabitsDetailSlide(primaryColor, theme),
+        _buildRecordsSlide(primaryColor, theme),
+        _buildFailureChartSlide(primaryColor, theme),
       ],
     );
   }
 
   // ==================== اسلاید ۱: تاریخچه کلی ====================
 
-  Widget _buildCalendarSlide() {
-    final color = _slideColors[0];
-
+  Widget _buildCalendarSlide(Color primaryColor, ThemeProvider theme) {
     String monthName;
     String yearText;
     int daysInMonth;
@@ -749,11 +707,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -762,7 +720,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // کنترل‌های ماه
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -792,14 +749,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     });
                   },
                   icon: const Icon(Icons.chevron_left),
-                  color: color,
+                  color: primaryColor,
                 ),
                 Text(
                   '$monthName $yearText',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: color,
+                    color: primaryColor,
                   ),
                 ),
                 IconButton(
@@ -828,15 +785,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     });
                   },
                   icon: const Icon(Icons.chevron_right),
-                  color: color,
+                  color: primaryColor,
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            // تقویم
-            _buildCalendarGrid(color, daysInMonth, firstDayWeekday),
+            _buildCalendarGrid(
+                primaryColor, theme, daysInMonth, firstDayWeekday),
             const SizedBox(height: 16),
-            // آمار
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -844,19 +800,22 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   'روزهای فعال',
                   '$_totalActiveDays',
                   Icons.calendar_today,
-                  color,
+                  primaryColor,
+                  theme,
                 ),
                 _buildStatItem(
                   'کل عادت‌ها',
                   '${_habits.length}',
                   Icons.fitness_center,
-                  color,
+                  primaryColor,
+                  theme,
                 ),
                 _buildStatItem(
                   'بهترین استریک',
                   '$_bestStreak',
                   Icons.local_fire_department,
-                  color,
+                  primaryColor,
+                  theme,
                 ),
               ],
             ),
@@ -916,7 +875,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     return jalali.weekDay - 1;
   }
 
-  Widget _buildCalendarGrid(Color color, int daysInMonth, int firstDayWeekday) {
+  Widget _buildCalendarGrid(
+    Color primaryColor,
+    ThemeProvider theme,
+    int daysInMonth,
+    int firstDayWeekday,
+  ) {
     final weekDays = _calendarType == 'jalali'
         ? ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
         : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -978,12 +942,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isActive
-                    ? color
+                    ? primaryColor
                     : isToday
-                    ? color.withValues(alpha: 0.2)
-                    : Colors.transparent,
+                        ? primaryColor.withValues(alpha: 0.2)
+                        : Colors.transparent,
                 border: isToday && !isActive
-                    ? Border.all(color: color, width: 2)
+                    ? Border.all(color: primaryColor, width: 2)
                     : null,
               ),
               child: Center(
@@ -995,10 +959,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     color: isActive
                         ? Colors.white
                         : isToday
-                        ? color
-                        : isFuture
-                        ? Colors.grey.shade300
-                        : const Color(0xFF1A1A2E),
+                            ? primaryColor
+                            : isFuture
+                                ? Colors.grey.shade300
+                                : theme.textColor,
                   ),
                 ),
               ),
@@ -1028,17 +992,18 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     String label,
     String value,
     IconData icon,
-    Color color,
+    Color primaryColor,
+    ThemeProvider theme,
   ) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 20),
+          child: Icon(icon, color: primaryColor, size: 20),
         ),
         const SizedBox(height: 4),
         Text(
@@ -1046,12 +1011,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: color,
+            color: primaryColor,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 10, color: theme.textSecondaryColor),
         ),
       ],
     );
@@ -1059,9 +1024,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== اسلاید ۲: جزئیات عادت‌ها ====================
 
-  // ✅ متد بهینه‌شده برای دریافت وضعیت هفتگی همه عادت‌ها با یک کوئری
   Future<Map<String, List<bool>>> _getAllHabitsWeeklyStatus() async {
-    // ✅ اگر کش معتبر است، از آن استفاده کن
     if (_cachedWeeklyStatus != null &&
         _cacheTime != null &&
         DateTime.now().difference(_cacheTime!) < _cacheDuration) {
@@ -1074,26 +1037,22 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
     if (_habits.isEmpty) return result;
 
-    // ✅ ساخت لیست تاریخ‌های هفته
     final List<String> weekDates = [];
     for (int i = 0; i < 7; i++) {
       final date = weekStart.add(Duration(days: i));
       weekDates.add(date.toIso8601String().split('T').first);
     }
 
-    // ✅ گرفتن ID همه عادت‌ها
     final List<String> habitIds = _habits.map((h) => h.id).toList();
 
-    // ✅ یک کوئری بزرگ برای همه عادت‌ها و همه روزها
     try {
       final response = await _supabase.client
           .from('habit_completions')
           .select('habit_id, date')
           .eq('user_id', widget.userId)
-          .inFilter('habit_id', habitIds) // ✅ درست
-          .inFilter('date', weekDates); // ✅ درست
+          .inFilter('habit_id', habitIds)
+          .inFilter('date', weekDates);
 
-      // ✅ ساخت یک Set از ترکیب habit_id + date برای جستجوی سریع
       final Set<String> completedSet = {};
       for (var item in response) {
         final habitId = item['habit_id'] as String;
@@ -1101,7 +1060,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         completedSet.add('$habitId|$date');
       }
 
-      // ✅ پر کردن نتیجه برای هر عادت
       for (var habit in _habits) {
         final List<bool> weekStatus = [];
         for (int i = 0; i < 7; i++) {
@@ -1113,13 +1071,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         result[habit.id] = weekStatus;
       }
 
-      // ✅ ذخیره در کش
       _cachedWeeklyStatus = result;
       _cacheTime = DateTime.now();
 
       return result;
     } catch (e) {
-      // در صورت خطا، یک Map خالی برگردان
       for (var habit in _habits) {
         result[habit.id] = List.filled(7, false);
       }
@@ -1127,21 +1083,19 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     }
   }
 
-  // ✅ وقتی داده‌ها ریفرش می‌شن، کش رو پاک کن
   void _clearCache() {
     _cachedWeeklyStatus = null;
     _cacheTime = null;
   }
 
-  Widget _buildHabitsDetailSlide() {
-    final color = _slideColors[1];
-
+  Widget _buildHabitsDetailSlide(Color primaryColor, ThemeProvider theme) {
     if (_habits.isEmpty) {
       return _buildEmptySlide(
         icon: Icons.fitness_center_outlined,
         title: 'هنوز عادتی ساخته نشده',
         subtitle: 'برای مشاهده جزئیات، ابتدا عادت‌های خود را ایجاد کنید',
-        color: color,
+        primaryColor: primaryColor,
+        theme: theme,
       );
     }
 
@@ -1149,25 +1103,25 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: FutureBuilder<Map<String, List<bool>>>(
-        key: ValueKey(_habits.length), // ✅ ریفرش با تغییر تعداد عادت‌ها
+        key: ValueKey(_habits.length),
         future: _getAllHabitsWeeklyStatus(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(40),
-                child: CircularProgressIndicator(color: Color(0xFF2563EB)),
+                padding: const EdgeInsets.all(40),
+                child: CircularProgressIndicator(color: primaryColor),
               ),
             );
           }
@@ -1193,6 +1147,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                       _clearCache();
                       setState(() {});
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                    ),
                     child: const Text('تلاش مجدد'),
                   ),
                 ],
@@ -1207,19 +1165,18 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [
-                // هدر جدول
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
                     children: [
                       const SizedBox(width: 48),
                       Expanded(
-                        child: const Text(
+                        child: Text(
                           'عادت',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E),
+                            color: theme.textColor,
                           ),
                         ),
                       ),
@@ -1259,6 +1216,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     final weekStart = _getWeekStart(now);
     final currentWeekdayIndex = _getCurrentWeekdayIndex();
     final weekDayLetters = _getWeekDayLetters();
+    final theme = Provider.of<ThemeProvider>(context);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1290,10 +1248,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           Expanded(
             child: Text(
               habit.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -1327,7 +1285,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 shape: BoxShape.circle,
                 color: circleColor,
                 border: isTodayAndNotDone
-                    ? Border.all(color: const Color(0xFF2563EB), width: 2)
+                    ? Border.all(color: theme.primaryColor, width: 2)
                     : null,
               ),
               child: Center(
@@ -1353,17 +1311,18 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
+    required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -1377,10 +1336,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -1397,13 +1356,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // ==================== اسلاید ۳: رکوردهای شما ====================
 
-  // ✅ متد کمکی برای دریافت عادت‌های با بیشترین استریک (همه)
   List<({Habit habit, int streak})> _getHabitsWithBestStreak() {
     List<({Habit habit, int streak})> result = [];
 
     if (_habits.isEmpty) return result;
 
-    // ✅ پیدا کردن حداکثر استریک
     int maxStreak = 0;
     for (var habit in _habits) {
       if (!habit.isActive) continue;
@@ -1414,10 +1371,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       }
     }
 
-    // ✅ اگر هیچ عادتی استریک نداشت، خالی برگردان
     if (maxStreak == 0) return result;
 
-    // ✅ پیدا کردن همه عادت‌هایی که بیشترین استریک رو دارند
     for (var habit in _habits) {
       if (!habit.isActive) continue;
       if (habit.challengeId != null || habit.questId != null) continue;
@@ -1429,14 +1384,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
     return result;
   }
-  // lib/features/profile/widgets/analytics_detail_screen.dart
 
-  Widget _buildRecordsSlide() {
-    final color = _slideColors[2];
+  Widget _buildRecordsSlide(Color primaryColor, ThemeProvider theme) {
     final bestDays = _getBestWeekDays();
     final topDay = bestDays.isNotEmpty ? bestDays.first : null;
 
-    // ✅ دریافت همه عادت‌های با بیشترین استریک
     final bestHabits = _getHabitsWithBestStreak();
     final hasBestHabits = bestHabits.isNotEmpty && bestHabits.first.streak > 0;
 
@@ -1449,11 +1401,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -1462,9 +1414,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // 1. طولانی‌ترین استریک کلی
+            // ─── کارت ۱: مشکی پر ───
             _buildRecordCard(
-              gradient: const [Color(0xFFFF6B6B), Color(0xFFFFA500)],
+              color: const Color(0xFF090909), // ✅ مشکی
               title: '🔥 طولانی‌ترین استریک',
               value: '$_bestStreak',
               unit: ' روز',
@@ -1475,9 +1427,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ),
             const SizedBox(height: 12),
 
-            // 2. عادت‌های با بیشترین استریک - ✅ نمایش چند عادت
+            // ─── کارت ۲: سفید با استروک مشکی ───
             _buildBestHabitsCard(
-              gradient: const [Color(0xFF7C3AED), Color(0xFF2563EB)],
+              color: Colors.white, // ✅ پس‌زمینه سفید
+              borderColor: const Color(0xFF090909), // ✅ استروک مشکی
               title: '🏆 عادت‌های با بیشترین استریک',
               habits: bestHabits,
               maxStreak: bestHabits.isNotEmpty ? bestHabits.first.streak : 0,
@@ -1485,9 +1438,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ),
             const SizedBox(height: 12),
 
-            // 3. بهترین روزهای هفته
+            // ─── کارت ۳: سبز (بدون تغییر) ───
             _buildRecordCard(
-              gradient: const [Color(0xFF2ECC71), Color(0xFF27AE60)],
+              color: primaryColor,
               title: '🌟 بهترین روزهای شما',
               value: topDay != null ? topDay['day'] : 'اطلاعاتی ثبت نشده',
               unit: topDay != null ? ' (${topDay['count']} روز)' : '',
@@ -1504,7 +1457,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   Widget _buildRecordCard({
-    required List<Color> gradient,
+    required Color color,
     required String title,
     required String value,
     required String unit,
@@ -1515,11 +1468,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: color,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -1542,7 +1491,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ✅ اگر مقدار خالی یا null بود، پیام مناسب نمایش بده
                     Text(
                       value.isNotEmpty ? value : 'اطلاعاتی وجود ندارد',
                       style: TextStyle(
@@ -1581,38 +1529,49 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
-  // lib/features/profile/widgets/analytics_detail_screen.dart
-
   Widget _buildBestHabitsCard({
-    required List<Color> gradient,
+    required Color color,
     required String title,
     required List<({Habit habit, int streak})> habits,
     required int maxStreak,
     required IconData icon,
+    Color? borderColor, // ✅ پارامتر جدید
   }) {
+    // ✅ تشخیص پس‌زمینه تیره یا روشن
+    final bool isDarkBg = color.computeLuminance() < 0.5;
+    final Color textColor = isDarkBg ? Colors.white : const Color(0xFF090909);
+    final Color subtleTextColor = isDarkBg
+        ? Colors.white.withValues(alpha: 0.7)
+        : const Color(0xFF090909).withValues(alpha: 0.6);
+    final Color iconBgColor = isDarkBg
+        ? Colors.white.withValues(alpha: 0.2)
+        : const Color(0xFF090909).withValues(alpha: 0.08);
+    final Color chipBgColor = isDarkBg
+        ? Colors.white.withValues(alpha: 0.15)
+        : const Color(0xFF090909).withValues(alpha: 0.06);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: color,
         borderRadius: BorderRadius.circular(16),
+        // ✅ استروک مشکی (اگه borderColor پاس داده بشه)
+        border: borderColor != null
+            ? Border.all(color: borderColor, width: 2)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // عنوان
           Row(
             children: [
-              Icon(icon, color: Colors.white, size: 20),
+              Icon(icon, color: textColor, size: 20),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white,
+                  color: textColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1624,24 +1583,24 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: chipBgColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.local_fire_department,
                         size: 14,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '$maxStreak روز',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: textColor,
                         ),
                       ),
                     ],
@@ -1651,14 +1610,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ],
           ),
           const SizedBox(height: 12),
-
-          // محتوا
           if (habits.isEmpty || maxStreak == 0) ...[
             Row(
               children: [
                 Icon(
                   icon,
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: subtleTextColor,
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -1670,48 +1627,44 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: subtleTextColor,
                     ),
                   ),
                 ),
               ],
             ),
           ] else ...[
-            // ✅ نمایش همه عادت‌های با بیشترین استریک
             ...habits.map((item) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    // آیکون عادت
                     Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: iconBgColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Center(
                         child: Icon(
                           _getIconData(item.habit.iconName),
-                          color: Colors.white,
+                          color: textColor,
                           size: 20,
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
-
-                    // عنوان عادت
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             item.habit.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: textColor,
                             ),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
@@ -1720,38 +1673,36 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                             '${item.streak} روز پیاپی',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.white.withValues(alpha: 0.7),
+                              color: subtleTextColor,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // تعداد روزهای استریک (آیکون کوچک)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: chipBgColor,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.local_fire_department,
                             size: 14,
-                            color: Colors.white,
+                            color: textColor,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${item.streak}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: textColor,
                             ),
                           ),
                         ],
@@ -1761,8 +1712,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 ),
               );
             }).toList(),
-
-            // ✅ اگر بیش از ۵ عادت با بیشترین استریک وجود داره، بقیه رو جمع کن
             if (habits.length > 5)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -1770,7 +1719,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   'و ${habits.length - 5} عادت دیگر...',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: subtleTextColor,
                   ),
                 ),
               ),
@@ -1779,13 +1728,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
     );
   }
-
   // ==================== اسلاید ۴: نمودار شکست ====================
 
-  // lib/features/profile/widgets/analytics_detail_screen.dart
-
-  Widget _buildFailureChartSlide() {
-    final color = _slideColors[3];
+  Widget _buildFailureChartSlide(Color primaryColor, ThemeProvider theme) {
     const weekDays = [
       'شنبه',
       'یک‌شنبه',
@@ -1820,11 +1765,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -1836,16 +1781,15 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // هدر
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   '📊 عملکرد روزهای هفته',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.textColor,
                   ),
                 ),
                 if (hasData)
@@ -1890,9 +1834,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 16),
-
             if (hasData) ...[
-              // ✅ نمودار با ارتفاع کمتر و محاسبه دقیق
               SizedBox(
                 height: 160,
                 child: Row(
@@ -1900,8 +1842,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   children: List.generate(7, (index) {
                     final value = _successData[index];
 
-                    // ✅ محاسبه دقیق ارتفاع (حداکثر 70% ارتفاع موجود)
-                    final double maxHeight = 160 - 50; // 50 پیکسل برای متن‌ها
+                    final double maxHeight = 160 - 50;
                     final double minHeight = 8;
                     final double height = maxValue > 0
                         ? minHeight + (value / maxValue) * maxHeight * 0.7
@@ -1914,9 +1855,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     return Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min, // ✅ مهم
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // درصد
                           Text(
                             '${(value * 100).toInt()}%',
                             style: TextStyle(
@@ -1927,30 +1867,21 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                               color: isBestDay
                                   ? Colors.green
                                   : isZero
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
                             ),
                           ),
                           const SizedBox(height: 3),
-
-                          // ✅ ستون با ارتفاع دقیق
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 3),
                             width: 28,
                             height: height.clamp(minHeight, maxHeight),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: isBestDay
-                                    ? [Colors.green.shade400, Colors.green]
-                                    : isZero
-                                    ? [
-                                        Colors.grey.shade300,
-                                        Colors.grey.shade400,
-                                      ]
-                                    : [color, color.withValues(alpha: 0.6)],
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                              ),
+                              color: isBestDay
+                                  ? Colors.green
+                                  : isZero
+                                      ? Colors.grey.shade300
+                                      : primaryColor,
                               borderRadius: BorderRadius.circular(6),
                               boxShadow: isBestDay
                                   ? [
@@ -1973,8 +1904,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                                 : null,
                           ),
                           const SizedBox(height: 4),
-
-                          // نام روز
                           Text(
                             weekDays[index],
                             style: TextStyle(
@@ -1985,8 +1914,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                               color: isBestDay
                                   ? Colors.green
                                   : isZero
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600,
+                                      ? Colors.grey.shade400
+                                      : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -1995,12 +1924,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   }),
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // ✅ تحلیل
               _buildSuccessAnalysisCard(
-                color: color,
+                primaryColor: primaryColor,
                 weekDays: weekDays,
                 bestDayIndex: bestDayIndex,
                 bestDayValue: bestDayValue,
@@ -2018,9 +1944,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                       color: Colors.grey.shade300,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'برای مشاهده نمودار عملکرد، حداقل چند روز فعالیت داشته باشید',
-                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+                      style: TextStyle(
+                        color: theme.textSecondaryColor,
+                        fontSize: 13,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -2032,10 +1961,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
     );
   }
-  // lib/features/profile/widgets/analytics_detail_screen.dart
 
   Widget _buildSuccessAnalysisCard({
-    required Color color,
+    required Color primaryColor,
     required List<String> weekDays,
     required int bestDayIndex,
     required double bestDayValue,
@@ -2048,12 +1976,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: primaryColor.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.15)),
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // ✅ مهم
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -2106,19 +2034,19 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+              color: primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                const Icon(Icons.lightbulb, color: Color(0xFF2563EB), size: 14),
+                Icon(Icons.lightbulb, color: primaryColor, size: 14),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     '💪 روز ${weekDays[worstDayIndex]} را با برنامه‌ریزی بهتر شروع کنید!',
                     style: TextStyle(
                       fontSize: 10,
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.85),
+                      color: primaryColor.withValues(alpha: 0.85),
                     ),
                   ),
                 ),
@@ -2148,16 +2076,17 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
     );
   }
+
   // ==================== حالت لودینگ ====================
 
-  Widget _buildLoadingState() {
-    return const Center(
+  Widget _buildLoadingState(Color primaryColor) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: Color(0xFF2563EB)),
-          SizedBox(height: 16),
-          Text(
+          CircularProgressIndicator(color: primaryColor),
+          const SizedBox(height: 16),
+          const Text(
             'در حال بارگذاری...',
             style: TextStyle(color: Color(0xFF6B7280)),
           ),

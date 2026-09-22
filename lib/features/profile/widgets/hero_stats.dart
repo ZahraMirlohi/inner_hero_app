@@ -1,7 +1,9 @@
 // lib/features/profile/widgets/hero_stats.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/character_model.dart';
+import '/providers/theme_provider.dart';
 
 class HeroStats extends StatelessWidget {
   final Character character;
@@ -10,10 +12,13 @@ class HeroStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -26,12 +31,12 @@ class HeroStats extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'آمار قهرمان',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -42,7 +47,7 @@ class HeroStats extends StatelessWidget {
                   icon: Icons.cake,
                   label: 'سن قهرمان',
                   value: '${character.characterAge} روز',
-                  color: const Color(0xFF2563EB),
+                  color: primaryColor,
                 ),
               ),
               Expanded(
@@ -50,7 +55,7 @@ class HeroStats extends StatelessWidget {
                   icon: Icons.stars,
                   label: 'لول',
                   value: '${character.level}',
-                  color: const Color(0xFFFFA500),
+                  color: primaryColor,
                 ),
               ),
             ],
@@ -63,7 +68,7 @@ class HeroStats extends StatelessWidget {
                   icon: Icons.local_fire_department,
                   label: 'استریک جاری',
                   value: '${character.streak} روز',
-                  color: const Color(0xFFE74C3C),
+                  color: primaryColor,
                 ),
               ),
               Expanded(
@@ -71,13 +76,13 @@ class HeroStats extends StatelessWidget {
                   icon: Icons.emoji_events,
                   label: 'مدال‌ها',
                   value: '${character.badges}',
-                  color: const Color(0xFFF39C12),
+                  color: primaryColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildXpBar(),
+          _buildXpBar(primaryColor),
         ],
       ),
     );
@@ -116,7 +121,7 @@ class HeroStats extends StatelessWidget {
     );
   }
 
-  Widget _buildXpBar() {
+  Widget _buildXpBar(Color primaryColor) {
     final progress = character.levelProgress;
     final xpNeeded = character.level * 100;
 
@@ -142,7 +147,7 @@ class HeroStats extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             backgroundColor: Colors.grey.shade200,
-            color: const Color(0xFF2563EB),
+            color: primaryColor,
             minHeight: 8,
           ),
         ),

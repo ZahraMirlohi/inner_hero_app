@@ -1,4 +1,8 @@
+// lib/features/explore/widgets/challenge_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class ChallengeCard extends StatelessWidget {
   final Map<String, dynamic> challenge;
@@ -14,9 +18,12 @@ class ChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     final bgColor = isRegistrationClosed
         ? Colors.grey.shade300
-        : _parseColor(challenge['color'] ?? '#FFB8B8');
+        : primaryColor.withOpacity(0.1);
 
     return GestureDetector(
       onTap: onTap,
@@ -28,7 +35,7 @@ class ChallengeCard extends StatelessWidget {
               ? []
               : [
                   BoxShadow(
-                    color: bgColor.withAlpha(40),
+                    color: primaryColor.withOpacity(0.1),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -37,7 +44,6 @@ class ChallengeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // محتوای کارت
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -53,7 +59,7 @@ class ChallengeCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isRegistrationClosed
                               ? Colors.grey.shade400
-                              : Colors.white.withAlpha(51),
+                              : Colors.white.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -68,7 +74,6 @@ class ChallengeCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      // تعداد شرکت‌کنندگان
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -77,7 +82,7 @@ class ChallengeCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: isRegistrationClosed
                               ? Colors.grey.shade400
-                              : Colors.white.withAlpha(51),
+                              : Colors.white.withOpacity(0.5),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -131,16 +136,5 @@ class ChallengeCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _parseColor(String colorStr) {
-    try {
-      if (colorStr.startsWith('#')) {
-        return Color(int.parse('FF${colorStr.substring(1)}', radix: 16));
-      }
-      return const Color(0xFF4A90E2);
-    } catch (e) {
-      return const Color(0xFF4A90E2);
-    }
   }
 }

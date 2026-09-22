@@ -2,7 +2,9 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
 
 class HabitTimerWidget extends StatefulWidget {
   final String habitId;
@@ -36,12 +38,10 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
 
   void _startTimer() {
     if (_timer != null && _timer!.isActive) return;
-
     setState(() {
       _isRunning = true;
       _isPaused = false;
     });
-
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -61,12 +61,10 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
 
   void _resumeTimer() {
     if (_timer != null && _timer!.isActive) return;
-
     setState(() {
       _isRunning = true;
       _isPaused = false;
     });
-
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -92,7 +90,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('حداقل ۵ ثانیه زمان را ثبت کنید'),
-            backgroundColor: Colors.orange,
+            backgroundColor: Color(0xFFFFA500),
           ),
         );
       }
@@ -103,17 +101,14 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       _isSaved = true;
       _isRunning = false;
     });
-
     _timer?.cancel();
 
     try {
       final user = await _supabase.getCurrentUser();
       if (user == null) return;
-
       final today = DateTime.now();
       final dateStr = today.toIso8601String().split('T').first;
 
-      // ✅ حذف رکورد قبلی
       await _supabase.client
           .from('habit_time_tracking')
           .delete()
@@ -121,7 +116,6 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
           .eq('user_id', user.id)
           .eq('date', dateStr);
 
-      // ✅ درج رکورد جدید
       await _supabase.client.from('habit_time_tracking').insert({
         'habit_id': widget.habitId,
         'user_id': user.id,
@@ -156,14 +150,17 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     final timeString = _formatTime(_elapsedSeconds);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: const Color(0xFFF7FCEB),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: const Color(0xFFE8EDF2)),
       ),
       child: Column(
         children: [
@@ -172,7 +169,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E),
+              color: Color(0xFF090909),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -183,7 +180,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             style: TextStyle(
               fontSize: 42,
               fontWeight: FontWeight.bold,
-              color: _isSaved ? Colors.green : const Color(0xFF4A90E2),
+              color: _isSaved ? const Color(0xFF2ECC71) : primaryColor,
               fontFamily: 'monospace',
             ),
           ),
@@ -192,13 +189,13 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: const Color(0xFF2ECC71).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
                 '✅ زمان ثبت شد',
                 style: TextStyle(
-                  color: Colors.green,
+                  color: Color(0xFF2ECC71),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -207,13 +204,13 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: const Color(0xFFFFA500).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
                 '⏱️ در حال انجام...',
                 style: TextStyle(
-                  color: Colors.orange,
+                  color: Color(0xFFFFA500),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -222,13 +219,13 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
+              child: Text(
                 '⏸️ مکث شده',
                 style: TextStyle(
-                  color: Colors.blue,
+                  color: primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -241,21 +238,21 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 _buildControlButton(
                   icon: Icons.play_arrow,
                   label: 'شروع',
-                  color: Colors.green,
+                  color: const Color(0xFF2ECC71),
                   onTap: _startTimer,
                 ),
               if (_isRunning)
                 _buildControlButton(
                   icon: Icons.pause,
                   label: 'مکث',
-                  color: Colors.orange,
+                  color: const Color(0xFFFFA500),
                   onTap: _pauseTimer,
                 ),
               if (_isPaused)
                 _buildControlButton(
                   icon: Icons.play_arrow,
                   label: 'ادامه',
-                  color: Colors.green,
+                  color: const Color(0xFF2ECC71),
                   onTap: _resumeTimer,
                 ),
               const SizedBox(width: 8),
@@ -263,7 +260,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 _buildControlButton(
                   icon: Icons.refresh,
                   label: 'بازنشانی',
-                  color: Colors.grey,
+                  color: const Color(0xFF73786B),
                   onTap: _resetTimer,
                 ),
               const SizedBox(width: 8),
@@ -271,7 +268,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 _buildControlButton(
                   icon: Icons.save,
                   label: 'ذخیره زمان',
-                  color: Colors.blue,
+                  color: primaryColor,
                   onTap: _saveTime,
                 ),
             ],
@@ -292,9 +289,9 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

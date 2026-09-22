@@ -1,8 +1,12 @@
+// lib/features/arena/screens/add_task_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/providers/theme_provider.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({super.key});
@@ -22,7 +26,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   bool _isLoading = false;
   String _calendarType = 'jalali';
 
-  final _supabase = SupabaseService(); // ← تغییر
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -237,10 +241,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('تسک جدید'),
+        title: const Text('وظیفه جدید'),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: const Color(0xFF1A1A2E),
@@ -254,137 +261,66 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'عنوان تسک',
-                hintText: 'مثال: تماس با مشتری',
-                prefixIcon: const Icon(Icons.title, color: Color(0xFFFFA500)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
-            ),
+            _buildTitleField(primaryColor),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'توضیحات (اختیاری)',
-                prefixIcon: const Icon(
-                  Icons.description,
-                  color: Color(0xFFFFA500),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              maxLines: 2,
-            ),
+            _buildDescriptionField(primaryColor),
             const SizedBox(height: 16),
-            _buildSubTasksSection(),
+            _buildSubTasksSection(primaryColor),
             const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFA500).withAlpha(20),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFFFFA500),
-                  size: 20,
-                ),
-              ),
-              title: const Text('تاریخ سررسید'),
-              subtitle: Text(
-                _getDisplayDate(),
-                style: TextStyle(
-                  color:
-                      _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
-                ),
-              ),
-              onTap: _selectDate,
-            ),
+            _buildDateSection(primaryColor),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('امتیاز XP:'),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Slider(
-                    value: _xpReward.toDouble(),
-                    min: 5,
-                    max: 200,
-                    divisions: 9,
-                    activeColor: const Color(0xFFFFA500),
-                    inactiveColor: Colors.grey.shade300,
-                    onChanged: (value) =>
-                        setState(() => _xpReward = value.toInt()),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFA500).withAlpha(25),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$_xpReward XP',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFFA500),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildXPSection(primaryColor),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _saveTask,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA500),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'ذخیره تسک',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
+            _buildSubmitButton(primaryColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSubTasksSection() {
+  Widget _buildTitleField(Color primaryColor) {
+    return TextFormField(
+      controller: _titleController,
+      decoration: InputDecoration(
+        labelText: 'عنوان تسک',
+        hintText: 'مثال: تماس با مشتری',
+        prefixIcon: Icon(Icons.title, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      validator: (value) =>
+          value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
+    );
+  }
+
+  Widget _buildDescriptionField(Color primaryColor) {
+    return TextFormField(
+      controller: _descriptionController,
+      decoration: InputDecoration(
+        labelText: 'توضیحات (اختیاری)',
+        prefixIcon: Icon(Icons.description, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      maxLines: 2,
+    );
+  }
+
+  Widget _buildSubTasksSection(Color primaryColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -398,6 +334,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 decoration: InputDecoration(
                   hintText: 'مثلاً: تهیه لیست موارد',
                   border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
@@ -425,7 +365,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               },
               icon: const Icon(Icons.add),
               style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA500),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -454,17 +394,111 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
+  Widget _buildDateSection(Color primaryColor) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: primaryColor.withAlpha(20),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.calendar_today,
+          color: primaryColor,
+          size: 20,
+        ),
+      ),
+      title: const Text('تاریخ سررسید'),
+      subtitle: Text(
+        _getDisplayDate(),
+        style: TextStyle(
+          color: _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
+        ),
+      ),
+      onTap: _selectDate,
+    );
+  }
+
+  Widget _buildXPSection(Color primaryColor) {
+    return Row(
+      children: [
+        const Text('امتیاز XP:'),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Slider(
+            value: _xpReward.toDouble(),
+            min: 5,
+            max: 200,
+            divisions: 9,
+            activeColor: primaryColor,
+            inactiveColor: Colors.grey.shade300,
+            onChanged: (value) => setState(() => _xpReward = value.toInt()),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: primaryColor.withAlpha(25),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$_xpReward XP',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton(Color primaryColor) {
+    return ElevatedButton(
+      onPressed: _isLoading ? null : _saveTask,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      child: _isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Text(
+              'ذخیره تسک',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+    );
+  }
+
   Future<void> _saveTask() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final user = await _supabase.getCurrentUser(); // ← تغییر
+      final user = await _supabase.getCurrentUser();
       if (user != null && mounted) {
         final task = Task(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userId: user.id, // ← تغییر
+          userId: user.id,
           title: _titleController.text,
           description: _descriptionController.text,
           subTasks: _subTasks,
@@ -476,7 +510,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           updatedAt: DateTime.now(),
         );
 
-        await _supabase.createTask(task); // ← تغییر
+        await _supabase.createTask(task);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -1,6 +1,10 @@
+// lib/features/arena/widgets/habit_expansion_tile.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/features/arena/models/habit_model.dart';
-import '/services/supabase_service.dart'; // ← تغییر
+import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
 
 class HabitExpansionTile extends StatefulWidget {
   final Habit habit;
@@ -19,8 +23,7 @@ class HabitExpansionTile extends StatefulWidget {
 class _HabitExpansionTileState extends State<HabitExpansionTile> {
   late List<String> _completedSubHabits;
   bool _isExpanded = false;
-
-  final _supabase = SupabaseService(); // ← اضافه شده
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -36,10 +39,8 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
     } else {
       _completedSubHabits.remove(subHabit);
     }
-
     setState(() {});
 
-    // به‌روزرسانی در دیتابیس
     final updatedHabit = Habit(
       id: widget.habit.id,
       userId: widget.habit.userId,
@@ -67,7 +68,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
       groupId: widget.habit.groupId,
     );
 
-    await _supabase.updateHabit(updatedHabit); // ← تغییر
+    await _supabase.updateHabit(updatedHabit);
     widget.onChanged();
   }
 
@@ -100,6 +101,9 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     final progress = widget.habit.subHabits.isEmpty
         ? 0.0
         : _completedSubHabits.length / widget.habit.subHabits.length;
@@ -107,10 +111,10 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       elevation: 2,
       child: Column(
         children: [
-          // هدر اصلی
           ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -120,12 +124,12 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Color(widget.habit.backgroundColor).withAlpha(255),
+                color: primaryColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _getIconData(widget.habit.iconName),
-                color: Color(widget.habit.iconColor),
+                color: primaryColor,
                 size: 28,
               ),
             ),
@@ -134,14 +138,14 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: Color(0xFF090909),
               ),
             ),
             subtitle: Text(
               widget.habit.description.isEmpty
                   ? 'بدون توضیحات'
                   : widget.habit.description,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF73786B)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -155,22 +159,22 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4A90E2).withAlpha(25),
+                      color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${_completedSubHabits.length}/${widget.habit.subHabits.length}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF4A90E2),
+                        color: primaryColor,
                       ),
                     ),
                   ),
                 const SizedBox(width: 8),
                 Icon(
                   _isExpanded ? Icons.expand_less : Icons.expand_more,
-                  color: Colors.grey,
+                  color: const Color(0xFF73786B),
                 ),
               ],
             ),
@@ -180,12 +184,10 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
               });
             },
           ),
-
-          // بخش توسعه یافته (زیرعادت‌ها)
           if (_isExpanded && widget.habit.subHabits.isNotEmpty)
             Container(
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: const Color(0xFFF7FCEB),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
@@ -193,7 +195,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
               ),
               child: Column(
                 children: [
-                  const Divider(height: 1),
+                  const Divider(height: 1, color: Color(0xFFE8EDF2)),
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -204,7 +206,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                            color: Color(0xFF090909),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -215,21 +217,22 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                                 _toggleSubHabit(subHabit, value),
                             title: Text(
                               subHabit,
-                              style: const TextStyle(fontSize: 14),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF090909),
+                              ),
                             ),
-                            activeColor: const Color(0xFF4A90E2),
+                            activeColor: primaryColor,
                             contentPadding: EdgeInsets.zero,
                             dense: true,
                           ),
                         ),
-
-                        // نوار پیشرفت
                         if (widget.habit.subHabits.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           LinearProgressIndicator(
                             value: progress,
-                            backgroundColor: Colors.grey.shade200,
-                            color: const Color(0xFF4A90E2),
+                            backgroundColor: const Color(0xFFE8EDF2),
+                            color: primaryColor,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           const SizedBox(height: 8),
@@ -237,7 +240,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                             'پیشرفت: ${(progress * 100).toInt()}%',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: Color(0xFF73786B),
                             ),
                           ),
                         ],

@@ -1,8 +1,13 @@
+// lib/features/arena/edit_task_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/providers/theme_provider.dart';
+import '/providers/sync_provider.dart';
 
 class EditTaskScreen extends StatefulWidget {
   final Task task;
@@ -24,7 +29,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   bool _isLoading = false;
   String _calendarType = 'jalali';
 
-  final _supabase = SupabaseService(); // ← تغییر
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -104,18 +109,30 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                   children: [
                     Row(
                       children: [
+                        // ✅ سال با isExpanded و isDense
                         Expanded(
+                          flex: 3,
                           child: DropdownButtonFormField<int>(
                             value: selectedYear,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'سال',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 12,
+                              ),
+                              isDense: true,
                             ),
                             items: List.generate(10, (i) {
                               final year = Jalali.now().year - 2 + i;
                               return DropdownMenuItem(
                                 value: year,
-                                child: Text(year.toString()),
+                                child: Text(
+                                  year.toString(),
+                                  style: const TextStyle(fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -127,19 +144,31 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
+                        // ✅ ماه با isExpanded و isDense
                         Expanded(
+                          flex: 3,
                           child: DropdownButtonFormField<int>(
                             value: selectedMonth,
+                            isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'ماه',
                               border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 12,
+                              ),
+                              isDense: true,
                             ),
                             items: List.generate(12, (i) {
                               final month = i + 1;
                               return DropdownMenuItem(
                                 value: month,
-                                child: Text(_getMonthName(month)),
+                                child: Text(
+                                  _getMonthName(month),
+                                  style: const TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -157,9 +186,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                     DropdownButtonFormField<int>(
                       value:
                           selectedDay > daysInMonth ? daysInMonth : selectedDay,
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'روز',
                         border: OutlineInputBorder(),
+                        isDense: true,
                       ),
                       items: List.generate(daysInMonth, (i) {
                         final day = i + 1;
@@ -196,6 +227,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                       setState(() {
                         _dueDate = miladiDate;
                       });
+                      print('📅 Selected date: $miladiDate');
                       Navigator.pop(context);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -254,10 +286,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('ویرایش تسک'),
+        title: const Text('ویرایش وظیفه'),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: const Color(0xFF1A1A2E),
@@ -271,137 +306,66 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'عنوان تسک',
-                hintText: 'مثال: تماس با مشتری',
-                prefixIcon: const Icon(Icons.title, color: Color(0xFFFFA500)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              validator: (value) =>
-                  value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
-            ),
+            _buildTitleField(primaryColor),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'توضیحات (اختیاری)',
-                prefixIcon: const Icon(
-                  Icons.description,
-                  color: Color(0xFFFFA500),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              maxLines: 2,
-            ),
+            _buildDescriptionField(primaryColor),
             const SizedBox(height: 16),
-            _buildSubTasksSection(),
+            _buildSubTasksSection(primaryColor),
             const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFA500).withAlpha(20),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFFFFA500),
-                  size: 20,
-                ),
-              ),
-              title: const Text('تاریخ سررسید'),
-              subtitle: Text(
-                _getDisplayDate(),
-                style: TextStyle(
-                  color:
-                      _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
-                ),
-              ),
-              onTap: _selectDate,
-            ),
+            _buildDateSection(primaryColor),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('امتیاز XP:'),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Slider(
-                    value: _xpReward.toDouble(),
-                    min: 5,
-                    max: 200,
-                    divisions: 9,
-                    activeColor: const Color(0xFFFFA500),
-                    inactiveColor: Colors.grey.shade300,
-                    onChanged: (value) =>
-                        setState(() => _xpReward = value.toInt()),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFA500).withAlpha(25),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$_xpReward XP',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFFFA500),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _buildXPSection(primaryColor),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _updateTask,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA500),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                minimumSize: const Size(double.infinity, 50),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'ذخیره تغییرات',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
+            _buildSubmitButton(primaryColor),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSubTasksSection() {
+  Widget _buildTitleField(Color primaryColor) {
+    return TextFormField(
+      controller: _titleController,
+      decoration: InputDecoration(
+        labelText: 'عنوان تسک',
+        hintText: 'مثال: تماس با مشتری',
+        prefixIcon: Icon(Icons.title, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      validator: (value) =>
+          value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
+    );
+  }
+
+  Widget _buildDescriptionField(Color primaryColor) {
+    return TextFormField(
+      controller: _descriptionController,
+      decoration: InputDecoration(
+        labelText: 'توضیحات (اختیاری)',
+        prefixIcon: Icon(Icons.description, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      maxLines: 2,
+    );
+  }
+
+  Widget _buildSubTasksSection(Color primaryColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -415,6 +379,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 decoration: InputDecoration(
                   hintText: 'مثلاً: تهیه لیست موارد',
                   border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
@@ -442,7 +410,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               },
               icon: const Icon(Icons.add),
               style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA500),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -474,12 +442,116 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
+  Widget _buildDateSection(Color primaryColor) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: primaryColor.withAlpha(20),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.calendar_today,
+          color: primaryColor,
+          size: 20,
+        ),
+      ),
+      title: const Text('تاریخ سررسید'),
+      subtitle: Text(
+        _getDisplayDate(),
+        style: TextStyle(
+          color: _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
+        ),
+      ),
+      onTap: _selectDate,
+    );
+  }
+
+  Widget _buildXPSection(Color primaryColor) {
+    return Row(
+      children: [
+        const Text('امتیاز XP:'),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Slider(
+            value: _xpReward.toDouble(),
+            min: 5,
+            max: 200,
+            divisions: 9,
+            activeColor: primaryColor,
+            inactiveColor: Colors.grey.shade300,
+            onChanged: (value) => setState(() => _xpReward = value.toInt()),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: primaryColor.withAlpha(25),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$_xpReward XP',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton(Color primaryColor) {
+    return ElevatedButton(
+      onPressed: _isLoading ? null : _updateTask,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      child: _isLoading
+          ? const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : const Text(
+              'ذخیره تغییرات',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+    );
+  }
+
   Future<void> _updateTask() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
+      // ✅ پاکسازی dueDate (حذف ساعت)
+      DateTime? cleanDueDate;
+      if (_dueDate != null) {
+        cleanDueDate = DateTime(
+          _dueDate!.year,
+          _dueDate!.month,
+          _dueDate!.day,
+        );
+      }
+
       final updatedTask = Task(
         id: widget.task.id,
         userId: widget.task.userId,
@@ -487,14 +559,25 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         description: _descriptionController.text,
         subTasks: _subTasks,
         completedSubTasks: widget.task.completedSubTasks,
-        dueDate: _dueDate,
+        dueDate: cleanDueDate,
         isCompleted: widget.task.isCompleted,
         xpReward: _xpReward,
         createdAt: widget.task.createdAt,
         updatedAt: DateTime.now(),
       );
 
-      await _supabase.updateTask(updatedTask); // ← تغییر
+      print('📤 Updating task: ${updatedTask.toMap()}');
+
+      await _supabase.updateTask(updatedTask);
+
+      // ✅ به‌روزرسانی LocalStorage
+      try {
+        final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+        await syncProvider.saveTaskToLocal(updatedTask);
+        print('✅ Task saved to local storage');
+      } catch (e) {
+        print('⚠️ Error saving task to local: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -507,6 +590,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
+      print('❌ Error updating task: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

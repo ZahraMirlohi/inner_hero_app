@@ -1,5 +1,3 @@
-// lib/features/explore/screens/explore_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -12,6 +10,7 @@ import 'quests_tab.dart';
 import 'cosmetics_tab.dart';
 import 'leaderboard_tab.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 import '/services/local_storage_service.dart';
 import 'dart:async';
 
@@ -27,7 +26,7 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen>
     with TickerProviderStateMixin {
   late TabController _tabController;
-  late AnimationController _animationController;
+  late AnimationController _indicatorAnimationController;
 
   List<Map<String, dynamic>> _challenges = [];
   List<Map<String, dynamic>> _myChallenges = [];
@@ -44,12 +43,18 @@ class _ExploreScreenState extends State<ExploreScreen>
   final _supabase = SupabaseService();
   final Map<String, _CachedChallengeDetails> _challengeDetailsCache = {};
 
+  final List<Map<String, dynamic>> _tabs = [
+    {'icon': Icons.flag, 'label': 'چالش‌ها'},
+    {'icon': Icons.inventory_2, 'label': 'بسته‌ها'},
+    {'icon': Icons.stars, 'label': 'ماموریت‌ها'},
+    {'icon': Icons.emoji_events, 'label': 'افتخارات'},
+  ];
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+    _tabController = TabController(length: _tabs.length, vsync: this);
+    _indicatorAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -63,10 +68,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    if (_animationController.isAnimating) {
-      _animationController.stop();
-    }
-    _animationController.dispose();
+    _indicatorAnimationController.dispose();
     super.dispose();
   }
 
@@ -84,19 +86,9 @@ class _ExploreScreenState extends State<ExploreScreen>
     _loadData();
   }
 
-  // ==================== بارگذاری داده‌ها با پشتیبانی از آفلاین ====================
-
   Future<void> _loadData() async {
-    // ✅ جلوگیری از اجرای همزمان
-    if (_isInitialized || _isLoadingInProgress) {
-      print('⏭️ _loadData: Skip - already initialized or in progress');
-      return;
-    }
-
-    if (!mounted) {
-      print('⏭️ _loadData: Skip - widget not mounted');
-      return;
-    }
+    if (_isInitialized || _isLoadingInProgress) return;
+    if (!mounted) return;
 
     print('🔄 _loadData: Starting...');
     _isLoadingInProgress = true;
@@ -110,13 +102,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final currentUser = await _supabase.getCurrentUser();
 
-      // ✅ بررسی و بروزرسانی وضعیت چالش‌های کاربر
       if (_currentUserId.isNotEmpty) {
         await _supabase.checkAndUpdateUserChallenges(_currentUserId);
       }
 
       if (currentUser == null) {
-        print('⚠️ _loadData: No user logged in');
         if (mounted) {
           setState(() {
             _errorMessage = 'لطفاً وارد حساب کاربری خود شوید';
@@ -129,42 +119,32 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
 
       _currentUserId = currentUser.id;
-      print('👤 _loadData: User ID: $_currentUserId');
 
-      // ✅ مرحله 1: همیشه اول از داده‌های محلی استفاده کن
       bool hasLocalData = false;
 
       if (syncProvider.hasChallenges) {
         _challenges = syncProvider.challenges;
         _myChallenges = syncProvider.userChallenges;
         hasLocalData = true;
-        print('📱 Loaded ${_challenges.length} challenges from LOCAL storage');
       }
 
       if (syncProvider.packages.isNotEmpty) {
         _templatePackages = syncProvider.packages;
         hasLocalData = true;
-        print(
-          '📱 Loaded ${_templatePackages.length} packages from LOCAL storage',
-        );
       }
 
       if (syncProvider.quests.isNotEmpty) {
         _quests = syncProvider.quests;
         hasLocalData = true;
-        print('📱 Loaded ${_quests.length} quests from LOCAL storage');
       }
 
       if (_currentUserId.isNotEmpty) {
         await _supabase.checkUserChallengeStreak(_currentUserId);
       }
 
-      // ✅ مرحله 2: اگر آنلاین هستیم، در پس‌زمینه به‌روزرسانی کن
       if (syncProvider.isOnline) {
-        print('🌐 Online - updating data in background...');
         await _loadFromSupabase(syncProvider);
       } else if (!hasLocalData) {
-        // ✅ اگر آفلاین هستیم و داده محلی نداریم
         setState(() {
           _errorMessage = 'برای بارگذاری اطلاعات به اتصال اینترنت نیاز دارید';
           _isLoading = false;
@@ -174,26 +154,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         return;
       }
 
-      // ✅ مرحله 3: پردازش داده‌های چالش
       _processChallenges();
-
-      // ✅ مرحله 4: پردازش ماموریت‌های تکمیل شده
       _processCompletedQuests();
 
-      print('🎬 _loadData: Starting animation...');
-      if (mounted &&
-          !_animationController.isAnimating &&
-          !_animationController.isCompleted) {
-        try {
-          _animationController.forward();
-        } catch (e) {
-          // اگر controller dispose شده بود، نادیده بگیر
-          print('⚠️ Animation controller error: $e');
-        }
-      }
-
       if (mounted) {
-        print('✅ _loadData: Success - Updating UI');
         setState(() {
           _isLoading = false;
           _isInitialized = true;
@@ -213,7 +177,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ✅ بارگذاری از Supabase در پس‌زمینه
   Future<void> _loadFromSupabase(SyncProvider syncProvider) async {
     try {
       final results = await Future.wait([
@@ -230,7 +193,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       final newQuests = results[3] as List<Quest>;
       final userQuests = results[4] as List<UserQuest>;
 
-      // ✅ به‌روزرسانی داده‌ها
       if (newChallenges.isNotEmpty) {
         _challenges = newChallenges;
         await syncProvider.saveChallengesToLocal(newChallenges);
@@ -251,7 +213,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         await syncProvider.saveQuestsToLocal(newQuests);
       }
 
-      // ✅ پردازش ماموریت‌های تکمیل شده
       final completedQuestIds = userQuests
           .where((uq) => uq.isCompleted == true)
           .map((uq) => uq.questId)
@@ -259,34 +220,22 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       _completedQuests =
           _quests.where((q) => completedQuestIds.contains(q.id)).toList();
-
-      print(
-        '📊 Loaded from Supabase: ${_challenges.length} challenges, ${_templatePackages.length} packages, ${_quests.length} quests',
-      );
     } catch (e) {
       print('⚠️ Background sync error: $e');
     }
   }
 
-// ✅ اصلاح متد _processChallenges - حذف منطق تاریخ
   void _processChallenges() {
-    final now = DateTime.now();
     for (int i = 0; i < _challenges.length; i++) {
       final challenge = _challenges[i];
       final challengeId = challenge['id'];
 
-      // ❌ حذف بررسی تاریخ ثبت‌نام
-      // if (challenge['registration_end_date'] != null) { ... }
-
-      // ✅ همیشه قابل ثبت‌نام است (فقط is_active را چک کن)
       _challenges[i]['isRegistrationClosed'] = false;
       _challenges[i]['daysLeft'] = 999;
 
-      // ✅ بررسی وضعیت عضویت
       final isJoined = _myChallenges.any((c) => c['id'] == challengeId);
       _challenges[i]['isJoined'] = isJoined;
 
-      // ✅ بررسی وضعیت تکمیل
       if (isJoined) {
         final userChallenge = _myChallenges.firstWhere(
           (c) => c['id'] == challengeId,
@@ -305,14 +254,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ✅ پردازش ماموریت‌های تکمیل شده
   void _processCompletedQuests() {
     // این متد در _loadFromSupabase پردازش می‌شود
+    // در واقع ماموریت‌های تکمیل شده در همان مرحله بارگذاری شناسایی می‌شوند
+    // و نیازی به پردازش جداگانه ندارند
   }
 
-  // ==================== متدهای چالش ====================
-
-  // ✅ اصلاح متد _joinChallenge - بدون await غیرضروری
   Future<void> _joinChallenge(Map<String, dynamic> challenge) async {
     // ✅ نمایش پیام فوری
     if (mounted) {
@@ -324,7 +271,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
               SizedBox(width: 12),
               Text('در حال ثبت‌نام در چالش...'),
@@ -360,7 +309,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           });
         }
 
-        // ✅ 3. ریفرش در پس‌زمینه (بدون await)
+        // ✅ 3. ریفرش در پس‌زمینه
         final syncProvider = Provider.of<SyncProvider>(context, listen: false);
         unawaited(syncProvider.manualSync());
 
@@ -369,7 +318,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           widget.refreshNotifier!.value++;
         }
 
-        // ✅ 5. ریفرش صفحه (بدون بارگذاری مجدد کامل)
+        // ✅ 5. ریفرش صفحه
         _isInitialized = false;
         _isLoadingInProgress = false;
         unawaited(_loadData());
@@ -400,7 +349,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ✅ اصلاح متد _leaveChallenge
   Future<void> _leaveChallenge(Map<String, dynamic> challenge) async {
     _isLoadingInProgress = true;
     if (mounted) setState(() => _isLoading = true);
@@ -415,7 +363,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
               ),
               SizedBox(width: 12),
               Text('در حال انصراف از چالش...'),
@@ -491,9 +441,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // ==================== متدهای ماموریت ====================
-  // lib/features/explore/screens/explore_screen.dart
-
   Future<void> _startQuest(Quest quest) async {
     if (!mounted) return;
 
@@ -565,8 +512,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-// lib/features/explore/screens/explore_screen.dart
-
   Future<void> _cancelQuest(Quest quest) async {
     _isLoadingInProgress = true;
     if (mounted) setState(() => _isLoading = true);
@@ -579,7 +524,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
         // ✅ 2. ریفرش فوری داده‌های محلی از طریق LocalStorage
         try {
-          final localStorage = LocalStorageService(); // ✅ درست
+          final localStorage = LocalStorageService();
           final habits = localStorage.getHabits();
           final updatedHabits =
               habits.where((h) => h.questId != quest.id).toList();
@@ -622,180 +567,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  // ==================== Widgetهای اصلی ====================
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('اکسپلور'),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              forceRefresh();
-            },
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2563EB)),
-            )
-          : _errorMessage.isNotEmpty
-              ? _buildErrorState()
-              : _buildMainContent(),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'خطا در بارگذاری داده‌ها',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(_errorMessage, style: TextStyle(color: Colors.grey.shade600)),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              _isInitialized = false;
-              _isLoadingInProgress = false;
-              _loadData();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('تلاش مجدد'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMainContent() {
-    return Column(
-      children: [
-        Container(
-          color: Colors.white,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            indicatorColor: const Color(0xFF2563EB),
-            indicatorWeight: 3,
-            labelColor: const Color(0xFF2563EB),
-            unselectedLabelColor: Colors.grey.shade500,
-            labelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-            tabs: const [
-              Tab(text: 'چالش‌ها'),
-              Tab(text: 'بسته‌ها'),
-              Tab(text: 'ماموریت‌ها'),
-              Tab(text: 'افتخارات'),
-              Tab(text: 'بازارچه'),
-            ],
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              ChallengesTab(
-                challenges: _challenges,
-                myChallenges: _myChallenges,
-                currentUserId: _currentUserId,
-                onRefresh: _loadData,
-                joinChallenge: _joinChallenge,
-                leaveChallenge: _leaveChallenge,
-                showChallengeDetails: _showChallengeDetailsDialog,
-              ),
-              PackagesTab(
-                packages: _templatePackages,
-                currentUserId: _currentUserId,
-                onRefresh: _loadData,
-              ),
-              QuestsTab(
-                quests: _quests,
-                completedQuests: _completedQuests,
-                currentUserId: _currentUserId,
-                onRefresh: _loadData,
-                showQuestDetail: _showQuestDetailDialog,
-              ),
-              const LeaderboardTab(),
-              const CosmeticsTab(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==================== متدهای کمکی ====================
-
-  Color _parseColor(String colorStr) {
-    try {
-      if (colorStr.startsWith('#')) {
-        return Color(int.parse('FF${colorStr.substring(1)}', radix: 16));
-      }
-      return const Color(0xFF2563EB);
-    } catch (e) {
-      return const Color(0xFF2563EB);
-    }
-  }
-
-// lib/features/explore/screens/explore_screen.dart
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'fitness_center':
-        return Icons.fitness_center;
-      case 'psychology':
-        return Icons.psychology;
-      case 'attach_money':
-        return Icons.attach_money;
-      case 'favorite':
-        return Icons.favorite;
-      case 'forest':
-        return Icons.forest;
-      case 'whatshot':
-        return Icons.whatshot;
-      case 'emoji_events':
-        return Icons.emoji_events;
-      case 'diamond':
-        return Icons.diamond;
-      case 'beach_access':
-        return Icons.beach_access;
-      case 'flare':
-        return Icons.flare;
-      case 'star':
-        return Icons.star;
-      case 'flag':
-        return Icons.flag;
-      default:
-        return Icons.stars;
-    }
-  }
-
-  // ✅ متد کامل نمایش جزئیات چالش
   void _showChallengeDetailsDialog(Map<String, dynamic> challenge) async {
     try {
       final challengeId = challenge['id'];
@@ -857,9 +629,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-  // lib/features/explore/screens/explore_screen.dart
-
-  // ✅ متد کامل نمایش دیالوگ جزئیات چالش با داده‌های آماده
   void _showChallengeDetailsDialogWithData(
     Map<String, dynamic> challenge,
     Map<String, dynamic> data,
@@ -869,7 +638,9 @@ class _ExploreScreenState extends State<ExploreScreen>
       final progressData = data['progress'] as Map<String, int>? ??
           {'completedDays': 0, 'totalDays': 0};
 
-      final fixedColor = const Color(0xFF2563EB);
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final Color primaryColor = themeProvider.primaryColor;
+
       final isJoined = _myChallenges.any((c) => c['id'] == challenge['id']);
       final isRegistrationClosed = challenge['isRegistrationClosed'] ?? false;
 
@@ -897,7 +668,6 @@ class _ExploreScreenState extends State<ExploreScreen>
         endDate = DateTime.now().add(Duration(days: duration));
       }
 
-      // ✅ بررسی وضعیت چالش
       bool isCompleted = false;
       bool isFailed = false;
 
@@ -912,12 +682,10 @@ class _ExploreScreenState extends State<ExploreScreen>
         }
       }
 
-      // ✅ وضعیت چالش
       final bool isActive = isJoined && !isCompleted && !isFailed;
       final bool isNew = !isJoined && !isRegistrationClosed;
       final bool isExpired = isRegistrationClosed && !isJoined;
 
-      // ✅ داده‌های پیشرفت
       final completedDays = progressData['completedDays'] ?? 0;
       final totalDays = progressData['totalDays'] ?? duration;
       final double progress = totalDays > 0 ? completedDays / totalDays : 0.0;
@@ -942,7 +710,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // ✅ نشانگر کشیدن
+                    // نشانگر کشیدن
                     Center(
                       child: Container(
                         width: 60,
@@ -960,7 +728,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ==================== هدر چالش ====================
+                            // هدر چالش
                             Row(
                               children: [
                                 Container(
@@ -968,17 +736,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   height: 60,
                                   decoration: BoxDecoration(
                                     color: isCompleted
-                                        ? Colors.green.withValues(alpha: 0.15)
+                                        ? Colors.green.withOpacity(0.15)
                                         : isFailed
-                                            ? Colors.red.withValues(alpha: 0.15)
+                                            ? Colors.red.withOpacity(0.15)
                                             : isActive
-                                                ? fixedColor.withValues(
-                                                    alpha: 0.15)
+                                                ? primaryColor.withOpacity(0.15)
                                                 : isExpired
                                                     ? Colors.grey
-                                                        .withValues(alpha: 0.15)
-                                                    : Colors.orange.withValues(
-                                                        alpha: 0.15),
+                                                        .withOpacity(0.15)
+                                                    : Colors.orange
+                                                        .withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Icon(
@@ -998,7 +765,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                             : isExpired
                                                 ? Colors.grey.shade600
                                                 : isActive
-                                                    ? fixedColor
+                                                    ? primaryColor
                                                     : Colors.orange,
                                     size: 30,
                                   ),
@@ -1040,7 +807,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ],
                                   ),
                                 ),
-                                // ✅ برچسب وضعیت
+                                // برچسب وضعیت
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 12,
@@ -1048,17 +815,16 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   ),
                                   decoration: BoxDecoration(
                                     color: isCompleted
-                                        ? Colors.green.withValues(alpha: 0.1)
+                                        ? Colors.green.withOpacity(0.1)
                                         : isFailed
-                                            ? Colors.red.withValues(alpha: 0.1)
+                                            ? Colors.red.withOpacity(0.1)
                                             : isExpired
-                                                ? Colors.grey
-                                                    .withValues(alpha: 0.1)
+                                                ? Colors.grey.withOpacity(0.1)
                                                 : isActive
-                                                    ? fixedColor.withValues(
-                                                        alpha: 0.1)
+                                                    ? primaryColor
+                                                        .withOpacity(0.1)
                                                     : Colors.orange
-                                                        .withValues(alpha: 0.1),
+                                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -1081,7 +847,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                               : isExpired
                                                   ? Colors.grey.shade600
                                                   : isActive
-                                                      ? fixedColor
+                                                      ? primaryColor
                                                       : Colors.orange,
                                     ),
                                   ),
@@ -1089,7 +855,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ],
                             ),
 
-                            // ==================== وضعیت چالش ====================
+                            // وضعیت چالش
                             if (isJoined) ...[
                               const SizedBox(height: 16),
                               Container(
@@ -1099,17 +865,17 @@ class _ExploreScreenState extends State<ExploreScreen>
                                 ),
                                 decoration: BoxDecoration(
                                   color: isCompleted
-                                      ? Colors.green.withValues(alpha: 0.1)
+                                      ? Colors.green.withOpacity(0.1)
                                       : isFailed
-                                          ? Colors.red.withValues(alpha: 0.1)
-                                          : Colors.blue.withValues(alpha: 0.1),
+                                          ? Colors.red.withOpacity(0.1)
+                                          : Colors.blue.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isCompleted
                                         ? Colors.green
                                         : isFailed
                                             ? Colors.red
-                                            : fixedColor,
+                                            : primaryColor,
                                     width: 1,
                                   ),
                                 ),
@@ -1125,7 +891,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           ? Colors.green
                                           : isFailed
                                               ? Colors.red
-                                              : fixedColor,
+                                              : primaryColor,
                                       size: 20,
                                     ),
                                     const SizedBox(width: 12),
@@ -1143,7 +909,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                               ? Colors.green
                                               : isFailed
                                                   ? Colors.red
-                                                  : fixedColor,
+                                                  : primaryColor,
                                         ),
                                       ),
                                     ),
@@ -1153,7 +919,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
-                                          color: fixedColor,
+                                          color: primaryColor,
                                         ),
                                       ),
                                   ],
@@ -1165,24 +931,24 @@ class _ExploreScreenState extends State<ExploreScreen>
                             const Divider(),
                             const SizedBox(height: 16),
 
-                            // ==================== اطلاعات چالش ====================
-                            _buildDetailRowFixed(
+                            // اطلاعات چالش
+                            _buildDetailRow(
                               Icons.timer,
                               'مدت زمان چالش',
                               '$duration روز',
-                              isExpired ? Colors.grey.shade600 : fixedColor,
+                              isExpired ? Colors.grey.shade600 : primaryColor,
                             ),
                             const SizedBox(height: 12),
 
-                            _buildDetailRowFixed(
+                            _buildDetailRow(
                               Icons.people,
                               'شرکت‌کنندگان',
                               '$realParticipants نفر',
-                              isExpired ? Colors.grey.shade600 : fixedColor,
+                              isExpired ? Colors.grey.shade600 : primaryColor,
                             ),
                             const SizedBox(height: 12),
 
-                            _buildDetailRowFixed(
+                            _buildDetailRow(
                               Icons.stars,
                               'پاداش نهایی',
                               '+${challenge['xp_reward'] ?? 0} XP',
@@ -1192,13 +958,11 @@ class _ExploreScreenState extends State<ExploreScreen>
                                       ? Colors.red
                                       : isExpired
                                           ? Colors.grey.shade600
-                                          : fixedColor,
+                                          : primaryColor,
                             ),
                             const SizedBox(height: 12),
 
-                            const SizedBox(height: 12),
-
-                            // ==================== نوار پیشرفت (فقط برای چالش‌های فعال) ====================
+                            // نوار پیشرفت (فقط برای چالش‌های فعال)
                             if (isActive) ...[
                               const SizedBox(height: 16),
                               const Divider(),
@@ -1223,7 +987,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.bold,
-                                          color: fixedColor,
+                                          color: primaryColor,
                                         ),
                                       ),
                                     ],
@@ -1234,7 +998,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     child: LinearProgressIndicator(
                                       value: progress,
                                       backgroundColor: Colors.grey.shade200,
-                                      color: fixedColor,
+                                      color: primaryColor,
                                       minHeight: 10,
                                     ),
                                   ),
@@ -1251,14 +1015,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: Colors.orange.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: Colors.orange.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: Colors.orange.withValues(
-                                            alpha: 0.2,
-                                          ),
+                                          color: Colors.orange.withOpacity(0.2),
                                         ),
                                       ),
                                       child: Row(
@@ -1286,7 +1046,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                             ],
 
-                            // ==================== چالش کامل شده ====================
+                            // چالش کامل شده
                             if (isCompleted) ...[
                               const SizedBox(height: 16),
                               const Divider(),
@@ -1338,7 +1098,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ),
                             ],
 
-                            // ==================== چالش ناموفق ====================
+                            // چالش ناموفق
                             if (isFailed) ...[
                               const SizedBox(height: 16),
                               const Divider(),
@@ -1392,20 +1152,17 @@ class _ExploreScreenState extends State<ExploreScreen>
 
                             const SizedBox(height: 24),
 
-                            // ==================== دکمه‌های اقدام ====================
+                            // دکمه‌های اقدام
                             if (isCompleted) ...[
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
+                                  color: Colors.green.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.green,
-                                    width: 2,
-                                  ),
+                                  border:
+                                      Border.all(color: Colors.green, width: 2),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1430,16 +1187,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                             ] else if (isFailed) ...[
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.withValues(alpha: 0.1),
+                                  color: Colors.red.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.red,
-                                    width: 2,
-                                  ),
+                                  border:
+                                      Border.all(color: Colors.red, width: 2),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1482,8 +1236,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     backgroundColor: const Color(0xFFEF4444),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
+                                        vertical: 14),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -1494,9 +1247,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                             ] else if (isExpired) ...[
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(16),
@@ -1543,11 +1295,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: fixedColor,
+                                    backgroundColor: primaryColor,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
-                                    ),
+                                        vertical: 14),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -1582,11 +1333,65 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
-// lib/features/explore/screens/explore_screen.dart
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+          ),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showQuestDetailDialog(Quest quest) async {
     try {
-      final color = _parseColor(quest.color);
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final Color color = _parseColor(quest.color);
 
       // ✅ دریافت وضعیت ماموریت برای کاربر
       final userQuests = await _supabase.getUserQuests(_currentUserId);
@@ -1888,7 +1693,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                               ],
                             ),
 
-                            // ==================== نوار پیشرفت (فقط در صورت شروع) ====================
+                            // ==================== نوار پیشرفت ====================
                             if (hasStarted && !isCompleted) ...[
                               const SizedBox(height: 16),
                               const Divider(),
@@ -2131,16 +1936,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                             if (isCompleted) ...[
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 decoration: BoxDecoration(
                                   color: Colors.green.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.green,
-                                    width: 2,
-                                  ),
+                                  border:
+                                      Border.all(color: Colors.green, width: 2),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2189,9 +1991,8 @@ class _ExploreScreenState extends State<ExploreScreen>
                                                 Navigator.pop(context, true),
                                             child: const Text(
                                               'بله، انصراف',
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                              ),
+                                              style:
+                                                  TextStyle(color: Colors.red),
                                             ),
                                           ),
                                         ],
@@ -2206,8 +2007,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     foregroundColor: Colors.red,
                                     side: const BorderSide(color: Colors.red),
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
+                                        vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -2233,8 +2033,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     backgroundColor: color,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
+                                        vertical: 16),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -2273,10 +2072,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
     }
   }
-
-  // ==================== ویجت کمکی برای اطلاعات ماموریت (با پارامتر isActive) ====================
-
-  // lib/features/explore/screens/explore_screen.dart
 
   Widget _buildQuestInfoItem({
     required IconData icon,
@@ -2326,55 +2121,99 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
     );
   }
-  // ==================== ویجت کمکی برای نمایش جزئیات ====================
 
-  Widget _buildDetailRowFixed(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  Color _parseColor(String colorStr) {
+    try {
+      if (colorStr.startsWith('#')) {
+        return Color(int.parse('FF${colorStr.substring(1)}', radix: 16));
+      }
+      return const Color(0xFF4A90E2);
+    } catch (e) {
+      return const Color(0xFF4A90E2);
+    }
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'fitness_center':
+        return Icons.fitness_center;
+      case 'book':
+        return Icons.book;
+      case 'wb_sunny':
+        return Icons.wb_sunny;
+      case 'self_improvement':
+        return Icons.self_improvement;
+      case 'water_drop':
+        return Icons.water_drop;
+      case 'no_food':
+        return Icons.no_food;
+      case 'language':
+        return Icons.language;
+      case 'directions_walk':
+        return Icons.directions_walk;
+      case 'whatshot':
+        return Icons.whatshot;
+      case 'flag':
+        return Icons.flag;
+      case 'local_fire_department':
+        return Icons.local_fire_department;
+      case 'sports_martial_arts':
+        return Icons.sports_martial_arts;
+      default:
+        return Icons.flag;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7FCEB),
+      body: _isLoading
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: primaryColor),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'در حال بارگذاری...',
+                    style: TextStyle(color: Color(0xFF73786B)),
+                  ),
+                ],
+              ),
+            )
+          : _errorMessage.isNotEmpty
+              ? _buildErrorState(primaryColor)
+              : _buildMainContent(primaryColor),
+    );
+  }
+
+  Widget _buildErrorState(Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Text(
+            'خطا در بارگذاری داده‌ها',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-          ),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Text(
-                value,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
+          const SizedBox(height: 8),
+          Text(_errorMessage, style: TextStyle(color: Colors.grey.shade600)),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: forceRefresh,
+            icon: const Icon(Icons.refresh),
+            label: const Text('تلاش مجدد'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
@@ -2383,12 +2222,140 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
   }
 
-  String _formatDate(DateTime date) {
-    final year = date.year;
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '$year/$month/$day';
+  Widget _buildTabBar(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF090909),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: false,
+        labelPadding: EdgeInsets.zero,
+        indicatorSize: TabBarIndicatorSize.tab,
+        // ✅ حذف کن — این باعث خطا می‌شه
+        // indicatorPadding: const EdgeInsets.all(2),
+        indicator: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              primaryColor,
+              Color.lerp(primaryColor, Colors.black, 0.15)!,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+        ),
+        dividerColor: Colors.transparent,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+        labelStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+        ),
+        tabs: _tabs.map((tab) {
+          return Tab(
+            height: 58,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(tab['icon'], size: 20),
+                const SizedBox(height: 3),
+                Text(
+                  tab['label'],
+                  style: const TextStyle(fontSize: 10),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
+
+  Widget _buildMainContent(Color primaryColor) {
+    return Column(
+      children: [
+        // ✅ تب‌های جدید
+        _buildTabBar(primaryColor),
+
+        const SizedBox(height: 8),
+
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            child: TabBarView(
+              key: ValueKey(_tabController.index),
+              controller: _tabController,
+              children: [
+                ChallengesTab(
+                  challenges: _challenges,
+                  myChallenges: _myChallenges,
+                  currentUserId: _currentUserId,
+                  onRefresh: _loadData,
+                  joinChallenge: _joinChallenge,
+                  leaveChallenge: _leaveChallenge,
+                  showChallengeDetails: _showChallengeDetailsDialog,
+                ),
+                PackagesTab(
+                  packages: _templatePackages,
+                  currentUserId: _currentUserId,
+                  onRefresh: _loadData,
+                ),
+                QuestsTab(
+                  quests: _quests,
+                  completedQuests: _completedQuests,
+                  currentUserId: _currentUserId,
+                  onRefresh: _loadData,
+                  showQuestDetail: _showQuestDetailDialog,
+                ),
+                const LeaderboardTab(),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatDate(DateTime date) {
+  final year = date.year;
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '$year/$month/$day';
 }
 
 class _CachedChallengeDetails {

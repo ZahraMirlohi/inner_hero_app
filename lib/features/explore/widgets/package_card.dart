@@ -1,6 +1,10 @@
+// lib/features/explore/widgets/package_card.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/package_model.dart';
 import 'package_detail_dialog.dart';
+import '/providers/theme_provider.dart';
 
 class PackageCard extends StatelessWidget {
   final Package package;
@@ -16,8 +20,11 @@ class PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _parseColor(package.color);
-    final bgColor = _parseColor(package.backgroundColor);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
+    final color = primaryColor;
+    final bgColor = isActive ? color.withOpacity(0.08) : Colors.grey.shade100;
 
     return GestureDetector(
       onTap: () async {
@@ -39,7 +46,7 @@ class PackageCard extends StatelessWidget {
           boxShadow: isActive
               ? [
                   BoxShadow(
-                    color: color.withAlpha(40),
+                    color: color.withOpacity(0.1),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -74,7 +81,7 @@ class PackageCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? Colors.white.withAlpha(76)
+                          ? Colors.white.withOpacity(0.3)
                           : Colors.grey.shade400,
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -133,9 +140,8 @@ class PackageCard extends StatelessWidget {
                     height: 24,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: package.habits.length > 3
-                          ? 3
-                          : package.habits.length,
+                      itemCount:
+                          package.habits.length > 3 ? 3 : package.habits.length,
                       itemBuilder: (context, index) {
                         final habit = package.habits[index];
                         return Container(
@@ -146,7 +152,7 @@ class PackageCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: isActive
-                                ? color.withAlpha(51)
+                                ? color.withOpacity(0.2)
                                 : Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -164,7 +170,7 @@ class PackageCard extends StatelessWidget {
 
                   const SizedBox(height: 12),
 
-                  // دکمه فعال/غیرفعال (اکنون فقط نمایشی است)
+                  // دکمه فعال/غیرفعال
                   Row(
                     children: [
                       Container(
@@ -174,7 +180,7 @@ class PackageCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isActive
-                              ? const Color(0xFFFFA500).withAlpha(25)
+                              ? const Color(0xFFFFA500).withOpacity(0.15)
                               : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -216,9 +222,8 @@ class PackageCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: isActive
-                                ? Colors.white
-                                : Colors.grey.shade600,
+                            color:
+                                isActive ? Colors.white : Colors.grey.shade600,
                           ),
                         ),
                       ),
@@ -231,17 +236,6 @@ class PackageCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _parseColor(String colorStr) {
-    try {
-      if (colorStr.startsWith('#')) {
-        return Color(int.parse('FF${colorStr.substring(1)}', radix: 16));
-      }
-      return const Color(0xFF4A90E2);
-    } catch (e) {
-      return const Color(0xFF4A90E2);
-    }
   }
 
   IconData _getIconData(String iconName) {

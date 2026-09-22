@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/buddy_matcher_service.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 import '../models/user_personality.dart';
 
 class PersonalityScreen extends StatefulWidget {
@@ -30,7 +31,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
   // ==================== انتخاب‌ها ====================
   Gender _selectedGender = Gender.other;
   List<PersonalityType> _selectedPersonalities = [];
-  MBTIType? _selectedMBTI; // ✅ اضافه کردن این خط
+  MBTIType? _selectedMBTI;
   List<String> _interests = [];
   List<String> _goals = [];
   int _experienceLevel = 1;
@@ -78,7 +79,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           _personality = personality;
           _selectedGender = personality.gender;
           _selectedPersonalities = personality.personalityTypes;
-          _selectedMBTI = personality.mbtiType; // ✅ اضافه شده
+          _selectedMBTI = personality.mbtiType;
           _interests = personality.interests;
           _goals = personality.goals;
           _experienceLevel = personality.experienceLevel;
@@ -92,8 +93,6 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       _isLoading = false;
     });
   }
-
-  // ==================== افزودن/حذف ====================
 
   void _addInterest() {
     final text = _interestsController.text.trim();
@@ -147,8 +146,6 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     });
   }
 
-  // ==================== ذخیره ====================
-
   Future<void> _savePersonality() async {
     if (_userId == null) return;
 
@@ -161,9 +158,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         userId: _userId!,
         gender: _selectedGender,
         personalityTypes: _selectedPersonalities,
-        mbtiType: _selectedMBTI, // ✅ اضافه شده
+        mbtiType: _selectedMBTI,
         interests: _interests,
-        habits: [], // از عادت‌های کاربر پر می‌شود
+        habits: [],
         goals: _goals,
         bio: _bioController.text.isNotEmpty ? _bioController.text : null,
         preferredTimes: _preferredTimes,
@@ -203,55 +200,59 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     }
   }
 
-  // ==================== Build ====================
-
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('شخصیت من'),
-        backgroundColor: Colors.white,
+        title: Text(
+          'شخصیت من',
+          style: TextStyle(color: theme.textColor),
+        ),
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _savePersonality,
-            child: const Text(
+            child: Text(
               'ذخیره',
-              style: TextStyle(color: Color(0xFF4A90E2)),
+              style: TextStyle(color: primaryColor),
             ),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+          ? Center(
+              child: CircularProgressIndicator(color: primaryColor),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildGenderSelector(),
+                  _buildGenderSelector(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildMBTISection(), // ✅ اضافه کردن بخش MBTI
+                  _buildMBTISection(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildPersonalitySelector(),
+                  _buildPersonalitySelector(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildInterestsSection(),
+                  _buildInterestsSection(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildGoalsSection(),
+                  _buildGoalsSection(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildBioSection(),
+                  _buildBioSection(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildTimePreference(),
+                  _buildTimePreference(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildExperienceLevel(),
+                  _buildExperienceLevel(theme, primaryColor),
                   const SizedBox(height: 20),
-                  _buildLookingForBuddy(),
+                  _buildLookingForBuddy(theme, primaryColor),
                   const SizedBox(height: 32),
-                  _buildSaveButton(),
+                  _buildSaveButton(primaryColor),
                 ],
               ),
             ),
@@ -260,11 +261,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
 
   // ==================== ویجت‌ها ====================
 
-  Widget _buildGenderSelector() {
+  Widget _buildGenderSelector(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -277,22 +278,22 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'جنسیت',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildGenderChip(Gender.male, 'مرد'),
+              _buildGenderChip(Gender.male, 'مرد', theme, primaryColor),
               const SizedBox(width: 12),
-              _buildGenderChip(Gender.female, 'زن'),
+              _buildGenderChip(Gender.female, 'زن', theme, primaryColor),
               const SizedBox(width: 12),
-              _buildGenderChip(Gender.other, 'سایر'),
+              _buildGenderChip(Gender.other, 'سایر', theme, primaryColor),
             ],
           ),
         ],
@@ -300,7 +301,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildGenderChip(Gender gender, String label) {
+  Widget _buildGenderChip(
+    Gender gender,
+    String label,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     final isSelected = _selectedGender == gender;
     return Expanded(
       child: GestureDetector(
@@ -312,7 +318,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF4A90E2) : Colors.grey.shade100,
+            color: isSelected ? primaryColor : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
             border: isSelected ? null : Border.all(color: Colors.grey.shade300),
           ),
@@ -332,11 +338,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
 
   // ==================== انتخاب MBTI ====================
 
-  Widget _buildMBTISection() {
+  Widget _buildMBTISection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -351,29 +357,27 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 '🧠 تایپ شخصیتی MBTI',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.textColor,
                 ),
               ),
               const Spacer(),
               TextButton(
-                onPressed: _showMBTITestDialog,
+                onPressed: () => _showMBTITestDialog(theme, primaryColor),
                 style: TextButton.styleFrom(
-                  backgroundColor: const Color(
-                    0xFF4A90E2,
-                  ).withValues(alpha: 0.1),
+                  backgroundColor: primaryColor.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   'انجام تست',
                   style: TextStyle(
-                    color: Color(0xFF4A90E2),
+                    color: primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -383,19 +387,17 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           const SizedBox(height: 8),
           Text(
             'شناخت تایپ شخصیتی به پیدا کردن هم‌مسیرهای مناسب کمک می‌کند',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
           ),
           const SizedBox(height: 12),
-
-          // نمایش MBTI فعلی
           if (_selectedMBTI != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.05),
+                color: primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF4A90E2).withValues(alpha: 0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -411,17 +413,17 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                       children: [
                         Text(
                           _selectedMBTI!.displayName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                            color: theme.textColor,
                           ),
                         ),
                         Text(
                           _selectedMBTI!.description,
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey.shade700,
+                            color: theme.textSecondaryColor,
                           ),
                         ),
                       ],
@@ -434,15 +436,14 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                       });
                     },
                     icon: const Icon(Icons.close, size: 18),
-                    color: Colors.grey.shade500,
+                    color: theme.textSecondaryColor,
                   ),
                 ],
               ),
             ),
           ] else ...[
-            // دکمه انتخاب MBTI
             GestureDetector(
-              onTap: _showMBTIPickerDialog,
+              onTap: () => _showMBTIPickerDialog(theme, primaryColor),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -454,11 +455,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     style: BorderStyle.solid,
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add, color: Colors.grey),
-                    SizedBox(width: 8),
+                    const Icon(Icons.add, color: Colors.grey),
+                    const SizedBox(width: 8),
                     Text(
                       'انتخاب تایپ شخصیتی',
                       style: TextStyle(color: Colors.grey, fontSize: 14),
@@ -473,7 +474,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  void _showMBTITestDialog() {
+  void _showMBTITestDialog(ThemeProvider theme, Color primaryColor) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -491,18 +492,15 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.05),
+                color: primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: GestureDetector(
-                onTap: () {
-                  // باز کردن لینک در مرورگر
-                  // می‌توانید از url_launcher استفاده کنید
-                },
-                child: const Text(
+                onTap: () {},
+                child: Text(
                   '🔗 www.16personalities.com/fa',
                   style: TextStyle(
-                    color: Color(0xFF4A90E2),
+                    color: primaryColor,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -524,10 +522,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _showMBTIPickerDialog();
+              _showMBTIPickerDialog(theme, primaryColor);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -539,7 +538,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  void _showMBTIPickerDialog() {
+  void _showMBTIPickerDialog(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -579,14 +578,15 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                   child: GridView.builder(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.5,
-                        ),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.5,
+                    ),
                     itemCount: MBTIType.values.length,
                     itemBuilder: (context, index) {
                       final type = MBTIType.values[index];
+                      final isSelected = _selectedMBTI == type;
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -597,15 +597,15 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _selectedMBTI == type
-                                ? const Color(0xFF4A90E2).withValues(alpha: 0.1)
+                            color: isSelected
+                                ? primaryColor.withValues(alpha: 0.1)
                                 : Colors.grey.shade50,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: _selectedMBTI == type
-                                  ? const Color(0xFF4A90E2)
+                              color: isSelected
+                                  ? primaryColor
                                   : Colors.grey.shade200,
-                              width: _selectedMBTI == type ? 2 : 1,
+                              width: isSelected ? 2 : 1,
                             ),
                           ),
                           child: Column(
@@ -620,12 +620,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                                 type.displayName,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: _selectedMBTI == type
+                                  fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
-                                  color: _selectedMBTI == type
-                                      ? const Color(0xFF4A90E2)
-                                      : const Color(0xFF1A1A2E),
+                                  color: isSelected
+                                      ? primaryColor
+                                      : theme.textColor,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -644,11 +644,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildPersonalitySelector() {
+  Widget _buildPersonalitySelector(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -661,18 +661,18 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'نوع شخصیت',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'حداکثر ۳ مورد را انتخاب کنید',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -704,9 +704,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF4A90E2)
-                        : Colors.grey.shade100,
+                    color: isSelected ? primaryColor : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected
                         ? null
@@ -728,11 +726,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildInterestsSection() {
+  Widget _buildInterestsSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -745,12 +743,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'علاقه‌مندی‌ها',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -780,7 +778,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 onPressed: _addInterest,
                 icon: const Icon(Icons.add),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A90E2),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -808,11 +806,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildGoalsSection() {
+  Widget _buildGoalsSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -825,12 +823,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'اهداف',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -860,7 +858,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 onPressed: _addGoal,
                 icon: const Icon(Icons.add),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A90E2),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -888,11 +886,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildBioSection() {
+  Widget _buildBioSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -905,12 +903,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'درباره من',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -933,11 +931,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildTimePreference() {
+  Widget _buildTimePreference(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -950,12 +948,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'زمان‌های ترجیحی',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -972,9 +970,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF4A90E2)
-                        : Colors.grey.shade100,
+                    color: isSelected ? primaryColor : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected
                         ? null
@@ -996,11 +992,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  Widget _buildExperienceLevel() {
+  Widget _buildExperienceLevel(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1013,12 +1009,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'سطح تجربه',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -1030,7 +1026,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                   min: 1,
                   max: 5,
                   divisions: 4,
-                  activeColor: const Color(0xFF4A90E2),
+                  activeColor: primaryColor,
                   onChanged: (value) {
                     setState(() {
                       _experienceLevel = value.toInt();
@@ -1044,15 +1040,15 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   _getExperienceLabel(_experienceLevel),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF4A90E2),
+                    color: primaryColor,
                   ),
                 ),
               ),
@@ -1080,11 +1076,11 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     }
   }
 
-  Widget _buildLookingForBuddy() {
+  Widget _buildLookingForBuddy(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1097,7 +1093,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -1105,12 +1101,12 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.textColor,
                 ),
               ),
               Text(
                 'در لیست پیشنهادات نمایش داده شوید',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
               ),
             ],
           ),
@@ -1121,20 +1117,20 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 _lookingForBuddy = value;
               });
             },
-            activeColor: const Color(0xFF4A90E2),
+            activeColor: primaryColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(Color primaryColor) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: _isSaving ? null : _savePersonality,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4A90E2),
+          backgroundColor: primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

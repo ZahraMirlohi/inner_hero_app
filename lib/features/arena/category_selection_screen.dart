@@ -1,5 +1,9 @@
+// lib/features/arena/category_selection_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'add_habit_screen.dart';
+import '/providers/theme_provider.dart';
 
 class CategorySelectionScreen extends StatelessWidget {
   const CategorySelectionScreen({super.key});
@@ -87,7 +91,7 @@ class CategorySelectionScreen extends StatelessWidget {
           'name': 'هدف‌گذاری',
           'icon': 'flag',
           'color': 0xFFF39C12,
-        }, // تغییر از target به flag
+        },
         {'name': 'تفکر مثبت', 'icon': 'lightbulb', 'color': 0xFFF1C40F},
         {'name': 'مدیریت استرس', 'icon': 'spa', 'color': 0xFF2ECC71},
         {'name': 'مهارت جدید', 'icon': 'school', 'color': 0xFF3498DB},
@@ -97,6 +101,9 @@ class CategorySelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -126,7 +133,7 @@ class CategorySelectionScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A90E2),
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -136,7 +143,6 @@ class CategorySelectionScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -152,7 +158,6 @@ class CategorySelectionScreen extends StatelessWidget {
               ],
             ),
           ),
-
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -165,6 +170,7 @@ class CategorySelectionScreen extends StatelessWidget {
                   icon: category['icon'] as IconData,
                   color: category['color'] as int,
                   habits: category['habits'] as List<Map<String, dynamic>>,
+                  primaryColor: primaryColor,
                 );
               },
             ),
@@ -180,7 +186,10 @@ class CategorySelectionScreen extends StatelessWidget {
     required IconData icon,
     required int color,
     required List<Map<String, dynamic>> habits,
+    required Color primaryColor,
   }) {
+    final Color categoryColor = Color(color);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -189,10 +198,10 @@ class CategorySelectionScreen extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Color(color).withAlpha(20),
+            color: categoryColor.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: Color(color), size: 24),
+          child: Icon(icon, color: primaryColor, size: 24),
         ),
         title: Text(
           name,
@@ -214,6 +223,7 @@ class CategorySelectionScreen extends StatelessWidget {
                   name: habit['name'] as String,
                   iconName: habit['icon'] as String,
                   color: habit['color'] as int,
+                  primaryColor: primaryColor,
                 );
               }).toList(),
             ),
@@ -228,6 +238,7 @@ class CategorySelectionScreen extends StatelessWidget {
     required String name,
     required String iconName,
     required int color,
+    required Color primaryColor,
   }) {
     return GestureDetector(
       onTap: () {
@@ -245,19 +256,19 @@ class CategorySelectionScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Color(color).withAlpha(15),
+          color: primaryColor.withAlpha(15),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Color(color).withAlpha(50), width: 1),
+          border: Border.all(color: primaryColor.withAlpha(50), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_getIconData(iconName), color: Color(color), size: 20),
+            Icon(_getIconData(iconName), color: primaryColor, size: 20),
             const SizedBox(width: 8),
             Text(
               name,
               style: TextStyle(
-                color: Color(color),
+                color: primaryColor,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),

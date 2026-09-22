@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/features/arena/models/task_model.dart';
-import '/services/supabase_service.dart'; // ← تغییر
+import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
 
 class TaskExpansionTile extends StatefulWidget {
   final Task task;
@@ -20,7 +22,7 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
   late List<String> _completedSubTasks;
   bool _isExpanded = false;
 
-  final _supabase = SupabaseService(); // ← اضافه شده
+  final _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -53,12 +55,15 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
       updatedAt: DateTime.now(),
     );
 
-    await _supabase.updateTask(updatedTask); // ← تغییر
+    await _supabase.updateTask(updatedTask);
     widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     final progress = widget.task.subTasks.isEmpty
         ? 0.0
         : _completedSubTasks.length / widget.task.subTasks.length;
@@ -81,14 +86,12 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
               decoration: BoxDecoration(
                 color: widget.task.isCompleted
                     ? Colors.green
-                    : Colors.grey.shade200,
+                    : primaryColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 widget.task.isCompleted ? Icons.check_circle : Icons.assignment,
-                color: widget.task.isCompleted
-                    ? Colors.white
-                    : Colors.grey.shade500,
+                color: widget.task.isCompleted ? Colors.white : primaryColor,
               ),
             ),
             title: Text(
@@ -96,9 +99,8 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                decoration: widget.task.isCompleted
-                    ? TextDecoration.lineThrough
-                    : null,
+                decoration:
+                    widget.task.isCompleted ? TextDecoration.lineThrough : null,
                 color: widget.task.isCompleted
                     ? Colors.grey
                     : const Color(0xFF1A1A2E),
@@ -120,15 +122,15 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFA500).withAlpha(25),
+                      color: primaryColor.withAlpha(25),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '${_completedSubTasks.length}/${widget.task.subTasks.length}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFFFA500),
+                        color: primaryColor,
                       ),
                     ),
                   ),
@@ -182,7 +184,7 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
                               subTask,
                               style: const TextStyle(fontSize: 14),
                             ),
-                            activeColor: const Color(0xFFFFA500),
+                            activeColor: primaryColor,
                             contentPadding: EdgeInsets.zero,
                             dense: true,
                           ),
@@ -194,7 +196,7 @@ class _TaskExpansionTileState extends State<TaskExpansionTile> {
                           LinearProgressIndicator(
                             value: progress,
                             backgroundColor: Colors.grey.shade200,
-                            color: const Color(0xFFFFA500),
+                            color: primaryColor,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           const SizedBox(height: 8),

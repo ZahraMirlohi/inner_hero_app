@@ -17,6 +17,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "6.4.1"
+  animated_bottom_navigation_bar:
+    dependency: "direct main"
+    description:
+      name: animated_bottom_navigation_bar
+      sha256: "7ad064b98536d9a38366d3f39907a82da35c695ed79b9ed27ccd16444f5c3184"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.4.1"
   app_links:
     dependency: "direct main"
     description:
@@ -53,10 +61,10 @@ packages:
     dependency: transitive
     description:
       name: archive
-      sha256: cb6a278ef2dbb298455e1a713bda08524a175630ec643a242c399c932a0a1f7d
+      sha256: a96e8b390886ee8abb49b7bd3ac8df6f451c621619f52a26e815fdcf568959ff
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "3.6.1"
+    version: "4.0.9"
   args:
     dependency: transitive
     description:
@@ -281,6 +289,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.3.6"
+  dash_curved_tab_bar:
+    dependency: "direct main"
+    description:
+      name: dash_curved_tab_bar
+      sha256: "47d0a9e8320d174194359789c49f210ff1687d7e9c5972480e1734c45859a64c"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.0.3"
   desktop_webview_window:
     dependency: transitive
     description:
@@ -809,10 +825,10 @@ packages:
     dependency: "direct main"
     description:
       name: lottie
-      sha256: a93542cc2d60a7057255405f62252533f8e8956e7e06754955669fd32fb4b216
+      sha256: "58dda9eee3f1b1fb9d490b0161635cffe93022b3b8ca0687e3df33a53620ead2"
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "2.7.0"
+    version: "3.5.1"
   matcher:
     dependency: transitive
     description:
@@ -1101,6 +1117,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.5.2"
+  posix:
+    dependency: transitive
+    description:
+      name: posix
+      sha256: bc1bad54ad2b735816e31f8d4600cfde6c7839975085ddfbca48b6c9f7c4044e
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "6.5.2"
   postgrest:
     dependency: transitive
     description:

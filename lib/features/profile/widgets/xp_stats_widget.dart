@@ -1,6 +1,8 @@
 // lib/features/profile/widgets/xp_stats_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class XpStatsWidget extends StatelessWidget {
   final int totalXp;
@@ -16,6 +18,9 @@ class XpStatsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     // ✅ محاسبه مستقیم برای اطمینان
     final currentLevelXp = (level - 1) * 100;
     final xpInCurrentLevel = totalXp - currentLevelXp;
@@ -25,15 +30,11 @@ class XpStatsWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF2563EB), const Color(0xFF7C3AED)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: primaryColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+            color: primaryColor.withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 4),
           ),

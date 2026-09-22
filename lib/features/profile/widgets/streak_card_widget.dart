@@ -1,14 +1,18 @@
 // lib/features/profile/widgets/streak_card_widget.dart
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/providers/theme_provider.dart';
 
 class StreakCardWidget extends StatelessWidget {
   final int currentStreak;
   final int bestStreak;
   final int weeklyStreak;
   final List<bool>
-  weekDays; // ✅ این لیست باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
+      weekDays; // ✅ این لیست باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
 
   const StreakCardWidget({
     super.key,
@@ -20,6 +24,7 @@ class StreakCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ⚠️ منطق زیر دقیقاً همون منطق قبلیه — هیچ محاسبه‌ای تغییر نکرده
     final bool isOnFire = currentStreak >= 7;
     final String streakEmoji = _getStreakEmoji(currentStreak);
 
@@ -34,35 +39,18 @@ class StreakCardWidget extends StatelessWidget {
     print('📅 Today Index: $todayIndex (${weekDaysLabels[todayIndex]})');
     print('📊 WeekDays status: $weekDays');
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isOnFire
-              ? [
-                  const Color(0xFFFF6B6B),
-                  const Color(0xFFFFA500),
-                  const Color(0xFFFFD93D),
-                ]
-              : [const Color(0xFF2563EB), const Color(0xFF7C3AED)],
-          stops: isOnFire ? const [0.0, 0.5, 1.0] : null,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color:
-                (isOnFire ? const Color(0xFFFF6B6B) : const Color(0xFF2563EB))
-                    .withValues(alpha: 0.25),
-            blurRadius: 15,
-            spreadRadius: 3,
-          ),
-        ],
-      ),
+    // 🎨 رنگ‌های تم اپلیکیشن
+    final theme = context.watch<ThemeProvider>();
+    const Color kBlack = Color(0xFF090909);
+    const Color kTextSecondary = Color(0xFF73786B);
+    final Color kGreen = theme.primaryColor; // قابل تغییر توسط کاربر
+
+    // ✅ بدون باکس سفید پشت زمینه — فقط پدینگ ساده
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
-          // هدر
+          // ---------- هدر ----------
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -70,40 +58,26 @@ class StreakCardWidget extends StatelessWidget {
                 children: [
                   Text(
                     isOnFire ? '🔥' : '⚡',
-                    style: const TextStyle(fontSize: 20),
+                    style: const TextStyle(fontSize: 18),
                   ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isOnFire ? 'در آتش!' : 'استریک روزانه',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        isOnFire
-                            ? '$currentStreak روز پیاپی! 💪'
-                            : 'هر روز یک قدم به قهرمانی',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 6),
+                  const Text(
+                    'استریک روزانه',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: kBlack,
+                    ),
                   ),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
-                  vertical: 4,
+                  vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  color: kGreen.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -111,15 +85,15 @@ class StreakCardWidget extends StatelessWidget {
                     const Icon(
                       Icons.emoji_events,
                       size: 14,
-                      color: Colors.white,
+                      color: kBlack,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '$bestStreak',
+                      '$bestStreak رکورد',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: kBlack,
                       ),
                     ),
                   ],
@@ -127,115 +101,29 @@ class StreakCardWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
 
-          // عدد استریک
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                currentStreak.toString(),
-                style: const TextStyle(
-                  fontSize: 72,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  height: 0.9,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'روز',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 22),
 
-          Center(
-            child: Text(streakEmoji, style: const TextStyle(fontSize: 24)),
-          ),
-          const SizedBox(height: 12),
-
-          // ✅ نمایش روزهای هفته شمسی با تطابق ایندکس
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (index) {
-              // ✅ weekDays باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
-              final bool isActive = weekDays.length > index && weekDays[index];
-              final bool isToday = index == todayIndex;
-
-              return Column(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isActive
-                          ? Colors.white
-                          : isToday
-                          ? Colors.white.withValues(alpha: 0.3)
-                          : Colors.white.withValues(alpha: 0.1),
-                      border: isToday && !isActive
-                          ? Border.all(color: Colors.white, width: 1.5)
-                          : null,
-                    ),
-                    child: Center(
-                      child: isActive
-                          ? const Icon(
-                              Icons.check,
-                              color: Color(0xFF2563EB),
-                              size: 14,
-                            )
-                          : isToday
-                          ? const Icon(
-                              Icons.circle,
-                              color: Colors.white,
-                              size: 6,
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    weekDaysLabels[index],
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: isActive
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isActive
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              );
-            }),
+          // ---------- دایره‌ی بزرگ استریک + ۷ دایره‌ی کوچک به‌صورت منحنی با فاصله از لبه ----------
+          _buildStreakOrb(
+            kBlack: kBlack,
+            kGreen: kGreen,
+            kTextSecondary: kTextSecondary,
+            streakEmoji: streakEmoji,
+            weekDaysLabels: weekDaysLabels,
+            todayIndex: todayIndex,
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _getMotivationalMessage(currentStreak),
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.9),
-                fontWeight: FontWeight.w500,
-              ),
+          // ---------- پیام انگیزشی (بیرون از دایره) ----------
+          Text(
+            _getMotivationalMessage(currentStreak),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              color: kBlack,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -243,6 +131,176 @@ class StreakCardWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildStreakOrb({
+    required Color kBlack,
+    required Color kGreen,
+    required Color kTextSecondary,
+    required String streakEmoji,
+    required List<String> weekDaysLabels,
+    required int todayIndex,
+  }) {
+    // اندازه‌های دایره‌ی بزرگ و دایره‌های کوچک
+    const double bigDiameter = 176;
+    const double smallDiameter = 30;
+    const double bigRadius = bigDiameter / 2;
+    const double smallRadius = smallDiameter / 2;
+
+    // شعاعی که مرکز دایره‌های کوچک روی آن قرار می‌گیرن — فاصله‌ی بیشتری
+    // از لبه‌ی دایره‌ی بزرگ گرفته شده (قبلاً ۱۶ بود، الان ۳۸)
+    const double arcRadius = bigRadius + 38;
+
+    // بازه‌ی زاویه‌ای که دایره‌های کوچک روی آن چیده می‌شن (به‌صورت منحنی بالای دایره)
+    const double startAngleDeg = 202;
+    const double endAngleDeg = 338;
+    const double angleStep = (endAngleDeg - startAngleDeg) / 6;
+
+    // اندازه‌ی کل ناحیه‌ای که این ترکیب (دایره‌ی بزرگ + قوس دایره‌های کوچک) نیاز داره
+    const double stackWidth = 2 * arcRadius + smallDiameter;
+    const double labelHeight = 16; // فضای لازم برای متن زیر هر دایره‌ی کوچک
+    const double stackHeight =
+        bigDiameter + (arcRadius - bigRadius) + smallDiameter + labelHeight;
+
+    final double centerX = stackWidth / 2;
+    // چون دایره‌ی بزرگ به پایین استک چسبیده (bottom: 0)، مرکز عمودیش:
+    final double bigCircleCenterY = stackHeight - bigRadius;
+
+    return SizedBox(
+      width: stackWidth,
+      height: stackHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // دایره‌ی بزرگ (رنگ ساده - رنگ تم اپلیکیشن)
+          Positioned(
+            bottom: 0,
+            left: (stackWidth - bigDiameter) / 2,
+            child: Container(
+              width: bigDiameter,
+              height: bigDiameter,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: kBlack,
+                boxShadow: [
+                  BoxShadow(
+                    color: kGreen.withValues(alpha: 0.35),
+                    blurRadius: 22,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(streakEmoji, style: const TextStyle(fontSize: 22)),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        currentStreak.toString(),
+                        style: const TextStyle(
+                          fontSize: 54,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          height: 0.95,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          'روز',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ۷ دایره‌ی کوچک، چیده‌شده روی یک منحنی با فاصله از لبه‌ی دایره‌ی بزرگ
+          ...List.generate(7, (index) {
+            final bool isActive = weekDays.length > index && weekDays[index];
+            final bool isToday = index == todayIndex;
+
+            final double angleDeg = startAngleDeg + (index * angleStep);
+            final double angleRad = angleDeg * pi / 180;
+
+            final double dotX = centerX + arcRadius * cos(angleRad);
+            final double dotY = bigCircleCenterY + arcRadius * sin(angleRad);
+
+            return Positioned(
+              left: dotX - smallRadius,
+              top: dotY - smallRadius,
+              child: SizedBox(
+                width: smallDiameter + 10,
+                child: Column(
+                  children: [
+                    Container(
+                      width: smallDiameter,
+                      height: smallDiameter,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // ✅ تیک‌خورده = رنگ تم (سبز)، تیک‌نخورده = مشکی
+                        color: isActive ? kGreen : kBlack,
+                        border: isToday && !isActive
+                            ? Border.all(color: kGreen, width: 1.4)
+                            : null,
+                        boxShadow: isActive
+                            ? [
+                                BoxShadow(
+                                  color: kGreen.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: isActive
+                            ? Icon(
+                                Icons.check,
+                                color: kBlack,
+                                size: 13,
+                              )
+                            : isToday
+                                ? Icon(
+                                    Icons.circle,
+                                    color: kGreen,
+                                    size: 6,
+                                  )
+                                : null,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      weekDaysLabels[index],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            isActive ? FontWeight.bold : FontWeight.normal,
+                        color: isActive ? kBlack : kTextSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ⚠️ این دو تابع دقیقاً همونی هستن که قبلاً بودن — بدون هیچ تغییری
   String _getStreakEmoji(int streak) {
     if (streak >= 100) return '👑';
     if (streak >= 50) return '🌟';

@@ -1,6 +1,10 @@
+// lib/features/arena/widgets/calendar_header.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/date_service.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/providers/theme_provider.dart';
 
 class CalendarHeader extends StatefulWidget {
   final Function(DateTime) onDateSelected;
@@ -24,8 +28,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
   String _calendarType = 'jalali';
   late List<DateTime> _monthDates;
   final ScrollController _scrollController = ScrollController();
-  double _dragStartX = 0;
-  double _scrollStartX = 0;
 
   DateTime _currentMonth = DateTime.now();
 
@@ -141,7 +143,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
   }
 
   void _onDateSelected(DateTime date) {
-    // ✅ اطمینان از اینکه تاریخ بدون ساعت است
     final selectedDate = DateTime(date.year, date.month, date.day);
     widget.onDateSelected(selectedDate);
   }
@@ -167,14 +168,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
     }
   }
 
-  // calendar_header.dart
-
   int _getJalaliWeekday(DateTime date) {
     final jalali = Jalali.fromDateTime(date);
-    // weekDay در کتابخانه shamsi_date:
-    // 1 = شنبه, 2 = یکشنبه, 3 = دوشنبه, 4 = سه‌شنبه,
-    // 5 = چهارشنبه, 6 = پنج‌شنبه, 7 = جمعه
-    // برای تبدیل به ایندکس 0-6، باید 1 کم کنیم
     return jalali.weekDay - 1;
   }
 
@@ -182,13 +177,13 @@ class _CalendarHeaderState extends State<CalendarHeader>
     if (_calendarType == 'jalali') {
       final weekdayNumber = _getJalaliWeekday(date);
       const weekdays = [
-        'شنبه', // ایندکس 0
-        'یک‌شنبه', // ایندکس 1
-        'دوشنبه', // ایندکس 2
-        'سه‌شنبه', // ایندکس 3
-        'چهارشنبه', // ایندکس 4
-        'پنج‌شنبه', // ایندکس 5
-        'جمعه', // ایندکس 6
+        'شنبه',
+        'یک‌شنبه',
+        'دوشنبه',
+        'سه‌شنبه',
+        'چهارشنبه',
+        'پنج‌شنبه',
+        'جمعه',
       ];
       return weekdays[weekdayNumber];
     } else {
@@ -288,44 +283,28 @@ class _CalendarHeaderState extends State<CalendarHeader>
     }
   }
 
-  void _onPanStart(DragStartDetails details) {
-    _dragStartX = details.localPosition.dx;
-    _scrollStartX = _scrollController.position.pixels;
-  }
-
-  void _onPanUpdate(DragUpdateDetails details) {
-    final delta = details.localPosition.dx - _dragStartX;
-    _scrollController.position.moveTo(_scrollStartX - delta);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         children: [
+          // ✅ هدر تقویم با padding مناسب
           GestureDetector(
             onTap: _toggleExpanded,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(13),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(top: 8, bottom: 4, left: 4, right: 4),
               child: Row(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF4A90E2).withAlpha(25),
+                      color: primaryColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -334,7 +313,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF4A90E2),
+                          color: Color(0xFF090909),
                         ),
                       ),
                     ),
@@ -344,23 +323,19 @@ class _CalendarHeaderState extends State<CalendarHeader>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'امروز',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
                         Text(
                           _getWeekdayName(widget.selectedDate),
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                            color: Color(0xFF090909),
                           ),
                         ),
                         Text(
                           '${_getMonthName(widget.selectedDate)} ${_getYear(widget.selectedDate)}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                            fontSize: 13,
+                            color: const Color(0xFF73786B),
                           ),
                         ),
                       ],
@@ -371,7 +346,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
                     turns: _isExpanded ? 0.5 : 0.0,
                     child: Icon(
                       Icons.keyboard_arrow_down,
-                      color: Colors.grey.shade600,
+                      color: const Color(0xFF73786B),
                     ),
                   ),
                 ],
@@ -379,28 +354,20 @@ class _CalendarHeaderState extends State<CalendarHeader>
             ),
           ),
 
+          // ✅ کشوی تقویم (بدون Scrollbar)
           if (_isExpanded)
             SizeTransition(
               sizeFactor: _scaleAnimation,
               child: Container(
-                margin: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(13),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   children: [
+                    // ✅ ماه و سال
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -409,133 +376,124 @@ class _CalendarHeaderState extends State<CalendarHeader>
                             onPressed: _goToPreviousMonth,
                             icon: const Icon(Icons.chevron_left),
                             iconSize: 28,
-                            color: const Color(0xFF4A90E2),
+                            color: const Color(0xFF090909),
                           ),
                           Text(
                             '${_getCurrentMonthName()} ${_getCurrentYear()}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1A2E),
+                              color: Color(0xFF090909),
                             ),
                           ),
                           IconButton(
                             onPressed: _goToNextMonth,
                             icon: const Icon(Icons.chevron_right),
                             iconSize: 28,
-                            color: const Color(0xFF4A90E2),
+                            color: const Color(0xFF090909),
                           ),
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
-                    SizedBox(
-                      height: 90,
-                      child: Scrollbar(
-                        controller: _scrollController,
-                        thumbVisibility: true,
-                        trackVisibility: true,
-                        radius: const Radius.circular(10),
-                        thickness: 6,
-                        child: GestureDetector(
-                          onPanStart: _onPanStart,
-                          onPanUpdate: _onPanUpdate,
-                          child: SingleChildScrollView(
-                            controller: _scrollController,
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(
-                              parent: AlwaysScrollableScrollPhysics(),
-                            ),
-                            child: Row(
-                              children: _monthDates.map((date) {
-                                final isToday = _isToday(date);
-                                final isSelected = _isSelectedDate(date);
 
-                                return GestureDetector(
-                                  onTap: () {
-                                    // ✅ اطمینان از اینکه تاریخ بدون ساعت است
-                                    final cleanDate = DateTime(
-                                      date.year,
-                                      date.month,
-                                      date.day,
-                                    );
-                                    widget.onDateSelected(cleanDate);
-                                    _toggleExpanded();
-                                  },
-                                  child: MouseRegion(
-                                    cursor: SystemMouseCursors.click,
-                                    child: Container(
-                                      width: 60,
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? const Color(0xFF4A90E2)
-                                            : isToday
-                                            ? const Color(
-                                                0xFF4A90E2,
-                                              ).withAlpha(25)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: isToday && !isSelected
-                                            ? Border.all(
-                                                color: const Color(0xFF4A90E2),
-                                                width: 1,
-                                              )
-                                            : null,
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            _getWeekdayName(
-                                              date,
-                                            ).substring(0, 1),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w500,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : Colors.grey.shade500,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            _getDayNumber(date),
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: isSelected
-                                                  ? Colors.white
-                                                  : isToday
-                                                  ? const Color(0xFF4A90E2)
-                                                  : const Color(0xFF1A1A2E),
-                                            ),
-                                          ),
-                                          if (isToday)
-                                            Container(
-                                              width: 4,
-                                              height: 4,
-                                              margin: const EdgeInsets.only(
-                                                top: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : const Color(0xFF4A90E2),
-                                                shape: BoxShape.circle,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                    const SizedBox(height: 4),
+
+                    // ✅ لیست روزها (بدون Scrollbar)
+                    SizedBox(
+                      height: 80,
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        child: Row(
+                          children: _monthDates.map((date) {
+                            final isToday = _isToday(date);
+                            final isSelected = _isSelectedDate(date);
+
+                            return GestureDetector(
+                              onTap: () {
+                                final cleanDate = DateTime(
+                                  date.year,
+                                  date.month,
+                                  date.day,
                                 );
-                              }).toList(),
-                            ),
-                          ),
+                                widget.onDateSelected(cleanDate);
+                                _toggleExpanded();
+                              },
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: Container(
+                                  width: 56,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? primaryColor
+                                        : isToday
+                                            ? primaryColor.withValues(
+                                                alpha: 0.10)
+                                            : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: isToday && !isSelected
+                                        ? Border.all(
+                                            color: primaryColor.withValues(
+                                                alpha: 0.30),
+                                            width: 1,
+                                          )
+                                        : null,
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _getWeekdayName(date).substring(0, 1),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : const Color(0xFF73786B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _getDayNumber(date),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : isToday
+                                                  ? primaryColor
+                                                  : const Color(0xFF090909),
+                                        ),
+                                      ),
+                                      if (isToday)
+                                        Container(
+                                          width: 4,
+                                          height: 4,
+                                          margin: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isSelected
+                                                ? Colors.white
+                                                : primaryColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ),

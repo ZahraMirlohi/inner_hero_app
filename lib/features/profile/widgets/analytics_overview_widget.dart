@@ -2,9 +2,11 @@
 
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/features/arena/models/habit_model.dart';
 import '/features/explore/models/quest_model.dart';
+import '/providers/theme_provider.dart';
 
 class AnalyticsOverviewWidget extends StatefulWidget {
   final String userId;
@@ -79,8 +81,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     }
   }
 
-  // lib/features/profile/widgets/analytics_overview_widget.dart
-
   Future<void> _loadStats() async {
     if (_isLoading && _isRefreshing) return;
 
@@ -132,17 +132,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         }
       }
 
-      // 3. چالش‌های امروز - ✅ فقط چالش‌های فعال و کامل نشده
+      // 3. چالش‌های امروز
       int todayChallenges = 0;
       int todayChallengesCompleted = 0;
 
-      // ✅ فقط چالش‌هایی که کامل نشده‌اند و فعال هستند
       final activeChallenges = userChallenges.where((c) {
-        // ❌ چالش‌های کامل شده را حذف کن
         if (c['is_completed'] == true) return false;
-        // ❌ چالش‌های ناموفق را حذف کن
         if (c['status'] == 'failed') return false;
-        // ❌ چالش‌های غیرفعال را حذف کن
         if (c['is_active'] == false) return false;
         return true;
       }).toList();
@@ -153,7 +149,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         final challengeId = challenge['id'];
         final challengeTitle = challenge['title'] ?? '';
 
-        // دریافت عادت‌های این چالش
         List<Habit> challengeHabits =
             allHabits.where((h) => h.challengeId == challengeId).toList();
 
@@ -193,11 +188,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         }
       }
 
-      // 4. ماموریت‌های امروز - ✅ فقط ماموریت‌های فعال و کامل نشده
+      // 4. ماموریت‌های امروز
       int todayQuests = 0;
       int todayQuestsCompleted = 0;
 
-      // ✅ فقط ماموریت‌هایی که کامل نشده‌اند و فعال هستند
       final activeQuests =
           userQuests.where((uq) => uq.isActive && !uq.isCompleted).toList();
 
@@ -301,10 +295,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -321,12 +318,12 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                '📊 نمای کلی پیشرفت امروز',
+              Text(
+                'پیشرفت امروز',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.textColor,
                 ),
               ),
               TextButton(
@@ -336,10 +333,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                   minimumSize: const Size(0, 0),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
+                child: Text(
                   'جزئیات بیشتر ›',
                   style: TextStyle(
-                    color: Color(0xFF2563EB),
+                    color: primaryColor,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -350,16 +347,17 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           const SizedBox(height: 16),
 
           if (_isLoading)
-            _buildModernLoadingIndicator()
+            _buildModernLoadingIndicator(primaryColor)
           else ...[
-            _buildCompletionRateCard(),
+            _buildCompletionRateCard(primaryColor, theme.textColor),
             const SizedBox(height: 16),
             _buildStatRow(
               icon: Icons.fitness_center,
               label: 'عادت‌ها',
               total: _todayHabits,
               completed: _todayHabitsCompleted,
-              color: const Color(0xFF4A90E2),
+              color: primaryColor,
+              textColor: theme.textColor,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -367,7 +365,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               label: 'تسک‌ها',
               total: _todayTasks,
               completed: _todayTasksCompleted,
-              color: const Color(0xFFFFA500),
+              color: primaryColor,
+              textColor: theme.textColor,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -375,7 +374,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               label: 'چالش‌ها',
               total: _todayChallenges,
               completed: _todayChallengesCompleted,
-              color: const Color(0xFF7C3AED),
+              color: primaryColor,
+              textColor: theme.textColor,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -383,26 +383,26 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               label: 'ماموریت‌ها',
               total: _todayQuests,
               completed: _todayQuestsCompleted,
-              color: const Color(0xFF2ECC71),
+              color: primaryColor,
+              textColor: theme.textColor,
             ),
             const SizedBox(height: 16),
-            _buildMotivationalMessage(),
+            _buildMotivationalMessage(primaryColor),
           ],
         ],
       ),
     );
   }
 
-  // ==================== لودینگ ساده و مدرن ====================
+  // ==================== لودینگ ساده ====================
 
-  Widget _buildModernLoadingIndicator() {
+  Widget _buildModernLoadingIndicator(Color primaryColor) {
     return SizedBox(
       height: 140,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ✅ حلقه چرخان ساده با گرادیانت
             AnimatedBuilder(
               animation: _rotationAnimation,
               builder: (context, child) {
@@ -420,11 +420,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF4A90E2), Color(0xFF7C3AED)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: primaryColor,
                         ),
                       ),
                     ),
@@ -433,8 +429,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               },
             ),
             const SizedBox(height: 16),
-
-            // ✅ متن لودینگ با سه نقطه
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -447,9 +441,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                   ),
                 ),
                 const SizedBox(width: 4),
-                _buildDot(0),
-                _buildDot(1),
-                _buildDot(2),
+                _buildDot(0, primaryColor),
+                _buildDot(1, primaryColor),
+                _buildDot(2, primaryColor),
               ],
             ),
           ],
@@ -458,7 +452,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     );
   }
 
-  Widget _buildDot(int index) {
+  Widget _buildDot(int index, Color primaryColor) {
     return AnimatedBuilder(
       animation: _loadingController,
       builder: (context, child) {
@@ -471,9 +465,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           height: 5,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(
-              0xFF4A90E2,
-            ).withValues(alpha: opacity.clamp(0.2, 1.0)),
+            color: primaryColor.withValues(alpha: opacity.clamp(0.2, 1.0)),
           ),
         );
       },
@@ -482,23 +474,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
 
   // ==================== بقیه ویجت‌ها ====================
 
-  Widget _buildCompletionRateCard() {
+  Widget _buildCompletionRateCard(Color primaryColor, Color textColor) {
     final percent = (_completionRate * 100).toInt();
-    final bool isGood = percent >= 70;
-    final bool isExcellent = percent >= 90;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isExcellent
-              ? [const Color(0xFF2ECC71), const Color(0xFF27AE60)]
-              : isGood
-                  ? [const Color(0xFF4A90E2), const Color(0xFF7C3AED)]
-                  : [const Color(0xFFFFA500), const Color(0xFFE74C3C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFF090909),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -547,14 +529,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     );
   }
 
-// lib/features/profile/widgets/analytics_overview_widget.dart
-
   Widget _buildStatRow({
     required IconData icon,
     required String label,
     required int total,
     required int completed,
     required Color color,
+    required Color textColor,
   }) {
     final bool hasItems = total > 0;
     final bool allDone = hasItems && completed == total;
@@ -562,9 +543,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
+        color: color.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.12), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.12), width: 1),
       ),
       child: Row(
         children: [
@@ -572,7 +553,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),
@@ -581,10 +562,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: textColor,
               ),
             ),
           ),
@@ -602,12 +583,12 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: allDone
-                    ? Colors.green.withOpacity(0.12)
-                    : color.withOpacity(0.12),
+                    ? Colors.green.withValues(alpha: 0.12)
+                    : color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                allDone ? '✅ کامل' : '${((completed / total) * 100).toInt()}%',
+                allDone ? ' کامل' : '${((completed / total) * 100).toInt()}%',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
@@ -642,7 +623,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     }
   }
 
-  Widget _buildMotivationalMessage() {
+  Widget _buildMotivationalMessage(Color primaryColor) {
     final bool hasItems = _totalItems > 0;
     final bool allDone = hasItems && _totalItems == _totalCompleted;
 
@@ -699,19 +680,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFA500).withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFFFFA500).withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.local_fire_department,
-            color: Color(0xFFFFA500),
-            size: 20,
-          ),
+          Icon(Icons.local_fire_department, color: primaryColor, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -719,7 +694,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.orange.shade700,
+                color: primaryColor,
               ),
             ),
           ),

@@ -1,6 +1,5 @@
 // lib/features/arena/screens/today_tab.dart
 
-// ✅ حذف importهای تکراری - فقط اینها را نگه دارید
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -9,7 +8,7 @@ import '/features/arena/models/habit_model.dart';
 import '/features/arena/models/task_model.dart';
 import '../category_selection_screen.dart';
 import '../add_task_screen.dart';
-import '../edit_habit_screen.dart';
+import '../edit_habit_screen.dart' as edit_habit;
 import '../edit_task_screen.dart';
 import 'congratulation_screen.dart';
 import '/features/explore/models/quest_model.dart';
@@ -17,24 +16,29 @@ import '/features/explore/models/user_quest_model.dart';
 import '/features/explore/screens/quest_completion_screen.dart';
 import '/features/explore/screens/challenge_completion_screen.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 import 'dart:async';
 import '/models/offline_operation.dart';
-import '../models/habit_time_tracking.dart'; // ✅ اضافه کنید
-import '../widgets/habit_timer_widget.dart'; // ✅ اضافه کنید
-import '../models/timer_setting.dart'; // اگر نیاز دارید
+import '../models/habit_time_tracking.dart';
+import '../widgets/habit_timer_widget.dart';
+import '../models/timer_setting.dart';
 import '../widgets/timer_picker_widget.dart';
 import '../widgets/completion_level_picker.dart';
 import '../models/habit_completion.dart';
 import '/features/arena/screens/habit_detail_screen.dart';
+import '../widgets/habit_card.dart';
+import '../widgets/task_card.dart';
 
 class TodayTab extends StatefulWidget {
   final DateTime selectedDate;
   final ValueNotifier<int>? profileRefreshNotifier;
+  final Function(double)? onProgressUpdate;
 
   const TodayTab({
     super.key,
     required this.selectedDate,
     this.profileRefreshNotifier,
+    this.onProgressUpdate,
   });
 
   @override
@@ -50,6 +54,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   List<Habit> _completedHabits = [];
   List<Task> _completedTasks = [];
 
+  int _totalTodayItems = 0;
+  int _completedItems = 0;
+
   // ==================== وضعیت‌ها ====================
   bool _isLoading = true;
   String? _currentUserId;
@@ -58,7 +65,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // ==================== وضعیت‌های تکمیل ====================
   final Map<String, bool> _habitCompletionStatus = {};
-
   final Map<String, bool> _taskCompletedStatus = {};
 
   // ==================== وضعیت‌های گسترش (Expansion) ====================
@@ -72,10 +78,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   DateTime? _cacheTime;
   static const Duration _cacheDuration = Duration(seconds: 30);
 
-  // ==================== منوی شناور ====================
-  bool _isMenuOpen = false;
-  late AnimationController _menuAnimationController;
-
   // ==================== انیمیشن‌ها ====================
   final Map<String, AnimationController> _animationControllers = {};
   final Map<String, Animation<double>> _animations = {};
@@ -86,30 +88,25 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   int _initialTodayItemsCount = 0;
   bool _initialCountSet = false;
 
-  // ==================== متدهای چرخه حیات ====================
+  // ✅ کلیدهای GlobalKey برای ویجت‌های Dismissible (با استفاده از List)
+  final List<GlobalKey> _habitKeys = [];
+  final List<GlobalKey> _taskKeys = [];
 
   @override
   void initState() {
     super.initState();
-    _menuAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
     _initialTodayItemsCount = 0;
     _initialCountSet = false;
     _hasShownCongratulationToday = false;
     _lastCheckDate = '';
 
-    // ✅ بارگذاری با کمی تأخیر برای اطمینان از آماده بودن SyncProvider
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
   }
 
-  // ✅ متد ریفرش عمومی
   void refreshData() {
     if (!_isLoading) {
-      // ✅ ریفرش کامل با پاک کردن کش
       _cacheTime = null;
       _cachedHabits = null;
       _cachedTasks = null;
@@ -128,7 +125,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _menuAnimationController.dispose();
     for (var controller in _animationControllers.values) {
       controller.dispose();
     }
@@ -160,27 +156,44 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  void _toggleExpanded(String id, String type) {
-    setState(() {
-      if (_expandedItemId == id && _expandedType == type) {
-        if (_animationControllers.containsKey(id)) {
-          _animationControllers[id]!.reverse();
-        }
-        _expandedItemId = null;
-        _expandedType = null;
-        _expandedSubItemId = null;
-      } else {
-        if (_expandedItemId != null &&
-            _animationControllers.containsKey(_expandedItemId)) {
-          _animationControllers[_expandedItemId]!.reverse();
-        }
-        _initAnimation(id);
-        _animationControllers[id]!.forward();
-        _expandedItemId = id;
-        _expandedType = type;
-        _expandedSubItemId = null;
+  void _calculateTotalItems() {
+    final allHabits = _todayHabits + _completedHabits;
+    final allTasks = _todayTasks + _completedTasks;
+
+    final uniqueHabits = <String, Habit>{};
+    for (var habit in allHabits) {
+      if (!uniqueHabits.containsKey(habit.id)) {
+        uniqueHabits[habit.id] = habit;
       }
-    });
+    }
+
+    _totalTodayItems = uniqueHabits.length + allTasks.length;
+    _completedItems = _completedHabits.length + _completedTasks.length;
+  }
+
+  void _calculateAndUpdateProgress() {
+    if (_totalTodayItems == 0) {
+      _calculateTotalItems();
+    }
+
+    _completedItems = _completedHabits.length + _completedTasks.length;
+
+    double progress =
+        _totalTodayItems > 0 ? _completedItems / _totalTodayItems : 0.0;
+
+    if (progress > 1.0) {
+      progress = 1.0;
+    }
+
+    if (widget.onProgressUpdate != null) {
+      widget.onProgressUpdate!(progress);
+    }
+  }
+
+  void _resetTotalItems() {
+    _totalTodayItems = 0;
+    _calculateTotalItems();
+    _calculateAndUpdateProgress();
   }
 
   // ==================== متد تبریک ====================
@@ -190,17 +203,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
     if (_lastCheckDate == today && _hasShownCongratulationToday) return;
 
-    // ✅ فقط عادت‌ها و تسک‌ها رو بررسی کن (چالش‌ها عادت دارن)
     final hadAnyTaskForToday = _initialTodayItemsCount > 0;
     final allPendingEmpty = _todayHabits.isEmpty && _todayTasks.isEmpty;
 
-    final hasFailedItems = false;
-
-    if (hadAnyTaskForToday && allPendingEmpty && !hasFailedItems) {
+    if (hadAnyTaskForToday && allPendingEmpty) {
       final hasAnyCompleted =
           _completedHabits.isNotEmpty || _completedTasks.isNotEmpty;
       if (!hasAnyCompleted) {
-        print('📊 No completed activities - skipping congratulation');
         return;
       }
 
@@ -252,7 +261,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     if (!mounted) return;
 
-    // ✅ فقط اگر قبلاً بارگذاری نشده یا نیاز به ریفرش دارد
     setState(() => _isLoading = true);
 
     try {
@@ -266,40 +274,37 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ دریافت داده‌ها
       List<Habit> allHabits = [];
-      List<Task> allTasks = [];
-
       if (syncProvider.habits.isNotEmpty) {
         allHabits = syncProvider.habits;
       } else if (syncProvider.isOnline) {
         allHabits = await _supabase.getHabits(_currentUserId!);
       }
 
+      List<Task> allTasks = [];
       if (syncProvider.tasks.isNotEmpty) {
         allTasks = syncProvider.tasks;
       } else if (syncProvider.isOnline) {
         allTasks = await _supabase.getTasks(_currentUserId!);
       }
 
-      // ✅ پردازش عادت‌ها
       final List<Habit> pendingHabits = [];
       final List<Habit> completedHabits = [];
 
       for (var habit in allHabits) {
         if (!habit.isActive) continue;
 
-        // ✅ برای ماموریت‌ها از متد shouldShowQuestOnDate استفاده کن
+        bool shouldShow = false;
+
         if (habit.questId != null) {
-          if (!habit.shouldShowQuestOnDate(widget.selectedDate)) {
-            continue;
-          }
+          shouldShow = habit.shouldShowQuestOnDate(widget.selectedDate);
+        } else if (habit.challengeId != null) {
+          shouldShow = habit.shouldDoOnDate(widget.selectedDate);
         } else {
-          // ✅ برای عادت‌های معمولی و چالش‌ها
-          if (!habit.shouldDoOnDate(widget.selectedDate)) {
-            continue;
-          }
+          shouldShow = habit.shouldDoOnDate(widget.selectedDate);
         }
+
+        if (!shouldShow) continue;
 
         final isCompleted = await _supabase.isHabitCompletedOnDate(
           habit.id,
@@ -315,10 +320,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
 
-      // ✅ پردازش تسک‌ها
       final List<Task> pendingTasks = [];
       final List<Task> completedTasks = [];
-      // ❌ حذف failedTasks
 
       for (var task in allTasks) {
         if (task.dueDate == null) continue;
@@ -332,7 +335,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
 
-      // ✅ به‌روزرسانی UI
       if (mounted) {
         setState(() {
           _todayHabits = pendingHabits;
@@ -342,6 +344,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           _isLoading = false;
         });
       }
+
+      _resetTotalItems();
     } catch (e) {
       print('❌ Error loading data: $e');
       if (mounted) {
@@ -350,19 +354,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  // ==================== متدهای عمومی برای ریفرش ====================
+  // ==================== متدهای تکمیل عادت و وظیفه (فشرده شده) ====================
 
   Future<void> _markHabitCompleted(Habit habit) async {
-    if (!mounted) {
-      print('❌ Widget not mounted, cannot show dialog');
-      return;
-    }
+    if (!mounted) return;
 
-    // ✅ تشخیص نوع عادت
-    final bool isQuest = habit.questId != null;
-    final bool isChallenge = habit.challengeId != null;
-
-    // ✅ نمایش دیالوگ انتخاب سطح با اطلاعات واقعی
     final level = await showDialog<CompletionLevel>(
       context: context,
       barrierDismissible: true,
@@ -370,9 +366,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         habitTitle: habit.title,
         habitXpReward: habit.xpReward,
         habitId: habit.id,
-        isQuest: isQuest,
-        isChallenge: isChallenge,
-        // ✅ ارسال اطلاعات واقعی سطح
+        isQuest: habit.questId != null,
+        isChallenge: habit.challengeId != null,
         fullDescription: habit.fullDescription,
         halfDescription: habit.halfDescription,
         basicDescription: habit.basicDescription,
@@ -383,37 +378,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       ),
     );
 
-    if (level == null) {
-      print('❌ User cancelled habit completion');
-      return;
-    }
-
-    if (!mounted) {
-      print('❌ Widget unmounted after dialog');
-      return;
-    }
-
-    print('✅ Level selected: ${level.displayName}');
+    if (level == null || !mounted) return;
 
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // ============================================================
-    // STEP 1: به‌روزرسانی فوری UI
-    // ============================================================
-    if (mounted) {
-      setState(() {
-        _habitCompletionStatus[habit.id] = true;
-        _todayHabits.remove(habit);
-        if (!_completedHabits.contains(habit)) {
-          _completedHabits.add(habit);
-        }
-        _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
-      });
-    }
+    setState(() {
+      _todayHabits.remove(habit);
+      if (!_completedHabits.contains(habit)) {
+        _completedHabits.add(habit);
+      }
+      _habitCompletionStatus[habit.id] = true;
+    });
 
-    // ============================================================
-    // STEP 2: نمایش پیام فوری
-    // ============================================================
+    _calculateAndUpdateProgress();
+
     final xpEarned = (habit.xpReward * level.xpMultiplier / 100).round();
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -426,25 +404,16 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       );
     }
 
-    // ============================================================
-    // STEP 3: اجرای عملیات دیتابیس در پس‌زمینه (بدون await)
-    // ============================================================
-
-    // ✅ ریفرش پروفایل فوری
     _scheduleProfileRefresh();
-
-    // ✅ اجرای عملیات دیتابیس به صورت پس‌زمینه
     _performDatabaseOperations(habit, level, xpEarned);
   }
 
-// ✅ متد جداگانه برای عملیات دیتابیس
   Future<void> _performDatabaseOperations(
       Habit habit, CompletionLevel level, int xpEarned) async {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
     try {
       if (syncProvider.isOnline) {
-        // ✅ اجرای موازی با Future.wait
         await Future.wait([
           _supabase.markHabitCompletedWithLevel(
             habitId: habit.id,
@@ -462,11 +431,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           ),
         ]);
 
-        // ✅ اگر عادت مربوط به چالش است - اجرای موازی
         if (habit.challengeId != null) {
-          print('📝 Processing challenge: ${habit.challengeId}');
-
-          // ✅ اجرای موازی عملیات چالش
           await Future.wait([
             _supabase.completeChallengeDay(
               userId: _currentUserId!,
@@ -479,24 +444,18 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             ),
           ]);
 
-          // ✅ ریفرش اکسپلور
           if (widget.profileRefreshNotifier != null) {
             widget.profileRefreshNotifier!.value++;
           }
-
-          // ✅ بررسی کامل شدن چالش (بدون تایم‌اوت)
           unawaited(_checkAndCompleteChallenge(habit));
         }
 
-        // ✅ اگر عادت مربوط به ماموریت است
         if (habit.questId != null) {
           unawaited(_handleQuestCompletion(habit));
         }
 
-        // ✅ ریفرش پروفایل دوباره
         _scheduleProfileRefresh();
       } else {
-        // ✅ حالت آفلاین
         await syncProvider.addOfflineOperation(
           type: OperationType.completeHabitWithLevel,
           data: {
@@ -510,7 +469,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ انجام شد (آفلاین)'),
+              content: Text(' انجام شد (آفلاین)'),
               backgroundColor: Colors.orange,
               duration: Duration(milliseconds: 600),
             ),
@@ -518,7 +477,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
 
-      // ✅ بررسی تکمیل همه و نمایش تبریک
       _checkAllCompletedAndShowCongratulation();
     } catch (e) {
       print('❌ Error in database operations: $e');
@@ -543,18 +501,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  // ✅ متد جداگانه برای بررسی کامل شدن چالش (بدون تایم‌اوت)
   Future<void> _checkAndCompleteChallenge(Habit habit) async {
     try {
-      print('🔍 Checking challenge completion for habit: ${habit.id}');
-
       final completedChallenge = await _supabase.checkAndCompleteChallenge(
           _currentUserId!, habit.challengeId!);
 
       if (completedChallenge != null && mounted) {
-        print('✅ Challenge completed: ${completedChallenge['title']}');
-
-        // ✅ ریفرش فوری اکسپلور
         if (widget.profileRefreshNotifier != null) {
           widget.profileRefreshNotifier!.value++;
         }
@@ -567,7 +519,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         final completedDays = progress['completedDays'] ?? 0;
         final totalDays = progress['totalDays'] ?? 3;
 
-        // ✅ نمایش صفحه تبریک
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -591,125 +542,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _markHabitCompletedWithLevel(
-      Habit habit, CompletionLevel level) async {
-    final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-
-    // ✅ بررسی mounted قبل از setState
-    if (mounted) {
-      setState(() {
-        _habitCompletionStatus[habit.id] = true;
-        _todayHabits.remove(habit);
-        if (!_completedHabits.contains(habit)) {
-          _completedHabits.add(habit);
-        }
-        _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
-      });
-    }
-
-    try {
-      if (syncProvider.isOnline) {
-        await _supabase.markHabitCompletedWithLevel(
-          habitId: habit.id,
-          userId: _currentUserId!,
-          date: widget.selectedDate,
-          level: level,
-        );
-
-        final xpEarned = (habit.xpReward * level.xpMultiplier / 100).round();
-        await _supabase.recordDailyActivity(
-          userId: _currentUserId!,
-          date: widget.selectedDate,
-          habitsCompleted: 1,
-          xpEarned: xpEarned,
-          isActive: true,
-        );
-
-        _scheduleProfileRefresh();
-
-        // ✅ بررسی mounted قبل از نمایش SnackBar
-        if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${level.emoji} +$xpEarned XP دریافت کردید!'),
-              backgroundColor: level.color,
-              duration: const Duration(milliseconds: 800),
-            ),
-          );
-        }
-      } else {
-        await syncProvider.addOfflineOperation(
-          type: OperationType.completeHabitWithLevel,
-          data: {
-            'habitId': habit.id,
-            'date': widget.selectedDate.toIso8601String(),
-            'xpReward': habit.xpReward,
-            'level': level.toString().split('.').last,
-          },
-        );
-
-        // ✅ بررسی mounted قبل از نمایش SnackBar
-        if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ انجام شد (آفلاین)'),
-              backgroundColor: Colors.orange,
-              duration: Duration(milliseconds: 600),
-            ),
-          );
-        }
-      }
-
-      _checkAllCompletedAndShowCongratulation();
-    } catch (e) {
-      // ✅ بررسی mounted قبل از setState
-      if (mounted) {
-        setState(() {
-          _habitCompletionStatus[habit.id] = false;
-          _completedHabits.remove(habit);
-          if (habit.shouldDoOnDate(widget.selectedDate) &&
-              !_todayHabits.contains(habit)) {
-            _todayHabits.add(habit);
-          }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-// lib/features/arena/screens/today_tab.dart
-
-// ✅ در متد _handleQuestCompletion
   Future<void> _handleQuestCompletion(Habit habit) async {
     try {
-      print('🔍 Checking quest completion for habit: ${habit.id}');
-
       if (habit.questId == null) return;
 
-      // ✅ به‌روزرسانی پیشرفت ماموریت
       final completedQuest =
           await _supabase.updateQuestProgress(_currentUserId!, habit.id);
 
       if (completedQuest != null && mounted) {
-        print('✅ Quest completed: ${completedQuest.title}');
-
-        // ✅ ریفرش فوری داده‌ها
         await _loadData();
 
-        // ✅ ریفرش SyncProvider
         final syncProvider = Provider.of<SyncProvider>(context, listen: false);
         await syncProvider.forceRefresh();
 
-        // ✅ نمایش صفحه تبریک
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -729,95 +574,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _handleChallengeCompletion(Habit habit) async {
-    try {
-      print('🔍 Checking challenge completion for habit: ${habit.id}');
-      print('📝 Challenge ID: ${habit.challengeId}');
-
-      if (habit.challengeId == null) return;
-
-      // ✅ 1. ثبت روز چالش
-      await _supabase.completeChallengeDay(
-        userId: _currentUserId!,
-        challengeId: habit.challengeId!,
-        date: widget.selectedDate,
-      );
-
-      // ✅ 2. به‌روزرسانی پیشرفت
-      await _supabase.updateChallengeProgress(
-        _currentUserId!,
-        habit.challengeId!,
-      );
-
-      // ✅ 3. ریفرش اکسپلور
-      if (widget.profileRefreshNotifier != null) {
-        widget.profileRefreshNotifier!.value++;
-      }
-
-      // ✅ 4. بررسی کامل شدن چالش - با تایم‌اوت بیشتر
-      try {
-        final completedChallenge = await _supabase
-            .checkAndCompleteChallenge(_currentUserId!, habit.challengeId!)
-            .timeout(const Duration(seconds: 10)); // ✅ افزایش به ۱۰ ثانیه
-
-        if (completedChallenge != null && mounted) {
-          print('✅ Challenge completed: ${completedChallenge['title']}');
-
-          // ✅ ریفرش صفحه برای نمایش تغییرات
-          await _loadData();
-
-          // ✅ نمایش صفحه تبریک
-          final progress = await _supabase.getUserChallengeProgressDetails(
-            _currentUserId!,
-            habit.challengeId!,
-          );
-
-          final completedDays = progress['completedDays'] ?? 0;
-          final totalDays = progress['totalDays'] ?? 3;
-
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChallengeCompletionScreen(
-                challenge: completedChallenge,
-                completedDays: completedDays,
-                totalDays: totalDays,
-              ),
-            ),
-          );
-
-          _hasShownCongratulationToday = false;
-          _initialCountSet = false;
-
-          if (mounted) {
-            await _loadData();
-          }
-        }
-      } on TimeoutException {
-        // ✅ اگر تایم‌اوت شد، باز هم ریفرش کن
-        print('⏰ Challenge check timeout, forcing refresh...');
-
-        // ✅ حذف دستی عادت‌های چالش از localStorage
-        await _supabase.removeChallengeHabitByChallengeId(
-          _currentUserId!,
-          habit.challengeId!,
-        );
-
-        // ✅ ریفرش صفحه
-        if (mounted) {
-          await _loadData();
-          if (widget.profileRefreshNotifier != null) {
-            widget.profileRefreshNotifier!.value++;
-          }
-        }
-      } catch (e) {
-        print('⚠️ Challenge completion error: $e');
-      }
-    } catch (e) {
-      print('⚠️ Challenge completion error: $e');
-    }
-  }
-
   void _scheduleProfileRefresh() {
     if (!mounted) return;
 
@@ -828,10 +584,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       try {
         if (widget.profileRefreshNotifier != null) {
-          // ✅ افزایش مقدار notifier برای ریفرش پروفایل
           widget.profileRefreshNotifier!.value++;
-          print(
-              '🔄 Profile refresh triggered with value: ${widget.profileRefreshNotifier!.value}');
         }
       } catch (e) {
         print('⚠️ Profile refresh error: $e');
@@ -843,21 +596,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
     setState(() {
-      _habitCompletionStatus[habit.id] = false;
       _completedHabits.remove(habit);
       if (habit.shouldDoOnDate(widget.selectedDate) &&
           !_todayHabits.contains(habit)) {
         _todayHabits.add(habit);
       }
-      _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
+      _habitCompletionStatus[habit.id] = false;
     });
+
+    _calculateAndUpdateProgress();
 
     Future.microtask(() async {
       try {
         if (syncProvider.isOnline) {
-          print('🗑️ Unmarking habit: ${habit.title}');
-
-          // ✅ 1. لغو تکمیل عادت
           await _supabase.markHabitCompletedOnDate(
             habit.id,
             _currentUserId!,
@@ -865,35 +616,23 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             false,
           );
 
-          // ✅ 2. کم کردن XP
           await _supabase.removeXP(_currentUserId!, habit.xpReward);
-          print('🗑️ XP removed: ${habit.xpReward} from habit: ${habit.title}');
 
-          // ✅ 3. اگر عادت مربوط به چالش است، روز چالش رو لغو کن
           if (habit.challengeId != null) {
-            print('📝 Removing challenge day for: ${habit.challengeId}');
-            print('📅 Date: ${widget.selectedDate}');
-
             await _supabase.removeChallengeDay(
               userId: _currentUserId!,
               challengeId: habit.challengeId!,
-              date: widget.selectedDate, // ✅ تاریخ انتخاب شده در تقویم
+              date: widget.selectedDate,
             );
-
             await _supabase.updateChallengeProgress(
               _currentUserId!,
               habit.challengeId!,
             );
           }
 
-          // ✅ 4. بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
           final hasOtherActivities = await _checkIfTodayHasOtherActivities();
-          print('📊 Has other activities: $hasOtherActivities');
-          print('📊 Completed habits: ${_completedHabits.length}');
-          print('📊 Completed tasks: ${_completedTasks.length}');
 
           if (!hasOtherActivities) {
-            print('📊 No activities left - setting isActive = false');
             await _supabase.recordDailyActivity(
               userId: _currentUserId!,
               date: widget.selectedDate,
@@ -905,7 +644,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             await _supabase.updateUserStreak(_currentUserId!);
             _scheduleProfileRefresh();
           } else {
-            print('📊 Other activities exist - keeping isActive = true');
             await _supabase.recordDailyActivity(
               userId: _currentUserId!,
               date: widget.selectedDate,
@@ -916,23 +654,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             );
           }
 
-          // ✅ 5. ریفرش پروفایل (با تاخیر برای اطمینان از ذخیره شدن)
           _scheduleProfileRefresh();
-
-          // ✅ 6. یک بار دیگر ریفرش با تاخیر بیشتر
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              _scheduleProfileRefresh();
-            }
-          });
-
           _hasShownCongratulationToday = false;
           _checkAllCompletedAndShowCongratulation();
-
-          // ✅ 7. بارگذاری مجدد داده‌ها برای به‌روزرسانی UI
           await _loadData();
         } else {
-          // ✅ حالت آفلاین
           await syncProvider.addOfflineOperation(
             type: OperationType.uncompleteHabit,
             data: {
@@ -966,21 +692,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     });
   }
 
-  // lib/features/arena/screens/today_tab.dart
-
   Future<bool> _checkIfTodayHasOtherActivities() async {
     final hasCompletedHabits = _completedHabits.isNotEmpty;
     final hasCompletedTasks = _completedTasks.isNotEmpty;
 
     if (hasCompletedHabits || hasCompletedTasks) {
-      print('📊 Has completed habits or tasks in memory');
       return true;
     }
 
     try {
       final todayStr = widget.selectedDate.toIso8601String().split('T').first;
 
-      // 1. چک کردن habit_completions (فقط عادت‌های معمولی، نه چالش‌ها)
       final habitCompletions = await _supabase.client
           .from('habit_completions')
           .select('id, habit_id')
@@ -988,7 +710,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           .eq('date', todayStr);
 
       if (habitCompletions.isNotEmpty) {
-        // ✅ بررسی کن که آیا این عادت‌ها مربوط به چالش هستند یا نه
         for (var completion in habitCompletions) {
           final habitId = completion['habit_id'];
           final habit = await _supabase.client
@@ -1000,13 +721,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           if (habit != null &&
               habit['challenge_id'] == null &&
               habit['quest_id'] == null) {
-            print('📊 Found regular habit completion in database');
             return true;
           }
         }
       }
 
-      // 2. چک کردن challenge_completions
       final challengeCompletions = await _supabase.client
           .from('challenge_completions')
           .select('id')
@@ -1015,11 +734,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           .limit(1);
 
       if (challengeCompletions.isNotEmpty) {
-        print('📊 Found challenge completions in database');
         return true;
       }
 
-      // 3. چک کردن tasks
       final tasks = await _supabase.client
           .from('tasks')
           .select('id')
@@ -1029,26 +746,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           .limit(1);
 
       if (tasks.isNotEmpty) {
-        print('📊 Found completed tasks in database');
         return true;
       }
 
-      print('📊 No regular activities found in database');
       return false;
     } catch (e) {
-      print('⚠️ Error checking activities: $e');
       return false;
     }
   }
 
-  /// محاسبه مجدد پیشرفت ماموریت از صفر
   Future<void> _recalculateQuestProgress(String userId, String questId) async {
     try {
-      // 1. دریافت همه عادت‌های این ماموریت
       final habits = await _supabase.getHabits(userId);
       final questHabits = habits.where((h) => h.questId == questId).toList();
 
-      // 2. شمارش روزهایی که انجام شدن
       int completedCount = 0;
       for (var habit in questHabits) {
         final isCompleted = await _supabase.isHabitCompletedOnDate(
@@ -1059,7 +770,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         if (isCompleted) completedCount++;
       }
 
-      // 3. به‌روزرسانی progress در user_quests
       final userQuests = await _supabase.getUserQuests(userId);
       final userQuest = userQuests.firstWhere(
         (uq) => uq.questId == questId && uq.isActive,
@@ -1086,6 +796,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
+    _calculateAndUpdateProgress();
+
     try {
       if (syncProvider.isOnline) {
         await Future.wait([
@@ -1105,7 +817,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           type: OperationType.completeTask,
           data: {...task.toMap(), 'id': task.id, 'xpReward': task.xpReward},
         );
-        print('📝 Task completion saved offline: ${task.title}');
       }
 
       if (mounted) {
@@ -1114,7 +825,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           SnackBar(
             content: syncProvider.isOnline
                 ? Text('+${task.xpReward} XP دریافت کردید!')
-                : Text('✅ انجام شد (آفلاین) - پس از اتصال همگام‌سازی می‌شود'),
+                : Text(' انجام شد (آفلاین) - پس از اتصال همگام‌سازی می‌شود'),
             backgroundColor:
                 syncProvider.isOnline ? Colors.green : Colors.orange,
             duration: const Duration(milliseconds: 800),
@@ -1149,6 +860,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       _initialTodayItemsCount = _todayHabits.length + _todayTasks.length;
     });
 
+    _calculateAndUpdateProgress();
+
     try {
       final updatedTask = Task(
         id: task.id,
@@ -1168,15 +881,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         await _supabase.updateTask(updatedTask);
         await _supabase.removeXP(_currentUserId!, task.xpReward);
 
-        // ✅ بررسی کن که آیا امروز هیچ فعالیت دیگه‌ای باقی مونده یا نه
         final hasOtherActivities = await _checkIfTodayHasOtherActivities();
 
-        print('📊 Has other activities: $hasOtherActivities');
-        print('📊 Completed habits: ${_completedHabits.length}');
-        print('📊 Completed tasks: ${_completedTasks.length}');
-
         if (!hasOtherActivities) {
-          print('📊 No activities left - setting isActive = false');
           await _supabase.recordDailyActivity(
             userId: _currentUserId!,
             date: widget.selectedDate,
@@ -1185,13 +892,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             xpEarned: 0,
             isActive: false,
           );
-
-          // ✅ استریک رو مجبور به بازمحاسبه کن
           await _supabase.updateUserStreak(_currentUserId!);
-
           _scheduleProfileRefresh();
         } else {
-          print('📊 Other activities exist - keeping isActive = true');
           await _supabase.recordDailyActivity(
             userId: _currentUserId!,
             date: widget.selectedDate,
@@ -1226,36 +929,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  void _toggleMenu() {
-    setState(() {
-      _isMenuOpen = !_isMenuOpen;
-      if (_isMenuOpen) {
-        _menuAnimationController.forward();
-      } else {
-        _menuAnimationController.reverse();
-      }
-    });
-  }
-
-  void _openAddHabit() {
-    _toggleMenu();
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CategorySelectionScreen()),
-    ).then((_) {
-      _loadData();
-    });
-  }
-
-  void _openAddTask() {
-    _toggleMenu();
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddTaskScreen()),
-    ).then((_) {
-      _loadData();
-    });
-  }
+  // ==================== متدهای کمکی ====================
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
@@ -1322,9 +996,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-// ✅ اصلاح متد _showHabitDetailsDialog
   void _showHabitDetailsDialog(Habit habit) {
-    // ✅ باز کردن صفحه کامل HabitDetailScreen
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1431,7 +1103,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF4A90E2).withAlpha(20),
+            color: const Color(0xFF4A90E2).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: const Color(0xFF4A90E2), size: 18),
@@ -1447,20 +1119,15 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-// lib/features/arena/screens/today_tab.dart
-
   Future<void> _toggleSubHabit(Habit habit, String subHabit) async {
-    // 1. ایجاد لیست جدید از زیرعادت‌های انجام شده
     List<String> newCompletedSubHabits = List.from(habit.completedSubHabits);
 
-    // 2. اگر زیرعادت قبلاً انجام شده، حذف کن، در غیر این صورت اضافه کن
     if (newCompletedSubHabits.contains(subHabit)) {
       newCompletedSubHabits.remove(subHabit);
     } else {
       newCompletedSubHabits.add(subHabit);
     }
 
-    // 3. ایجاد عادت به‌روزرسانی شده
     final updatedHabit = Habit(
       id: habit.id,
       userId: habit.userId,
@@ -1493,18 +1160,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       timerSetting: habit.timerSetting,
     );
 
-    // 4. ذخیره در دیتابیس (با مدیریت آفلاین)
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // به‌روزرسانی UI (تمام لیست‌ها)
     setState(() {
-      // به‌روزرسانی در لیست امروز
       final todayIndex = _todayHabits.indexWhere((h) => h.id == habit.id);
       if (todayIndex != -1) {
         _todayHabits[todayIndex] = updatedHabit;
       }
 
-      // به‌روزرسانی در لیست انجام شده
       final completedIndex =
           _completedHabits.indexWhere((h) => h.id == habit.id);
       if (completedIndex != -1) {
@@ -1512,36 +1175,50 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       }
     });
 
-    // 5. ذخیره در LocalStorage
     await syncProvider.saveHabitToLocal(updatedHabit);
 
-    // 6. اگر آنلاین هستیم، به دیتابیس هم بفرست
     if (syncProvider.isOnline) {
       await _supabase.updateHabit(updatedHabit);
     } else {
-      // آفلاین: ذخیره در صف
       await syncProvider.addOfflineOperation(
         type: OperationType.updateHabit,
         data: updatedHabit.toMap(),
       );
-      print('📝 Habit update saved offline: ${updatedHabit.title}');
     }
   }
 
-// lib/features/arena/screens/today_tab.dart
+  void _toggleExpanded(String id, String type) {
+    setState(() {
+      if (_expandedItemId == id && _expandedType == type) {
+        if (_animationControllers.containsKey(id)) {
+          _animationControllers[id]!.reverse();
+        }
+        _expandedItemId = null;
+        _expandedType = null;
+        _expandedSubItemId = null;
+      } else {
+        if (_expandedItemId != null &&
+            _animationControllers.containsKey(_expandedItemId)) {
+          _animationControllers[_expandedItemId]!.reverse();
+        }
+        _initAnimation(id);
+        _animationControllers[id]!.forward();
+        _expandedItemId = id;
+        _expandedType = type;
+        _expandedSubItemId = null;
+      }
+    });
+  }
 
   Future<void> _toggleSubTask(Task task, String subTask) async {
-    // 1. ایجاد لیست جدید از زیرتسک‌های انجام شده
     List<String> newCompletedSubTasks = List.from(task.completedSubTasks);
 
-    // 2. اگر زیرتسک قبلاً انجام شده، حذف کن، در غیر این صورت اضافه کن
     if (newCompletedSubTasks.contains(subTask)) {
       newCompletedSubTasks.remove(subTask);
     } else {
       newCompletedSubTasks.add(subTask);
     }
 
-    // 3. ایجاد تسک به‌روزرسانی شده
     final updatedTask = Task(
       id: task.id,
       userId: task.userId,
@@ -1556,48 +1233,54 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       updatedAt: DateTime.now(),
     );
 
-    // 4. ذخیره در دیتابیس (با مدیریت آفلاین)
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-    // به‌روزرسانی UI (تمام لیست‌ها)
     setState(() {
-      // به‌روزرسانی در لیست امروز
       final todayIndex = _todayTasks.indexWhere((t) => t.id == task.id);
       if (todayIndex != -1) {
         _todayTasks[todayIndex] = updatedTask;
       }
 
-      // به‌روزرسانی در لیست انجام شده
       final completedIndex = _completedTasks.indexWhere((t) => t.id == task.id);
       if (completedIndex != -1) {
         _completedTasks[completedIndex] = updatedTask;
       }
     });
 
-    // 5. ذخیره در LocalStorage
     await syncProvider.saveTaskToLocal(updatedTask);
 
-    // 6. اگر آنلاین هستیم، به دیتابیس هم بفرست
     if (syncProvider.isOnline) {
       await _supabase.updateTask(updatedTask);
     } else {
-      // آفلاین: ذخیره در صف
       await syncProvider.addOfflineOperation(
         type: OperationType.updateTask,
         data: updatedTask.toMap(),
       );
-      print('📝 Task update saved offline: ${updatedTask.title}');
     }
   }
 
   void _editHabit(Habit habit) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => EditHabitScreen(habit: habit)),
+      MaterialPageRoute(
+        builder: (_) => edit_habit.EditHabitScreen(habit: habit),
+      ),
     );
+
+    // ✅ بعد از برگشت از ویرایش، اجباری reload کن
     if (result == true && mounted) {
-      _loadData();
+      print('🔄 Habit edited, reloading data...');
+
+      // ✅ پاک کردن کش
+      _cacheTime = null;
+      _cachedHabits = null;
+      _cachedTasks = null;
+
+      // ✅ reload اجباری
+      await _loadData();
+      print('✅ Today tab data reloaded');
     }
+
     _toggleExpanded(habit.id, 'habit');
   }
 
@@ -1632,7 +1315,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       MaterialPageRoute(builder: (_) => EditTaskScreen(task: task)),
     );
     if (result == true && mounted) {
-      _loadData();
+      // ✅ پاک کردن cache
+      _cacheTime = null;
+      _cachedTasks = null;
+      // ✅ ریفرش اجباری
+      await _loadData();
     }
     _toggleExpanded(task.id, 'task');
   }
@@ -1679,690 +1366,222 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Consumer<SyncProvider>(
-          builder: (context, syncProvider, child) {
-            // ✅ اگر در حال بارگذاری است و داده‌ای وجود ندارد
-            if (_isLoading && !syncProvider.hasLocalData) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Color(0xFF4A90E2)),
-                    SizedBox(height: 16),
-                    Text(
-                      'در حال بارگذاری اطلاعات...',
-                      style: TextStyle(color: Color(0xFF6B7280)),
-                    ),
-                  ],
-                ),
-              );
-            }
+  // ==================== ویجت‌های Swipe (Dismissible) - نسخه سازگار با Web ====================
 
-            // ✅ اگر داده محلی وجود دارد، حتی در آفلاین نمایش بده
-            if (syncProvider.hasLocalData) {
-              // نمایش محتوا با داده‌های محلی
-              return RefreshIndicator(
-                onRefresh: _loadData,
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF4A90E2),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        child: _buildTodayContent(),
-                      ),
-              );
-            }
-
-            // ✅ فقط اگر داده محلی وجود ندارد و آفلاین هستیم
-            if (!syncProvider.hasLocalData && !syncProvider.isOnline) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.wifi_off, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    Text(
-                      'اتصال اینترنت برقرار نیست',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'برای مشاهده اطلاعات به اتصال اینترنت نیاز دارید',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _loadData,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('تلاش مجدد'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // ✅ نمایش محتوای اصلی (با داده‌های محلی یا آنلاین)
-            return RefreshIndicator(
-              onRefresh: _loadData,
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF4A90E2),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16),
-                      child: _buildTodayContent(),
-                    ),
-            );
-          },
-        ),
-        _buildFloatingMenuButton(),
-      ],
-    );
-  }
-
-// lib/features/arena/screens/today_tab.dart
-
-  Widget _buildTodayContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ============================================================
-        // بخش عادت‌ها و تسک‌های امروز (انجام نشده)
-        // ============================================================
-        if (_todayHabits.isNotEmpty || _todayTasks.isNotEmpty) ...[
-          const Text(
-            'امروز',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ..._todayHabits.map((habit) => _buildHabitItem(habit)),
-          ..._todayTasks.map((task) => _buildTaskItem(task)),
-          const SizedBox(height: 24),
-        ],
-
-        // ============================================================
-        // بخش عادت‌ها و تسک‌های انجام شده
-        // ============================================================
-        if (_completedHabits.isNotEmpty || _completedTasks.isNotEmpty) ...[
-          Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'انجام شده',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ..._completedHabits.map((habit) => _buildCompletedHabitItem(habit)),
-          ..._completedTasks.map((task) => _buildCompletedTaskItem(task)),
-          const SizedBox(height: 24),
-        ],
-
-        // ============================================================
-        // ❌ بخش شکست خورده - کاملاً حذف شده
-        // ============================================================
-
-        // ============================================================
-        // حالت خالی (هیچ کاری برای امروز)
-        // ============================================================
-        if (_todayHabits.isEmpty &&
-            _todayTasks.isEmpty &&
-            _completedHabits.isEmpty &&
-            _completedTasks.isEmpty)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 100),
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 80,
-                  color: Colors.grey.shade300,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'هیچ کاری برای این روز ندارید!',
-                  style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'روی دکمه + کلیک کنید',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFloatingMenuButton() {
-    return Positioned(
-      bottom: 20,
-      right: 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ============================================================
-          // آیتم‌های منو (عادت جدید و وظیفه جدید)
-          // ============================================================
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: _isMenuOpen ? 1.0 : 0.0,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              height: _isMenuOpen ? 120 : 0,
-              curve: Curves.easeOutCubic,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_isMenuOpen) ...[
-                      // ✅ دکمه افزودن عادت
-                      ScaleTransition(
-                        scale: CurvedAnimation(
-                          parent: _menuAnimationController,
-                          curve: Curves.easeOutCubic,
-                        ),
-                        child: _buildMenuItem(
-                          icon: Icons.fitness_center,
-                          label: 'عادت جدید',
-                          color: const Color(0xFF4A90E2),
-                          onTap: _openAddHabit,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ✅ دکمه افزودن تسک
-                      ScaleTransition(
-                        scale: CurvedAnimation(
-                          parent: _menuAnimationController,
-                          curve: Curves.easeOutCubic,
-                        ),
-                        child: _buildMenuItem(
-                          icon: Icons.assignment,
-                          label: 'وظیفه جدید',
-                          color: const Color(0xFFFFA500),
-                          onTap: _openAddTask,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // ============================================================
-          // دکمه اصلی (FloatingActionButton)
-          // ============================================================
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 350),
-            curve: Curves.easeOutCubic,
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _isMenuOpen
-                  ? const Color(0xFFE74C3C) // رنگ قرمز برای بستن
-                  : const Color(0xFF4A90E2), // رنگ آبی برای باز کردن
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(40),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: GestureDetector(
-              onTap: _toggleMenu,
-              child: AnimatedRotation(
-                duration: const Duration(milliseconds: 350),
-                curve: Curves.easeOutCubic,
-                turns: _isMenuOpen ? 0.125 : 0.0,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    return ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(
-                        opacity: animation,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: Icon(
-                    _isMenuOpen ? Icons.close : Icons.add,
-                    key: ValueKey(_isMenuOpen),
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // lib/features/arena/screens/today_tab.dart
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHabitItem(Habit habit) {
-    // ✅ تشخیص عادت چالش (با 🏆 شروع میشه)
-    final isChallengeHabit = habit.title.startsWith('🏆');
-
-    // ✅ تشخیص عادت ماموریت (questId دارد)
-    final isQuestHabit = habit.questId != null;
-
-    final hasSubHabits = habit.subHabits.isNotEmpty;
-    final isExpanded = _expandedItemId == habit.id && _expandedType == 'habit';
-    final isSubExpanded = _expandedSubItemId == habit.id;
-
-    _initAnimation(habit.id);
+  Widget _buildSwipeableHabitItem(Habit habit, Color primaryColor) {
+    final bool isQuest = habit.questId != null;
+    final bool isChallenge = habit.challengeId != null;
+    final bool isEditable = !isQuest && !isChallenge;
 
     return Dismissible(
-      key: Key(habit.id),
+      key: UniqueKey(), // ✅ استفاده از UniqueKey به جای ValueKey
       direction: DismissDirection.horizontal,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.green,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.check, color: Colors.white, size: 28),
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3,
+        DismissDirection.endToStart: 0.3,
+      },
+      background: _buildSwipeBackground(
+        isLeft: true,
+        primaryColor: primaryColor,
+        label: 'انجام شد ',
+        icon: Icons.check_circle,
       ),
-      secondaryBackground: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.green,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.check, color: Colors.white, size: 28),
+      secondaryBackground: _buildSwipeBackground(
+        isLeft: false,
+        primaryColor: primaryColor,
+        label: 'انجام شد ',
+        icon: Icons.check_circle,
       ),
       confirmDismiss: (direction) async {
-        // ✅ بدون await برای سرعت بیشتر
         _markHabitCompleted(habit);
         return false;
       },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () => _toggleExpanded(habit.id, 'habit'),
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    // ==================== آیکون عادت ====================
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Color(habit.backgroundColor).withAlpha(255),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _getIconData(habit.iconName),
-                        color: Color(habit.iconColor),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // ==================== عنوان و توضیحات ====================
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            habit.title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1A1A2E),
-                            ),
-                          ),
-                          Text(
-                            '${_getFrequencyText(habit)} • ${_getTimeOfDayText(habit.timeOfDay)}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // ==================== نمایش زیرعادت‌ها ====================
-                    if (hasSubHabits && habit.completedSubHabits.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4A90E2).withAlpha(25),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${habit.completedSubHabits.length}/${habit.subHabits.length}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF4A90E2),
-                          ),
-                        ),
-                      ),
-
-                    // lib/features/arena/screens/today_tab.dart
-
-// ✅ نمایش زمان ثبت شده امروز
-                    FutureBuilder<HabitTimeTracking?>(
-                      future: _getHabitTimeToday(habit.id),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF4A90E2).withAlpha(25),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.timer,
-                                    size: 12, color: Color(0xFF4A90E2)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  snapshot.data!.formattedTime,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF4A90E2),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-
-                    // ==================== برچسب چالش/ماموریت ====================
-                    if (isChallengeHabit || isQuestHabit)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isChallengeHabit
-                              ? Colors.orange.withAlpha(25)
-                              : Colors.purple.withAlpha(25),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isChallengeHabit ? '🏆 چالش' : '🎯 ماموریت',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isChallengeHabit
-                                ? Colors.orange.shade700
-                                : Colors.purple.shade700,
-                          ),
-                        ),
-                      ),
-
-                    // ==================== XP ====================
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFA500).withAlpha(25),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '+${habit.xpReward} XP',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFFA500),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      child: HabitCard(
+        habit: habit,
+        isCompleted: false,
+        onToggle: () => _markHabitCompleted(habit),
+        onEdit: isEditable ? () => _editHabit(habit) : () {},
+        onDelete: isEditable ? () => _deleteHabit(habit) : () {},
+        onTimer: isEditable ? () => _showTimerDialog(habit) : null,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HabitDetailScreen(habit: habit),
             ),
-
-            // ==================== بخش Expanded (باز شده) ====================
-            if (isExpanded)
-              SizeTransition(
-                sizeFactor: _animations[habit.id]!,
-                child: Column(
-                  children: [
-                    // ... دکمه‌های اکشن (بدون تغییر)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey.shade200,
-                            width: isSubExpanded ? 0 : 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildActionButton(
-                            icon: Icons.check_circle,
-                            onTap: () => _markHabitCompleted(habit),
-                          ),
-                          if (hasSubHabits)
-                            _buildActionButton(
-                              icon: isSubExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.list_alt,
-                              onTap: () {
-                                setState(() {
-                                  if (_expandedSubItemId == habit.id) {
-                                    _expandedSubItemId = null;
-                                  } else {
-                                    _expandedSubItemId = habit.id;
-                                  }
-                                });
-                              },
-                            ),
-                          _buildActionButton(
-                            icon: Icons.info_outline,
-                            onTap: () => _showHabitDetailsDialog(habit),
-                          ),
-                          if (!isChallengeHabit && !isQuestHabit)
-                            _buildActionButton(
-                              icon: Icons.timer,
-                              onTap: () => _showTimerDialog(habit),
-                            ),
-                          _buildActionButton(
-                            icon: Icons.edit,
-                            onTap: (isChallengeHabit || isQuestHabit)
-                                ? null
-                                : () => _editHabit(habit),
-                          ),
-                          _buildActionButton(
-                            icon: Icons.delete,
-                            onTap: (isChallengeHabit || isQuestHabit)
-                                ? null
-                                : () => _deleteHabit(habit),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // ==================== زیرعادت‌ها ====================
-                    if (isSubExpanded && hasSubHabits)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'زیرعادت‌ها',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A2E),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...habit.subHabits.map(
-                              (subHabit) => CheckboxListTile(
-                                value: habit.completedSubHabits.contains(
-                                  subHabit,
-                                ),
-                                onChanged: (value) async {
-                                  await _toggleSubHabit(habit, subHabit);
-                                  setState(() {});
-                                },
-                                title: Text(subHabit),
-                                activeColor: const Color(0xFF4A90E2),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            LinearProgressIndicator(
-                              value: habit.subHabits.isEmpty
-                                  ? 0
-                                  : habit.completedSubHabits.length /
-                                      habit.subHabits.length,
-                              backgroundColor: Colors.grey.shade200,
-                              color: const Color(0xFF4A90E2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'پیشرفت: ${habit.subHabits.isEmpty ? 0 : ((habit.completedSubHabits.length / habit.subHabits.length) * 100).toInt()}%',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-// lib/features/arena/screens/today_tab.dart
+  Widget _buildSwipeableCompletedHabitItem(Habit habit, Color primaryColor) {
+    final bool isQuest = habit.questId != null;
+    final bool isChallenge = habit.challengeId != null;
+    final bool isEditable = !isQuest && !isChallenge;
+
+    final key = ValueKey('completed_habit_${habit.id}');
+
+    return Dismissible(
+      key: key,
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3,
+        DismissDirection.endToStart: 0.3,
+      },
+      background: _buildSwipeBackground(
+        isLeft: true,
+        primaryColor: Colors.orange,
+        label: 'برگردان ',
+        icon: Icons.refresh,
+      ),
+      secondaryBackground: _buildSwipeBackground(
+        isLeft: false,
+        primaryColor: Colors.orange,
+        label: 'برگردان ',
+        icon: Icons.refresh,
+      ),
+      confirmDismiss: (direction) async {
+        _unmarkHabit(habit);
+        return false;
+      },
+      child: HabitCard(
+        habit: habit,
+        isCompleted: true,
+        onToggle: () => _unmarkHabit(habit),
+        onEdit: isEditable ? () => _editHabit(habit) : () {},
+        onDelete: isEditable ? () => _deleteHabit(habit) : () {},
+        onTimer: isEditable ? () => _showTimerDialog(habit) : null,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HabitDetailScreen(habit: habit),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSwipeableTaskItem(Task task, Color primaryColor) {
+    final key = ValueKey('task_${task.id}');
+
+    return Dismissible(
+      key: key,
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3,
+        DismissDirection.endToStart: 0.3,
+      },
+      background: _buildSwipeBackground(
+        isLeft: true,
+        primaryColor: primaryColor,
+        label: 'انجام شد ',
+        icon: Icons.check_circle,
+      ),
+      secondaryBackground: _buildSwipeBackground(
+        isLeft: false,
+        primaryColor: primaryColor,
+        label: 'انجام شد ',
+        icon: Icons.check_circle,
+      ),
+      confirmDismiss: (direction) async {
+        _markTaskCompleted(task);
+        return false;
+      },
+      child: TaskCard(
+        task: task,
+        isCompleted: false,
+        onToggle: () => _markTaskCompleted(task),
+        onEdit: () => _editTask(task),
+        onDelete: () => _deleteTask(task),
+      ),
+    );
+  }
+
+  Widget _buildSwipeableCompletedTaskItem(Task task, Color primaryColor) {
+    final key = ValueKey('completed_task_${task.id}');
+
+    return Dismissible(
+      key: key,
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.3,
+        DismissDirection.endToStart: 0.3,
+      },
+      background: _buildSwipeBackground(
+        isLeft: true,
+        primaryColor: Colors.orange,
+        label: 'برگردان ',
+        icon: Icons.refresh,
+      ),
+      secondaryBackground: _buildSwipeBackground(
+        isLeft: false,
+        primaryColor: Colors.orange,
+        label: 'برگردان ',
+        icon: Icons.refresh,
+      ),
+      confirmDismiss: (direction) async {
+        _unmarkTask(task);
+        return false;
+      },
+      child: TaskCard(
+        task: task,
+        isCompleted: true,
+        onToggle: () => _unmarkTask(task),
+        onEdit: () => _editTask(task),
+        onDelete: () => _deleteTask(task),
+      ),
+    );
+  }
+
+  Widget _buildSwipeBackground({
+    required bool isLeft,
+    required Color primaryColor,
+    required String label,
+    required IconData icon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: primaryColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isLeft) ...[
+            Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ] else ...[
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(icon, color: Colors.white, size: 28),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ==================== سایر متدها ====================
 
   Future<HabitTimeTracking?> _getHabitTimeToday(String habitId) async {
     try {
@@ -2385,7 +1604,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       }
       return null;
     } catch (e) {
-      print('❌ Error getting habit time: $e');
       return null;
     }
   }
@@ -2405,7 +1623,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ✅ استفاده از _TimerDialogContent
                   _TimerDialogContent(
                     habit: habit,
                     initialMinutes: habit.timerSetting?.minutes ?? 10,
@@ -2437,7 +1654,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  // ✅ متد ذخیره تنظیمات تایمر با دقیقه و ثانیه
   void _saveTimerSetting(
     String habitId,
     int minutes,
@@ -2453,7 +1669,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       final habit = habits[index];
 
-      // ✅ ایجاد TimerSetting جدید با دقیقه و ثانیه
       final timerSetting = TimerSetting(
         habitId: habitId,
         minutes: minutes,
@@ -2515,7 +1730,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         );
       }
     } catch (e) {
-      print('❌ Error saving timer setting: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2545,167 +1759,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               _markHabitCompleted(habit);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('بله، انجام شد ✅'),
+            child: const Text('بله، انجام شد '),
           ),
         ],
       ),
     );
   }
 
-// lib/features/arena/screens/today_tab.dart
-
-  Widget _buildCompletedHabitItem(Habit habit) {
-    return Dismissible(
-      key: Key(habit.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.orange,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.refresh, color: Colors.white, size: 28),
-      ),
-      confirmDismiss: (direction) async {
-        await _unmarkHabit(habit);
-        return false;
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        color: Colors.green.shade50,
-        child: ListTile(
-          leading: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(50),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 24,
-            ),
-          ),
-          title: Text(
-            habit.title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.lineThrough,
-              color: Colors.grey,
-            ),
-          ),
-          subtitle: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${_getFrequencyText(habit)} • ${_getTimeOfDayText(habit.timeOfDay)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ),
-              // ✅ نمایش تگ سطح فقط در بخش "انجام شده"
-              FutureBuilder<CompletionLevel>(
-                future: _getHabitCompletionLevel(habit.id),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    final level = snapshot.data!;
-
-                    // ✅ نمایش توضیحات سطح
-                    String levelDescription = '';
-                    switch (level) {
-                      case CompletionLevel.full:
-                        levelDescription = habit.fullDescription ?? 'کامل';
-                        break;
-                      case CompletionLevel.half:
-                        levelDescription = habit.halfDescription ?? 'نیمه';
-                        break;
-                      case CompletionLevel.basic:
-                        levelDescription = habit.basicDescription ?? 'پایه';
-                        break;
-                    }
-
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: level.color.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: level.color.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            level.emoji,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            level.displayName,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: level.color,
-                            ),
-                          ),
-                          // ✅ نمایش توضیحات سطح به صورت Tooltip
-                          Tooltip(
-                            message: levelDescription,
-                            child: const Icon(
-                              Icons.info_outline,
-                              size: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.grey,
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
-          ),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(25),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '+${habit.xpReward} XP',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// ✅ دریافت سطح انجام عادت برای تاریخ انتخاب شده
   Future<CompletionLevel> _getHabitCompletionLevel(String habitId) async {
     try {
       final date = widget.selectedDate;
@@ -2726,354 +1786,170 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       return CompletionLevel.full;
     } catch (e) {
-      print('❌ Error getting completion level: $e');
       return CompletionLevel.full;
     }
   }
 
-  Widget _buildTaskItem(Task task) {
-    final isChallengeTask = task.title.startsWith('🎯');
-    final hasSubTasks = task.subTasks.isNotEmpty;
-    final isExpanded = _expandedItemId == task.id && _expandedType == 'task';
-    final isSubExpanded = _expandedSubItemId == task.id;
+  // ==================== Main Build ====================
 
-    _initAnimation(task.id);
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
 
-    return Dismissible(
-      key: Key(task.id),
-      direction: DismissDirection.horizontal,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.green,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.check, color: Colors.white, size: 28),
-      ),
-      secondaryBackground: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.green, // ✅ تغییر از قرمز به سبز
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.check,
-            color: Colors.white, size: 28), // ✅ تغییر آیکون
-      ),
-      confirmDismiss: (direction) async {
-        // ✅ هر دو جهت = انجام شده
-        await _markTaskCompleted(task);
-        return false;
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () => _toggleExpanded(task.id, 'task'),
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+    return Consumer<SyncProvider>(
+      builder: (context, syncProvider, child) {
+        if (_isLoading && !syncProvider.hasLocalData) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: primaryColor),
+                const SizedBox(height: 16),
+                const Text(
+                  'در حال بارگذاری اطلاعات...',
+                  style: TextStyle(color: Color(0xFF6B7280)),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.assignment,
-                        color: Colors.grey.shade500,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            task.title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1A1A2E),
-                            ),
-                          ),
-                          if (task.dueDate != null)
-                            FutureBuilder(
-                              future: DateService.formatDate(task.dueDate!),
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData) {
-                                  return Text(
-                                    'زمان: ${snapshot.data}',
-                                    style: const TextStyle(fontSize: 12),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                    if (hasSubTasks && task.completedSubTasks.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFA500).withAlpha(25),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${task.completedSubTasks.length}/${task.subTasks.length}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFFFA500),
-                          ),
-                        ),
-                      ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFA500).withAlpha(25),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '+${task.xpReward} XP',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFFA500),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
-            if (isExpanded)
-              SizeTransition(
-                sizeFactor: _animations[task.id]!,
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey.shade200,
-                            width: isSubExpanded ? 0 : 1,
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildActionButton(
-                            icon: Icons.check_circle,
-                            onTap: () => _markTaskCompleted(task),
-                          ),
-                          if (hasSubTasks)
-                            _buildActionButton(
-                              icon: isSubExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.list_alt,
-                              onTap: () {
-                                setState(() {
-                                  if (_expandedSubItemId == task.id) {
-                                    _expandedSubItemId = null;
-                                  } else {
-                                    _expandedSubItemId = task.id;
-                                  }
-                                });
-                              },
-                            ),
-                          _buildActionButton(
-                            icon: Icons.info_outline,
-                            onTap: () => _showTaskDetailsDialog(task),
-                          ),
-                          _buildActionButton(
-                            icon: Icons.edit,
-                            onTap:
-                                isChallengeTask ? null : () => _editTask(task),
-                          ),
-                          _buildActionButton(
-                            icon: Icons.delete,
-                            onTap: isChallengeTask
-                                ? null
-                                : () => _deleteTask(task),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (isSubExpanded && hasSubTasks)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(16),
-                            bottomRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'زیرتسک‌ها',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A2E),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            ...task.subTasks.map(
-                              (subTask) => CheckboxListTile(
-                                value: task.completedSubTasks.contains(subTask),
-                                onChanged: (value) async {
-                                  await _toggleSubTask(task, subTask);
-                                  setState(() {});
-                                },
-                                title: Text(subTask),
-                                activeColor: const Color(0xFFFFA500),
-                                contentPadding: EdgeInsets.zero,
-                                dense: true,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            LinearProgressIndicator(
-                              value: task.subTasks.isEmpty
-                                  ? 0
-                                  : task.completedSubTasks.length /
-                                      task.subTasks.length,
-                              backgroundColor: Colors.grey.shade200,
-                              color: const Color(0xFFFFA500),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'پیشرفت: ${task.subTasks.isEmpty ? 0 : ((task.completedSubTasks.length / task.subTasks.length) * 100).toInt()}%',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+          );
+        }
+
+        if (syncProvider.hasLocalData) {
+          return RefreshIndicator(
+            onRefresh: _loadData,
+            color: primaryColor,
+            child: _isLoading
+                ? Center(
+                    child: CircularProgressIndicator(color: primaryColor),
+                  )
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    child: _buildTodayContent(primaryColor),
+                  ),
+          );
+        }
+
+        if (!syncProvider.hasLocalData && !syncProvider.isOnline) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'اتصال اینترنت برقرار نیست',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
-              ),
-          ],
-        ),
-      ),
+                const SizedBox(height: 8),
+                Text(
+                  'برای مشاهده اطلاعات به اتصال اینترنت نیاز دارید',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _loadData,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('تلاش مجدد'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: _loadData,
+          color: primaryColor,
+          child: _isLoading
+              ? Center(
+                  child: CircularProgressIndicator(color: primaryColor),
+                )
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: _buildTodayContent(primaryColor),
+                ),
+        );
+      },
     );
   }
 
-  Widget _buildCompletedTaskItem(Task task) {
-    return Dismissible(
-      key: Key(task.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.orange,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.refresh, color: Colors.white, size: 28),
-      ),
-      confirmDismiss: (direction) async {
-        await _unmarkTask(task);
-        return false;
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        color: Colors.green.shade50,
-        child: ListTile(
-          leading: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(50),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.check_circle,
-              color: Colors.green,
-              size: 24,
-            ),
-          ),
-          title: Text(
-            task.title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.lineThrough,
-              color: Colors.grey,
-            ),
-          ),
-          subtitle: task.dueDate != null
-              ? FutureBuilder(
-                  future: DateService.formatDate(task.dueDate!),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      return Text(
-                        'زمان: ${snapshot.data}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                )
-              : null,
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(25),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '+${task.xpReward} XP',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+  Widget _buildTodayContent(Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_todayHabits.isNotEmpty || _todayTasks.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ..._todayHabits
+              .map((habit) => _buildSwipeableHabitItem(habit, primaryColor)),
+          ..._todayTasks
+              .map((task) => _buildSwipeableTaskItem(task, primaryColor)),
+          const SizedBox(height: 24),
+        ],
+        if (_completedHabits.isNotEmpty || _completedTasks.isNotEmpty) ...[
+          Row(
+            children: [
+              Icon(Icons.check_circle,
+                  color: const Color.fromARGB(255, 0, 0, 0), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'انجام شده',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._completedHabits.map((habit) =>
+              _buildSwipeableCompletedHabitItem(habit, primaryColor)),
+          ..._completedTasks.map(
+              (task) => _buildSwipeableCompletedTaskItem(task, primaryColor)),
+          const SizedBox(height: 24),
+        ],
+        if (_todayHabits.isEmpty &&
+            _todayTasks.isEmpty &&
+            _completedHabits.isEmpty &&
+            _completedTasks.isEmpty)
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 100),
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 80,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'هیچ کاری برای این روز ندارید!',
+                  style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'روی دکمه + کلیک کنید',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                ),
+              ],
             ),
           ),
-        ),
-      ),
+      ],
     );
   }
 }
@@ -3086,7 +1962,7 @@ class _TimerDialogContent extends StatefulWidget {
   final VoidCallback onComplete;
 
   const _TimerDialogContent({
-    super.key, // ✅ تغییر به super.key
+    super.key,
     required this.habit,
     required this.initialMinutes,
     required this.initialSeconds,
@@ -3113,14 +1989,18 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             '⏱️ تایمر عادت',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
           ),
           const SizedBox(height: 8),
           Text(
@@ -3128,8 +2008,6 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
             style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
           const SizedBox(height: 16),
-
-          // ✅ انتخاب دقیقه و ثانیه
           TimerPickerWidget(
             initialMinutes: _minutes,
             initialSeconds: _seconds,
@@ -3144,30 +2022,24 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
               });
             },
           ),
-
           const SizedBox(height: 16),
-
-          // ✅ نمایش زمان کل
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '${_minutes.toString().padLeft(2, '0')}:${_seconds.toString().padLeft(2, '0')}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF4A90E2),
+                color: primaryColor,
                 fontFamily: 'monospace',
               ),
             ),
           ),
-
           const SizedBox(height: 16),
-
-          // ✅ ویجت تایمر با پارامترهای جدید
           HabitTimerWidget(
             habitId: widget.habit.id,
             habitTitle: widget.habit.title,
@@ -3176,10 +2048,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
               widget.onComplete();
             },
           ),
-
           const SizedBox(height: 8),
-
-          // ✅ دکمه ذخیره تنظیمات تایمر (اختیاری)
           ElevatedButton.icon(
             onPressed: () {
               widget.onSave(_minutes, _seconds, _isCountdown);
@@ -3188,7 +2057,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
             icon: const Icon(Icons.save, size: 18),
             label: const Text('ذخیره تنظیمات تایمر'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(

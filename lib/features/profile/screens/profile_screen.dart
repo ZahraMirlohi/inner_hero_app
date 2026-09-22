@@ -16,6 +16,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/services.dart';
 import '/../utils/unique_id_generator.dart';
 import 'personality_screen.dart';
+import '/providers/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -34,6 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
+  bool _isUserInfoExpanded = false;
 
   int _currentStreak = 0;
   int _bestStreak = 0;
@@ -44,6 +46,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ✅ برای جلوگیری از بارگذاری مجدد در حین بارگذاری
   bool _isLoadingInProgress = false;
+
+  // 🎨 رنگ‌های تم اپلیکیشن (از ThemeProvider) — فقط برای ظاهر، در منطق استفاده نمی‌شه
+  late ThemeProvider _theme;
 
   @override
   void initState() {
@@ -94,17 +99,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // ✅ اجباری کردن بارگذاری از دیتابیس
     _isLoadingInProgress = false;
 
-    _loadProfile()
-        .then((_) {
-          // ✅ ریفرش آنالytics
-          _analyticsKey.currentState?.refreshData();
-          _isRefreshing = false;
-          print('✅ Profile refresh completed');
-        })
-        .catchError((e) {
-          print('❌ Profile refresh error: $e');
-          _isRefreshing = false;
-        });
+    _loadProfile().then((_) {
+      // ✅ ریفرش آنالytics
+      _analyticsKey.currentState?.refreshData();
+      _isRefreshing = false;
+      print('✅ Profile refresh completed');
+    }).catchError((e) {
+      print('❌ Profile refresh error: $e');
+      _isRefreshing = false;
+    });
   }
   // ==================== متد اصلی بارگذاری پروفایل ====================
 
@@ -210,10 +213,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _cachedWeekDays = weekStatus;
 
       if (_profile!.weeklyStreak != newWeeklyStreak) {
-        await _supabase.client
-            .from('profiles')
-            .update({'weekly_streak': newWeeklyStreak})
-            .eq('user_id', _profile!.userId);
+        await _supabase.client.from('profiles').update(
+            {'weekly_streak': newWeeklyStreak}).eq('user_id', _profile!.userId);
 
         setState(() {
           _weeklyStreak = newWeeklyStreak;
@@ -325,8 +326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final newUniqueId = UniqueIdGenerator.generateSecure();
           await _supabase.client
               .from('profiles')
-              .update({'unique_id': newUniqueId})
-              .eq('user_id', currentUser.id);
+              .update({'unique_id': newUniqueId}).eq('user_id', currentUser.id);
           response['unique_id'] = newUniqueId;
           print('✅ Unique ID generated for user: $newUniqueId');
         }
@@ -350,8 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (response['total_xp'] != totalXP) {
               await _supabase.client
                   .from('profiles')
-                  .update({'total_xp': totalXP})
-                  .eq('user_id', currentUser.id);
+                  .update({'total_xp': totalXP}).eq('user_id', currentUser.id);
               print('📊 Profile XP updated to match user_progress: $totalXP');
             }
           }
@@ -664,19 +663,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _theme = context.watch<ThemeProvider>();
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: _theme.backgroundColor,
       body: Consumer<SyncProvider>(
         builder: (context, syncProvider, child) {
           // ✅ حالت بارگذاری
           if (_isLoading && _profile == null) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Color(0xFF2563EB)),
-                  SizedBox(height: 16),
-                  Text(
+                  CircularProgressIndicator(color: _theme.primaryColor),
+                  const SizedBox(height: 16),
+                  const Text(
                     'در حال بارگذاری پروفایل...',
                     style: TextStyle(color: Color(0xFF6B7280)),
                   ),
@@ -722,7 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.refresh),
             label: const Text('تلاش مجدد'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: _theme.primaryColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -749,7 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.refresh),
             label: const Text('بارگذاری مجدد'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: _theme.primaryColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -779,8 +779,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF1A1A2E),
+          backgroundColor: _theme.surfaceColor,
+          foregroundColor: _theme.textColor,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -808,14 +808,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     print('📅 Today index: $todayIndex (${jalaliToday.weekDay})');
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
       child: Column(
         children: [
           _buildAvatarSection(),
           const SizedBox(height: 24),
           _buildUserInfoSection(),
           const SizedBox(height: 24),
-
           StreakCardWidget(
             currentStreak: _currentStreak,
             bestStreak: _bestStreak,
@@ -823,14 +822,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             weekDays: weekDays, // ✅ ارسال weekDays واقعی از کش
           ),
           const SizedBox(height: 24),
-
           XpStatsWidget(
             totalXp: _profile!.totalXp,
             level: _profile!.level,
             xpToNextLevel: _profile!.xpNeededForNextLevel,
           ),
           const SizedBox(height: 24),
-
           AnalyticsOverviewWidget(
             key: _analyticsKey,
             userId: _profile!.userId,
@@ -845,10 +842,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 24),
-
           _buildPersonalityButton(),
           const SizedBox(height: 12),
-
           _buildTermsButton(),
           const SizedBox(height: 12),
           _buildSettingsButton(),
@@ -913,14 +908,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             height: 180,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2563EB), Color(0xFF7C3AED)],
+              gradient: LinearGradient(
+                colors: [_theme.primaryColor, _theme.secondaryColor],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF2563EB).withOpacity(0.3),
+                  color: _theme.primaryColor.withOpacity(0.3),
                   blurRadius: 30,
                   spreadRadius: 8,
                 ),
@@ -929,17 +924,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Padding(
               padding: const EdgeInsets.all(6),
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: _theme.surfaceColor,
                 ),
                 child: Center(
                   child: Text(
                     _profile?.name.substring(0, 1).toUpperCase() ?? '?',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 48,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2563EB),
+                      color: _theme.primaryColor,
                     ),
                   ),
                 ),
@@ -953,7 +948,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _theme.surfaceColor,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -975,9 +970,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ).then((_) => _loadProfile());
                 },
-                icon: const Icon(
+                icon: Icon(
                   Icons.edit,
-                  color: Color(0xFF2563EB),
+                  color: _theme.primaryColor,
                   size: 24,
                 ),
                 padding: EdgeInsets.zero,
@@ -992,15 +987,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== بخش اطلاعات کاربر ====================
 
-  // lib/features/profile/screens/profile_screen.dart
-
-  // ✅ در بخش _buildUserInfoSection، ID یکتا را نمایش دهید
-
+// ═══════════════════════════════════════════════════════════
+// 🎯 ویجت اطلاعات کاربر (کشویی)
+// ═══════════════════════════════════════════════════════════
   Widget _buildUserInfoSection() {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -1011,244 +1004,296 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'اطلاعات کاربری',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: -0.3,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _showEditProfileDialog(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                      width: 1,
+          // ═══════════════════════════════════════════════════════
+          // ─── هدر کشو (همیشه قابل مشاهده) ───
+          // ═══════════════════════════════════════════════════════
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isUserInfoExpanded = !_isUserInfoExpanded;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                children: [
+                  // آیکون کاربر
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: _theme.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.person_outline_rounded,
+                        color: _theme.primaryColor,
+                        size: 22,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.edit_outlined,
-                        size: 14,
-                        color: Color(0xFF2563EB),
+                  const SizedBox(width: 12),
+                  // نام کاربر
+                  Expanded(
+                    child: Text(
+                      _profile?.name ?? 'کاربر',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _theme.textColor,
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        'ویرایش',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF2563EB),
-                        ),
-                      ),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // ✅ نمایش ID یکتا
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFF2563EB).withValues(alpha: 0.15),
-                width: 1,
+                  // فلش کشو
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 300),
+                    turns: _isUserInfoExpanded ? 0.5 : 0.0,
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: _theme.textSecondaryColor,
+                      size: 26,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.fingerprint,
-                    size: 16,
-                    color: Color(0xFF2563EB),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
+          ),
+
+          // ═══════════════════════════════════════════════════════
+          // ─── محتوای کشو (فقط وقتی باز است) ───
+          // ═══════════════════════════════════════════════════════
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 300),
+            crossFadeState: _isUserInfoExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 16),
+
+                  // ─── ID یکتا ───
+                  _buildUniqueIdBox(),
+                  const SizedBox(height: 16),
+
+                  // ─── ردیف اطلاعات ───
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'ID یکتا',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildMinimalInfoItem(
+                              label: 'نام',
+                              value: _profile!.name,
+                              icon: Icons.person_outline_rounded,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'ایمیل',
+                              value: _profile?.email?.split('@').first ?? '---',
+                              icon: Icons.email_outlined,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'شماره تماس',
+                              value: _profile?.phone ?? '---',
+                              icon: Icons.phone_outlined,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'تاریخ تولد',
+                              value: _formatDateShort(_profile?.birthDate),
+                              icon: Icons.cake_outlined,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            _profile?.uniqueId ?? '---',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: _profile?.uniqueId != null
-                                  ? const Color(0xFF2563EB)
-                                  : Colors.grey.shade400,
-                              letterSpacing: 1,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildMinimalInfoItem(
+                              label: 'سن',
+                              value: _profile?.realAge?.toString() ?? '---',
+                              icon: Icons.calendar_today_outlined,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          // ✅ دکمه کپی
-                          if (_profile?.uniqueId != null)
-                            GestureDetector(
-                              onTap: () {
-                                _copyToClipboard(_profile!.uniqueId!);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF2563EB,
-                                  ).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.copy,
-                                      size: 12,
-                                      color: Color(0xFF2563EB),
-                                    ),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'کپی',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Color(0xFF2563EB),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'جنسیت',
+                              value: _getGenderText(_profile?.gender),
+                              icon: Icons.people_outline,
                             ),
-                        ],
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'عضو از',
+                              value: _formatDateShort(_profile?.registeredAt),
+                              icon: Icons.history_outlined,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildMinimalInfoItem(
+                              label: 'سن آواتار',
+                              value: '${_profile?.avatarAge ?? 0} روز',
+                              icon: Icons.emoji_people_outlined,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-                // ✅ دکمه اشتراک‌گذاری
-                if (_profile?.uniqueId != null)
-                  GestureDetector(
-                    onTap: () {
-                      _shareUniqueId(_profile!.uniqueId!);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+
+                  const SizedBox(height: 18),
+
+                  // ─── دکمه ویرایش ───
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _showEditProfileDialog,
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text(
+                        'ویرایش اطلاعات',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.share_outlined,
-                        size: 18,
-                        color: Color(0xFF2563EB),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _theme.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 🆔 باکس ID یکتا (استخراج شده)
+// ═══════════════════════════════════════════════════════════
+  Widget _buildUniqueIdBox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: _theme.primaryColor.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: _theme.primaryColor.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: _theme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.fingerprint,
+              size: 16,
+              color: _theme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'ID یکتا',
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: _theme.textSecondaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      _profile?.uniqueId ?? '---',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _profile?.uniqueId != null
+                            ? _theme.primaryColor
+                            : _theme.textSecondaryColor,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_profile?.uniqueId != null)
+                      GestureDetector(
+                        onTap: () => _copyToClipboard(_profile!.uniqueId!),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _theme.primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.copy,
+                                size: 12,
+                                color: _theme.primaryColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'کپی',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: _theme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // سایر اطلاعات کاربر
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildMinimalInfoItem(
-                      label: 'نام',
-                      value: _profile!.name,
-                      icon: Icons.person_outline_rounded,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'ایمیل',
-                      value: _profile?.email?.split('@').first ?? '---',
-                      icon: Icons.email_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'شماره تماس',
-                      value: _profile?.phone ?? '---',
-                      icon: Icons.phone_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'تاریخ تولد',
-                      value: _formatDateShort(_profile?.birthDate),
-                      icon: Icons.cake_outlined,
-                    ),
-                  ],
+          if (_profile?.uniqueId != null)
+            GestureDetector(
+              onTap: () => _shareUniqueId(_profile!.uniqueId!),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _theme.primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.share_outlined,
+                  size: 18,
+                  color: _theme.primaryColor,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildMinimalInfoItem(
-                      label: 'سن',
-                      value: _profile?.realAge?.toString() ?? '---',
-                      icon: Icons.calendar_today_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'جنسیت',
-                      value: _getGenderText(_profile?.gender),
-                      icon: Icons.people_outline,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'عضو از',
-                      value: _formatDateShort(_profile?.registeredAt),
-                      icon: Icons.history_outlined,
-                    ),
-                    const SizedBox(height: 14),
-                    _buildMinimalInfoItem(
-                      label: 'سن آواتار',
-                      value: '${_profile?.avatarAge ?? 0} روز',
-                      icon: Icons.emoji_people_outlined,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -1299,9 +1344,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: _theme.backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EDF2), width: 0.5),
+        border: Border.all(
+          color: _theme.primaryColor.withValues(alpha: 0.12),
+          width: 0.5,
+        ),
       ),
       child: Row(
         children: [
@@ -1309,11 +1357,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFF2563EB).withOpacity(0.06),
+              color: _theme.primaryColor.withOpacity(0.06),
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Icon(icon, size: 16, color: const Color(0xFF2563EB)),
+              child: Icon(icon, size: 16, color: _theme.primaryColor),
             ),
           ),
           const SizedBox(width: 10),
@@ -1325,7 +1373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label,
                   style: TextStyle(
                     fontSize: 9,
-                    color: Colors.grey.shade500,
+                    color: _theme.textSecondaryColor,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.3,
                   ),
@@ -1337,8 +1385,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: value == '---'
-                        ? Colors.grey.shade400
-                        : const Color(0xFF1A1A2E),
+                        ? _theme.textSecondaryColor
+                        : _theme.textColor,
                     letterSpacing: -0.2,
                   ),
                   maxLines: 1,
@@ -1405,8 +1453,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: const Color(0xFF1A1A2E),
+          backgroundColor: _theme.surfaceColor,
+          foregroundColor: _theme.textColor,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -1434,8 +1482,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
-          foregroundColor: Colors.white,
+          backgroundColor: _theme.primaryColor,
+          foregroundColor: _theme.secondaryColor,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -1491,12 +1539,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'ویرایش اطلاعات',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A2E),
+                                color: _theme.textColor,
                               ),
                             ),
                             IconButton(
@@ -1506,7 +1554,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-
                         _buildEditField(
                           label: 'نام کاربری',
                           controller: nameController,
@@ -1519,7 +1566,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
-
                         _buildEditField(
                           label: 'شماره تلفن',
                           controller: phoneController,
@@ -1527,7 +1573,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: 12),
-
                         _buildEditField(
                           label: 'ایمیل',
                           controller: emailController,
@@ -1536,7 +1581,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           enabled: false,
                         ),
                         const SizedBox(height: 12),
-
                         _buildEditField(
                           label: 'سن',
                           controller: ageController,
@@ -1544,7 +1588,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 12),
-
                         GestureDetector(
                           onTap: () async {
                             final date = await showDatePicker(
@@ -1573,7 +1616,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Icon(
                                   Icons.calendar_today_outlined,
-                                  color: const Color(0xFF2563EB),
+                                  color: _theme.primaryColor,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 12),
@@ -1584,7 +1627,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         : 'تاریخ تولد را انتخاب کنید',
                                     style: TextStyle(
                                       color: selectedDate != null
-                                          ? const Color(0xFF1A1A2E)
+                                          ? _theme.textColor
                                           : Colors.grey.shade500,
                                     ),
                                   ),
@@ -1598,14 +1641,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         DropdownButtonFormField<String>(
                           value: _getGenderValue(genderController.text),
                           decoration: InputDecoration(
                             labelText: 'جنسیت',
-                            prefixIcon: const Icon(
+                            prefixIcon: Icon(
                               Icons.people_outline,
-                              color: Color(0xFF2563EB),
+                              color: _theme.primaryColor,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -1632,7 +1674,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
-
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -1652,18 +1693,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2563EB),
+                              backgroundColor: _theme.primaryColor,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'ذخیره تغییرات',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: _theme.secondaryColor,
                               ),
                             ),
                           ),
@@ -1697,7 +1738,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: const Color(0xFF2563EB)),
+        prefixIcon: Icon(icon, color: _theme.primaryColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -1821,7 +1862,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               await _updateField(label, controller.text);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: _theme.primaryColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1859,9 +1900,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           phone: field == 'phone' ? value : _profile!.phone,
           email: _profile!.email,
           birthDate: _profile!.birthDate,
-          realAge: field == 'real_age'
-              ? int.tryParse(value)
-              : _profile!.realAge,
+          realAge:
+              field == 'real_age' ? int.tryParse(value) : _profile!.realAge,
           gender: field == 'gender' ? value : _profile!.gender,
           registeredAt: _profile!.registeredAt,
           avatarStyle: _profile!.avatarStyle,

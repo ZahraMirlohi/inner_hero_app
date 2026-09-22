@@ -1,9 +1,11 @@
 // lib/features/arena/widgets/habit_chart_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/habit_completion.dart';
 import '/services/date_service.dart';
+import '/providers/theme_provider.dart';
 
 class HabitChartWidget extends StatefulWidget {
   final List<Map<String, dynamic>> data;
@@ -52,10 +54,8 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 
   void _scrollToToday() {
     if (_isInitialScrollDone || widget.data.isEmpty) return;
-
     final now = DateTime.now();
     final todayStr = now.toIso8601String().split('T').first;
-
     int todayIndex = -1;
     for (int i = 0; i < widget.data.length; i++) {
       if (widget.data[i]['date'] == todayStr) {
@@ -63,22 +63,15 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         break;
       }
     }
-
-    if (todayIndex == -1) {
-      todayIndex = widget.data.length - 1;
-    }
-
+    if (todayIndex == -1) todayIndex = widget.data.length - 1;
     final totalDays = widget.data.length;
     final minWidth = MediaQuery.of(context).size.width - 32;
     final chartWidth = (totalDays * 32.0).clamp(minWidth, totalDays * 32.0);
     final xStep = totalDays > 1 ? chartWidth / (totalDays - 1) : 0;
-
     final targetPosition =
         (todayIndex * xStep) - (MediaQuery.of(context).size.width / 2) + 50;
     final maxScroll = chartWidth - (MediaQuery.of(context).size.width - 32);
-
     final clampedPosition = targetPosition.clamp(0.0, maxScroll);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients && !_isInitialScrollDone) {
         _scrollController.animateTo(
@@ -93,16 +86,13 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.data.isEmpty) {
-      return _buildEmptyState();
-    }
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = themeProvider.primaryColor;
 
+    if (widget.data.isEmpty) return _buildEmptyState(primaryColor);
     final validData =
         widget.data.where((d) => d['isCompleted'] == true).toList();
-
-    if (validData.isEmpty) {
-      return _buildNoDataState();
-    }
+    if (validData.isEmpty) return _buildNoDataState(primaryColor);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -120,7 +110,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
+          _buildHeader(primaryColor),
           const SizedBox(height: 12),
           SizedBox(
             height: 200,
@@ -128,7 +118,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              child: _buildChart(),
+              child: _buildChart(primaryColor),
             ),
           ),
           const SizedBox(height: 8),
@@ -140,7 +130,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(Color primaryColor) {
     return Container(
       height: 180,
       padding: const EdgeInsets.all(16),
@@ -155,19 +145,19 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
           ),
         ],
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.show_chart, size: 40, color: Colors.grey),
-            SizedBox(height: 8),
+            Icon(Icons.show_chart, size: 40, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
             Text(
               'هنوز داده‌ای برای نمایش وجود ندارد',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: const Color(0xFF73786B), fontSize: 13),
             ),
             Text(
               'با انجام عادت، نمودار ساخته می‌شود',
-              style: TextStyle(color: Colors.grey, fontSize: 11),
+              style: TextStyle(color: const Color(0xFF73786B), fontSize: 11),
             ),
           ],
         ),
@@ -175,7 +165,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildNoDataState() {
+  Widget _buildNoDataState(Color primaryColor) {
     return Container(
       height: 180,
       padding: const EdgeInsets.all(16),
@@ -190,19 +180,19 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
           ),
         ],
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.event_busy, size: 40, color: Colors.grey),
-            SizedBox(height: 8),
+            Icon(Icons.event_busy, size: 40, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
             Text(
               'هیچ روزی در این ماه تکمیل نشده',
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(color: const Color(0xFF73786B), fontSize: 13),
             ),
             Text(
               'روزهای آینده را از دست نده! 💪',
-              style: TextStyle(color: Colors.grey, fontSize: 11),
+              style: TextStyle(color: const Color(0xFF73786B), fontSize: 11),
             ),
           ],
         ),
@@ -210,7 +200,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Color primaryColor) {
     return Row(
       children: [
         const Text(
@@ -218,6 +208,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
+            color: Color(0xFF090909),
           ),
         ),
         const Spacer(),
@@ -225,14 +216,14 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFF4A90E2).withOpacity(0.1),
+              color: primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '🎯 ${widget.targetValue}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: Color(0xFF4A90E2),
+                color: primaryColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -241,11 +232,10 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildChart() {
+  Widget _buildChart(Color primaryColor) {
     final totalDays = widget.data.length;
     final minWidth = MediaQuery.of(context).size.width - 32;
     final chartWidth = (totalDays * 32.0).clamp(minWidth, totalDays * 32.0);
-
     return SizedBox(
       width: chartWidth,
       height: 200,
@@ -253,6 +243,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         painter: _HabitChartPainter(
           allData: widget.data,
           calendarType: _calendarType,
+          primaryColor: primaryColor,
         ),
       ),
     );
@@ -277,7 +268,6 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     Color color;
     String label;
     IconData icon;
-
     if (level == null) {
       color = Colors.grey.shade300;
       label = 'انجام نشده';
@@ -287,14 +277,13 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
       label = level.displayName;
       icon = Icons.circle;
     }
-
     return Row(
       children: [
         Icon(icon, color: color, size: 10),
         const SizedBox(width: 3),
         Text(
           label,
-          style: const TextStyle(fontSize: 10),
+          style: const TextStyle(fontSize: 10, color: Color(0xFF73786B)),
         ),
       ],
     );
@@ -302,26 +291,20 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 
   Widget _buildSummaryStats() {
     final fullCount = widget.data
-        .where(
-          (d) => d['isCompleted'] == true && d['level'] == 'full',
-        )
+        .where((d) => d['isCompleted'] == true && d['level'] == 'full')
         .length;
     final halfCount = widget.data
-        .where(
-          (d) => d['isCompleted'] == true && d['level'] == 'half',
-        )
+        .where((d) => d['isCompleted'] == true && d['level'] == 'half')
         .length;
     final basicCount = widget.data
-        .where(
-          (d) => d['isCompleted'] == true && d['level'] == 'basic',
-        )
+        .where((d) => d['isCompleted'] == true && d['level'] == 'basic')
         .length;
     final totalCompleted = fullCount + halfCount + basicCount;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: const Color(0xFFF7FCEB),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -330,7 +313,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
           _buildStatItem('🌟 کامل', fullCount, const Color(0xFF2ECC71)),
           _buildStatItem('⭐ نیمه', halfCount, const Color(0xFFFFA500)),
           _buildStatItem('✨ پایه', basicCount, const Color(0xFF3498DB)),
-          _buildStatItem('📊 مجموع', totalCompleted, const Color(0xFF4A90E2)),
+          _buildStatItem('📊 مجموع', totalCompleted, const Color(0xFFB0CC5D)),
         ],
       ),
     );
@@ -349,10 +332,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         ),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 9,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 9, color: Color(0xFF73786B)),
         ),
       ],
     );
@@ -364,17 +344,17 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 class _HabitChartPainter extends CustomPainter {
   final List<Map<String, dynamic>> allData;
   final String calendarType;
+  final Color primaryColor;
 
   _HabitChartPainter({
     required this.allData,
     required this.calendarType,
+    required this.primaryColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (allData.isEmpty) return;
-
-    // ✅ padding با فضای کافی برای اعداد
     final padding = const EdgeInsets.fromLTRB(45, 8, 8, 35);
     final chartWidth = size.width - padding.left - padding.right;
     final chartHeight = size.height - padding.top - padding.bottom;
@@ -396,11 +376,9 @@ class _HabitChartPainter extends CustomPainter {
 
     final xStep = allData.length > 1 ? chartWidth / (allData.length - 1) : 0.0;
     final points = <Offset>[];
-
     for (int i = 0; i < allData.length; i++) {
       final x = padding.left + (i * xStep);
       final isCompleted = allData[i]['isCompleted'] == true;
-
       if (isCompleted) {
         final value = getLevelValue(allData[i]['level']);
         final y = padding.top + chartHeight - (value / 3 * chartHeight);
@@ -408,11 +386,9 @@ class _HabitChartPainter extends CustomPainter {
       }
     }
 
-    // روزهای بدون داده (خاکستری)
     for (int i = 0; i < allData.length; i++) {
       final x = padding.left + (i * xStep);
       final isCompleted = allData[i]['isCompleted'] == true;
-
       if (!isCompleted) {
         final y = padding.top + chartHeight - (0.5 / 3 * chartHeight);
         final dotPaint = Paint()
@@ -422,20 +398,17 @@ class _HabitChartPainter extends CustomPainter {
       }
     }
 
-    // خط بین نقاط
     if (points.length > 1) {
       final linePaint = Paint()
-        ..color = const Color(0xFF4A90E2)
+        ..color = primaryColor
         ..strokeWidth = 2
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
-
       for (int i = 0; i < points.length - 1; i++) {
         canvas.drawLine(points[i], points[i + 1], linePaint);
       }
     }
 
-    // نقاط انجام شده
     for (int i = 0; i < points.length; i++) {
       final level = allData[i % allData.length]['level'] ?? 'full';
       Color color;
@@ -452,20 +425,15 @@ class _HabitChartPainter extends CustomPainter {
         default:
           color = Colors.grey;
       }
-
       final dotPaint = Paint()
         ..color = color
         ..style = PaintingStyle.fill;
-
       canvas.drawCircle(points[i], 6, dotPaint);
-
       final borderPaint = Paint()
         ..color = Colors.white
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke;
-
       canvas.drawCircle(points[i], 6, borderPaint);
-
       final emoji = _getLevelEmoji(level);
       final textSpan = TextSpan(
         text: emoji,
@@ -482,7 +450,6 @@ class _HabitChartPainter extends CustomPainter {
             points[i].dy - textPainter.height / 2),
       );
     }
-
     _drawDayLabels(canvas, size, padding, xStep);
   }
 
@@ -497,27 +464,23 @@ class _HabitChartPainter extends CustomPainter {
       {'label': '⭐ نیمه', 'value': 2.0, 'color': const Color(0xFFFFA500)},
       {'label': '✨ پایه', 'value': 1.0, 'color': const Color(0xFF3498DB)},
     ];
-
     final textStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
+      color: Color(0xFF73786B),
     );
-
     for (var level in levels) {
       final y = padding.top +
           chartHeight -
           ((level['value'] as double) / 3 * chartHeight);
-
       final dashPaint = Paint()
         ..color = (level['color'] as Color).withOpacity(0.25)
         ..strokeWidth = 0.8
         ..style = PaintingStyle.stroke;
-
       final dashWidth = 3.0;
       final dashSpace = 3.0;
       double startX = padding.left;
       final endX = padding.left + chartWidth;
-
       while (startX < endX) {
         canvas.drawLine(
           Offset(startX, y),
@@ -526,7 +489,6 @@ class _HabitChartPainter extends CustomPainter {
         );
         startX += dashWidth + dashSpace;
       }
-
       final textSpan = TextSpan(
         text: level['label'] as String,
         style: textStyle.copyWith(
@@ -553,15 +515,13 @@ class _HabitChartPainter extends CustomPainter {
   ) {
     final textStyle = TextStyle(
       fontSize: 9,
-      color: Colors.grey.shade800,
+      color: Color(0xFF73786B),
       fontWeight: FontWeight.w600,
     );
-
     for (int i = 0; i < allData.length; i++) {
       final x = padding.left + (i * xStep);
       final dateStr = allData[i]['date'];
       final date = DateTime.parse(dateStr);
-
       String label;
       if (calendarType == 'jalali') {
         final jalali = Jalali.fromDateTime(date);
@@ -569,9 +529,7 @@ class _HabitChartPainter extends CustomPainter {
       } else {
         label = date.day.toString();
       }
-
       final y = size.height - 6;
-
       final textSpan = TextSpan(
         text: label,
         style: textStyle,
@@ -581,12 +539,9 @@ class _HabitChartPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-
-      // ✅ پس‌زمینه سفید برای خوانایی بهتر
       final bgPaint = Paint()
         ..color = Colors.white
         ..style = PaintingStyle.fill;
-
       canvas.drawRect(
         Rect.fromLTWH(
           x - textPainter.width / 2 - 2,
@@ -596,7 +551,6 @@ class _HabitChartPainter extends CustomPainter {
         ),
         bgPaint,
       );
-
       textPainter.paint(
         canvas,
         Offset(x - textPainter.width / 2, y - textPainter.height + 1),
