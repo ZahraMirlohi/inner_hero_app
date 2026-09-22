@@ -1326,7 +1326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('📤 ID یکتا برای اشتراک‌گذاری کپی شد'),
+          content: Text(' ID یکتا برای اشتراک‌گذاری کپی شد'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.blue,
         ),
