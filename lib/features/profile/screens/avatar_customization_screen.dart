@@ -376,8 +376,8 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
                           ),
                         )
                       : isSelected
-                      ? const Color(0xFF2563EB)
-                      : Colors.grey.shade100,
+                          ? const Color(0xFF2563EB)
+                          : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(16),
                   border: isSelected
                       ? Border.all(color: const Color(0xFF2563EB), width: 2)
@@ -406,12 +406,10 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
                     : Text(
                         option['name'],
                         style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.grey.shade700,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          color:
+                              isSelected ? Colors.white : Colors.grey.shade700,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
               ),

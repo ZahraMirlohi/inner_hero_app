@@ -41,19 +41,22 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: const Color(0xFFF5F7FA),
       body: Stack(
         children: [
-          // ✅ 1. محتوای اصلی (صفحات) - بدون Scaffold اضافی
-          IndexedStack(
-            index: _currentIndex,
-            children: [
-              ArenaScreen(
-                profileRefreshNotifier: _profileRefreshNotifier,
-              ),
-              const ChatScreen(),
-              ExploreScreen(refreshNotifier: _exploreRefreshNotifier),
-              ProfileScreen(
-                refreshNotifier: _profileRefreshNotifier,
-              ),
-            ],
+          // ✅ 1. محتوای اصلی (صفحات) با SafeArea
+          SafeArea(
+            bottom: false, // ⚠️ مهم: چون CustomBottomNavBar خودش SafeArea داره
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                ArenaScreen(
+                  profileRefreshNotifier: _profileRefreshNotifier,
+                ),
+                const ChatScreen(),
+                ExploreScreen(refreshNotifier: _exploreRefreshNotifier),
+                ProfileScreen(
+                  refreshNotifier: _profileRefreshNotifier,
+                ),
+              ],
+            ),
           ),
 
           // ✅ 2. نوار ناوبری شناور روی محتوا

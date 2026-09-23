@@ -190,124 +190,120 @@ class _ArenaScreenState extends State<ArenaScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FCEB),
-      // ✅ فضای پایین برای FAB — این باید با FAB هماهنگ باشه
-      bottomNavigationBar: const SizedBox(height: 110),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // هدر تقویم
-            CalendarHeader(
-              onDateSelected: _onDateSelected,
-              selectedDate: _selectedDate,
-            ),
+      bottomNavigationBar: const SizedBox(height: 130),
+      body: Column(
+        children: [
+          // هدر تقویم
+          CalendarHeader(
+            onDateSelected: _onDateSelected,
+            selectedDate: _selectedDate,
+          ),
 
-            const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-            // نوار وضعیت
-            Consumer<SyncProvider>(
-              builder: (context, syncProvider, child) {
-                if (!syncProvider.isOnline ||
-                    syncProvider.hasOfflineOperations) {
-                  return _buildOfflineStatusBar(syncProvider, primaryColor);
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+          // نوار وضعیت
+          Consumer<SyncProvider>(
+            builder: (context, syncProvider, child) {
+              if (!syncProvider.isOnline || syncProvider.hasOfflineOperations) {
+                return _buildOfflineStatusBar(syncProvider, primaryColor);
+              }
+              return const SizedBox.shrink();
+            },
+          ),
 
-            // پروگرس بار
-            _buildHorizontalProgressBar(primaryColor),
+          // پروگرس بار
+          _buildHorizontalProgressBar(primaryColor),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            // تب‌ها
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: DashCurvedTabBar(
-                tabs: _tabs,
-                icons: _tabs.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final isSelected = _selectedIndex == index;
-                  return Icon(
-                    _icons[index],
-                    color: isSelected
-                        ? const Color(0xFF090909)
-                        : const Color(0xFF73786B),
-                    size: 20,
-                  );
-                }).toList(),
-                selectedIndex: _selectedIndex,
-                onTap: _onTabChanged,
-                tabBarHeight: 54,
-                tabBarBorderRadius: 30,
-                selectedTabColor: primaryColor,
-                selectedTabTextStyle: const TextStyle(
-                  color: Color(0xFF090909),
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                unselectedTabTextStyle: const TextStyle(
-                  color: Color(0xFF73786B),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                iconPosition: IconPosition.left,
-                hideTabText: false,
-                hideBorders: true,
-                showDivider: false,
+          // تب‌ها
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: DashCurvedTabBar(
+              tabs: _tabs,
+              icons: _tabs.asMap().entries.map((entry) {
+                final index = entry.key;
+                final isSelected = _selectedIndex == index;
+                return Icon(
+                  _icons[index],
+                  color: isSelected
+                      ? const Color(0xFF090909)
+                      : const Color(0xFF73786B),
+                  size: 20,
+                );
+              }).toList(),
+              selectedIndex: _selectedIndex,
+              onTap: _onTabChanged,
+              tabBarHeight: 54,
+              tabBarBorderRadius: 30,
+              selectedTabColor: primaryColor,
+              selectedTabTextStyle: const TextStyle(
+                color: Color(0xFF090909),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
+              unselectedTabTextStyle: const TextStyle(
+                color: Color(0xFF73786B),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              iconPosition: IconPosition.left,
+              hideTabText: false,
+              hideBorders: true,
+              showDivider: false,
             ),
+          ),
 
-            const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
-            // ============ کادر سفید تب‌ها ============
-            const SizedBox(height: 12),
+          // ============ کادر سفید تب‌ها ============
+          const SizedBox(height: 12),
 
-            // ✅ کادر سبز — بدون فضای اضافی در پایین
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                child: ClipPath(
-                  clipper: const _BottomNotchClipper(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+          // ✅ کادر سبز — بدون فضای اضافی در پایین
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: ClipPath(
+                clipper: const _BottomNotchClipper(),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryColor.withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: IndexedStack(
+                          index: _selectedIndex,
+                          children: [
+                            TodayTab(
+                              key: _todayTabKey,
+                              selectedDate: _selectedDate,
+                              profileRefreshNotifier:
+                                  widget.profileRefreshNotifier,
+                              onProgressUpdate: updateProgress,
+                            ),
+                            HabitsTab(key: _habitsTabKey),
+                            TasksTab(key: _tasksTabKey),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: IndexedStack(
-                            index: _selectedIndex,
-                            children: [
-                              TodayTab(
-                                key: _todayTabKey,
-                                selectedDate: _selectedDate,
-                                profileRefreshNotifier:
-                                    widget.profileRefreshNotifier,
-                                onProgressUpdate: updateProgress,
-                              ),
-                              HabitsTab(key: _habitsTabKey),
-                              TasksTab(key: _tasksTabKey),
-                            ],
-                          ),
-                        ),
-                        // ✅ این فضای خالی داخل کادر سبز برای جادادن FAB در notch
-                        const SizedBox(height: 32),
-                      ],
-                    ),
+                      ),
+                      // ✅ این فضای خالی داخل کادر سبز برای جادادن FAB در notch
+                      const SizedBox(height: 32),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: _buildFloatingMenuButton(primaryColor),

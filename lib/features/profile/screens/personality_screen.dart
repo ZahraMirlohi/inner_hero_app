@@ -229,31 +229,35 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           ? Center(
               child: CircularProgressIndicator(color: primaryColor),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGenderSelector(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildMBTISection(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildPersonalitySelector(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildInterestsSection(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildGoalsSection(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildBioSection(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildTimePreference(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildExperienceLevel(theme, primaryColor),
-                  const SizedBox(height: 20),
-                  _buildLookingForBuddy(theme, primaryColor),
-                  const SizedBox(height: 32),
-                  _buildSaveButton(primaryColor),
-                ],
+          : SafeArea(
+              // ✅ SafeArea برای رعایت نوار پایین گوشی
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                //                                    ↑ پدینگ اضافه پایین
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildGenderSelector(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildMBTISection(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildPersonalitySelector(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildInterestsSection(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildGoalsSection(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildBioSection(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildTimePreference(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildExperienceLevel(theme, primaryColor),
+                    const SizedBox(height: 20),
+                    _buildLookingForBuddy(theme, primaryColor),
+                    const SizedBox(height: 32),
+                    _buildSaveButton(primaryColor),
+                  ],
+                ),
               ),
             ),
     );

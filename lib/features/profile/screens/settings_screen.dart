@@ -55,255 +55,259 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         foregroundColor: theme.textColor,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // بخش تنظیمات عمومی
-            _buildSettingsGroup(
-              'عمومی',
-              theme,
-              [
-                _buildSwitchTile(
-                  icon: Icons.dark_mode,
-                  title: 'حالت تاریک',
-                  value: _isDarkMode,
-                  onChanged: (value) {
-                    setState(() {
-                      _isDarkMode = value;
-                    });
-                  },
-                  primaryColor: primaryColor,
-                ),
-                _buildSwitchTile(
-                  icon: Icons.notifications,
-                  title: 'اعلان‌ها',
-                  value: _notificationsEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _notificationsEnabled = value;
-                    });
-                  },
-                  primaryColor: primaryColor,
-                ),
-                _buildSwitchTile(
-                  icon: Icons.volume_up,
-                  title: 'صدا',
-                  value: _soundEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _soundEnabled = value;
-                    });
-                  },
-                  primaryColor: primaryColor,
-                ),
-                _buildSwitchTile(
-                  icon: Icons.vibration,
-                  title: 'لرزش',
-                  value: _vibrationEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      _vibrationEnabled = value;
-                    });
-                  },
-                  primaryColor: primaryColor,
-                ),
-                // ✅ آیتم انتخاب رنگ
-                _buildColorTile(theme, primaryColor),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // بخش تنظیمات نمایش
-            _buildSettingsGroup(
-              'نمایش',
-              theme,
-              [
-                _buildDropdownTile(
-                  icon: Icons.calendar_today,
-                  title: 'نوع تقویم',
-                  value: _calendarType,
-                  options: ['شمسی', 'میلادی'],
-                  onChanged: (value) {
-                    if (value != null) {
+      body: SafeArea(
+        // ✅ SafeArea
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+          //                                    ↑ پدینگ اضافه پایین
+          child: Column(
+            children: [
+              // بخش تنظیمات عمومی
+              _buildSettingsGroup(
+                'عمومی',
+                theme,
+                [
+                  _buildSwitchTile(
+                    icon: Icons.dark_mode,
+                    title: 'حالت تاریک',
+                    value: _isDarkMode,
+                    onChanged: (value) {
                       setState(() {
-                        _calendarType = value;
-                        final type = value == 'شمسی' ? 'jalali' : 'gregorian';
-                        DateService.saveCalendarType(type);
+                        _isDarkMode = value;
                       });
-                    }
-                  },
-                  primaryColor: primaryColor,
-                ),
-                _buildDropdownTile(
-                  icon: Icons.language,
-                  title: 'زبان',
-                  value: _language == 'fa' ? 'فارسی' : 'English',
-                  options: ['فارسی', 'English'],
-                  onChanged: (value) {
-                    if (value != null) {
+                    },
+                    primaryColor: primaryColor,
+                  ),
+                  _buildSwitchTile(
+                    icon: Icons.notifications,
+                    title: 'اعلان‌ها',
+                    value: _notificationsEnabled,
+                    onChanged: (value) {
                       setState(() {
-                        _language = value == 'فارسی' ? 'fa' : 'en';
+                        _notificationsEnabled = value;
                       });
-                    }
-                  },
-                  primaryColor: primaryColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                    },
+                    primaryColor: primaryColor,
+                  ),
+                  _buildSwitchTile(
+                    icon: Icons.volume_up,
+                    title: 'صدا',
+                    value: _soundEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _soundEnabled = value;
+                      });
+                    },
+                    primaryColor: primaryColor,
+                  ),
+                  _buildSwitchTile(
+                    icon: Icons.vibration,
+                    title: 'لرزش',
+                    value: _vibrationEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _vibrationEnabled = value;
+                      });
+                    },
+                    primaryColor: primaryColor,
+                  ),
+                  // ✅ آیتم انتخاب رنگ
+                  _buildColorTile(theme, primaryColor),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // بخش حریم خصوصی
-            _buildSettingsGroup(
-              'حریم خصوصی',
-              theme,
-              [
-                _buildSwitchTile(
-                  icon: Icons.lock,
-                  title: 'پروفایل خصوصی',
-                  value: _privateProfile,
-                  onChanged: (value) {
-                    setState(() {
-                      _privateProfile = value;
-                    });
-                  },
-                  primaryColor: primaryColor,
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF44336).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.delete_forever,
-                      color: Color(0xFFF44336),
-                      size: 20,
-                    ),
+              // بخش تنظیمات نمایش
+              _buildSettingsGroup(
+                'نمایش',
+                theme,
+                [
+                  _buildDropdownTile(
+                    icon: Icons.calendar_today,
+                    title: 'نوع تقویم',
+                    value: _calendarType,
+                    options: ['شمسی', 'میلادی'],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _calendarType = value;
+                          final type = value == 'شمسی' ? 'jalali' : 'gregorian';
+                          DateService.saveCalendarType(type);
+                        });
+                      }
+                    },
+                    primaryColor: primaryColor,
                   ),
-                  title: Text(
-                    'حذف حساب کاربری',
-                    style: TextStyle(color: theme.textColor),
+                  _buildDropdownTile(
+                    icon: Icons.language,
+                    title: 'زبان',
+                    value: _language == 'fa' ? 'فارسی' : 'English',
+                    options: ['فارسی', 'English'],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _language = value == 'فارسی' ? 'fa' : 'en';
+                        });
+                      }
+                    },
+                    primaryColor: primaryColor,
                   ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: theme.textSecondaryColor,
-                  ),
-                  onTap: () {
-                    _showDeleteAccountDialog(theme, primaryColor);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // بخش درباره
-            _buildSettingsGroup(
-              'درباره',
-              theme,
-              [
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.info,
-                      color: primaryColor,
-                      size: 20,
-                    ),
+              // بخش حریم خصوصی
+              _buildSettingsGroup(
+                'حریم خصوصی',
+                theme,
+                [
+                  _buildSwitchTile(
+                    icon: Icons.lock,
+                    title: 'پروفایل خصوصی',
+                    value: _privateProfile,
+                    onChanged: (value) {
+                      setState(() {
+                        _privateProfile = value;
+                      });
+                    },
+                    primaryColor: primaryColor,
                   ),
-                  title: Text(
-                    'نسخه اپلیکیشن',
-                    style: TextStyle(color: theme.textColor),
-                  ),
-                  trailing: Text(
-                    '1.0.0',
-                    style: TextStyle(color: theme.textSecondaryColor),
-                  ),
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.people,
-                      color: primaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(
-                    'تیم توسعه',
-                    style: TextStyle(color: theme.textColor),
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: theme.textSecondaryColor,
-                  ),
-                  onTap: () {
-                    _showTeamDialog(theme, primaryColor);
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            // دکمه خروج
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF44336).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      title: const Text('خروج از حساب'),
-                      content: const Text('آیا از خروج خود مطمئن هستید؟'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('انصراف'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text(
-                            'خروج',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ],
+                      child: const Icon(
+                        Icons.delete_forever,
+                        color: Color(0xFFF44336),
+                        size: 20,
+                      ),
                     ),
-                  );
-                  if (confirm == true) {
-                    await _supabase.logout();
-                    if (mounted) {
-                      Navigator.pushReplacementNamed(context, '/login');
+                    title: Text(
+                      'حذف حساب کاربری',
+                      style: TextStyle(color: theme.textColor),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: theme.textSecondaryColor,
+                    ),
+                    onTap: () {
+                      _showDeleteAccountDialog(theme, primaryColor);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // بخش درباره
+              _buildSettingsGroup(
+                'درباره',
+                theme,
+                [
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.info,
+                        color: primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'نسخه اپلیکیشن',
+                      style: TextStyle(color: theme.textColor),
+                    ),
+                    trailing: Text(
+                      '1.0.0',
+                      style: TextStyle(color: theme.textSecondaryColor),
+                    ),
+                  ),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.people,
+                        color: primaryColor,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'تیم توسعه',
+                      style: TextStyle(color: theme.textColor),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: theme.textSecondaryColor,
+                    ),
+                    onTap: () {
+                      _showTeamDialog(theme, primaryColor);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // دکمه خروج
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        title: const Text('خروج از حساب'),
+                        content: const Text('آیا از خروج خود مطمئن هستید؟'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('انصراف'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'خروج',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await _supabase.logout();
+                      if (mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
                     }
-                  }
-                },
-                icon: const Icon(Icons.logout, color: Colors.red),
-                label: const Text(
-                  'خروج از حساب',
-                  style: TextStyle(color: Colors.red),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  label: const Text(
+                    'خروج از حساب',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
