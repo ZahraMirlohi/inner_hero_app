@@ -190,10 +190,12 @@ class _ArenaScreenState extends State<ArenaScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FCEB),
+      // ✅ فضای پایین برای FAB — این باید با FAB هماهنگ باشه
+      bottomNavigationBar: const SizedBox(height: 110),
       body: SafeArea(
         child: Column(
           children: [
-            // ============ هدر تقویم ============
+            // هدر تقویم
             CalendarHeader(
               onDateSelected: _onDateSelected,
               selectedDate: _selectedDate,
@@ -201,7 +203,7 @@ class _ArenaScreenState extends State<ArenaScreen>
 
             const SizedBox(height: 8),
 
-            // ============ نوار وضعیت آفلاین/آنلاین ============
+            // نوار وضعیت
             Consumer<SyncProvider>(
               builder: (context, syncProvider, child) {
                 if (!syncProvider.isOnline ||
@@ -212,12 +214,12 @@ class _ArenaScreenState extends State<ArenaScreen>
               },
             ),
 
-            // ============ پروگرس بار افقی زیبا ============
+            // پروگرس بار
             _buildHorizontalProgressBar(primaryColor),
 
             const SizedBox(height: 12),
 
-            // ============ تب‌ها ============
+            // تب‌ها
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: DashCurvedTabBar(
@@ -258,20 +260,21 @@ class _ArenaScreenState extends State<ArenaScreen>
             const SizedBox(height: 12),
 
             // ============ کادر سفید تب‌ها ============
+            const SizedBox(height: 12),
+
+            // ✅ کادر سبز — بدون فضای اضافی در پایین
             Expanded(
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                 child: ClipPath(
                   clipper: const _BottomNotchClipper(),
                   child: Container(
                     decoration: BoxDecoration(
-                      color:
-                          primaryColor, // ✅ تغییر از Colors.white به primaryColor
+                      color: primaryColor,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withValues(
-                              alpha: 0.25), // ✅ سایه با رنگ تم
+                          color: primaryColor.withValues(alpha: 0.25),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -295,21 +298,19 @@ class _ArenaScreenState extends State<ArenaScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 40),
+                        // ✅ این فضای خالی داخل کادر سبز برای جادادن FAB در notch
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 1),
           ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: _buildFloatingMenuButton(primaryColor),
-      bottomNavigationBar: const SizedBox(height: 100),
     );
   }
 
