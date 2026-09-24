@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
 import '/services/ai_service.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 import '/features/chat/models/message_model.dart';
 import '/features/chat/models/conversation_model.dart';
 
@@ -45,7 +46,6 @@ class _AIChatScreenState extends State<AIChatScreen>
     _chatService = ChatService();
     _aiService = AIService();
 
-    // گوش دادن به تغییرات فوکوس برای مدیریت کیبورد
     _focusNode.addListener(() {
       if (_focusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 300), _scrollToBottom);
@@ -129,7 +129,7 @@ class _AIChatScreenState extends State<AIChatScreen>
     if (text.isEmpty || _conversationId == null || _userId == null) return;
 
     _messageController.clear();
-    _focusNode.unfocus(); // بستن کیبورد بعد از ارسال
+    _focusNode.unfocus();
 
     if (mounted) {
       setState(() {
@@ -188,42 +188,67 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      resizeToAvoidBottomInset: true, // ✅ مهم: برای مدیریت کیبورد
+      backgroundColor: theme.backgroundColor,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF9B59B6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: const Text('🤖', style: TextStyle(fontSize: 18)),
+              child: const Text('🤖', style: TextStyle(fontSize: 20)),
             ),
-            const SizedBox(width: 10),
-            const Column(
+            const SizedBox(width: 12),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'مربی هوش مصنوعی',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textColor,
+                  ),
                 ),
-                Text(
-                  'آنلاین 🟢',
-                  style: TextStyle(fontSize: 11, color: Colors.green),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'آنلاین',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, size: 20),
+            icon: Icon(Icons.refresh, size: 20, color: primaryColor),
             onPressed: _loadMessages,
           ),
         ],
@@ -231,12 +256,12 @@ class _AIChatScreenState extends State<AIChatScreen>
       body: Column(
         children: [
           // Quick Suggestions
-          _buildQuickSuggestions(),
+          _buildQuickSuggestions(theme, primaryColor),
 
-          // Messages - با Expanded برای پر کردن فضا
+          // Messages
           Expanded(
             child: _messages.isEmpty
-                ? _buildEmptyState()
+                ? _buildEmptyState(theme, primaryColor)
                 : ListView.builder(
                     controller: _scrollController,
                     reverse: true,
@@ -247,22 +272,22 @@ class _AIChatScreenState extends State<AIChatScreen>
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[_messages.length - 1 - index];
-                      return _buildMessageBubble(message);
+                      return _buildMessageBubble(message, theme, primaryColor);
                     },
                   ),
           ),
 
-          // ✅ Input Bar با SafeArea در پایین
-          _buildInputBar(),
+          // Input Bar
+          _buildInputBar(theme, primaryColor),
         ],
       ),
     );
   }
 
-  Widget _buildQuickSuggestions() {
+  Widget _buildQuickSuggestions(ThemeProvider theme, Color primaryColor) {
     return Container(
-      height: 46,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _quickSuggestions.length,
@@ -271,17 +296,26 @@ class _AIChatScreenState extends State<AIChatScreen>
             onTap: () => _sendSuggestion(_quickSuggestions[index]),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: const Color(0xFF9B59B6).withValues(alpha: 0.2),
+                  color: primaryColor.withValues(alpha: 0.2),
                 ),
               ),
-              child: Text(
-                _quickSuggestions[index],
-                style: TextStyle(fontSize: 12, color: const Color(0xFF9B59B6)),
+              child: Center(
+                child: Text(
+                  _quickSuggestions[index],
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           );
@@ -290,7 +324,11 @@ class _AIChatScreenState extends State<AIChatScreen>
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message) {
+  Widget _buildMessageBubble(
+    ChatMessage message,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     final isAI = message.isFromAI;
     final isSystem = message.isSystem;
 
@@ -300,7 +338,7 @@ class _AIChatScreenState extends State<AIChatScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -326,43 +364,63 @@ class _AIChatScreenState extends State<AIChatScreen>
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         child: Column(
-          crossAxisAlignment: isAI
-              ? CrossAxisAlignment.start
-              : CrossAxisAlignment.end,
+          crossAxisAlignment:
+              isAI ? CrossAxisAlignment.start : CrossAxisAlignment.end,
           children: [
+            if (isAI)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text('🤖', style: TextStyle(fontSize: 10)),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'مربی هوش مصنوعی',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isAI ? Colors.white : const Color(0xFF9B59B6),
-                borderRadius: BorderRadius.circular(16).copyWith(
-                  bottomLeft: isAI
-                      ? const Radius.circular(4)
-                      : const Radius.circular(16),
-                  bottomRight: isAI
-                      ? const Radius.circular(16)
-                      : const Radius.circular(4),
-                ),
+                color: isAI ? theme.surfaceColor : const Color(0xFF090909),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 6,
-                    offset: const Offset(0, 1),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isAI ? const Color(0xFF1A1A2E) : Colors.white,
+                  color: isAI ? theme.textColor : Colors.white,
                   fontSize: 14,
                   height: 1.5,
                 ),
               ),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 4),
             Text(
               _formatTime(message.createdAt),
-              style: const TextStyle(fontSize: 10, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 10,
+                color: theme.textSecondaryColor,
+              ),
             ),
           ],
         ),
@@ -370,50 +428,52 @@ class _AIChatScreenState extends State<AIChatScreen>
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(ThemeProvider theme, Color primaryColor) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: const Color(0xFF9B59B6).withValues(alpha: 0.05),
+              color: primaryColor.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.auto_awesome,
               size: 48,
-              color: Color(0xFF9B59B6),
+              color: primaryColor,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          const SizedBox(height: 20),
+          Text(
             'از مربی هوش مصنوعی بپرسید!',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'برنامه‌ریزی، انگیزه و راهنمایی شخصی',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.textSecondaryColor,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ✅ Input Bar با SafeArea و مدیریت کیبورد
-  Widget _buildInputBar() {
+  Widget _buildInputBar(ThemeProvider theme, Color primaryColor) {
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.surfaceColor,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -427,8 +487,11 @@ class _AIChatScreenState extends State<AIChatScreen>
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(30),
+                  color: primaryColor.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: primaryColor.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: TextField(
                   controller: _messageController,
@@ -437,11 +500,11 @@ class _AIChatScreenState extends State<AIChatScreen>
                     hintText: 'پیام خود را بنویسید...',
                     hintStyle: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey.shade500,
+                      color: theme.textSecondaryColor,
                     ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
+                      horizontal: 18,
                       vertical: 12,
                     ),
                   ),
@@ -455,10 +518,17 @@ class _AIChatScreenState extends State<AIChatScreen>
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _isLoading
-                    ? Colors.grey.shade300
-                    : const Color(0xFF9B59B6),
+                color: _isLoading ? Colors.grey.shade300 : primaryColor,
                 shape: BoxShape.circle,
+                boxShadow: _isLoading
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: IconButton(
                 padding: EdgeInsets.zero,
@@ -472,7 +542,11 @@ class _AIChatScreenState extends State<AIChatScreen>
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.send, color: Colors.white, size: 22),
+                    : const Icon(
+                        Icons.send,
+                        color: Colors.white,
+                        size: 22,
+                      ),
               ),
             ),
           ],

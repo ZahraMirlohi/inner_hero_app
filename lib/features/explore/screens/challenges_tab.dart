@@ -321,14 +321,20 @@ class _NotchedChallengeCard extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           // ─── لایه ۱: تگ داخل حفره ───
+          // ─── لایه ۱: تگ داخل حفره ───
           if (showNotch)
             Positioned(
-              top: 6,
-              right: notchRightOffset,
-              child: _buildNotchTag(
-                notchIcon,
-                notchLabel,
-                accentColor,
+              top: 0, // ✅ از 6 به 0
+              left: 0,
+              right: 0,
+              height: notchDepth, // ✅ ارتفاع دقیقاً برابر عمق حفره
+              child: Center(
+                // ✅ وسط‌چین دقیقاً در حفره
+                child: _buildNotchTag(
+                  notchIcon,
+                  notchLabel,
+                  accentColor,
+                ),
               ),
             ),
 
@@ -454,8 +460,8 @@ class _NotchedChallengeCard extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 14, // ✅ از 16 به 14
+                fontWeight: FontWeight.w600, // ✅ از bold به w600
                 color: textColor,
                 height: 1.3,
               ),
@@ -508,8 +514,8 @@ class _NotchedChallengeCard extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
-    Color? textColor, // ✅ جدید (اختیاری)
-    Color? subtleColor, // ✅ جدید (اختیاری)
+    Color? textColor,
+    Color? subtleColor,
   }) {
     final Color finalTextColor = textColor ?? const Color(0xFF090909);
     final Color finalSubtleColor =
@@ -518,19 +524,19 @@ class _NotchedChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15), // کمی شفاف‌تر برای خوانایی
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 12, color: finalSubtleColor),
+          Icon(icon, size: 11, color: finalSubtleColor), // ✅ از 12 به 11
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+              fontSize: 9, // ✅ از 10 به 9
+              fontWeight: FontWeight.w500, // ✅ از w600 به w500
               color: finalTextColor,
             ),
           ),
@@ -543,35 +549,26 @@ class _NotchedChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            color,
-            Color.lerp(color, Colors.black, 0.15)!,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        // ✅ رنگ پاستیلی ساده (بدون گرادیانت)
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.4),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.white),
+          Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.3,
+              color: color,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -934,7 +931,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     return Container(
       color: const Color(0xFFF7FCEB),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+        padding: const EdgeInsets.fromLTRB(16, 100, 16, 120),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -942,14 +939,27 @@ class _ChallengesTabState extends State<ChallengesTab> {
             if (successfulChallenges.isNotEmpty) ...[
               _buildSectionHeader(
                 icon: Icons.emoji_events,
-                title: '🏆 چالش‌های موفق',
+                title: ' چالش‌های موفق',
                 color: Colors.green,
+                centered: true,
               ),
               const SizedBox(height: 12),
-              ...successfulChallenges.map(
-                (challenge) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildSuccessCard(challenge, primaryColor),
+              // ✅ اسکرول افقی کارت‌های کوچک
+              SizedBox(
+                height: 140,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  itemCount: successfulChallenges.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: _buildSuccessCard(
+                        successfulChallenges[index],
+                        primaryColor,
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),
@@ -959,27 +969,42 @@ class _ChallengesTabState extends State<ChallengesTab> {
             if (activeChallenges.isNotEmpty) ...[
               _buildSectionHeader(
                 icon: Icons.play_circle,
-                title: '⚡ چالش‌های فعال من',
+                title: ' چالش‌های فعال من',
                 color: const Color(0xFF090909),
+                centered: true, // ✅
               ),
               const SizedBox(height: 12),
-              ...activeChallenges.map(
-                (challenge) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildActiveCard(challenge, primaryColor),
+              SizedBox(
+                height: 200, // ✅ ارتفاع ثابت برای یکسان بودن کارت‌ها
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal, // ✅ اسکرول افقی
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  itemCount: activeChallenges.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: SizedBox(
+                        width: 280, // ✅ عرض ثابت برای هر کارت
+                        child: _buildActiveCard(
+                          activeChallenges[index],
+                          const Color.fromARGB(255, 108, 188, 224),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),
             ],
-
             // ─── چالش‌های جدید (دو ستونه) ───
             if (otherChallenges.isNotEmpty) ...[
               _buildSectionHeader(
                 icon: Icons.explore,
-                title: '✨ چالش‌های جدید',
-                color: const Color(0xFFFFA500),
+                title: ' چالش‌های جدید',
+                color: const Color.fromARGB(255, 0, 0, 0),
+                centered: true,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 12), // ✅ از 12 به 8
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -991,11 +1016,15 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             (index, challenge) => MapEntry(
                               index,
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: _buildNewCard(
-                                  challenge,
-                                  primaryColor,
-                                  index % 8,
+                                // ✅ از 14 به 6
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: SizedBox(
+                                  height: 170,
+                                  child: _buildNewCard(
+                                    challenge,
+                                    primaryColor,
+                                    index % 8,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1004,7 +1033,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                           .toList(),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10), // ✅ از 12 به 10
                   Expanded(
                     child: Column(
                       children: rightColumn
@@ -1013,11 +1042,15 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             (index, challenge) => MapEntry(
                               index,
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: _buildNewCard(
-                                  challenge,
-                                  primaryColor,
-                                  (index + leftColumn.length) % 8,
+                                // ✅ از 14 به 6
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: SizedBox(
+                                  height: 170,
+                                  child: _buildNewCard(
+                                    challenge,
+                                    primaryColor,
+                                    (index + leftColumn.length) % 8,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1028,7 +1061,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12), // ✅ از 16 به 12
             ],
           ],
         ),
@@ -1041,40 +1074,271 @@ class _ChallengesTabState extends State<ChallengesTab> {
   // ═══════════════════════════════════════════════════════════
 
   Widget _buildSuccessCard(Map<String, dynamic> challenge, Color primaryColor) {
-    final challengeId = challenge['id'];
-    final totalDays = challenge['challenge_duration'] as int? ?? 7;
+    final title = challenge['title'] ?? 'چالش';
+    final duration = challenge['challenge_duration'] as int? ?? 7;
 
-    return FutureBuilder<int>(
-      key: ValueKey('success_${challengeId}_$_refreshCounter'),
-      future: _getCachedParticipants(challengeId),
-      builder: (context, snapshot) {
-        return _NotchedChallengeCard(
-          challenge: challenge,
-          accentColor: Colors.green,
-          primaryColor: primaryColor,
-          isCompleted: true,
-          participants: snapshot.data,
-          notchLabel: '$totalDays روز', // ← اینجا تغییر کرد
-          notchIcon: Icons.calendar_today, // ← آیکون تقویم
-          onTap: () => widget.showChallengeDetails(challenge),
-        );
-      },
+    return GestureDetector(
+      onTap: () => widget.showChallengeDetails(challenge),
+      child: Container(
+        width: 130,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          // ✅ گرادیانت طلایی-نارنجی پس‌زمینه
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFFDF5), // کرم خیلی روشن
+              Color(0xFFFFF0C4), // طلایی کرم
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            // ✅ درخشش طلایی قوی‌تر از ماموریت
+            BoxShadow(
+              color: const Color(0xFFFFA500).withValues(alpha: 0.25),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ═══════════════════════════════════════════
+              // 🌟 ستاره‌های تزئینی گوشه
+              // ═══════════════════════════════════════════
+              SizedBox(
+                height: 14,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // جرقه چپ
+                    const Icon(
+                      Icons.star,
+                      size: 10,
+                      color: Color(0xFFFFC107),
+                    ),
+                    const SizedBox(width: 4),
+                    // جرقه میانی (بزرگ‌تر)
+                    const Icon(
+                      Icons.star,
+                      size: 14,
+                      color: Color(0xFFFFA500),
+                    ),
+                    const SizedBox(width: 4),
+                    // جرقه راست
+                    const Icon(
+                      Icons.star,
+                      size: 10,
+                      color: Color(0xFFFFC107),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ═══════════════════════════════════════════
+              // 🏆 جام طلایی
+              // ═══════════════════════════════════════════
+              Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // ✅ هاله درخشش پشت جام
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFFFFD700).withValues(alpha: 0.35),
+                          const Color(0xFFFFD700).withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // ✅ جام
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // ✅ گرادیانت طلایی براق
+                      gradient: const RadialGradient(
+                        center: Alignment(-0.4, -0.4),
+                        radius: 0.9,
+                        colors: [
+                          Color(0xFFFFF8B0), // درخشان
+                          Color(0xFFFFD700), // طلایی
+                          Color(0xFFE5A100), // طلایی تیره
+                          Color(0xFFB8860B), // طلایی قهوه‌ای
+                        ],
+                        stops: [0.0, 0.4, 0.75, 1.0],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFFD700).withValues(alpha: 0.6),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFB8860B).withValues(alpha: 0.4),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        // حلقه داخلی
+                        Positioned.fill(
+                          child: Container(
+                            margin: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFFFF8B0)
+                                    .withValues(alpha: 0.7),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // ✅ آیکون جام
+                        const Center(
+                          child: Icon(
+                            Icons.emoji_events,
+                            size: 30,
+                            color: Color(0xFF5D4037), // قهوه‌ای تیره
+                          ),
+                        ),
+                        // ✨ درخشش بالا-راست
+                        Positioned(
+                          top: 6,
+                          right: 8,
+                          child: Container(
+                            width: 5,
+                            height: 5,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 14,
+                          right: 14,
+                          child: Container(
+                            width: 3,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 6),
+
+              // ═══════════════════════════════════════════
+              // 📛 پلاک نام
+              // ═══════════════════════════════════════════
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  // ✅ پس‌زمینه پلاک قهوه‌ای تیره
+                  color: const Color(0xFF5D4037),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5D4037).withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFFF8B0),
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              // ═══════════════════════════════════════════
+              // 🏅 برچسب «قهرمان»
+              // ═══════════════════════════════════════════
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFA500).withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFFFA500).withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.workspace_premium,
+                      size: 10,
+                      color: Color(0xFFE5A100),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '$duration روز قهرمانی',
+                      style: const TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFB8860B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildActiveCard(Map<String, dynamic> challenge, Color primaryColor) {
     final challengeId = challenge['id'];
     final totalDays = challenge['challenge_duration'] as int? ?? 7;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final Color primaryLight = themeProvider.primaryLight;
 
-    // ✅ رنگ سبز پویا بر اساس primaryColor
-    // از HSL استفاده می‌کنیم تا سبز رو با ته‌رنگ primaryColor بسازیم
-    final HSLColor hsl = HSLColor.fromColor(primaryColor);
-    final Color dynamicGreen = HSLColor.fromAHSL(
-      1.0,
-      hsl.hue, // ✅ hue از تم
-      0.55, // اشباع متوسط
-      0.45, // روشنایی متوسط
-    ).toColor();
+    // ✅ حذف dynamicGreen — استفاده مستقیم از primaryColor
 
     return FutureBuilder<List<dynamic>>(
       key: ValueKey('active_${challengeId}_$_refreshCounter'),
@@ -1096,21 +1360,257 @@ class _ChallengesTabState extends State<ChallengesTab> {
           progress = total > 0 ? completedDays / total : 0.0;
         }
 
-        return _NotchedChallengeCard(
-          challenge: challenge,
-          accentColor: dynamicGreen, // ✅ رنگ accent پویا
-          primaryColor: primaryColor,
-          isActive: true,
-          participants: participants,
-          progressValue: progress,
-          progressText: '$completedDays از $total روز',
-          notchLabel: '$total روز',
-          notchIcon: Icons.calendar_today,
-          showNotch: false, // ✅ بدون حفره
-          fillColor: dynamicGreen, // ✅ رنگ پس‌زمینه سبز پویا
-          showBorder: false, // ✅ بدون بوردر
-          onTap: () => widget.showChallengeDetails(challenge),
-          onLeave: () => _showLeaveChallengeDialog(challenge),
+        final title = challenge['title'] ?? 'بدون عنوان';
+        final xpReward = challenge['xp_reward'] as int? ?? 50;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: primaryColor, // ✅ رنگ تم اپلیکیشن
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withValues(alpha: 0.30),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ─── ردیف بالا: مدت زمان ───
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.timer_outlined,
+                            size: 11,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$total روز',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.bolt,
+                            size: 11,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          const Text(
+                            'فعال',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // ─── عنوان ───
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 10),
+
+                // ─── نوار پیشرفت ───
+                Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0.0, 1.0),
+                        backgroundColor: Colors.white.withValues(alpha: 0.25),
+                        color: const Color(0xFF090909),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text(
+                          '$completedDays از $total روز',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${(progress * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                const Spacer(),
+
+                // ─── ردیف پایین: XP + دکمه‌ها ───
+                Row(
+                  children: [
+                    // XP
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.stars,
+                            size: 11,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '+$xpReward XP',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+
+                    // ✅ دکمه مشاهده (مشکی)
+                    GestureDetector(
+                      onTap: () => widget.showChallengeDetails(challenge),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF090909),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.visibility_outlined,
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 3),
+                            Text(
+                              'مشاهده',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 6),
+
+                    // ✅ دکمه حذف (primaryLight)
+                    GestureDetector(
+                      onTap: () => _showLeaveChallengeDialog(challenge),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color.fromARGB(255, 255, 255, 255),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.delete_outline,
+                              size: 12,
+                              color: Color(0xFF090909),
+                            ),
+                            SizedBox(width: 3),
+                            Text(
+                              'حذف',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF090909),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -1165,7 +1665,35 @@ class _ChallengesTabState extends State<ChallengesTab> {
     required IconData icon,
     required String title,
     required Color color,
+    bool centered = false, // ✅ پارامتر جدید
   }) {
+    if (centered) {
+      return Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Row(
       children: [
         Container(

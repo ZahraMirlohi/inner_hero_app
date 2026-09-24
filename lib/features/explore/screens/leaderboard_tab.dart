@@ -180,6 +180,9 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       color: const Color(0xFFF7FCEB),
       child: Column(
         children: [
+          // ✅ پدینگ بالای صفحه (ارتفاع تب‌بار)
+          const SizedBox(height: 100),
+
           _buildHeader(primaryColor),
           Expanded(
             child: _isLoading
@@ -202,16 +205,17 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: primaryColor,
+        color: const Color.fromARGB(255, 255, 191, 53),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.3),
+            color:
+                const Color.fromARGB(255, 255, 191, 53).withValues(alpha: 0.3),
             blurRadius: 16,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -275,7 +279,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                       ),
                       const SizedBox(width: 5),
                       Text(
-                        'رتبه شما: #$_currentUserRank',
+                        'رتبه شما: $_currentUserRank',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -304,7 +308,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       color: primaryColor,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 120),
+        padding: const EdgeInsets.only(top: 100, bottom: 120),
         child: Column(
           children: [
             // ✅ پاس دادن primaryColor به _buildPodium
@@ -506,17 +510,18 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
             children: [
               // ─── شماره رتبه ───
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '#$rank',
+                  '$rank',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 0, 0, 0),
                   ),
                 ),
               ),
@@ -653,7 +658,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
               ),
               child: Center(
                 child: Text(
-                  '#$rank',
+                  '$rank',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w900,

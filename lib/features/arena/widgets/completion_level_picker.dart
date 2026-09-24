@@ -10,7 +10,6 @@ class CompletionLevelPicker extends StatefulWidget {
   final int habitXpReward;
   final Function(CompletionLevel) onSelected;
 
-  // ✅ فیلدهای جدید برای نمایش اطلاعات واقعی
   final String? fullDescription;
   final String? halfDescription;
   final String? basicDescription;
@@ -45,22 +44,18 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final Color primaryColor = themeProvider.primaryColor;
 
-    // ✅ تشخیص نوع عادت
     final bool isQuest = widget.isQuest ?? false;
     final bool isChallenge = widget.isChallenge ?? false;
 
-    // ✅ تعیین توضیحات پیش‌فرض بر اساس نوع
     String defaultFull = isQuest ? 'انجام کامل ماموریت' : 'انجام کامل عادت';
     String defaultHalf =
         isQuest ? 'انجام نیمی از ماموریت' : 'انجام نیمی از عادت';
     String defaultBasic = isQuest ? 'انجام حداقل ماموریت' : 'انجام حداقل عادت';
 
-    // ✅ استفاده از مقادیر واقعی یا پیش‌فرض
     final fullDesc = widget.fullDescription ?? defaultFull;
     final halfDesc = widget.halfDescription ?? defaultHalf;
     final basicDesc = widget.basicDescription ?? defaultBasic;
 
-    // ✅ بررسی اینکه آیا تنظیمات سفارشی است
     final bool isCustomFull =
         widget.fullDescription != null && widget.fullDescription != defaultFull;
     final bool isCustomHalf =
@@ -68,7 +63,6 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     final bool isCustomBasic = widget.basicDescription != null &&
         widget.basicDescription != defaultBasic;
 
-    // ✅ برچسب نوع عادت
     String typeLabel = '';
     if (isQuest) {
       typeLabel = 'ماموریت';
@@ -77,9 +71,9 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     }
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -89,26 +83,26 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    color: primaryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.emoji_events,
                     color: primaryColor,
-                    size: 28,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'چگونه انجام دادی؟',
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -118,7 +112,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                             child: Text(
                               widget.habitTitle,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: Colors.grey.shade600,
                               ),
                               maxLines: 1,
@@ -127,21 +121,21 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                           ),
                           if (typeLabel.isNotEmpty)
                             Container(
-                              margin: const EdgeInsets.only(left: 8),
+                              margin: const EdgeInsets.only(left: 6),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                                horizontal: 6,
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
                                 color: isQuest
                                     ? Colors.purple.withOpacity(0.1)
                                     : Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 typeLabel,
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.w600,
                                   color:
                                       isQuest ? Colors.purple : Colors.orange,
@@ -155,7 +149,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                         Text(
                           '🎯 هدف: ${widget.targetValue}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             color: primaryColor,
                             fontWeight: FontWeight.w500,
                           ),
@@ -165,7 +159,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // ==================== گزینه‌ها ====================
             _buildLevelOption(
@@ -174,7 +168,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               isCustom: isCustomFull,
               primaryColor: primaryColor,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             _buildLevelOption(
               CompletionLevel.half,
@@ -182,7 +176,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               isCustom: isCustomHalf,
               primaryColor: primaryColor,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             _buildLevelOption(
               CompletionLevel.basic,
@@ -191,7 +185,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               primaryColor: primaryColor,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // ✅ دکمه تایید
             SizedBox(
@@ -204,9 +198,9 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 child: Text(
@@ -214,7 +208,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                       ? 'یک گزینه را انتخاب کنید'
                       : 'تایید ${_selectedLevel!.emoji}',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -247,7 +241,6 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     final isSelected = _selectedLevel == level;
     final xpEarned = (widget.habitXpReward * level.xpMultiplier / 100).round();
 
-    // ✅ محاسبه مقدار هدف برای هر سطح
     String? levelValue;
     if (widget.targetValue != null && widget.targetValue!.isNotEmpty) {
       levelValue = _calculateLevelValue(widget.targetValue!, level);
@@ -260,20 +253,13 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? level.color.withOpacity(0.1)
-              : isCustom
-                  ? level.color.withOpacity(0.04)
-                  : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(16),
+          color:
+              isSelected ? level.color.withOpacity(0.08) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected
-                ? level.color
-                : isCustom
-                    ? level.color.withOpacity(0.2)
-                    : Colors.grey.shade200,
+            color: isSelected ? level.color : Colors.grey.shade200,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -281,9 +267,9 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
           children: [
             Text(
               level.emoji,
-              style: const TextStyle(fontSize: 28),
+              style: const TextStyle(fontSize: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,49 +279,30 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                       Text(
                         level.displayName,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: isSelected
                               ? level.color
                               : const Color(0xFF1A1A2E),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       if (isCustom)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 5,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
                             color: level.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             'سفارشی',
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 8,
                               fontWeight: FontWeight.w500,
                               color: level.color,
-                            ),
-                          ),
-                        ),
-                      if (!isCustom)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'پیش‌فرض',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey,
                             ),
                           ),
                         ),
@@ -345,22 +312,21 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: isSelected
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade600,
+                          ? Colors.grey.shade700
+                          : Colors.grey.shade500,
                     ),
                   ),
-                  // ✅ نمایش مقدار هدف برای هر سطح
                   if (levelValue != null) ...[
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 6,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: level.color.withOpacity(0.08),
+                        color: level.color.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -368,14 +334,14 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                         children: [
                           Icon(
                             Icons.flag,
-                            size: 12,
+                            size: 10,
                             color: level.color,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Text(
                             'نیاز: $levelValue',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w500,
                               color: level.color,
                             ),
@@ -388,15 +354,15 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: level.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: level.color.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '+$xpEarned XP',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: level.color,
                 ),
@@ -408,7 +374,6 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     );
   }
 
-  // ✅ متد محاسبه مقدار هدف برای هر سطح
   String? _calculateLevelValue(String targetValue, CompletionLevel level) {
     if (targetValue.isEmpty) return null;
 

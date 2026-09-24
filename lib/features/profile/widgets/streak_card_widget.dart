@@ -45,66 +45,82 @@ class StreakCardWidget extends StatelessWidget {
     const Color kTextSecondary = Color(0xFF73786B);
     final Color kGreen = theme.primaryColor; // قابل تغییر توسط کاربر
 
-    // ✅ بدون باکس سفید پشت زمینه — فقط پدینگ ساده
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    // ✅ باکس سفید پشت کل محتوا
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         children: [
-          // ---------- هدر ----------
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    isOnFire ? '🔥' : '⚡',
-                    style: const TextStyle(fontSize: 18),
+          // ---------- هدر (وسط‌چین + بولد + مشکی) ----------
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isOnFire ? '🔥' : '⚡',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'استریک روزانه',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: kBlack,
                   ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'استریک روزانه',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // ✅ بج رکورد (زیر عنوان، وسط‌چین)
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
+              decoration: BoxDecoration(
+                color: kGreen.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.emoji_events,
+                    size: 14,
+                    color: kBlack,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$bestStreak رکورد',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                       color: kBlack,
                     ),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: kGreen.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.emoji_events,
-                      size: 14,
-                      color: kBlack,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$bestStreak رکورد',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: kBlack,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
 
           const SizedBox(height: 22),
 
-          // ---------- دایره‌ی بزرگ استریک + ۷ دایره‌ی کوچک به‌صورت منحنی با فاصله از لبه ----------
+          // ---------- دایره‌ی بزرگ استریک + ۷ دایره‌ی کوچک ----------
           _buildStreakOrb(
             kBlack: kBlack,
             kGreen: kGreen,
@@ -116,7 +132,7 @@ class StreakCardWidget extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // ---------- پیام انگیزشی (بیرون از دایره) ----------
+          // ---------- پیام انگیزشی ----------
           Text(
             _getMotivationalMessage(currentStreak),
             textAlign: TextAlign.center,

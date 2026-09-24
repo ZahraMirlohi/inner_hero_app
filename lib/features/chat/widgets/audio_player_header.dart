@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/audio_player_service.dart';
+import '/providers/theme_provider.dart';
 
 class AudioPlayerHeader extends StatefulWidget {
   const AudioPlayerHeader({super.key});
@@ -79,6 +80,9 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     if (_audioService.currentUrl == null) {
       return const SizedBox.shrink();
     }
@@ -87,15 +91,14 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: isActive ? 56 : 0,
+      height: isActive ? 64 : 0,
       child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        height: 64,
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade900,
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade800, width: 1),
-          ),
+          color: const Color(0xFF090909),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
@@ -108,171 +111,165 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
           children: [
             // ✅ آیکون
             Container(
-              width: 32,
-              height: 32,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: _isBuffering
-                    ? Colors.orange.shade700
+                    ? Colors.orange.withValues(alpha: 0.2)
                     : _isLoading
-                    ? Colors.grey.shade700
-                    : Colors.purple.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
+                        ? Colors.grey.withValues(alpha: 0.2)
+                        : primaryColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: _isBuffering
-                  ? const Icon(
-                      Icons.hourglass_empty,
-                      color: Colors.orange,
-                      size: 16,
-                    )
-                  : _isLoading
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
+                  ? const Center(
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.orange,
+                        ),
                       ),
                     )
-                  : Icon(
-                      _isPlaying ? Icons.music_note : Icons.music_note,
-                      color: _isPlaying ? Colors.purple : Colors.grey.shade400,
-                      size: 16,
-                    ),
+                  : _isLoading
+                      ? const Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          _isPlaying ? Icons.pause : Icons.music_note,
+                          color: primaryColor,
+                          size: 18,
+                        ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
 
             // ✅ اطلاعات آهنگ
             Expanded(
-              child: Row(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _fileName ?? 'در حال بارگذاری...',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 1),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SliderTheme(
-                                data: SliderThemeData(
-                                  trackHeight: 2,
-                                  thumbShape: const RoundSliderThumbShape(
-                                    enabledThumbRadius: 4,
-                                  ),
-                                  overlayShape: const RoundSliderOverlayShape(
-                                    overlayRadius: 6,
-                                  ),
-                                  activeTrackColor: _isLoading || _isBuffering
-                                      ? Colors.grey.shade600
-                                      : Colors.purple,
-                                  inactiveTrackColor: Colors.grey.shade600,
-                                  thumbColor: _isLoading || _isBuffering
-                                      ? Colors.grey.shade600
-                                      : Colors.purple,
-                                  overlayColor: Colors.purple.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                ),
-                                child: Slider(
-                                  value: _duration.inMilliseconds > 0
-                                      ? (_position.inMilliseconds /
-                                                _duration.inMilliseconds)
-                                            .clamp(0.0, 1.0)
-                                      : 0.0,
-                                  onChanged: (_isLoading || _isBuffering)
-                                      ? null
-                                      : (_duration.inMilliseconds > 0
-                                            ? _seekTo
-                                            : null),
-                                  min: 0,
-                                  max: 1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatDuration(_position),
-                              style: TextStyle(
-                                fontSize: 8,
-                                color: _isLoading || _isBuffering
-                                    ? Colors.grey.shade500
-                                    : Colors.grey.shade400,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  Text(
+                    _fileName ?? 'در حال بارگذاری...',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 5,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 8,
+                            ),
+                            activeTrackColor: _isLoading || _isBuffering
+                                ? Colors.grey.shade600
+                                : primaryColor,
+                            inactiveTrackColor: Colors.grey.shade700,
+                            thumbColor: _isLoading || _isBuffering
+                                ? Colors.grey.shade600
+                                : primaryColor,
+                            overlayColor: primaryColor.withValues(alpha: 0.2),
+                          ),
+                          child: Slider(
+                            value: _duration.inMilliseconds > 0
+                                ? (_position.inMilliseconds /
+                                        _duration.inMilliseconds)
+                                    .clamp(0.0, 1.0)
+                                : 0.0,
+                            onChanged: (_isLoading || _isBuffering)
+                                ? null
+                                : (_duration.inMilliseconds > 0
+                                    ? _seekTo
+                                    : null),
+                            min: 0,
+                            max: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDuration(_position),
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: _isLoading || _isBuffering
+                              ? Colors.grey.shade500
+                              : Colors.grey.shade400,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
             // ✅ دکمه‌ها
-            Row(
-              children: [
-                // دکمه بستن
-                IconButton(
-                  onPressed: () => _audioService.stop(),
-                  icon: const Icon(Icons.close, color: Colors.grey, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 2),
+            IconButton(
+              onPressed: () => _audioService.stop(),
+              icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 6),
 
-                // دکمه پلی/مکث
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: (_isLoading || _isBuffering)
-                        ? Colors.grey.shade600
-                        : Colors.purple,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.purple.withValues(alpha: 0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+            // دکمه پلی/مکث
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: (_isLoading || _isBuffering)
+                    ? Colors.grey.shade700
+                    : primaryColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
-                  child: IconButton(
-                    onPressed: (_isLoading || _isBuffering)
-                        ? null
-                        : _togglePlayback,
-                    icon: _isLoading || _isBuffering
-                        ? const SizedBox(
-                            width: 12,
-                            height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(
-                            _isPlaying ? Icons.pause : Icons.play_arrow,
+                ],
+              ),
+              child: IconButton(
+                onPressed:
+                    (_isLoading || _isBuffering) ? null : _togglePlayback,
+                icon: _isLoading || _isBuffering
+                    ? const Center(
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             color: Colors.white,
-                            size: 14,
                           ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ),
-              ],
+                        ),
+                      )
+                    : Icon(
+                        _isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ),
           ],
         ),

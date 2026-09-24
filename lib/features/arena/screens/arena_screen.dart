@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:dash_curved_tab_bar/dash_curved_tab_bar.dart';
 import '../widgets/calendar_header.dart';
 import 'today_tab.dart';
 import 'habits_tab.dart';
@@ -48,6 +47,9 @@ class _ArenaScreenState extends State<ArenaScreen>
   ];
 
   bool _isMenuOpen = false;
+
+  // ✅ عرض استاندارد برای همه کادرها
+  static const double _horizontalMargin = 16.0;
 
   @override
   void initState() {
@@ -199,7 +201,7 @@ class _ArenaScreenState extends State<ArenaScreen>
             selectedDate: _selectedDate,
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
 
           // نوار وضعیت
           Consumer<SyncProvider>(
@@ -214,68 +216,54 @@ class _ArenaScreenState extends State<ArenaScreen>
           // پروگرس بار
           _buildHorizontalProgressBar(primaryColor),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
-          // تب‌ها
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: DashCurvedTabBar(
-              tabs: _tabs,
-              icons: _tabs.asMap().entries.map((entry) {
-                final index = entry.key;
-                final isSelected = _selectedIndex == index;
-                return Icon(
-                  _icons[index],
-                  color: isSelected
-                      ? const Color(0xFF090909)
-                      : const Color(0xFF73786B),
-                  size: 20,
-                );
-              }).toList(),
-              selectedIndex: _selectedIndex,
-              onTap: _onTabChanged,
-              tabBarHeight: 54,
-              tabBarBorderRadius: 30,
-              selectedTabColor: primaryColor,
-              selectedTabTextStyle: const TextStyle(
-                color: Color(0xFF090909),
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+          // ✅ تب‌بار جدید
+          _CustomTabBar(
+            currentIndex: _selectedIndex,
+            onTap: _onTabChanged,
+            items: List.generate(
+              _tabs.length,
+              (index) => _TabBarItem(
+                icon: _icons[index],
+                label: _tabs[index],
               ),
-              unselectedTabTextStyle: const TextStyle(
-                color: Color(0xFF73786B),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              iconPosition: IconPosition.left,
-              hideTabText: false,
-              hideBorders: true,
-              showDivider: false,
             ),
+            primaryColor: primaryColor,
+            spacing: 8.0, // ✅ فاصله بین تب‌ها - خودتان تغییر دهید
+            height: 62.0, // ✅ ارتفاع کادر
+            selectedCircleSize: 46.0, // ✅ ارتفاع دایره انتخاب شده
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
-          // ============ کادر سفید تب‌ها ============
-          const SizedBox(height: 12),
-
-          // ✅ کادر سبز — بدون فضای اضافی در پایین
+          // ✅ کادر اصلی - سفید با سایه زیبا
           Expanded(
             child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              margin: const EdgeInsets.symmetric(horizontal: _horizontalMargin),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.20),
+                    blurRadius: 32,
+                    spreadRadius: -4,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
               child: ClipPath(
                 clipper: const _BottomNotchClipper(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: primaryColor,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                   ),
                   child: Column(
                     children: [
@@ -295,7 +283,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                           ],
                         ),
                       ),
-                      // ✅ این فضای خالی داخل کادر سبز برای جادادن FAB در notch
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -310,18 +297,18 @@ class _ArenaScreenState extends State<ArenaScreen>
     );
   }
 
-  // ==================== پروگرس بار افقی زیبا ====================
+  // ==================== پروگرس بار افقی ====================
 
   Widget _buildHorizontalProgressBar(Color primaryColor) {
-    // ✅ رنگ پروگرس بار - همیشه مشکی
     final Color progressColor = const Color(0xFF090909);
-
-    // ✅ محاسبه درصد
     final int percent = (_currentProgress * 100).toInt();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.symmetric(
+        horizontal: _horizontalMargin,
+        vertical: 4,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -335,12 +322,8 @@ class _ArenaScreenState extends State<ArenaScreen>
       ),
       child: Column(
         children: [
-          // ============================================================
-          // پروگرس بار
-          // ============================================================
           Stack(
             children: [
-              // ریل پشتی (Track)
               Container(
                 height: 24,
                 decoration: BoxDecoration(
@@ -348,8 +331,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-
-              // نوار پروگرس با انیمیشن
               AnimatedContainer(
                 duration: const Duration(milliseconds: 600),
                 curve: Curves.easeOutCubic,
@@ -362,15 +343,14 @@ class _ArenaScreenState extends State<ArenaScreen>
 
                       return Stack(
                         children: [
-                          // نوار پروگرس با گرادیانت مشکی
                           Container(
                             width: progressWidth,
                             height: 24,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
+                              gradient: const LinearGradient(
                                 colors: [
-                                  const Color(0xFF2A2A2A),
-                                  const Color(0xFF090909),
+                                  Color(0xFF2A2A2A),
+                                  Color(0xFF090909),
                                 ],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
@@ -385,8 +365,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                               ],
                             ),
                           ),
-
-                          // درخشش روی نوک پروگرس
                           if (_currentProgress > 0.05 &&
                               _currentProgress < 0.98)
                             Positioned(
@@ -408,8 +386,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                                 ),
                               ),
                             ),
-
-                          // نقطه درخشان متحرک روی نوک پروگرس
                           if (_currentProgress > 0.02 &&
                               _currentProgress < 0.98)
                             Positioned(
@@ -438,14 +414,11 @@ class _ArenaScreenState extends State<ArenaScreen>
                   ),
                 ),
               ),
-
-              // آیکون‌های تزئینی روی نوار
               Positioned.fill(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: [
-                      // آیکون سمت چپ
                       Container(
                         width: 16,
                         height: 16,
@@ -464,7 +437,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                         ),
                       ),
                       const Spacer(),
-                      // آیکون سمت راست
                       Container(
                         width: 16,
                         height: 16,
@@ -488,15 +460,10 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ],
           ),
-
-          // ============================================================
-          // ✅ درصد پیشرفت زیر پروگرس بار
-          // ============================================================
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // آیکون کوچک انگیزشی
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -514,8 +481,6 @@ class _ArenaScreenState extends State<ArenaScreen>
                 ),
               ),
               const SizedBox(width: 6),
-
-              // درصد با رنگ برجسته
               Text(
                 '$percent%',
                 style: TextStyle(
@@ -534,24 +499,19 @@ class _ArenaScreenState extends State<ArenaScreen>
   // ==================== Floating Menu Button ====================
 
   Widget _buildFloatingMenuButton(Color primaryColor) {
-    // ✅ عرض کل فضا برای منوی افقی
     final double totalWidth = 320;
     final double buttonSize = 56;
 
     return SizedBox(
       width: totalWidth,
-      height: 50, // ✅ ارتفاع ثابت برای جلوگیری از جابه‌جایی
+      height: 50,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
         children: [
-          // ============================================================
-          // دکمه "عادت جدید" - سمت چپ
-          // ============================================================
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
-            // وقتی باز است: سمت چپ | وقتی بسته است: پشت دکمه + می‌ره مخفی
             left: _isMenuOpen ? 0 : (totalWidth / 2) - 40,
             bottom: _isMenuOpen ? 0 : -30,
             child: AnimatedOpacity(
@@ -568,14 +528,9 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ),
           ),
-
-          // ============================================================
-          // دکمه "وظیفه جدید" - سمت راست
-          // ============================================================
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
-            // وقتی باز است: سمت راست | وقتی بسته است: پشت دکمه + می‌ره مخفی
             right: _isMenuOpen ? 0 : (totalWidth / 2) - 40,
             bottom: _isMenuOpen ? 0 : -30,
             child: AnimatedOpacity(
@@ -592,10 +547,6 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ),
           ),
-
-          // ============================================================
-          // دکمه اصلی (+) - همیشه در پایین وسط
-          // ============================================================
           Positioned(
             bottom: 0,
             left: 0,
@@ -652,7 +603,7 @@ class _ArenaScreenState extends State<ArenaScreen>
     );
   }
 
-// ==================== ویجت دکمه‌های کناری ====================
+  // ==================== ویجت دکمه‌های کناری ====================
 
   Widget _buildSideMenuItem({
     required IconData icon,
@@ -674,7 +625,6 @@ class _ArenaScreenState extends State<ArenaScreen>
               offset: const Offset(0, 4),
             ),
           ],
-          // ✅ استروک رنگی
           border: Border.all(
             color: color.withValues(alpha: 0.3),
             width: 1.5,
@@ -683,7 +633,6 @@ class _ArenaScreenState extends State<ArenaScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ آیکون رنگی در دایره کم‌رنگ
             Container(
               width: 28,
               height: 28,
@@ -698,11 +647,10 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ),
             const SizedBox(width: 8),
-            // ✅ متن مشکی
             Text(
               label,
               style: const TextStyle(
-                color: Color(0xFF090909), // ✅ مشکی
+                color: Color(0xFF090909),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -738,7 +686,10 @@ class _ArenaScreenState extends State<ArenaScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+        horizontal: _horizontalMargin,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -783,6 +734,274 @@ class _ArenaScreenState extends State<ArenaScreen>
               splashRadius: 20,
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ==================== ویجت‌های کمکی تب‌بار ====================
+
+class _TabBarItem {
+  final IconData icon;
+  final String label;
+
+  const _TabBarItem({
+    required this.icon,
+    required this.label,
+  });
+}
+
+class _CustomTabBar extends StatefulWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+  final List<_TabBarItem> items;
+  final Color primaryColor;
+
+  // ✅ فاصله بین تب‌ها (قابل تنظیم)
+  final double spacing;
+
+  // ✅ ارتفاع کادر
+  final double height;
+
+  // ✅ اندازه آیکون انتخاب شده (دایره)
+  final double selectedCircleSize;
+
+  const _CustomTabBar({
+    required this.currentIndex,
+    required this.onTap,
+    required this.items,
+    required this.primaryColor,
+    this.spacing = 8.0, // ✅ فاصله پیش‌فرض
+    this.height = 62.0,
+    this.selectedCircleSize = 46.0,
+  });
+
+  @override
+  State<_CustomTabBar> createState() => _CustomTabBarState();
+}
+
+class _CustomTabBarState extends State<_CustomTabBar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+
+  // ✅ اندازه‌های ثابت
+  static const double _horizontalPadding = 8;
+  static const double _iconSize = 20;
+  static const double _selectedIconSize = 20;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 280),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<double>(
+      begin: widget.currentIndex.toDouble(),
+      end: widget.currentIndex.toDouble(),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _animationController.forward();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_CustomTabBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _slideAnimation = Tween<double>(
+        begin: oldWidget.currentIndex.toDouble(),
+        end: widget.currentIndex.toDouble(),
+      ).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Curves.easeInOutCubic,
+        ),
+      );
+      _scaleAnimation = Tween<double>(
+        begin: 0.6,
+        end: 1.0,
+      ).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Curves.easeOutBack,
+        ),
+      );
+      _animationController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      // ✅ اجبار به LTR برای اینکه ترتیب تب‌ها به‌هم نریزد
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: LayoutBuilder(
+          builder: (context, outerConstraints) {
+            final double availableWidth =
+                outerConstraints.maxWidth - (_horizontalPadding * 2);
+
+            // ✅ محاسبه عرض هر تب با احتساب فاصله‌ها
+            final double totalSpacing =
+                widget.spacing * (widget.items.length - 1);
+            final double itemWidth =
+                (availableWidth - totalSpacing) / widget.items.length;
+
+            return Container(
+              height: widget.height,
+              padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(widget.height / 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // ✅ دایره رنگی متحرک
+                  AnimatedBuilder(
+                    animation: _slideAnimation,
+                    builder: (context, child) {
+                      final double progress = _slideAnimation.value;
+                      final double leftPosition =
+                          progress * (itemWidth + widget.spacing);
+
+                      return Positioned(
+                        left: leftPosition,
+                        top: (widget.height - widget.selectedCircleSize) / 2,
+                        child: AnimatedBuilder(
+                          animation: _scaleAnimation,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _scaleAnimation.value,
+                              child: Container(
+                                width: itemWidth,
+                                height: widget.selectedCircleSize,
+                                decoration: BoxDecoration(
+                                  color: widget.primaryColor,
+                                  borderRadius: BorderRadius.circular(
+                                    widget.selectedCircleSize / 2,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      widget.items[widget.currentIndex].icon,
+                                      color: const Color(0xFF090909),
+                                      size: _selectedIconSize,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    // ✅ متن در RTL رندر شود (داخل Directionality جداگانه)
+                                    Directionality(
+                                      textDirection: TextDirection.rtl,
+                                      child: Text(
+                                        widget.items[widget.currentIndex].label,
+                                        style: const TextStyle(
+                                          color: Color(0xFF090909),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+
+                  // ✅ همه آیتم‌ها
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: List.generate(widget.items.length, (index) {
+                      final isActive = index == widget.currentIndex;
+
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          right: index < widget.items.length - 1
+                              ? widget.spacing
+                              : 0,
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (widget.currentIndex != index) {
+                              widget.onTap(index);
+                            }
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: SizedBox(
+                            width: itemWidth,
+                            height: widget.height,
+                            child: isActive
+                                ? const SizedBox()
+                                : Center(
+                                    child: Icon(
+                                      widget.items[index].icon,
+                                      color: const Color(0xFF73786B),
+                                      size: _iconSize,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

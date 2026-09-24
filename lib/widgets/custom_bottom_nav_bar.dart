@@ -123,108 +123,111 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Center(
-        child: Container(
-          width: _containerWidth,
-          height: _containerHeight,
-          padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
-          decoration: BoxDecoration(
-            color: const Color(0xFF090909),
-            borderRadius: BorderRadius.circular(_containerHeight / 2),
-            // ✅ سایه‌های متعدد برای حالت شناور
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 2,
-                spreadRadius: 0,
-                offset: const Offset(0, 1),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.10),
-                blurRadius: 8,
-                spreadRadius: 0,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // ✅ دایره سبز متحرک
-              AnimatedBuilder(
-                animation: _slideAnimation,
-                builder: (context, child) {
-                  final double progress = _slideAnimation.value;
-                  final double leftPosition =
-                      (progress * (_itemSize + spacing));
+        // ✅ اجبار به LTR برای اینکه ترتیب آیتم‌ها به‌هم نریزد
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Container(
+            width: _containerWidth,
+            height: _containerHeight,
+            padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
+            decoration: BoxDecoration(
+              color: const Color(0xFF090909),
+              borderRadius: BorderRadius.circular(_containerHeight / 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 2,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 1),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.10),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // ✅ دایره سبز متحرک
+                AnimatedBuilder(
+                  animation: _slideAnimation,
+                  builder: (context, child) {
+                    final double progress = _slideAnimation.value;
+                    final double leftPosition =
+                        (progress * (_itemSize + spacing));
 
-                  return Positioned(
-                    left: leftPosition,
-                    top: (_containerHeight - _itemSize) / 2,
-                    child: AnimatedBuilder(
-                      animation: _scaleAnimation,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _scaleAnimation.value,
-                          child: Container(
-                            width: _itemSize,
-                            height: _itemSize,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFB0CC5D),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Icon(
-                                widget.items[widget.currentIndex].icon,
-                                color: const Color(0xFF090909),
-                                size: _iconSize,
+                    return Positioned(
+                      left: leftPosition,
+                      top: (_containerHeight - _itemSize) / 2,
+                      child: AnimatedBuilder(
+                        animation: _scaleAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _scaleAnimation.value,
+                            child: Container(
+                              width: _itemSize,
+                              height: _itemSize,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFB0CC5D),
+                                shape: BoxShape.circle,
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-
-              // ✅ همه آیتم‌ها
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(widget.items.length, (index) {
-                  final isActive = index == widget.currentIndex;
-
-                  return GestureDetector(
-                    onTap: () {
-                      if (widget.currentIndex != index) {
-                        widget.onTap(index);
-                      }
-                    },
-                    child: SizedBox(
-                      width: _itemSize,
-                      height: _itemSize,
-                      child: isActive
-                          ? const SizedBox()
-                          : Transform.translate(
-                              offset: Offset(0, inactiveVerticalOffset),
                               child: Center(
                                 child: Icon(
-                                  widget.items[index].icon,
-                                  color: const Color(0xFF6A6A6A),
+                                  widget.items[widget.currentIndex].icon,
+                                  color: const Color(0xFF090909),
                                   size: _iconSize,
                                 ),
                               ),
                             ),
-                    ),
-                  );
-                }),
-              ),
-            ],
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+
+                // ✅ همه آیتم‌ها
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(widget.items.length, (index) {
+                    final isActive = index == widget.currentIndex;
+
+                    return GestureDetector(
+                      onTap: () {
+                        if (widget.currentIndex != index) {
+                          widget.onTap(index);
+                        }
+                      },
+                      child: SizedBox(
+                        width: _itemSize,
+                        height: _itemSize,
+                        child: isActive
+                            ? const SizedBox()
+                            : Transform.translate(
+                                offset: Offset(0, inactiveVerticalOffset),
+                                child: Center(
+                                  child: Icon(
+                                    widget.items[index].icon,
+                                    color: const Color(0xFF6A6A6A),
+                                    size: _iconSize,
+                                  ),
+                                ),
+                              ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
         ),
       ),

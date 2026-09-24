@@ -209,7 +209,7 @@ class QuestCard extends StatelessWidget {
       headerBg = Colors.white;
       headerBorder = const Color(0xFF090909);
       headerBorderWidth = 2;
-      iconBoxBg = const Color(0xFF090909);
+      iconBoxBg = primaryColor; // ✅ سبز (رنگ تم) — قبلاً 0xFF090909 بود
       iconColor = Colors.white;
       titleColor = const Color(0xFF090909);
     }
@@ -465,11 +465,11 @@ class QuestCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: primaryColor,
+          color: const Color(0xFF090909), // ✅ مشکی
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.4),
+              color: Colors.black.withValues(alpha: 0.20),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),

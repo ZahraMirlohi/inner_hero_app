@@ -1,7 +1,9 @@
 // lib/features/chat/widgets/message_actions_menu.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/message_model.dart';
+import '/providers/theme_provider.dart';
 
 class MessageActionsMenu extends StatelessWidget {
   final ChatMessage message;
@@ -10,7 +12,7 @@ class MessageActionsMenu extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onDeleteForEveryone;
   final VoidCallback onCopy;
-  final Function(String) onReact; // ✅ اینجا درست است
+  final Function(String) onReact;
   final VoidCallback onForward;
 
   const MessageActionsMenu({
@@ -27,43 +29,80 @@ class MessageActionsMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
     final isOwnMessage = message.isFromMe;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // واکنش‌ها (Reactions)
-          _buildReactionRow(),
+          // نشانگر کشیدن
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // واکنش‌ها
+          _buildReactionRow(primaryColor, theme),
           const Divider(height: 1, thickness: 1),
 
           // اقدامات
-          _buildActionItem(icon: Icons.reply, label: 'پاسخ', onTap: onReply),
+          _buildActionItem(
+            icon: Icons.reply,
+            label: 'پاسخ',
+            onTap: onReply,
+            primaryColor: primaryColor,
+            theme: theme,
+          ),
 
           if (isOwnMessage && message.canBeEdited)
-            _buildActionItem(icon: Icons.edit, label: 'ویرایش', onTap: onEdit),
+            _buildActionItem(
+              icon: Icons.edit,
+              label: 'ویرایش',
+              onTap: onEdit,
+              primaryColor: primaryColor,
+              theme: theme,
+            ),
 
           if (!message.isDeleted)
-            _buildActionItem(icon: Icons.copy, label: 'کپی', onTap: onCopy),
+            _buildActionItem(
+              icon: Icons.copy,
+              label: 'کپی',
+              onTap: onCopy,
+              primaryColor: primaryColor,
+              theme: theme,
+            ),
 
           if (isOwnMessage)
             _buildActionItem(
               icon: Icons.delete_outline,
               label: 'حذف برای من',
-              color: Colors.red,
+              color: Colors.orange,
               onTap: onDelete,
+              primaryColor: primaryColor,
+              theme: theme,
             ),
 
           if (isOwnMessage && !message.isDeleted)
@@ -72,60 +111,71 @@ class MessageActionsMenu extends StatelessWidget {
               label: 'حذف برای همه',
               color: Colors.red,
               onTap: onDeleteForEveryone,
+              primaryColor: primaryColor,
+              theme: theme,
             ),
 
           _buildActionItem(
             icon: Icons.share,
             label: 'اشتراک‌گذاری',
             onTap: onForward,
+            primaryColor: primaryColor,
+            theme: theme,
           ),
 
           // اطلاعات پیام
           if (message.isEdited && !message.isDeleted)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
               child: Text(
                 'ویرایش شده در ${_formatTime(message.editedAt)}',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.textSecondaryColor,
+                ),
               ),
             ),
+
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  // ✅ متد _buildReactionRow - نسخه اصلاح شده
-  Widget _buildReactionRow() {
+  Widget _buildReactionRow(Color primaryColor, ThemeProvider theme) {
     final popularReactions = ['❤️', '🔥', '💪', '🎉', '😂', '😍', '🙏', '👍'];
 
     return SizedBox(
-      height: 50,
+      height: 56,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         itemCount: popularReactions.length,
         itemBuilder: (context, index) {
           final emoji = popularReactions[index];
-
-          // ✅ اصلاح: استفاده از ?. برای جلوگیری از null
           final isSelected =
               message.reactions?.any((r) => r.emoji == emoji) ?? false;
 
           return GestureDetector(
             onTap: () => onReact(emoji),
             child: Container(
-              margin: const EdgeInsets.all(4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? Colors.blue.withValues(alpha: 0.1)
+                    ? primaryColor.withValues(alpha: 0.12)
                     : Colors.transparent,
-                borderRadius: BorderRadius.circular(16),
+                shape: BoxShape.circle,
                 border: isSelected
-                    ? Border.all(color: Colors.blue, width: 1)
+                    ? Border.all(color: primaryColor, width: 1.5)
                     : null,
               ),
-              child: Text(emoji, style: const TextStyle(fontSize: 22)),
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 24)),
+              ),
             ),
           );
         },
@@ -137,21 +187,33 @@ class MessageActionsMenu extends StatelessWidget {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required Color primaryColor,
+    required ThemeProvider theme,
     Color? color,
   }) {
+    final finalColor = color ?? primaryColor;
+
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: color ?? Colors.grey.shade700),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: finalColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 18, color: finalColor),
+            ),
             const SizedBox(width: 14),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                color: color ?? Colors.grey.shade700,
+                fontWeight: FontWeight.w500,
+                color: color ?? theme.textColor,
               ),
             ),
           ],

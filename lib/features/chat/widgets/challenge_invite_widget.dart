@@ -1,7 +1,9 @@
 // lib/features/chat/widgets/challenge_invite_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/challenge_invite.dart';
+import '/providers/theme_provider.dart';
 
 class ChallengeInviteWidget extends StatefulWidget {
   final ChallengeInvite challenge;
@@ -24,22 +26,21 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     final isPending = widget.challenge.status == ChallengeStatus.pending;
     final isRejected = widget.challenge.status == ChallengeStatus.rejected;
     final isCancelled = widget.challenge.status == ChallengeStatus.cancelled;
 
-    // اگر کاربر خودش ایجاد کننده است، دکمه‌های پاسخ رو نشون نده
-    final bool isCreator =
-        widget.challenge.creatorId ==
-        widget.challenge.creatorId; // این رو در جای درست چک کنید
     final bool showRespondButtons = isPending && !widget.isMe && !_isResponding;
 
     return Container(
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: widget.isMe ? const Color(0xFF4A90E2) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -47,7 +48,12 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
             offset: const Offset(0, 2),
           ),
         ],
-        border: isPending ? Border.all(color: Colors.orange, width: 2) : null,
+        border: isPending
+            ? Border.all(
+                color: primaryColor.withValues(alpha: 0.3),
+                width: 2,
+              )
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,16 +63,16 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.emoji_events,
-                  color: Colors.orange,
-                  size: 20,
+                  color: primaryColor,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 10),
@@ -79,9 +85,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: widget.isMe
-                            ? Colors.white
-                            : const Color(0xFF1A1A2E),
+                        color: theme.textColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -90,16 +94,13 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                       '${widget.challenge.duration} روز • ${widget.challenge.xpReward} XP',
                       style: TextStyle(
                         fontSize: 11,
-                        color: widget.isMe
-                            ? Colors.white70
-                            : Colors.grey.shade500,
+                        color: theme.textSecondaryColor,
                       ),
                     ),
                   ],
                 ),
               ),
-              // وضعیت
-              _buildStatusBadge(),
+              _buildStatusBadge(primaryColor),
             ],
           ),
           const SizedBox(height: 10),
@@ -110,7 +111,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
               widget.challenge.description,
               style: TextStyle(
                 fontSize: 13,
-                color: widget.isMe ? Colors.white70 : Colors.grey.shade600,
+                color: theme.textSecondaryColor,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -118,31 +119,30 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
           const SizedBox(height: 10),
 
           // ==================== لیست عادت‌ها ====================
-          const Text(
+          Text(
             '📋 عادت‌های چالش:',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey,
+              color: theme.textSecondaryColor,
             ),
           ),
           const SizedBox(height: 6),
           ...widget.challenge.habits.map((habit) {
-            final iconColor = Color(habit.iconColor);
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
                 children: [
                   Container(
-                    width: 20,
-                    height: 20,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      color: primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       _getIconData(habit.iconName),
-                      color: iconColor,
+                      color: primaryColor,
                       size: 12,
                     ),
                   ),
@@ -152,9 +152,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                       habit.title,
                       style: TextStyle(
                         fontSize: 12,
-                        color: widget.isMe
-                            ? Colors.white
-                            : const Color(0xFF1A1A2E),
+                        color: theme.textColor,
                       ),
                     ),
                   ),
@@ -173,11 +171,11 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                   child: ElevatedButton(
                     onPressed: _isResponding ? null : () => _respond(true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: _isResponding
@@ -191,7 +189,10 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                           )
                         : const Text(
                             'قبول چالش 🚀',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
@@ -204,7 +205,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: const Text(
@@ -222,9 +223,11 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                color: Colors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -245,9 +248,11 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                color: Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -265,18 +270,15 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
             ),
 
           // ==================== فوتر ====================
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                // ✅ اصلاح: نمایش درست فرستنده و گیرنده
                 '${widget.challenge.creatorName} ➜ ${widget.challenge.opponentName}',
                 style: TextStyle(
                   fontSize: 9,
-                  color: widget.isMe
-                      ? Colors.white.withValues(alpha: 0.6)
-                      : Colors.grey.shade500,
+                  color: theme.textSecondaryColor,
                 ),
               ),
             ],
@@ -286,9 +288,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
     );
   }
 
-  // ==================== ویجت‌های کمکی ====================
-
-  Widget _buildStatusBadge() {
+  Widget _buildStatusBadge(Color primaryColor) {
     Color color;
     String label;
 
@@ -298,15 +298,15 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
         label = '⏳ در انتظار';
         break;
       case ChallengeStatus.accepted:
-        color = Colors.blue;
+        color = primaryColor;
         label = '✅ پذیرفته شد';
         break;
       case ChallengeStatus.active:
-        color = Colors.green;
+        color = primaryColor;
         label = '🔥 فعال';
         break;
       case ChallengeStatus.completed:
-        color = Colors.purple;
+        color = primaryColor;
         label = '🏆 کامل شد';
         break;
       case ChallengeStatus.cancelled:
@@ -322,9 +322,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: widget.isMe
-            ? Colors.white.withValues(alpha: 0.2)
-            : color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -332,20 +330,17 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: widget.isMe ? Colors.white : color,
+          color: color,
         ),
       ),
     );
   }
-
-  // lib/features/chat/widgets/challenge_invite_widget.dart
 
   Future<void> _respond(bool accept) async {
     setState(() {
       _isResponding = true;
     });
 
-    // ✅ صدا زدن onRespond با پارامتر accept
     await widget.onRespond(accept);
 
     if (mounted) {

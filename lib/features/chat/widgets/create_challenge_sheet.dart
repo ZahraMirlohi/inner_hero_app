@@ -1,8 +1,10 @@
 // lib/features/chat/widgets/create_challenge_sheet.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/challenge_invite.dart';
+import '/providers/theme_provider.dart';
 
 class CreateChallengeSheet extends StatefulWidget {
   final String buddyName;
@@ -53,26 +55,6 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     {'name': 'emoji_events', 'icon': Icons.emoji_events},
   ];
 
-  final List<Color> _iconColors = [
-    const Color(0xFF4A90E2),
-    const Color(0xFFE74C3C),
-    const Color(0xFF2ECC71),
-    const Color(0xFFF39C12),
-    const Color(0xFF9B59B6),
-    const Color(0xFF1ABC9C),
-    const Color(0xFFE67E22),
-    const Color(0xFF3498DB),
-  ];
-
-  final List<Color> _bgColors = [
-    const Color(0xFFF5F5F5),
-    const Color(0xFFE8F4FD),
-    const Color(0xFFFDE8E8),
-    const Color(0xFFE8FDE8),
-    const Color(0xFFFDF5E8),
-    const Color(0xFFF0E8FD),
-  ];
-
   @override
   void dispose() {
     _titleController.dispose();
@@ -84,58 +66,68 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(20),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.85,
       ),
+      decoration: BoxDecoration(
+        color: theme.surfaceColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // هدر
+          // ==================== هدر ====================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      color: primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.emoji_events,
-                      color: Colors.orange,
+                      color: primaryColor,
                       size: 22,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
+                  Text(
                     'چالش جدید',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E),
+                      color: theme.textColor,
                     ),
                   ),
                 ],
               ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close, color: theme.textSecondaryColor),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             'ارسال چالش برای ${widget.buddyName}',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.textSecondaryColor,
+            ),
           ),
           const SizedBox(height: 16),
 
-          // فرم
+          // ==================== فرم ====================
           Expanded(
             child: SingleChildScrollView(
               child: Form(
@@ -149,10 +141,13 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                       decoration: InputDecoration(
                         labelText: 'عنوان چالش',
                         hintText: 'مثال: چالش ۷ روزه ورزش',
-                        prefixIcon: const Icon(Icons.title),
+                        prefixIcon: Icon(Icons.title, color: primaryColor),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
                         ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
                       ),
                       validator: (value) => value?.isEmpty ?? true
                           ? 'لطفاً عنوان را وارد کنید'
@@ -167,116 +162,90 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                       decoration: InputDecoration(
                         labelText: 'توضیحات (اختیاری)',
                         hintText: 'توضیحاتی درباره چالش...',
-                        prefixIcon: const Icon(Icons.description),
+                        prefixIcon:
+                            Icon(Icons.description, color: primaryColor),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
                         ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
                       ),
                     ),
                     const SizedBox(height: 12),
 
                     // مدت زمان
-                    Row(
-                      children: [
-                        const Text(
-                          'مدت زمان:',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Slider(
-                            value: _duration.toDouble(),
-                            min: 3,
-                            max: 30,
-                            divisions: 27,
-                            activeColor: Colors.orange,
-                            onChanged: (value) {
-                              setState(() {
-                                _duration = value.toInt();
-                              });
-                            },
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$_duration روز',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildSliderRow(
+                      label: 'مدت زمان:',
+                      value: _duration.toDouble(),
+                      min: 3,
+                      max: 30,
+                      divisions: 27,
+                      displayText: '$_duration روز',
+                      primaryColor: primaryColor,
+                      theme: theme,
+                      onChanged: (value) {
+                        setState(() {
+                          _duration = value.toInt();
+                        });
+                      },
                     ),
                     const SizedBox(height: 12),
 
                     // پاداش XP
-                    Row(
-                      children: [
-                        const Text(
-                          'پاداش:',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Slider(
-                            value: _xpReward.toDouble(),
-                            min: 50,
-                            max: 500,
-                            divisions: 45,
-                            activeColor: Colors.orange,
-                            onChanged: (value) {
-                              setState(() {
-                                _xpReward = value.toInt();
-                              });
-                            },
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '$_xpReward XP',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      ],
+                    _buildSliderRow(
+                      label: 'پاداش:',
+                      value: _xpReward.toDouble(),
+                      min: 50,
+                      max: 500,
+                      divisions: 45,
+                      displayText: '$_xpReward XP',
+                      primaryColor: primaryColor,
+                      theme: theme,
+                      onChanged: (value) {
+                        setState(() {
+                          _xpReward = value.toInt();
+                        });
+                      },
                     ),
                     const SizedBox(height: 12),
 
                     // تاریخ شروع
                     ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.calendar_today),
-                      title: const Text('تاریخ شروع'),
-                      subtitle: Text(_formatDate(_startDate)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      tileColor: primaryColor.withValues(alpha: 0.06),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      leading: Icon(Icons.calendar_today, color: primaryColor),
+                      title: Text(
+                        'تاریخ شروع',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: theme.textColor,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _formatDate(_startDate),
+                        style: TextStyle(
+                          color: theme.textSecondaryColor,
+                        ),
+                      ),
                       onTap: _selectStartDate,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // عادت‌ها
-                    const Text(
+                    Text(
                       'عادت‌های چالش (حداکثر ۵ عدد)',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
+                        color: theme.textColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -286,27 +255,39 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(12),
+                          color: primaryColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: primaryColor.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: Column(
                           children: _habits.map((habit) {
                             return ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                               leading: Icon(
                                 _getIconData(habit.iconName),
-                                color: Color(habit.iconColor),
+                                color: primaryColor,
                                 size: 20,
                               ),
                               title: Text(
                                 habit.title,
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.textColor,
+                                ),
                               ),
                               subtitle: habit.description.isNotEmpty
                                   ? Text(
                                       habit.description,
-                                      style: const TextStyle(fontSize: 12),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.textSecondaryColor,
+                                      ),
                                     )
                                   : null,
                               trailing: IconButton(
@@ -334,33 +315,42 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: Colors.grey.shade300,
+                            color: primaryColor.withValues(alpha: 0.2),
                             style: BorderStyle.solid,
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Column(
                           children: [
                             TextField(
                               controller: _habitTitleController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 hintText: 'عنوان عادت...',
+                                hintStyle: TextStyle(
+                                  color: theme.textSecondaryColor,
+                                ),
                                 border: InputBorder.none,
                               ),
                             ),
                             TextField(
                               controller: _habitDescController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 hintText: 'توضیحات (اختیاری)...',
+                                hintStyle: TextStyle(
+                                  color: theme.textSecondaryColor,
+                                ),
                                 border: InputBorder.none,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Text(
+                                Text(
                                   'آیکون:',
-                                  style: TextStyle(fontSize: 12),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.textSecondaryColor,
+                                  ),
                                 ),
                                 const SizedBox(width: 8),
                                 ..._icons.take(6).map((icon) {
@@ -377,16 +367,13 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? Color(
-                                                _selectedIconColor,
-                                              ).withValues(alpha: 0.2)
+                                            ? primaryColor.withValues(
+                                                alpha: 0.15)
                                             : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                         border: isSelected
                                             ? Border.all(
-                                                color: Color(
-                                                  _selectedIconColor,
-                                                ),
+                                                color: primaryColor,
                                                 width: 1.5,
                                               )
                                             : null,
@@ -394,7 +381,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                                       child: Icon(
                                         icon['icon'],
                                         color: isSelected
-                                            ? Color(_selectedIconColor)
+                                            ? primaryColor
                                             : Colors.grey,
                                         size: 18,
                                       ),
@@ -403,13 +390,16 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                                 }),
                                 const Spacer(),
                                 IconButton(
-                                  onPressed: _addHabit,
-                                  icon: const Icon(Icons.add),
+                                  onPressed: () => _addHabit(primaryColor),
+                                  icon: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                  ),
                                   style: IconButton.styleFrom(
-                                    backgroundColor: Colors.orange,
+                                    backgroundColor: primaryColor,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
                                 ),
@@ -430,18 +420,22 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _submitChallenge,
+              onPressed: () => _submitChallenge(primaryColor),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
               child: const Text(
                 'ارسال چالش 🚀',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -450,15 +444,67 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     );
   }
 
+  Widget _buildSliderRow({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required String displayText,
+    required Color primaryColor,
+    required ThemeProvider theme,
+    required Function(double) onChanged,
+  }) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: theme.textColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: divisions,
+            activeColor: primaryColor,
+            onChanged: onChanged,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color: primaryColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            displayText,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ==================== متدها ====================
 
-  void _addHabit() {
+  void _addHabit(Color primaryColor) {
     final title = _habitTitleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لطفاً عنوان عادت را وارد کنید'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('لطفاً عنوان عادت را وارد کنید'),
+          backgroundColor: primaryColor,
         ),
       );
       return;
@@ -466,9 +512,9 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
 
     if (_habits.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('حداکثر ۵ عادت می‌توانید اضافه کنید'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('حداکثر ۵ عادت می‌توانید اضافه کنید'),
+          backgroundColor: primaryColor,
         ),
       );
       return;
@@ -504,15 +550,13 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     }
   }
 
-  // lib/features/chat/widgets/create_challenge_sheet.dart
-
-  void _submitChallenge() {
+  void _submitChallenge(Color primaryColor) {
     if (!_formKey.currentState!.validate()) return;
     if (_habits.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('حداقل یک عادت برای چالش اضافه کنید'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: const Text('حداقل یک عادت برای چالش اضافه کنید'),
+          backgroundColor: primaryColor,
         ),
       );
       return;
@@ -521,9 +565,9 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     final challenge = ChallengeInvite(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       creatorId: widget.userId,
-      creatorName: widget.userName, // ✅ نام فرستنده (خود کاربر)
+      creatorName: widget.userName,
       opponentId: widget.buddyId,
-      opponentName: widget.buddyName, // ✅ نام گیرنده (هم‌مسیر)
+      opponentName: widget.buddyName,
       title: _titleController.text,
       description: _descriptionController.text,
       habits: _habits,

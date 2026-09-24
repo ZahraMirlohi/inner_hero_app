@@ -1,8 +1,10 @@
 // lib/features/chat/screens/user_profile_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
+import '/providers/theme_provider.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -39,10 +41,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
 
     try {
-      // ✅ دریافت اطلاعات کاربر از دیتابیس
-      final profile = await _chatService.client
-          .from('profiles')
-          .select('''
+      final profile = await _chatService.client.from('profiles').select('''
             name,
             email,
             phone,
@@ -52,23 +51,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             current_streak,
             best_streak,
             created_at
-          ''')
-          .eq('user_id', widget.userId)
-          .maybeSingle();
+          ''').eq('user_id', widget.userId).maybeSingle();
 
       if (profile != null) {
-        // ✅ دریافت اطلاعات شخصیت کاربر
-        final personality = await _chatService.client
-            .from('user_personalities')
-            .select('''
+        final personality =
+            await _chatService.client.from('user_personalities').select('''
               gender,
               mbti_type,
               interests,
               goals,
               bio
-            ''')
-            .eq('user_id', widget.userId)
-            .maybeSingle();
+            ''').eq('user_id', widget.userId).maybeSingle();
 
         setState(() {
           _userData = {'profile': profile, 'personality': personality ?? {}};
@@ -90,34 +83,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'اطلاعات کاربر',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: theme.textColor,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         centerTitle: true,
       ),
       body: _isLoading
-          ? _buildLoadingState()
+          ? _buildLoadingState(primaryColor)
           : _errorMessage != null
-          ? _buildErrorState()
-          : _buildProfileContent(),
+              ? _buildErrorState(theme, primaryColor)
+              : _buildProfileContent(theme, primaryColor),
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
+  Widget _buildLoadingState(Color primaryColor) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: Color(0xFF4A90E2), strokeWidth: 2),
-          SizedBox(height: 16),
-          Text(
+          CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
+          const SizedBox(height: 16),
+          const Text(
             'در حال بارگذاری اطلاعات...',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
@@ -126,7 +126,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(ThemeProvider theme, Color primaryColor) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -135,18 +135,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           const SizedBox(height: 16),
           Text(
             _errorMessage!,
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _loadUserData,
-            icon: const Icon(Icons.refresh),
-            label: const Text('تلاش مجدد'),
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            label: const Text(
+              'تلاش مجدد',
+              style: TextStyle(color: Colors.white),
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
               ),
             ),
           ),
@@ -155,7 +162,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildProfileContent() {
+  Widget _buildProfileContent(ThemeProvider theme, Color primaryColor) {
     final profile = _userData!['profile'] as Map<String, dynamic>;
     final personality =
         _userData!['personality'] as Map<String, dynamic>? ?? {};
@@ -186,6 +193,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             email: email,
             phone: phone,
             bio: bio,
+            theme: theme,
+            primaryColor: primaryColor,
           ),
           const SizedBox(height: 16),
 
@@ -195,6 +204,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             currentStreak: currentStreak,
             bestStreak: bestStreak,
             createdAt: createdAt,
+            theme: theme,
+            primaryColor: primaryColor,
           ),
           const SizedBox(height: 16),
 
@@ -204,11 +215,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               mbtiType: mbtiType,
               interests: interests,
               goals: goals,
+              theme: theme,
+              primaryColor: primaryColor,
             ),
           const SizedBox(height: 16),
 
-          // ✅ دکمه شروع گفتگو
-          _buildActionButtons(),
+          // ✅ دکمه بازگشت
+          _buildActionButtons(primaryColor),
         ],
       ),
     );
@@ -220,15 +233,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     String? email,
     String? phone,
     String? bio,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -237,32 +252,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         children: [
           // ✅ آواتار
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                ? NetworkImage(avatarUrl)
-                : null,
-            child: avatarUrl == null || avatarUrl.isEmpty
-                ? Text(
-                    name.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A90E2),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: primaryColor.withValues(alpha: 0.15),
+              border: Border.all(color: primaryColor, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: avatarUrl != null && avatarUrl.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      avatarUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildAvatarInitial(
+                        name,
+                        primaryColor,
+                      ),
                     ),
                   )
-                : null,
+                : _buildAvatarInitial(name, primaryColor),
           ),
           const SizedBox(height: 16),
 
           // ✅ نام
           Text(
             name,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 4),
@@ -275,12 +301,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 Icon(
                   Icons.email_outlined,
                   size: 14,
-                  color: Colors.grey.shade500,
+                  color: theme.textSecondaryColor,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   email,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textSecondaryColor,
+                  ),
                 ),
               ],
             ),
@@ -293,12 +322,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 Icon(
                   Icons.phone_outlined,
                   size: 14,
-                  color: Colors.grey.shade500,
+                  color: theme.textSecondaryColor,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   phone,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textSecondaryColor,
+                  ),
                 ),
               ],
             ),
@@ -309,14 +341,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
+                color: primaryColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
               child: Text(
                 bio,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade700,
+                  color: theme.textColor,
                   height: 1.5,
                 ),
                 textAlign: TextAlign.center,
@@ -328,20 +364,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  Widget _buildAvatarInitial(String name, Color primaryColor) {
+    return Center(
+      child: Text(
+        name.substring(0, 1).toUpperCase(),
+        style: TextStyle(
+          fontSize: 32,
+          fontWeight: FontWeight.bold,
+          color: primaryColor,
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatsCard({
     required int totalXp,
     required int currentStreak,
     required int bestStreak,
     required DateTime createdAt,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -354,25 +405,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             icon: Icons.stars,
             label: 'XP',
             value: totalXp.toString(),
-            color: const Color(0xFFFFA500),
+            color: primaryColor,
+            theme: theme,
           ),
           _buildStatItem(
             icon: Icons.local_fire_department,
             label: 'استریک فعلی',
             value: '$currentStreak روز',
-            color: const Color(0xFFE74C3C),
+            color: primaryColor,
+            theme: theme,
           ),
           _buildStatItem(
             icon: Icons.emoji_events,
             label: 'بهترین استریک',
             value: '$bestStreak روز',
-            color: const Color(0xFF9B59B6),
+            color: primaryColor,
+            theme: theme,
           ),
           _buildStatItem(
             icon: Icons.cake,
             label: 'عضو از',
             value: _formatDate(createdAt),
-            color: const Color(0xFF4A90E2),
+            color: primaryColor,
+            theme: theme,
           ),
         ],
       ),
@@ -384,13 +439,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     required String label,
     required String value,
     required Color color,
+    required ThemeProvider theme,
   }) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 20),
@@ -399,14 +455,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: color,
+            color: theme.textColor,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Color(0xFF6B7280)),
+          style: TextStyle(
+            fontSize: 10,
+            color: theme.textSecondaryColor,
+          ),
         ),
       ],
     );
@@ -416,15 +475,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     String? mbtiType,
     List<dynamic>? interests,
     List<dynamic>? goals,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -433,51 +494,60 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.psychology, color: Color(0xFF9B59B6), size: 20),
-              SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.psychology,
+                  color: primaryColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 'شخصیت',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.textColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-
           if (mbtiType != null && mbtiType.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 'MBTI: $mbtiType',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF4A90E2),
+                  color: primaryColor,
                 ),
               ),
             ),
             const SizedBox(height: 12),
           ],
-
           if (interests != null && interests.isNotEmpty) ...[
-            const Text(
+            Text(
               'علاقه‌مندی‌ها:',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -488,29 +558,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: primaryColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     interest.toString(),
-                    style: const TextStyle(fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: primaryColor,
+                    ),
                   ),
                 );
               }).toList(),
             ),
             const SizedBox(height: 12),
           ],
-
           if (goals != null && goals.isNotEmpty) ...[
-            const Text(
+            Text(
               'اهداف:',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -521,12 +593,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: primaryColor.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     goal.toString(),
-                    style: const TextStyle(fontSize: 12, color: Colors.green),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: primaryColor,
+                    ),
                   ),
                 );
               }).toList(),
@@ -537,24 +612,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(Color primaryColor) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () {
           Navigator.pop(context);
         },
-        icon: const Icon(Icons.arrow_back, size: 18),
+        icon: const Icon(Icons.arrow_back, size: 18, color: Colors.white),
         label: const Text(
           'بازگشت به گفتگو',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4A90E2),
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
           elevation: 0,
         ),

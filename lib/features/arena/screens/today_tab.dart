@@ -354,7 +354,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  // ==================== متدهای تکمیل عادت و وظیفه (فشرده شده) ====================
+  // ==================== متدهای تکمیل عادت و وظیفه ====================
 
   Future<void> _markHabitCompleted(Habit habit) async {
     if (!mounted) return;
@@ -1267,16 +1267,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       ),
     );
 
-    // ✅ بعد از برگشت از ویرایش، اجباری reload کن
     if (result == true && mounted) {
       print('🔄 Habit edited, reloading data...');
 
-      // ✅ پاک کردن کش
       _cacheTime = null;
       _cachedHabits = null;
       _cachedTasks = null;
 
-      // ✅ reload اجباری
       await _loadData();
       print('✅ Today tab data reloaded');
     }
@@ -1315,10 +1312,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       MaterialPageRoute(builder: (_) => EditTaskScreen(task: task)),
     );
     if (result == true && mounted) {
-      // ✅ پاک کردن cache
       _cacheTime = null;
       _cachedTasks = null;
-      // ✅ ریفرش اجباری
       await _loadData();
     }
     _toggleExpanded(task.id, 'task');
@@ -1366,7 +1361,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  // ==================== ویجت‌های Swipe (Dismissible) - نسخه سازگار با Web ====================
+  // ==================== ویجت‌های Swipe (Dismissible) ====================
 
   Widget _buildSwipeableHabitItem(Habit habit, Color primaryColor) {
     final bool isQuest = habit.questId != null;
@@ -1374,7 +1369,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     final bool isEditable = !isQuest && !isChallenge;
 
     return Dismissible(
-      key: UniqueKey(), // ✅ استفاده از UniqueKey به جای ValueKey
+      key: UniqueKey(),
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1543,24 +1538,24 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     required IconData icon,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 3), // ✅ کاهش فاصله
       decoration: BoxDecoration(
         color: primaryColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
       ),
       alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-      padding: EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isLeft) ...[
-            Icon(icon, color: Colors.white, size: 28),
-            const SizedBox(width: 8),
+            Icon(icon, color: Colors.white, size: 24),
+            const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1569,12 +1564,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               label,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(icon, color: Colors.white, size: 28),
+            const SizedBox(width: 6),
+            Icon(icon, color: Colors.white, size: 24),
           ],
         ],
       ),
@@ -1825,7 +1820,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   )
                 : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12), // ✅ از 16 به 12
                     child: _buildTodayContent(primaryColor),
                   ),
           );
@@ -1879,7 +1874,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 )
               : SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12), // ✅ از 16 به 12
                   child: _buildTodayContent(primaryColor),
                 ),
         );
@@ -1892,35 +1887,42 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_todayHabits.isNotEmpty || _todayTasks.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ..._todayHabits
               .map((habit) => _buildSwipeableHabitItem(habit, primaryColor)),
           ..._todayTasks
               .map((task) => _buildSwipeableTaskItem(task, primaryColor)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
         ],
         if (_completedHabits.isNotEmpty || _completedTasks.isNotEmpty) ...[
-          Row(
-            children: [
-              Icon(Icons.check_circle,
-                  color: const Color.fromARGB(255, 0, 0, 0), size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'انجام شده',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 0, 0, 0),
+          // ✅ متن "انجام شده" وسط چین
+          const Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF090909),
+                  size: 18,
                 ),
-              ),
-            ],
+                SizedBox(width: 6),
+                Text(
+                  'انجام شده',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF090909),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ..._completedHabits.map((habit) =>
               _buildSwipeableCompletedHabitItem(habit, primaryColor)),
           ..._completedTasks.map(
               (task) => _buildSwipeableCompletedTaskItem(task, primaryColor)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
         ],
         if (_todayHabits.isEmpty &&
             _todayTasks.isEmpty &&
@@ -1930,21 +1932,21 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 100),
+                const SizedBox(height: 80),
                 Icon(
                   Icons.check_circle_outline,
-                  size: 80,
+                  size: 64,
                   color: Colors.grey.shade300,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   'هیچ کاری برای این روز ندارید!',
-                  style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   'روی دکمه + کلیک کنید',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                 ),
               ],
             ),

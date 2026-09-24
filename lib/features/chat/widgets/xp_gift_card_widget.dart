@@ -1,8 +1,10 @@
 // lib/features/chat/widgets/xp_gift_card_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/services/xp_gift_service.dart';
+import '/providers/theme_provider.dart';
 
 class XPGiftCardWidget extends StatefulWidget {
   final String giftId;
@@ -40,23 +42,19 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
   @override
   void initState() {
     super.initState();
-    // ✅ فقط یک بار در ابتدا چک کن
     _checkDeliveryStatus();
   }
 
   @override
   void didUpdateWidget(XPGiftCardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // ✅ اگر giftId تغییر کرد، دوباره چک کن
     if (oldWidget.giftId != widget.giftId && !_isChecking) {
       _checkDeliveryStatus();
     }
   }
 
   Future<void> _checkDeliveryStatus() async {
-    // ✅ جلوگیری از اجرای همزمان
     if (_isChecking || _isInitialized) return;
-
     _isChecking = true;
 
     try {
@@ -64,7 +62,6 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
       if (gift != null && mounted) {
         final newStatus = gift.isDelivered;
 
-        // ✅ فقط در صورت تغییر وضعیت، setState صدا بزن
         if (_isDelivered != newStatus) {
           setState(() {
             _isDelivered = newStatus;
@@ -73,8 +70,6 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         } else {
           _isInitialized = true;
         }
-
-        print('📊 Gift status: ${_isDelivered ? "Delivered" : "Pending"}');
       }
     } catch (e) {
       print('❌ Error checking gift status: $e');
@@ -83,8 +78,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
     }
   }
 
-  Future<void> _receiveGift() async {
-    // ✅ اگر قبلاً دریافت شده یا در حال بارگذاری است، کاری نکن
+  Future<void> _receiveGift(Color primaryColor) async {
     if (_isDelivered || _isLoading || _isChecking) return;
 
     setState(() {
@@ -95,7 +89,6 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
       final success = await _giftService.receiveGift(widget.giftId);
 
       if (success && mounted) {
-        // ✅ وضعیت را به روزرسانی کن
         setState(() {
           _isDelivered = true;
           _isLoading = false;
@@ -108,7 +101,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('🎉 ${widget.amount} XP دریافت شد!'),
-              backgroundColor: Colors.green,
+              backgroundColor: primaryColor,
               duration: const Duration(seconds: 2),
             ),
           );
@@ -132,22 +125,29 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ تا زمانی که مقداردهی اولیه انجام نشده، یک ویجت ساده نشان بده
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     if (!_isInitialized) {
       return Container(
         width: 280,
         height: 120,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+          color: theme.surfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: primaryColor.withValues(alpha: 0.15),
+          ),
         ),
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: primaryColor,
+            ),
           ),
         ),
       );
@@ -157,28 +157,16 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
       width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: _isDelivered
-              ? [Colors.green.shade100, Colors.green.shade50]
-              : [
-                  const Color(0xFFFFA500).withValues(alpha: 0.15),
-                  const Color(0xFFFFD700).withValues(alpha: 0.15),
-                ],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _isDelivered
-              ? Colors.green
-              : const Color(0xFFFFA500).withValues(alpha: 0.3),
+          color:
+              _isDelivered ? primaryColor : primaryColor.withValues(alpha: 0.3),
           width: _isDelivered ? 2 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: _isDelivered
-                ? Colors.green.withValues(alpha: 0.1)
-                : const Color(0xFFFFA500).withValues(alpha: 0.1),
+            color: primaryColor.withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -188,21 +176,20 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ✅ هدر
+          // ==================== هدر ====================
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: _isDelivered
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : const Color(0xFFFFA500).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   _isDelivered ? Icons.check_circle : Icons.stars,
-                  color: _isDelivered ? Colors.green : const Color(0xFFFFA500),
-                  size: 20,
+                  color: primaryColor,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 10),
@@ -215,77 +202,77 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: _isDelivered
-                            ? Colors.green
-                            : const Color(0xFFFFA500),
+                        color: primaryColor,
                       ),
                     ),
                     Text(
                       'از ${widget.senderName} به ${widget.receiverName}',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey.shade600,
+                        color: theme.textSecondaryColor,
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: _isDelivered
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : const Color(0xFFFFA500).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   '${widget.amount} XP',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: _isDelivered
-                        ? Colors.green
-                        : const Color(0xFFFFA500),
+                    color: primaryColor,
                   ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // ✅ پیام
+          // پیام
           if (widget.message.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
+                color: primaryColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: primaryColor.withValues(alpha: 0.12),
+                ),
               ),
               child: Text(
                 '"${widget.message}"',
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
-                  color: Colors.grey.shade700,
+                  color: theme.textColor,
                 ),
               ),
             ),
 
           const SizedBox(height: 10),
 
-          // ✅ دکمه دریافت (فقط برای گیرنده و زمانی که هنوز دریافت نشده)
+          // دکمه دریافت (فقط برای گیرنده)
           if (!_isDelivered && !widget.isMe)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _receiveGift,
+                onPressed: _isLoading ? null : () => _receiveGift(primaryColor),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFA500),
+                  backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 child: _isLoading
@@ -302,23 +289,28 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
               ),
             ),
 
-          // ✅ وضعیت دریافت شده (برای هر دو طرف)
+          // وضعیت دریافت شده
           if (_isDelivered)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 14),
+                  Icon(
+                    Icons.check_circle,
+                    color: primaryColor,
+                    size: 14,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     widget.isMe
@@ -326,21 +318,24 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                         : 'هدیه دریافت شد ✅',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w500,
+                      color: primaryColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
 
-          // ✅ وضعیت در انتظار (برای فرستنده)
+          // وضعیت در انتظار (برای فرستنده)
           if (!_isDelivered && widget.isMe)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.orange.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,

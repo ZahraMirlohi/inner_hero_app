@@ -62,20 +62,25 @@ class _TaskCardState extends State<TaskCard>
     });
   }
 
-// lib/features/arena/widgets/task_card.dart
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final Color primaryColor = themeProvider.primaryColor;
+    final Color primaryLight = themeProvider.primaryLight; // ✅ اضافه شد
 
-    // ✅ رنگ accent - همیشه سفید
-    final Color accentColor = Colors.white;
+    // ✅ رنگ کارت تسک - مشتق روشن رنگ اصلی
+    final Color cardColor = widget.isCompleted
+        ? const Color(0xFFF5F5F5)
+        : primaryLight; // ✅ از primaryLight استفاده می‌کند
+
+    // ✅ رنگ آیکون داخل دایره مشکی = هم‌رنگ باکس کارت
+    final Color iconColor =
+        widget.isCompleted ? Colors.grey.shade500 : cardColor;
 
     const Color textColor = Color(0xFF090909);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 6),
       child: Column(
         children: [
           // ============================================================
@@ -85,169 +90,154 @@ class _TaskCardState extends State<TaskCard>
             onTap: _toggleExpansion,
             behavior: HitTestBehavior.opaque,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // ✅ MAIN PILL - سفید با استروک سفید
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.isCompleted
-                            ? Colors.grey.shade100
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        // ✅ استروک سفید
-                        border: Border.all(
-                          color: accentColor, // ✅ سفید
-                          width: 2.5,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              // ✅ اجبار به LTR برای اینکه دایره در راست قرار گیرد
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ✅ MAIN PILL - سمت چپ
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              const Spacer(),
-                              Expanded(
-                                flex: 5,
-                                child: Text(
-                                  widget.task.title,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor,
-                                    decoration: widget.isCompleted
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              // ✅ XP با پس‌زمینه خاکستری ملایم
-                              if (!widget.isCompleted)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: const Text(
-                                    '+10 XP',
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                // ✅ عنوان - راست‌چین
+                                Expanded(
+                                  child: Text(
+                                    widget.task.title,
+                                    textAlign: TextAlign.right,
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF090909),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                      decoration: widget.isCompleted
+                                          ? TextDecoration.lineThrough
+                                          : null,
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    // ✅ اجبار به RTL برای متن فارسی
+                                    textDirection: TextDirection.rtl,
                                   ),
                                 ),
-                              const Spacer(),
-                              if (widget.task.dueDate != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _formatDate(widget.task.dueDate!),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF090909),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.calendar_today,
-                                        size: 12,
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                if (!widget.isCompleted)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text(
+                                      '+10',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
                                         color: Color(0xFF090909),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // ✅ نقطه جداکننده - سفید
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ✅ دایره آیکون - سفید
-                  GestureDetector(
-                    onTap: widget.onToggle,
-                    child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: accentColor, // ✅ سفید
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          widget.isCompleted
-                              ? Icons.check
-                              : Icons.assignment_outlined,
-                          color: const Color(0xFF090909), // ✅ مشکی
-                          size: 22,
+                                const Spacer(),
+                                if (widget.task.dueDate != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.6),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _formatDate(widget.task.dueDate!),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF090909),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        const Icon(
+                                          Icons.calendar_today,
+                                          size: 10,
+                                          color: Color(0xFF090909),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    // ✅ فاصله بین باکس کارت و دایره آیکون
+                    const SizedBox(width: 10),
+
+                    // ✅ دایره آیکون - سمت راست
+                    GestureDetector(
+                      onTap: widget.onToggle,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: widget.isCompleted
+                              ? const Color(0xFFE0E0E0)
+                              : const Color(0xFF090909),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Icon(
+                            widget.isCompleted
+                                ? Icons.check
+                                : Icons.assignment_outlined,
+                            color:
+                                widget.isCompleted ? Colors.white : iconColor,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -259,19 +249,19 @@ class _TaskCardState extends State<TaskCard>
             sizeFactor: _expansionAnimation,
             child: Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
+                horizontal: 16,
+                vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: widget.isCompleted ? Colors.grey.shade100 : Colors.white,
+                color: widget.isCompleted ? Colors.grey.shade50 : Colors.white,
                 borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(18),
-                  bottomRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: Colors.white.withOpacity(0.5),
-                    width: 1.5,
+                    color: primaryColor.withOpacity(0.15),
+                    width: 1,
                   ),
                 ),
               ),
@@ -283,9 +273,7 @@ class _TaskCardState extends State<TaskCard>
                         ? Icons.refresh
                         : Icons.check_circle_outline,
                     label: widget.isCompleted ? 'برگردان' : 'انجام',
-                    color: widget.isCompleted
-                        ? Colors.orange
-                        : const Color(0xFF090909), // ✅ انجام مشکی
+                    color: widget.isCompleted ? Colors.orange : primaryColor,
                     onTap: widget.onToggle,
                     isCompleted: widget.isCompleted,
                   ),
@@ -326,32 +314,31 @@ class _TaskCardState extends State<TaskCard>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ✅ دایره کوچک‌تر
           Container(
-            width: 36, // ← از 44 به 36
-            height: 36, // ← از 44 به 36
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: finalColor,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: finalColor.withOpacity(0.3),
-                  blurRadius: 6,
+                  color: finalColor.withOpacity(0.25),
+                  blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Icon(
               icon,
-              size: 18, // ← از 22 به 18
+              size: 16,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10, // ← از 11 به 10
+              fontSize: 9,
               color: finalColor,
               fontWeight: FontWeight.w600,
             ),

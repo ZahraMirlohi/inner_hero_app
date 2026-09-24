@@ -136,55 +136,93 @@ class _QuestsTabState extends State<QuestsTab> {
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+          padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // ✅ padding-top
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ═══════════════════════════════════════════════
+              // ماموریت‌های در حال انجام (افقی)
+              // ═══════════════════════════════════════════════
               if (activeQuests.isNotEmpty) ...[
                 _buildSectionHeader(
                   icon: Icons.play_circle,
-                  title: '⚡ ماموریت‌های در حال انجام',
-                  color: Colors.orange,
+                  title: 'ماموریت‌های در حال انجام',
                 ),
                 const SizedBox(height: 12),
-                ...activeQuests.map(
-                  (quest) => QuestCard(
-                    quest: quest,
-                    isActive: true,
-                    isCompleted: false,
-                    progress: _getQuestProgress(quest.id, userQuests),
-                    primaryColor: primaryColor,
-                    onTap: () => widget.showQuestDetail(quest),
-                    onCancel: () => _showCancelQuestDialog(quest),
+                SizedBox(
+                  height: 240, // ✅ ارتفاع ثابت برای کارت‌های افقی
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    itemCount: activeQuests.length,
+                    itemBuilder: (context, index) {
+                      final quest = activeQuests[index];
+                      final userQuest = userQuests.firstWhere(
+                        (uq) => uq.questId == quest.id,
+                        orElse: () => UserQuest(
+                          id: '',
+                          userId: '',
+                          questId: quest.id,
+                          startedAt: DateTime.now(),
+                          createdAt: DateTime.now(),
+                        ),
+                      );
+
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: SizedBox(
+                          width: 260, // ✅ عرض ثابت
+                          child: _buildActiveQuestCard(
+                            quest,
+                            userQuest.progress,
+                            primaryColor,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 24),
               ],
+
+              // ═══════════════════════════════════════════════
+              // ماموریت‌های تکمیل شده (مدال‌های کوچک افقی)
+              // ═══════════════════════════════════════════════
               if (completedQuests.isNotEmpty) ...[
                 _buildSectionHeader(
                   icon: Icons.emoji_events,
-                  title: '🏆 ماموریت‌های تکمیل شده',
-                  color: Colors.green,
+                  title: 'ماموریت‌های تکمیل شده',
                 ),
                 const SizedBox(height: 12),
-                ...completedQuests.map(
-                  (quest) => QuestCard(
-                    quest: quest,
-                    isActive: false,
-                    isCompleted: true,
-                    primaryColor: primaryColor,
-                    onTap: null,
+                SizedBox(
+                  height: 145, // ✅ ارتفاع برای کارت مدال
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    itemCount: completedQuests.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: _buildMedalCard(
+                          completedQuests[index],
+                          primaryColor,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 24),
               ],
+
+              // ═══════════════════════════════════════════════
+              // ماموریت‌های جدید (عمودی)
+              // ═══════════════════════════════════════════════
               if (newQuests.isNotEmpty) ...[
                 _buildSectionHeader(
                   icon: Icons.flag,
-                  title: '✨ ماموریت‌های جدید',
-                  color: primaryColor,
+                  title: 'ماموریت‌های جدید',
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 ...newQuests.map(
                   (quest) => QuestCard(
                     quest: quest,
@@ -202,6 +240,51 @@ class _QuestsTabState extends State<QuestsTab> {
         );
       },
     );
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'fitness_center':
+        return Icons.fitness_center;
+      case 'book':
+        return Icons.book;
+      case 'wb_sunny':
+        return Icons.wb_sunny;
+      case 'self_improvement':
+        return Icons.self_improvement;
+      case 'water_drop':
+        return Icons.water_drop;
+      case 'no_food':
+        return Icons.no_food;
+      case 'language':
+        return Icons.language;
+      case 'directions_walk':
+        return Icons.directions_walk;
+      case 'whatshot':
+        return Icons.whatshot;
+      case 'flag':
+        return Icons.flag;
+      case 'local_fire_department':
+        return Icons.local_fire_department;
+      case 'sports_martial_arts':
+        return Icons.sports_martial_arts;
+      case 'school':
+        return Icons.school;
+      case 'psychology':
+        return Icons.psychology;
+      case 'favorite':
+        return Icons.favorite;
+      case 'star':
+        return Icons.star;
+      case 'emoji_events':
+        return Icons.emoji_events;
+      case 'timer':
+        return Icons.timer;
+      case 'calendar_today':
+        return Icons.calendar_today;
+      default:
+        return Icons.flag; // ✅ پیش‌فرض
+    }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -237,6 +320,555 @@ class _QuestsTabState extends State<QuestsTab> {
         );
       }
     }
+  }
+
+  Widget _buildActiveQuestCard(Quest quest, int progress, Color primaryColor) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final Color primaryLight = themeProvider.primaryLight;
+
+    // ✅ رنگ کرمی
+    const Color creamColor = Color(0xFFFFF8E1); // کرمی روشن
+    const Color creamTextColor = Color(0xFF5D4037); // قهوه‌ای تیره برای متن
+
+    final double progressValue = quest.targetCount > 0
+        ? (progress / quest.targetCount).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFB981), // ✅ کرمی
+        borderRadius: BorderRadius.circular(20),
+        // ✅ بدون بوردر
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(255, 204, 148, 103)
+                .withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ─── ردیف بالا: آیکون + عنوان + بج فعال ───
+            Row(
+              children: [
+                // ✅ آیکون با پس‌زمینه سفید + بدون استروک + آیکون مشکی
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white, // ✅ سفید
+                    borderRadius: BorderRadius.circular(12),
+                    // ✅ بدون border
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _getIconData(quest.icon),
+                      color: const Color(0xFF090909), // ✅ مشکی
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    quest.title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: creamTextColor,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // ✅ بج «فعال»
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: creamTextColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt,
+                        size: 10,
+                        color: creamTextColor,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        'فعال',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: creamTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // ─── توضیحات ───
+            Text(
+              quest.description,
+              style: TextStyle(
+                fontSize: 11,
+                color: creamTextColor.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+
+            const SizedBox(height: 10),
+
+            // ─── نوار پیشرفت ───
+            Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progressValue,
+                    backgroundColor: creamTextColor.withValues(alpha: 0.15),
+                    color: creamTextColor,
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      '$progress از ${quest.targetCount} روز',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: creamTextColor.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${(progressValue * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: creamTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            const Spacer(),
+
+            // ─── ردیف پایین: XP + دکمه‌ها ───
+            Row(
+              children: [
+                // XP
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 39, 39, 39)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.stars,
+                        size: 11,
+                        color: Color.fromARGB(255, 0, 0, 0),
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '+${quest.xpReward}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color.fromARGB(255, 0, 0, 0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+
+                // ✅ دکمه مشاهده (مشکی)
+                GestureDetector(
+                  onTap: () => widget.showQuestDetail(quest),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF090909),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.visibility_outlined,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 3),
+                        Text(
+                          'مشاهده',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 6),
+
+                // ✅ دکمه غیرفعال (primaryLight)
+                GestureDetector(
+                  onTap: () => _showCancelQuestDialog(quest),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFF090909).withValues(alpha: 0.10),
+                        width: 1,
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.pause_circle_outline,
+                          size: 12,
+                          color: Color(0xFF090909),
+                        ),
+                        SizedBox(width: 3),
+                        Text(
+                          'غیرفعال',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF090909),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMedalCard(Quest quest, Color primaryColor) {
+    return GestureDetector(
+      onTap: () => widget.showQuestDetail(quest),
+      child: Container(
+        width: 130,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          // ✅ گرادیانت پس‌زمینه کرمی-طلایی ملایم
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFFFFDF5), // کرم خیلی روشن
+              Color(0xFFFFF3D6), // کرم طلایی
+            ],
+          ),
+          boxShadow: [
+            // ✅ سایه بیرونی تیره
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            // ✅ درخشش طلایی
+            BoxShadow(
+              color: const Color(0xFFFFD700).withValues(alpha: 0.20),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ═══════════════════════════════════════════
+              // 🏅 روبان‌های آویزان از بالای مدال
+              // ═══════════════════════════════════════════
+              SizedBox(
+                height: 18,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // روبان چپ
+                    Transform.rotate(
+                      angle: -0.35,
+                      child: Container(
+                        width: 14,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFE53935), // قرمز
+                              Color(0xFFB71C1C),
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(2),
+                            bottomRight: Radius.circular(8),
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(2),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    // روبان راست
+                    Transform.rotate(
+                      angle: 0.35,
+                      child: Container(
+                        width: 14,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFE53935),
+                              Color(0xFFB71C1C),
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(2),
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(2),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ═══════════════════════════════════════════
+              // 🏅 مدال دایره‌ای طلایی
+              // ═══════════════════════════════════════════
+              Transform.translate(
+                offset: const Offset(0, -4), // ✅ کمی روی روبان‌ها سوار شود
+                child: Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    // ✅ گرادیانت طلایی براق
+                    gradient: const RadialGradient(
+                      center: Alignment(-0.4, -0.4), // درخشش بالا-چپ
+                      radius: 0.9,
+                      colors: [
+                        Color(0xFFFFF8B0), // درخشان
+                        Color(0xFFFFD700), // طلایی
+                        Color(0xFFE5A100), // طلایی تیره
+                        Color(0xFFB8860B), // طلایی قهوه‌ای
+                      ],
+                      stops: [0.0, 0.4, 0.75, 1.0],
+                    ),
+                    boxShadow: [
+                      // ✅ درخشش بیرونی
+                      BoxShadow(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.5),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                      // ✅ سایه عمیق
+                      BoxShadow(
+                        color: const Color(0xFFB8860B).withValues(alpha: 0.4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      // حلقه داخلی
+                      Positioned.fill(
+                        child: Container(
+                          margin: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFFFF8B0)
+                                  .withValues(alpha: 0.6),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // آیکون مرکزی
+                      Center(
+                        child: Icon(
+                          _getIconData(quest.icon),
+                          size: 26,
+                          color: const Color(0xFF5D4037), // قهوه‌ای تیره
+                        ),
+                      ),
+                      // ✨ درخشش گوشه بالا-راست
+                      Positioned(
+                        top: 8,
+                        right: 10,
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      // ✨ درخشش کوچک‌تر
+                      Positioned(
+                        top: 14,
+                        right: 16,
+                        child: Container(
+                          width: 2,
+                          height: 2,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              // ═══════════════════════════════════════════
+              // 📛 پلاک نام مدال
+              // ═══════════════════════════════════════════
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  // ✅ پس‌زمینه پلاک قهوه‌ای تیره
+                  color: const Color(0xFF5D4037),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF5D4037).withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  quest.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFFFF8B0), // متن کرمی-طلایی
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              // ═══════════════════════════════════════════
+              // ⭐ تعداد XP کوچک
+              // ═══════════════════════════════════════════
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.star,
+                    size: 9,
+                    color: Color(0xFFE5A100),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '+${quest.xpReward} XP',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFFB8860B),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -384,21 +1016,34 @@ class _QuestsTabState extends State<QuestsTab> {
   Widget _buildSectionHeader({
     required IconData icon,
     required String title,
-    required Color color,
   }) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF090909).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF090909),
+              size: 16,
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF090909),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

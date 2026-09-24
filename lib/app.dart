@@ -1,6 +1,7 @@
 // lib/app.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '/features/auth/screens/login_screen.dart';
@@ -22,30 +23,20 @@ class _HeroAppState extends State<HeroApp> {
   @override
   void initState() {
     super.initState();
-    print('🔵 [APP] initState called');
     _checkLoginStatus();
   }
 
   Future<void> _checkLoginStatus() async {
-    print('🔵 [APP] _checkLoginStatus started');
-
     try {
       final prefs = await SharedPreferences.getInstance();
-      print('🔵 [APP] SharedPreferences loaded');
-
       final userId = prefs.getString('user_id');
-      print('🔵 [APP] userId from SharedPreferences: $userId');
 
       setState(() {
         _isLoggedIn = userId != null && userId.isNotEmpty;
         _isLoading = false;
         _debugInfo = 'userId: $userId, isLoggedIn: $_isLoggedIn';
-        print(
-          '🔵 [APP] State updated: isLoggedIn=$_isLoggedIn, isLoading=$_isLoading',
-        );
       });
     } catch (e) {
-      print('🔴 [APP] Error in _checkLoginStatus: $e');
       setState(() {
         _isLoading = false;
         _debugInfo = 'Error: $e';
@@ -55,12 +46,7 @@ class _HeroAppState extends State<HeroApp> {
 
   @override
   Widget build(BuildContext context) {
-    print(
-      '🔵 [APP] build called, isLoading=$_isLoading, isLoggedIn=$_isLoggedIn',
-    );
-
     if (_isLoading) {
-      print('🟡 [APP] Showing loading screen');
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
@@ -81,11 +67,29 @@ class _HeroAppState extends State<HeroApp> {
       );
     }
 
-    print('🟢 [APP] Building main app with isLoggedIn=$_isLoggedIn');
-
     return MaterialApp(
       title: 'قهرمان درون',
       debugShowCheckedModeBanner: false,
+
+      // ✅ تنظیمات locale فارسی
+      locale: const Locale('fa', 'IR'),
+      supportedLocales: const [
+        Locale('fa', 'IR'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
+      // ✅ اجبار کل اپلیکیشن به RTL
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child!,
+        );
+      },
+
       theme: ThemeData(
         fontFamily: 'Vazir',
         scaffoldBackgroundColor: Colors.grey.shade50,
@@ -115,14 +119,7 @@ class _HeroAppState extends State<HeroApp> {
       home: _isLoggedIn
           ? Consumer<SyncProvider>(
               builder: (context, syncProvider, child) {
-                print(
-                  '🟢 [APP] Consumer builder called, syncProvider.isInitialized=${syncProvider.isInitialized}',
-                );
-
                 if (!syncProvider.isInitialized) {
-                  print(
-                    '🟡 [APP] SyncProvider not initialized, showing loading',
-                  );
                   return const Scaffold(
                     body: Center(
                       child: Column(
@@ -139,8 +136,6 @@ class _HeroAppState extends State<HeroApp> {
                     ),
                   );
                 }
-
-                print('🟢 [APP] SyncProvider initialized, showing MainScreen');
                 return const MainScreen();
               },
             )

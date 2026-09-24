@@ -1,6 +1,5 @@
 // lib/features/chat/screens/buddy_chat_screen.dart
 
-// ✅ ایمپورت‌های صحیح
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -21,19 +20,22 @@ import 'package:open_file/open_file.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 
-// ✅ سرویس‌های جدید
+// ✅ سرویس‌ها
 import '/services/chat_service.dart';
 import '/services/supabase_service.dart';
 import '/services/audio_player_service.dart';
 import '/services/date_service.dart';
+import '/providers/theme_provider.dart';
 
-// ✅ بقیه ایمپورت‌ها به همین صورت باقی می‌مانند
+// ✅ مدل‌ها
 import '../models/message_model.dart';
 import '../models/conversation_model.dart';
 import '../models/challenge_invite.dart';
 import '../models/weekly_habit_performance.dart';
 import '../models/today_habits_list.dart';
 import '../models/xp_gift.dart';
+
+// ✅ ویجت‌ها
 import '../widgets/file_message_widget.dart';
 import '../widgets/weekly_performance_widget.dart';
 import '../widgets/today_habits_list_widget.dart';
@@ -44,6 +46,8 @@ import '../widgets/create_challenge_sheet.dart';
 import '../widgets/message_actions_menu.dart';
 import '../widgets/xp_gift_dialog.dart';
 import '../widgets/audio_player_header.dart';
+
+// ✅ سرویس‌های تخصصی
 import '/services/challenge_invite_service.dart';
 import '/services/weekly_performance_service.dart';
 import '/services/today_habits_service.dart';
@@ -156,7 +160,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     {'name': 'پیروزی', 'emoji': '🏆', 'id': '6'},
   ];
 
-  // ✅ وضعیت بارگذاری چالش‌ها
   final Set<String> _loadingChallenges = {};
 
   // ==================== واکنش‌ها ====================
@@ -198,11 +201,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
   final Map<String, String> _userNameCache = {};
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد بارگذاری چالش‌ها - با مدیریت خطا
+  // ==================== بارگذاری چالش‌ها ====================
   Future<void> _loadChallengesFromMessages(List<ChatMessage> messages) async {
-    // پیدا کردن همه challenge_idها از پیام‌ها
     final Set<String> challengeIds = {};
     for (var msg in messages) {
       if (msg.metadata != null) {
@@ -225,21 +225,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           final challenge = await service.getChallengeById(id);
           if (challenge != null) {
             _challengeCache[id] = challenge;
-            print('✅ Challenge loaded: $id');
           }
         } catch (e) {
           print('⚠️ Error loading challenge $id: $e');
-          // ادامه بده، یک چالش خراب نباید بقیه را متوقف کند
         }
       }
     } catch (e) {
       print('⚠️ Error in _loadChallengesFromMessages: $e');
-      // خطا را نادیده بگیر
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
+  // ==================== Init Chat ====================
   Future<void> _initChat() async {
     try {
       final user = await _chatService.getCurrentUser();
@@ -254,7 +250,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       await _updateLastSeen(user.id);
 
-      // ✅ دریافت نام خود کاربر
       try {
         final myProfile = await _supabase.client
             .from('profiles')
@@ -268,7 +263,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           });
         }
       } catch (e) {
-        print('⚠️ Error getting my name: $e');
         if (mounted) {
           setState(() {
             _myName = 'کاربر';
@@ -276,7 +270,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
       }
 
-      // ✅ پیدا کردن buddyId
       String buddyId = '';
       if (widget.conversation.memberIds.isNotEmpty) {
         final others =
@@ -337,10 +330,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
       }
 
-      // ✅ بارگذاری پیام‌ها با مدیریت خطا
       try {
         await _loadMessages();
-        // ✅ اسکرول به انتهای صفحه بعد از بارگذاری
         _scrollToBottom();
       } catch (e) {
         print('❌ Error in _loadMessages: $e');
@@ -351,9 +342,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
       }
 
-      // lib/features/chat/screens/buddy_chat_screen.dart
-
-      /// ✅ تنظیمات Realtime برای پیام‌ها - با به‌روزرسانی وضعیت
       _messageSubscription = _chatService
           .getMessages(widget.conversation.id, userId: _userId)
           .listen((newMessages) async {
@@ -365,12 +353,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           );
 
           if (mounted) {
-            // ✅ تعداد پیام‌های قبلی را ذخیره کن
             final oldMessageCount = _messages.length;
 
             setState(() {
               _messages = messagesWithReactions.reversed.toList();
-              // ✅ بروزرسانی پیام پین شده
               try {
                 _pinnedMessage = _messages.firstWhere((m) => m.isPinned);
               } catch (e) {
@@ -378,10 +364,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               }
             });
 
-            // ✅ پیام‌های جدید را به عنوان خوانده شده علامت بزن
             await _markMessagesAsRead();
 
-            // ✅ اگر پیام جدید از طرف مقابل رسیده، اسکرول به پایین
             if (_messages.length > oldMessageCount) {
               final lastMessage = _messages.first;
               if (lastMessage.senderId != _userId) {
@@ -393,7 +377,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           print('❌ Error in realtime update: $e');
         }
       });
-      // ✅ تنظیمات Realtime برای وضعیت تایپ
+
       _typingSubscription = _chatService
           .getTypingStatus(widget.conversation.id)
           .listen((typingData) {
@@ -420,15 +404,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // ✅ اصلاح متد _getCachedChallenge با مدیریت خطا
+  // ✅ متد دریافت چالش کش شده
   Future<ChallengeInvite?> _getCachedChallenge(String challengeId) async {
-    // اگر در حال بارگذاری است، صبر کن
     if (_loadingChallenges.contains(challengeId)) {
       await Future.delayed(const Duration(milliseconds: 100));
       return _challengeCache[challengeId];
     }
 
-    // اگر در کش باشد و معتبر باشد
     if (_challengeCache.containsKey(challengeId) &&
         _challengeCacheTime.containsKey(challengeId)) {
       final cacheTime = _challengeCacheTime[challengeId]!;
@@ -457,24 +439,23 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // ✅ متد پاک کردن کش
   void _clearChallengeCache(String challengeId) {
     _challengeCache.remove(challengeId);
     _challengeCacheTime.remove(challengeId);
   }
 
-  // ✅ نمایش منوی چندرسانه‌ای (مینیمال و مدرن)
-  void _showMediaMenuSheet() {
+  // ==================== منوی چندرسانه‌ای ====================
+  void _showMediaMenuSheet(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.surfaceColor,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.35, // ✅ ارتفاع کمتر
+          initialChildSize: 0.35,
           minChildSize: 0.25,
           maxChildSize: 0.45,
           expand: false,
@@ -484,7 +465,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ نشانگر کشیدن
                   Center(
                     child: Container(
                       width: 40,
@@ -496,41 +476,36 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // ✅ عنوان بسیار مینیمال
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
                     child: Text(
                       'ارسال',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
+                        color: theme.textColor,
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // ✅ لیست آیکون‌ها (بدون متن)
                   Expanded(
                     child: GridView.builder(
                       controller: scrollController,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5, // ✅ ۵ آیکون در هر ردیف
-                        childAspectRatio: 1.0, // ✅ مربعی
+                        crossAxisCount: 5,
+                        childAspectRatio: 1.0,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
                       ),
-                      itemCount: _getMediaMenuItems().length,
+                      itemCount: _getMediaMenuItems(theme, primaryColor).length,
                       itemBuilder: (context, index) {
-                        final item = _getMediaMenuItems()[index];
+                        final item =
+                            _getMediaMenuItems(theme, primaryColor)[index];
                         return _buildMediaMenuItem(item);
                       },
                     ),
                   ),
-
                   const SizedBox(height: 8),
                 ],
               ),
@@ -541,7 +516,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     );
   }
 
-  // ✅ ساخت آیتم منوی چندرسانه‌ای (مینیمال، بدون متن)
   Widget _buildMediaMenuItem(MediaMenuItem item) {
     return GestureDetector(
       onTap: () {
@@ -549,104 +523,101 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         item.onTap();
       },
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.transparent, // ✅ پس‌زمینه شفاف
-        ),
+        decoration: const BoxDecoration(color: Colors.transparent),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // ✅ آیکون اصلی
             Container(
-              width: 52, // ✅ سایز آیکون
+              width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.12), // ✅ رنگ ملایم
-                shape: BoxShape.circle, // ✅ دایره‌ای
+                color: item.color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
               ),
               child: Icon(
                 item.icon,
                 color: item.color,
-                size: 28, // ✅ سایز بزرگ‌تر
+                size: 28,
               ),
             ),
-            // ❌ متن حذف شد
           ],
         ),
       ),
     );
   }
 
-  // ✅ لیست آیتم‌های منو (به‌روزرسانی شده برای مینیمال)
-  List<MediaMenuItem> _getMediaMenuItems() {
-    final bool isWeb = identical(0, 0.0) ? false : true;
+  List<MediaMenuItem> _getMediaMenuItems(
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
+    final bool isWeb = kIsWeb;
 
     return [
       MediaMenuItem(
         icon: Icons.image,
-        title: '', // ✅ متن خالی
-        color: const Color(0xFF4A90E2),
+        title: '',
+        color: primaryColor,
         onTap: _sendImage,
       ),
       MediaMenuItem(
         icon: Icons.location_on,
         title: '',
-        color: const Color(0xFF2ECC71),
+        color: primaryColor,
         onTap: _sendLocation,
       ),
-      // ✅ فقط در موبایل و دسکتاپ
       if (!isWeb)
         MediaMenuItem(
           icon: Icons.contact_phone,
           title: '',
-          color: const Color(0xFFE74C3C),
+          color: primaryColor,
           onTap: _sendContact,
         ),
       MediaMenuItem(
         icon: Icons.attach_file,
         title: '',
-        color: const Color(0xFFF39C12),
+        color: primaryColor,
         onTap: _sendFile,
       ),
       MediaMenuItem(
         icon: Icons.music_note,
         title: '',
-        color: const Color(0xFF9B59B6),
+        color: primaryColor,
         onTap: _sendMusic,
       ),
       MediaMenuItem(
         icon: Icons.trending_up,
         title: '',
-        color: const Color(0xFF1ABC9C),
+        color: primaryColor,
         onTap: _sendDailyProgressCard,
       ),
       MediaMenuItem(
         icon: Icons.analytics,
         title: '',
-        color: const Color(0xFF7C3AED),
+        color: primaryColor,
         onTap: _sendWeeklyPerformance,
       ),
       MediaMenuItem(
         icon: Icons.checklist,
         title: '',
-        color: const Color(0xFFFFA500),
+        color: primaryColor,
         onTap: _sendTodayHabitsList,
       ),
       MediaMenuItem(
         icon: Icons.emoji_events,
         title: '',
-        color: const Color(0xFFE74C3C),
-        onTap: _showCreateChallengeDialog,
+        color: primaryColor,
+        onTap: () => _showCreateChallengeDialog(theme, primaryColor),
       ),
       MediaMenuItem(
         icon: Icons.stars,
         title: '',
-        color: const Color(0xFFFFA500),
+        color: primaryColor,
         onTap: _sendXPGift,
       ),
     ];
   }
 
-  // ✅ ارسال لوکیشن
+  // ==================== ارسال لوکیشن ====================
   void _sendLocation() async {
     final locationText = await Navigator.push<String>(
       context,
@@ -658,9 +629,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // ✅ متد ارسال شماره تماس - با flutter_contacts
+  // ==================== ارسال مخاطب ====================
   Future<void> _sendContact() async {
-    // ✅ تشخیص Web
     final bool isWeb = kIsWeb;
 
     if (isWeb) {
@@ -668,9 +638,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       return;
     }
 
-    // ✅ در موبایل/دسکتاپ: از flutter_contacts استفاده کن
     try {
-      // ✅ درخواست دسترسی
       final hasPermission = await FlutterContacts.requestPermission();
       if (!hasPermission) {
         if (mounted) {
@@ -684,7 +652,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         return;
       }
 
-      // ✅ دریافت مخاطبان
       final contacts = await FlutterContacts.getContacts(
         withProperties: true,
         withPhoto: false,
@@ -702,12 +669,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         return;
       }
 
-      // ✅ نمایش دیالوگ انتخاب مخاطب
       final selectedContact = await showModalBottomSheet<Contact>(
         context: context,
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         builder: (context) {
           return DraggableScrollableSheet(
@@ -758,14 +724,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                               contact.phones.map((p) => p.number).toList();
 
                           return ListTile(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             leading: CircleAvatar(
-                              backgroundColor: const Color(
-                                0xFF4A90E2,
-                              ).withValues(alpha: 0.1),
+                              backgroundColor: Theme.of(context)
+                                  .primaryColor
+                                  .withValues(alpha: 0.1),
                               child: Text(
                                 displayName.substring(0, 1).toUpperCase(),
-                                style: const TextStyle(
-                                  color: Color(0xFF4A90E2),
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -826,26 +795,27 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // ✅ متد جدید برای Web - نمایش دیالوگ وارد کردن شماره
   void _showContactInputDialog() {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final primaryColor = theme.primaryColor;
     final TextEditingController nameController = TextEditingController();
     final TextEditingController phoneController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.contact_phone,
-                color: Color(0xFF4A90E2),
+                color: primaryColor,
                 size: 22,
               ),
             ),
@@ -855,7 +825,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
               ),
             ),
           ],
@@ -867,10 +836,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               controller: nameController,
               decoration: InputDecoration(
                 hintText: 'نام مخاطب',
-                prefixIcon: const Icon(
-                  Icons.person_outline,
-                  color: Color(0xFF4A90E2),
-                ),
+                prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -885,10 +851,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 hintText: 'شماره تماس',
-                prefixIcon: const Icon(
-                  Icons.phone_outlined,
-                  color: Color(0xFF4A90E2),
-                ),
+                prefixIcon: Icon(Icons.phone_outlined, color: primaryColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -933,7 +896,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               _sendMessage(text: contactText, type: MessageType.text);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -946,67 +909,45 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     );
   }
 
-// lib/features/chat/screens/buddy_chat_screen.dart
-
+  // ==================== ارسال فایل ====================
   Future<void> _sendFile() async {
     try {
-      print('📁 _sendFile called!');
-
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.any,
       );
 
-      if (result == null || result.files.isEmpty) {
-        print('⚠️ No file selected');
-        return;
-      }
+      if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
-      // ✅ روش صحیح برای دریافت bytes در همه پلتفرم‌ها
       Uint8List? fileBytes;
 
-      // ✅ روش 1: اگر bytes موجود است
       if (file.bytes != null) {
         fileBytes = file.bytes;
-      }
-      // ✅ روش 2: اگر path موجود است (موبایل)
-      else if (file.path != null && file.path!.isNotEmpty) {
+      } else if (file.path != null && file.path!.isNotEmpty) {
         try {
           final File fileObj = File(file.path!);
           fileBytes = await fileObj.readAsBytes();
-          print('📁 File read from path: ${file.path}');
         } catch (e) {
           print('❌ Error reading file from path: $e');
         }
-      }
-      // ✅ روش 3: برای Web، استفاده از FileReader (در صورت نیاز)
-      else if (kIsWeb) {
-        // در Web، معمولاً bytes در دسترس نیست
-        // باید از روش جایگزین استفاده کنیم
-        print('⚠️ Web file picker: bytes not available, trying alternative...');
-
-        // برای Web، می‌توانیم از `file.path` (که URL است) استفاده کنیم
+      } else if (kIsWeb) {
         if (file.path != null) {
-          // در Web، file.path یک URL است
           final response = await http.get(Uri.parse(file.path!));
           if (response.statusCode == 200) {
             fileBytes = response.bodyBytes;
-            print('✅ File downloaded from URL: ${file.path}');
           }
         }
       }
 
       if (fileBytes == null) {
-        print('❌ Could not read file bytes');
         _showSnackBar('فایل قابل خواندن نیست');
         return;
       }
 
-      // ✅ ایجاد پیام موقت
       final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
 
       final tempMessage = ChatMessage(
@@ -1040,7 +981,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       _scrollToBottom();
 
-      // ✅ آپلود فایل
       final String fileUrl = await _uploadFileToStorageHttp(
         fileBytes: fileBytes,
         fileName: fileName,
@@ -1059,9 +999,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         return;
       }
 
-      print('✅ File uploaded successfully: $fileUrl');
-
-      // ✅ ارسال پیام واقعی
       final Map<String, dynamic> metadata = {
         'file_url': fileUrl,
         'file_name': fileName,
@@ -1088,8 +1025,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         metadata: metadata,
         senderName: _myName,
       );
-
-      print('✅ File message sent to database');
 
       setState(() {
         _messages.removeWhere((msg) => msg.id == tempMessageId);
@@ -1122,25 +1057,20 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
+  // ==================== ارسال موزیک ====================
   Future<void> _sendMusic() async {
     try {
-      print('🎵 _sendMusic called!');
-
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
         type: FileType.audio,
       );
 
-      if (result == null || result.files.isEmpty) {
-        print('⚠️ No music file selected');
-        return;
-      }
+      if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
-      // ✅ روش صحیح برای دریافت bytes
       Uint8List? fileBytes;
 
       if (file.bytes != null) {
@@ -1149,7 +1079,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         try {
           final File fileObj = File(file.path!);
           fileBytes = await fileObj.readAsBytes();
-          print('🎵 File read from path: ${file.path}');
         } catch (e) {
           print('❌ Error reading file from path: $e');
         }
@@ -1158,7 +1087,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           final response = await http.get(Uri.parse(file.path!));
           if (response.statusCode == 200) {
             fileBytes = response.bodyBytes;
-            print('✅ Music downloaded from URL: ${file.path}');
           }
         } catch (e) {
           print('❌ Error downloading music from URL: $e');
@@ -1166,12 +1094,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
 
       if (fileBytes == null) {
-        print('❌ Could not read music file bytes');
         _showSnackBar('فایل موزیک قابل خواندن نیست');
         return;
       }
 
-      // ✅ 1. ایجاد پیام موقت با وضعیت "در حال ارسال"
       final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
 
       final tempMessage = ChatMessage(
@@ -1198,7 +1124,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         hiddenFor: [],
       );
 
-      // ✅ 2. اضافه کردن پیام موقت به لیست
       setState(() {
         _messages.insert(0, tempMessage);
         _isSending = true;
@@ -1206,7 +1131,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       _scrollToBottom();
 
-      // ✅ 3. آپلود فایل
       final String fileUrl = await _uploadFileToStorageHttp(
         fileBytes: fileBytes,
         fileName: fileName,
@@ -1214,7 +1138,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       if (fileUrl.isEmpty) {
-        // ❌ اگر آپلود失敗، پیام را به حالت failed تغییر بده
         setState(() {
           final index = _messages.indexWhere((msg) => msg.id == tempMessageId);
           if (index != -1) {
@@ -1238,14 +1161,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           }
           _isSending = false;
         });
-
         _showSnackBar('خطا در آپلود موزیک');
         return;
       }
 
-      print('✅ Music uploaded to: $fileUrl');
-
-      // ✅ 4. ساخت metadata نهایی
       final Map<String, dynamic> metadata = {
         'file_url': fileUrl,
         'file_name': fileName,
@@ -1264,8 +1183,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
-      // ✅ 5. ارسال پیام واقعی به دیتابیس - با استفاده از sendMessage مستقیم
-      // و سپس پیام موقت را با پیام واقعی جایگزین کنید
       try {
         await _chatService.sendMessage(
           conversationId: widget.conversation.id,
@@ -1276,13 +1193,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           senderName: _myName,
         );
 
-        print('✅ Music message sent to database');
-
-        // ✅ 6. پیام موقت را با یک پیام واقعی جایگزین کن
-        // برای این کار باید پیام جدید را از دیتابیس دریافت کنیم
-        // یا اینکه پیام موقت را به روزرسانی کنیم
-
-        // روش: پیام موقت را به روزرسانی کن
         setState(() {
           final index = _messages.indexWhere((msg) => msg.id == tempMessageId);
           if (index != -1) {
@@ -1312,8 +1222,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
 
-        print('✅ _sendMusic completed!');
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1324,7 +1232,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
       } catch (e) {
         print('❌ Error sending music message: $e');
-        // در صورت خطا، پیام موقت را به حالت failed تغییر بده
         setState(() {
           final index = _messages.indexWhere((msg) => msg.id == tempMessageId);
           if (index != -1) {
@@ -1352,7 +1259,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     } catch (e) {
       print('❌ Error in _sendMusic: $e');
 
-      // ❌ در صورت خطا، پیام موقت را به حالت failed تغییر بده
       setState(() {
         final index = _messages.indexWhere(
           (msg) =>
@@ -1391,7 +1297,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
-  // ✅ متد ارسال ویجت عملکرد هفتگی
+  // ==================== ارسال عملکرد هفتگی ====================
   void _sendWeeklyPerformance() async {
     if (_userId == null) {
       _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
@@ -1399,7 +1305,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
 
     try {
-      // نمایش لودینگ
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1434,7 +1339,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         return;
       }
 
-      // ✅ ساخت متن ویجت
       final successPercent = (performance.successRate * 100).toInt();
       final motivationalMessage = performance.getMotivationalMessage();
 
@@ -1449,7 +1353,6 @@ $motivationalMessage
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
-      // ✅ ارسال با metadata
       _sendMessage(
         text: widgetText,
         type: MessageType.text,
@@ -1488,7 +1391,7 @@ $motivationalMessage
     }
   }
 
-  // ✅ متد ارسال لیست عادت‌های امروز
+  // ==================== ارسال لیست عادت‌های امروز ====================
   void _sendTodayHabitsList() async {
     if (_userId == null) {
       _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
@@ -1496,7 +1399,6 @@ $motivationalMessage
     }
 
     try {
-      // نمایش لودینگ
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1531,7 +1433,6 @@ $motivationalMessage
         return;
       }
 
-      // ✅ ساخت متن ویجت
       final rate = (data.completionRate * 100).toInt();
       final jalaliDate = Jalali.fromDateTime(data.date);
       final dateString = '${jalaliDate.day} ${_getMonthName(jalaliDate.month)}';
@@ -1546,7 +1447,6 @@ ${data.completionMessage}
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
-      // ✅ ارسال با metadata
       _sendMessage(
         text: widgetText,
         type: MessageType.text,
@@ -1585,7 +1485,6 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ متد کمکی برای نام ماه
   String _getMonthName(int month) {
     const months = [
       'فروردین',
@@ -1604,20 +1503,23 @@ ${data.completionMessage}
     return months[month - 1];
   }
 
-  // ✅ اصلاح متد _showCreateChallengeDialog
-  void _showCreateChallengeDialog() {
+  // ==================== دیالوگ ساخت چالش ====================
+  void _showCreateChallengeDialog(
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
         return CreateChallengeSheet(
           buddyName: _buddyName ?? 'هم‌مسیر',
           buddyId: _buddyId ?? '',
           userId: _userId ?? '',
-          userName: _myName ?? 'کاربر', // ✅ نام خود کاربر
+          userName: _myName ?? 'کاربر',
           onSubmit: (challenge) {
             _sendChallengeInvite(challenge);
           },
@@ -1625,8 +1527,6 @@ ${data.completionMessage}
       },
     );
   }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
 
   void _sendChallengeInvite(ChallengeInvite challenge) async {
     try {
@@ -1645,10 +1545,8 @@ ${data.completionMessage}
       );
 
       if (created != null) {
-        // ✅ اضافه کردن به کش بلافاصله
         _challengeCache[created.id] = created;
 
-        // ✅ ارسال پیام
         _sendMessage(
           text:
               '🏆 ${created.title}\n\n${created.description}\n\n📋 ${created.habits.length} عادت • ${created.duration} روز • ${created.xpReward} XP',
@@ -1678,16 +1576,12 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ اصلاح متد _respondToChallenge
   void _respondToChallenge(String challengeId, bool accept) async {
     try {
       final service = ChallengeInviteService();
       final success = await service.respondToChallenge(challengeId, accept);
 
       if (success && mounted) {
-        // ✅ پاک کردن کش چالش
         _challengeCache.remove(challengeId);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1697,16 +1591,14 @@ ${data.completionMessage}
           ),
         );
 
-        // ✅ بارگذاری مجدد پیام‌ها برای نمایش ویجت جدید
         _loadMessages();
       }
     } catch (e) {
       print('❌ Error responding to challenge: $e');
     }
   }
-  // ==================== متدهای کمکی ====================
 
-  // ✅ تبدیل حجم فایل به رشته خوانا
+  // ==================== متدهای کمکی ====================
   String _getFileSizeString(int bytes) {
     if (bytes == 0) return '0 B';
 
@@ -1722,8 +1614,7 @@ ${data.completionMessage}
     return '${size.toStringAsFixed(1)} ${suffixes[i]}';
   }
 
-  // ==================== آپلود فایل به Supabase Storage ====================
-
+  // ==================== آپلود ====================
   Future<String> _uploadFileToStorage({
     required Uint8List fileBytes,
     required String fileName,
@@ -1736,7 +1627,6 @@ ${data.completionMessage}
         return '';
       }
 
-      // ✅ فقط پسوند فایل را نگه دار
       final extension = fileName.contains('.')
           ? fileName.substring(fileName.lastIndexOf('.'))
           : '.mp3';
@@ -1745,9 +1635,6 @@ ${data.completionMessage}
           '${DateTime.now().millisecondsSinceEpoch}$extension';
       final path = '$folder/${user.id}/$simpleFileName';
 
-      print('📤 Uploading to: $path');
-
-      // ✅ آپلود بدون FileOptions (با تنظیم contentType به صورت جداگانه)
       await _supabase.client.storage
           .from('chat_files')
           .uploadBinary(path, fileBytes);
@@ -1755,7 +1642,6 @@ ${data.completionMessage}
       final String publicUrl =
           _supabase.client.storage.from('chat_files').getPublicUrl(path);
 
-      print('✅ Uploaded: $publicUrl');
       return publicUrl;
     } catch (e) {
       print('❌ Upload error: $e');
@@ -1763,8 +1649,6 @@ ${data.completionMessage}
       return '';
     }
   }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
 
   Future<String> _uploadFileToStorageHttp({
     required Uint8List fileBytes,
@@ -1795,9 +1679,6 @@ ${data.completionMessage}
       final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
       final storageUrl = '$supabaseUrl/storage/v1/object/chat_files/$path';
 
-      print('📤 Uploading to (HTTP): $storageUrl');
-
-      // ✅ تشخیص contentType
       String contentType = 'application/octet-stream';
       if (extension == '.jpg' || extension == '.jpeg') {
         contentType = 'image/jpeg';
@@ -1821,15 +1702,11 @@ ${data.completionMessage}
         body: fileBytes,
       );
 
-      print('📤 HTTP Response status: ${response.statusCode}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final publicUrl =
             _supabase.client.storage.from('chat_files').getPublicUrl(path);
-        print('✅ Uploaded (HTTP): $publicUrl');
         return publicUrl;
       } else {
-        print('❌ HTTP upload failed: ${response.statusCode}');
         _showSnackBar('خطا در آپلود: ${response.statusCode}');
         return '';
       }
@@ -1840,25 +1717,7 @@ ${data.completionMessage}
     }
   }
 
-  // ==================== ویجت تصویر ====================
-
-  Widget _buildImageMessage(ChatMessage message, bool isMe) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.network(
-        message.content,
-        width: 200,
-        height: 200,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) =>
-            const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-      ),
-    );
-  }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد ارسال یادآور در چت
+  // ==================== ارسال یادآور ====================
   void _sendReminder(String challengeTitle) async {
     if (_userId == null || _buddyId == null) return;
 
@@ -1891,49 +1750,16 @@ ${data.completionMessage}
     }
   }
 
-  // ==================== ویجت استیکر ====================
-
-  Widget _buildStickerMessage(ChatMessage message, bool isMe) {
-    return Text(message.content, style: const TextStyle(fontSize: 48));
-  }
-
-  // ==================== ویجت GIF ====================
-
-  Widget _buildGifMessage(ChatMessage message, bool isMe) {
-    return Row(
-      children: [
-        const Text('🎬', style: TextStyle(fontSize: 20)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            message.content,
-            style: TextStyle(
-              color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==================== متدهای کمکی ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ 1. اصلاح متد _sendDailyProgressCard - حذف .then و استفاده از async/await
+  // ==================== ارسال کارت پیشرفت ====================
   void _sendDailyProgressCard() {
-    // دریافت اطلاعات واقعی با async/await
     _getTodayStatsAndSend();
   }
 
-  // ✅ 2. متد جدید برای دریافت آمار و ارسال کارت
   Future<void> _getTodayStatsAndSend() async {
     try {
       final user = await _supabase.getCurrentUser();
       if (user == null) return;
 
-      // دریافت عادت‌های امروز
       final habits = await _supabase.getHabits(user.id);
       final today = DateTime.now();
 
@@ -1953,27 +1779,20 @@ ${data.completionMessage}
         if (isCompleted) completed++;
       }
 
-      // دریافت استریک
       final profile = await _supabase.client
           .from('profiles')
           .select('current_streak, best_streak')
           .eq('user_id', user.id)
           .maybeSingle();
 
-      // ✅ دریافت وضعیت هفته با تقویم شمسی
       final weekDays = await _getWeekDaysStatus(user.id);
 
-      print('📊 _getTodayStatsAndSend - WeekDays: $weekDays');
-      print('📊 _getTodayStatsAndSend - Total: $total, Completed: $completed');
-
-      // ✅ به‌روزرسانی متغیرهای کلاس
       _totalTodayHabits = total;
       _todayHabitsCompleted = completed;
       _todayHabitsRemaining = total - completed;
       _currentStreak = profile?['current_streak'] ?? 0;
       _weekDays = weekDays;
 
-      // ✅ ارسال کارت پیشرفت
       final String progressText = '''
 📊 کارت پیشرفت روزانه
 ━━━━━━━━━━━━━━━━━━━━
@@ -2001,84 +1820,19 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ اصلاح متد دریافت آمار امروز
-  void _getTodayStats() async {
-    try {
-      final user = await _supabase.getCurrentUser();
-      if (user == null) return;
-
-      // دریافت عادت‌های امروز
-      final habits = await _supabase.getHabits(user.id);
-      final today = DateTime.now();
-
-      int total = 0;
-      int completed = 0;
-
-      for (var habit in habits) {
-        if (!habit.isActive) continue;
-        if (!habit.shouldDoOnDate(today)) continue;
-
-        total++;
-        final isCompleted = await _supabase.isHabitCompletedOnDate(
-          habit.id,
-          user.id,
-          today,
-        );
-        if (isCompleted) completed++;
-      }
-
-      // دریافت استریک
-      final profile = await _supabase.client
-          .from('profiles')
-          .select('current_streak, best_streak')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-      // ✅ دریافت وضعیت هفته با تقویم شمسی
-      final weekDays = await _getWeekDaysStatus(user.id);
-
-      print('📊 _getTodayStats - WeekDays: $weekDays');
-      print('📊 _getTodayStats - Total: $total, Completed: $completed');
-
-      if (mounted) {
-        setState(() {
-          _totalTodayHabits = total;
-          _todayHabitsCompleted = completed;
-          _todayHabitsRemaining = total - completed;
-          _currentStreak = profile?['current_streak'] ?? 0;
-          _weekDays = weekDays;
-        });
-      }
-    } catch (e) {
-      print('❌ Error getting today stats: $e');
-    }
-  }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد دریافت وضعیت روزهای هفته با تقویم شمسی
   Future<List<bool>> _getWeekDaysStatus(String userId) async {
     List<bool> weekDays = List.filled(7, false);
 
     try {
       final now = DateTime.now();
-
-      // ✅ محاسبه شروع هفته بر اساس تقویم شمسی
       final jalaliNow = Jalali.fromDateTime(now);
-      final daysToSubtract = jalaliNow.weekDay - 1; // 0 = شنبه
+      final daysToSubtract = jalaliNow.weekDay - 1;
       final weekStart = now.subtract(Duration(days: daysToSubtract));
-
-      print('📅 Week start (Jalali): ${Jalali.fromDateTime(weekStart)}');
-      print('📅 Today (Jalali): ${Jalali.fromDateTime(now)}');
-      print('📅 Days to subtract: $daysToSubtract');
 
       for (int i = 0; i < 7; i++) {
         final date = weekStart.add(Duration(days: i));
         final dateStr = date.toIso8601String().split('T').first;
 
-        // ✅ دریافت وضعیت فعالیت از دیتابیس
         final activity = await _supabase.client
             .from('user_daily_activity')
             .select('is_active')
@@ -2088,12 +1842,6 @@ ${data.completionMessage}
 
         final isActive = activity != null && activity['is_active'] == true;
         weekDays[i] = isActive;
-
-        // ✅ لاگ برای دیباگ
-        final jalaliDate = Jalali.fromDateTime(date);
-        print(
-          '📊 Day ${i + 1}: ${jalaliDate.day}/${jalaliDate.month} - isActive: $isActive',
-        );
       }
 
       return weekDays;
@@ -2103,91 +1851,7 @@ ${data.completionMessage}
     }
   }
 
-  Future<int> _getUserStreak(String userId) async {
-    try {
-      final response = await _supabase.client
-          .from('profiles')
-          .select('current_streak')
-          .eq('user_id', userId)
-          .maybeSingle();
-      return response?['current_streak'] as int? ?? 0;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  Future<int> _getTodayHabitsCount(String userId) async {
-    try {
-      final today = DateTime.now().toIso8601String().split('T').first;
-      final response = await _supabase.client
-          .from('habits')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('is_active', true);
-      return response.length;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  Future<int> _getTodayCompletedHabits(String userId) async {
-    try {
-      final today = DateTime.now().toIso8601String().split('T').first;
-      final response = await _supabase.client
-          .from('habit_completions')
-          .select('habit_id')
-          .eq('user_id', userId)
-          .eq('date', today);
-      return response.length;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  // ✅ ارسال نمودار عملکرد
-  void _sendPerformanceChart() {
-    // در آینده: تولید نمودار
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('📊 نمودار عملکرد به زودی اضافه میشود'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // یک تابع کمکی برای پاکسازی نام فایل
-  String _sanitizeFileName(String fileName) {
-    // 1. پسوند فایل را جدا کنید
-    final extension = fileName.split('.').last;
-    // 2. نام فایل را بدون پسوند بگیرید
-    var name = fileName.substring(0, fileName.length - extension.length - 1);
-
-    // 3. تمام کاراکترهای غیرمجاز (فاصله، پرانتز، خط تیره) را با "_" جایگزین کنید
-    // فقط حروف انگلیسی، اعداد و "_" و "-" را نگه دارید (و "." برای پسوند)
-    final RegExp regExp = RegExp(r'[^a-zA-Z0-9_-]');
-    name = name.replaceAll(regExp, '_'); // تبدیل کاراکترهای بد به "_"
-
-    // 4. اگر نام خالی شد، یک نام پیش‌فرض بدهید
-    if (name.isEmpty) name = 'audio_file';
-
-    // 5. نام نهایی را بسازید
-    return '$name.$extension';
-  }
-
-  // ✅ ارسال تایمر/یادآور
-  void _sendTimerReminder() {
-    // در آینده: تنظیم تایمر
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('⏰ تنظیم تایمر و یادآور به زودی اضافه میشود'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد ارسال هدیه XP (اصلاح شده)
+  // ==================== ارسال هدیه XP ====================
   void _sendXPGift() async {
     if (_userId == null || _buddyId == null) {
       _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
@@ -2195,7 +1859,6 @@ ${data.completionMessage}
     }
 
     try {
-      // ✅ دریافت XP از جدول profiles
       final profile = await _supabase.client
           .from('profiles')
           .select('total_xp')
@@ -2209,11 +1872,9 @@ ${data.completionMessage}
         return;
       }
 
-      // ✅ استفاده از showDialog با XPGiftDialog (ویجت)
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => XPGiftDialog(
-          // ✅ اینجا XPGiftDialog یک ویجت است
           senderName: _myName ?? 'کاربر',
           receiverName: _buddyName ?? 'کاربر',
           maxXP: userXP,
@@ -2225,7 +1886,6 @@ ${data.completionMessage}
       final amount = result['amount'] as int;
       final message = result['message'] as String? ?? '';
 
-      // ✅ ارسال هدیه
       final giftId = DateTime.now().millisecondsSinceEpoch.toString();
 
       await _supabase.client.from('xp_gifts').insert({
@@ -2273,12 +1933,12 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ نمایش منوی هدر
-  void _showHeaderMenu() {
+  // ==================== منوی هدر ====================
+  void _showHeaderMenu(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
         return SafeArea(
@@ -2287,7 +1947,6 @@ ${data.completionMessage}
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ✅ نشانگر کشیدن
                 Center(
                   child: Container(
                     width: 40,
@@ -2299,74 +1958,59 @@ ${data.completionMessage}
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // ✅ عنوان منو
                 const Text(
                   'گزینه‌های گفتگو',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // ✅ گزینه بی‌صدا/صدا دار
                 _buildMenuTile(
                   icon: _isChatMuted ? Icons.volume_off : Icons.volume_up,
                   title: _isChatMuted ? 'فعال کردن صدا' : 'بی‌صدا کردن',
                   subtitle: _isChatMuted
-                      ? 'اعلان‌های این گفتگو فعال میشوند'
-                      : 'اعلان‌های این گفتگو غیرفعال میشوند',
+                      ? 'اعلان‌های این گفتگو فعال می‌شوند'
+                      : 'اعلان‌های این گفتگو غیرفعال می‌شوند',
                   onTap: () {
                     Navigator.pop(context);
-                    _toggleMuteChat();
+                    _toggleMuteChat(primaryColor);
                   },
-                  color: _isChatMuted ? Colors.green : Colors.orange,
+                  color: _isChatMuted ? Colors.green : primaryColor,
                 ),
-
                 const Divider(height: 1),
-
-                // ✅ گزینه جستجو
                 _buildMenuTile(
                   icon: Icons.search,
                   title: 'جستجو در گفتگو',
                   subtitle: 'جستجوی پیام‌ها',
                   onTap: () {
                     Navigator.pop(context);
-                    _showSearchInChat();
+                    _showSearchInChat(primaryColor);
                   },
-                  color: const Color(0xFF4A90E2),
+                  color: primaryColor,
                 ),
-
                 const Divider(height: 1),
-
-                // ✅ گزینه پاک کردن تاریخچه
                 _buildMenuTile(
                   icon: Icons.delete_sweep,
                   title: 'پاک کردن تاریخچه',
-                  subtitle: 'تمام پیام‌های این گفتگو حذف میشوند',
+                  subtitle: 'تمام پیام‌های این گفتگو حذف می‌شوند',
                   onTap: () {
                     Navigator.pop(context);
-                    _confirmClearHistory();
+                    _confirmClearHistory(primaryColor);
                   },
                   color: Colors.orange,
                 ),
-
                 const Divider(height: 1),
-
-                // ✅ گزینه حذف گفتگو
                 _buildMenuTile(
                   icon: Icons.exit_to_app,
                   title: 'حذف گفتگو',
-                  subtitle: 'از لیست گفتگوها حذف میشود',
+                  subtitle: 'از لیست گفتگوها حذف می‌شود',
                   onTap: () {
                     Navigator.pop(context);
-                    _confirmDeleteConversation();
+                    _confirmDeleteConversation(primaryColor);
                   },
                   color: Colors.red,
                 ),
-
                 const SizedBox(height: 8),
               ],
             ),
@@ -2376,7 +2020,6 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ ساخت آیتم منو
   Widget _buildMenuTile({
     required IconData icon,
     required String title,
@@ -2389,7 +2032,7 @@ ${data.completionMessage}
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 22),
       ),
@@ -2398,7 +2041,6 @@ ${data.completionMessage}
         style: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
-          color: Color(0xFF1A1A2E),
         ),
       ),
       subtitle: Text(
@@ -2410,14 +2052,10 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ تغییر وضعیت بی‌صدا/صدا دار
-  void _toggleMuteChat() {
+  void _toggleMuteChat(Color primaryColor) {
     setState(() {
       _isChatMuted = !_isChatMuted;
     });
-
-    // ✅ ذخیره در LocalStorage یا دیتابیس
-    // می‌توانید این وضعیت را در دیتابیس ذخیره کنید
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2425,16 +2063,16 @@ ${data.completionMessage}
           _isChatMuted ? '🔇 گفتگو بی‌صدا شد' : '🔊 گفتگو صدا دار شد',
         ),
         duration: const Duration(seconds: 1),
+        backgroundColor: primaryColor,
       ),
     );
   }
 
-  // ✅ جستجو در گفتگو - نسخه کامل
-  void _showSearchInChat() {
+  // ==================== جستجو در چت ====================
+  void _showSearchInChat(Color primaryColor) {
     final TextEditingController searchController = TextEditingController();
     final FocusNode focusNode = FocusNode();
 
-    // ✅ فوکوس روی فیلد جستجو
     WidgetsBinding.instance.addPostFrameCallback((_) {
       focusNode.requestFocus();
     });
@@ -2442,18 +2080,18 @@ ${data.completionMessage}
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search,
-                color: Color(0xFF4A90E2),
+                color: primaryColor,
                 size: 22,
               ),
             ),
@@ -2463,7 +2101,6 @@ ${data.completionMessage}
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
               ),
             ),
           ],
@@ -2477,7 +2114,7 @@ ${data.completionMessage}
               decoration: InputDecoration(
                 hintText: 'متن مورد نظر را وارد کنید...',
                 hintStyle: TextStyle(color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF4A90E2)),
+                prefixIcon: Icon(Icons.search, color: primaryColor),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(
@@ -2502,7 +2139,6 @@ ${data.completionMessage}
                 ),
               ),
               onChanged: (value) {
-                // ✅ به‌روزرسانی برای نمایش دکمه پاک کردن
                 setState(() {});
               },
               onSubmitted: (value) {
@@ -2517,10 +2153,6 @@ ${data.completionMessage}
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey.shade600,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
             child: const Text('انصراف'),
           ),
           ElevatedButton.icon(
@@ -2541,22 +2173,18 @@ ${data.completionMessage}
             icon: const Icon(Icons.search, size: 18),
             label: const Text('جستجو'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              elevation: 0,
             ),
           ),
         ],
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }
 
-  /// جستجوی پیام‌ها و اسکرول به نتیجه
   void _searchMessages(String query) {
     if (query.isEmpty) {
       _showSnackBar('لطفاً متن مورد نظر را وارد کنید');
@@ -2573,48 +2201,35 @@ ${data.completionMessage}
     }
 
     if (results.length == 1) {
-      _scrollToMessage(results.first.id); // ✅ استفاده از متد جدید
+      _scrollToMessage(results.first.id);
       return;
     }
 
     _showSearchResultsSheet(results, query);
   }
 
-  /// ✅ اسکرول به پیام پین شده - نسخه نهایی با چندین روش پشتیبان
   void _scrollToPinnedMessage(String messageId) {
-    // 1. ابتدا مطمئن شویم که پیام در لیست وجود دارد
     final index = _messages.indexWhere((msg) => msg.id == messageId);
     if (index == -1) {
       _showSnackBar('پیام پین شده در لیست موجود نیست');
       return;
     }
 
-    print('📌 Scrolling to pinned message: $messageId (index: $index)');
-
-    // 2. هایلایت پیام
     _highlightMessage(messageId);
-
-    // 3. روش اول: استفاده از Scrollable.ensureVisible با تاخیر
     _scrollToMessageWithEnsureVisible(messageId);
   }
 
-  /// ✅ روش اول: Scrollable.ensureVisible (دقیق‌ترین روش)
   void _scrollToMessageWithEnsureVisible(String messageId) {
-    // صبر برای رندر شدن کامل
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // اگر کلید وجود ندارد، ایجاد کن
       if (!_messageKeys.containsKey(messageId)) {
         _messageKeys[messageId] = GlobalKey();
       }
 
       final key = _messageKeys[messageId]!;
-
-      // چندین بار تلاش با تاخیرهای مختلف
       _tryEnsureVisible(key, messageId, attempt: 0);
     });
   }
 
-  /// ✅ تلاش مجدد برای ensureVisible با تاخیرهای افزایشی
   void _tryEnsureVisible(GlobalKey key, String messageId, {int attempt = 0}) {
     const maxAttempts = 5;
     const delay = Duration(milliseconds: 200);
@@ -2625,15 +2240,11 @@ ${data.completionMessage}
       try {
         final context = key.currentContext;
         if (context != null) {
-          // ✅ پیدا شد! اسکرول کن
           Scrollable.ensureVisible(
             context,
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeInOutCubic,
             alignment: 0.5,
-          );
-          print(
-            '✅ Scrolled to pinned message: $messageId (attempt ${attempt + 1})',
           );
           return;
         }
@@ -2641,24 +2252,20 @@ ${data.completionMessage}
         print('⚠️ EnsureVisible attempt ${attempt + 1} failed: $e');
       }
 
-      // اگر تلاش‌ها تمام نشده، دوباره امتحان کن
       if (attempt < maxAttempts - 1) {
         _tryEnsureVisible(key, messageId, attempt: attempt + 1);
       } else {
-        // ✅ اگر همه تلاش‌ها شکست خورد، از روش جایگزین استفاده کن
-        print('⚠️ All ensureVisible attempts failed, using fallback');
         _scrollToMessageFallback(messageId);
       }
     });
   }
 
-  /// نمایش نتایج جستجو در BottomSheet
   void _showSearchResultsSheet(List<ChatMessage> results, String query) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -2671,7 +2278,6 @@ ${data.completionMessage}
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // نشانگر کشیدن
                   Center(
                     child: Container(
                       width: 40,
@@ -2714,17 +2320,17 @@ ${data.completionMessage}
                             : msg.content;
 
                         return ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           leading: CircleAvatar(
                             radius: 16,
-                            backgroundColor: isMe
-                                ? const Color(0xFF4A90E2)
-                                : Colors.grey.shade300,
+                            backgroundColor: const Color(0xFF4A90E2),
                             child: Text(
                               isMe ? 'من' : '👤',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 10,
-                                color:
-                                    isMe ? Colors.white : Colors.grey.shade600,
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -2760,7 +2366,6 @@ ${data.completionMessage}
                           ),
                           onTap: () {
                             Navigator.pop(context);
-                            // ✅ اسکرول به پیام
                             _scrollToMessage(msg.id);
                           },
                         );
@@ -2776,55 +2381,37 @@ ${data.completionMessage}
     );
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ تأیید پاک کردن تاریخچه
-  void _confirmClearHistory() {
-    _clearChatHistory(); // ✅ مستقیماً متد اصلاح شده را صدا بزن
+  void _confirmClearHistory(Color primaryColor) {
+    _clearChatHistory(primaryColor);
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ متد کمکی برای بررسی توکن قبل از عملیات حساس
   Future<bool> _ensureValidSession() async {
     try {
       final session = _chatService.client.auth.currentSession;
       if (session == null) {
-        print('⚠️ No active session, redirecting to login...');
-        // می‌توانید به صفحه لاگین هدایت کنید
         return false;
       }
 
-      // بررسی انقضای توکن
       final expiresAt = session.expiresAt;
       if (expiresAt != null) {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         if (expiresAt - now < 60) {
-          // کمتر از 1 دقیقه
-          print('⏰ Session expired, refreshing...');
           try {
             await _chatService.client.auth.refreshSession();
-            print('✅ Session refreshed');
           } catch (e) {
-            print('❌ Failed to refresh session: $e');
             return false;
           }
         }
       }
       return true;
     } catch (e) {
-      print('❌ Error checking session: $e');
       return false;
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ پاک کردن تاریخچه گفتگو - نسخه نهایی با بررسی توکن
-  Future<void> _clearChatHistory() async {
+  Future<void> _clearChatHistory(Color primaryColor) async {
     if (_userId == null) return;
 
-    // ✅ بررسی توکن قبل از عملیات
     final isValid = await _ensureValidSession();
     if (!isValid) {
       if (mounted) {
@@ -2838,11 +2425,10 @@ ${data.completionMessage}
       return;
     }
 
-    // ✅ نمایش دیالوگ تایید
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'پاک کردن تاریخچه',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -2875,13 +2461,11 @@ ${data.completionMessage}
     });
 
     try {
-      // ✅ حذف همه پیام‌های گفتگو با یک کوئری
       await _chatService.client
           .from('messages')
           .delete()
           .eq('conversation_id', widget.conversation.id);
 
-      // ✅ پاک کردن لیست محلی
       setState(() {
         _messages.clear();
         _messageKeys.clear();
@@ -2898,7 +2482,6 @@ ${data.completionMessage}
         );
       }
     } catch (e) {
-      print('❌ Error clearing chat history: $e');
       setState(() {
         _isLoading = false;
       });
@@ -2913,19 +2496,18 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ تأیید حذف گفتگو
-  void _confirmDeleteConversation() {
+  void _confirmDeleteConversation(Color primaryColor) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'حذف گفتگو',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         content: Text(
           'آیا از حذف گفتگو با "${_buddyName ?? 'کاربر'}" مطمئن هستید؟\n\n'
-          'با این کار، این گفتگو از لیست شما حذف میشود.',
+          'با این کار، این گفتگو از لیست شما حذف می‌شود.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -2945,7 +2527,6 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ حذف گفتگو
   Future<void> _deleteConversation() async {
     if (_userId == null) return;
 
@@ -2959,7 +2540,7 @@ ${data.completionMessage}
             duration: Duration(seconds: 2),
           ),
         );
-        Navigator.pop(context); // برگشت به صفحه لیست گفتگوها
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -2973,13 +2554,9 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ متد علامت‌گذاری پیام‌ها به عنوان خوانده شده - استفاده از متد safe
   Future<void> _markMessagesAsRead() async {
     if (_userId == null || _messages.isEmpty) return;
 
-    // ✅ پیدا کردن پیام‌های خوانده نشده
     final unreadMessages = _messages.where((msg) {
       final isFromOther = msg.senderId != _userId;
       final isUnread = msg.status != MessageStatus.seen &&
@@ -2988,25 +2565,14 @@ ${data.completionMessage}
       return isFromOther && isUnread && isNotDeleted;
     }).toList();
 
-    if (unreadMessages.isEmpty) {
-      print('📊 No unread messages to mark as read');
-      return;
-    }
-
-    print('📊 Marking ${unreadMessages.length} messages as read');
-
-    for (var msg in unreadMessages) {
-      print('   - Message ${msg.id.substring(0, 8)} status: ${msg.status}');
-    }
+    if (unreadMessages.isEmpty) return;
 
     try {
-      // ✅ استفاده از متد safe
       await _chatService.markAllMessagesAsReadSafe(
         conversationId: widget.conversation.id,
         userId: _userId!,
       );
 
-      // ✅ به‌روزرسانی محلی
       setState(() {
         for (var msg in unreadMessages) {
           final index = _messages.indexWhere((m) => m.id == msg.id);
@@ -3039,11 +2605,8 @@ ${data.completionMessage}
           }
         }
       });
-
-      print('✅ ${unreadMessages.length} messages marked as read locally');
     } catch (e) {
       print('❌ Error marking messages as read: $e');
-      // در صورت خطا، فقط وضعیت محلی را به‌روزرسانی کن
       setState(() {
         for (var msg in unreadMessages) {
           final index = _messages.indexWhere((m) => m.id == msg.id);
@@ -3056,8 +2619,6 @@ ${data.completionMessage}
   }
 
   void _checkOnlineStatus(String? updatedAt) {
-    print('📊 Checking online status with: $updatedAt');
-
     if (updatedAt != null && updatedAt.isNotEmpty) {
       try {
         final lastSeen = DateTime.parse(updatedAt).toUtc();
@@ -3065,14 +2626,12 @@ ${data.completionMessage}
         final diff = now.difference(lastSeen);
         final isOnline = diff.inMinutes < 5;
 
-        // ✅ فقط اگر صفحه هنوز mount شده باشد، setState صدا بزن
         if (mounted) {
           setState(() {
             _isBuddyOnline = isOnline;
           });
         }
       } catch (e) {
-        print('❌ Error parsing date: $e');
         if (mounted) {
           setState(() {
             _isBuddyOnline = false;
@@ -3080,7 +2639,6 @@ ${data.completionMessage}
         }
       }
     } else {
-      print('⚠️ No updated_at provided');
       if (mounted) {
         setState(() {
           _isBuddyOnline = false;
@@ -3089,10 +2647,8 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ اصلاح _buildMessageActionsPopup
-  Widget _buildMessageActionsPopup() {
+  // ==================== Build Message Menu ====================
+  Widget _buildMessageActionsPopup(ThemeProvider theme, Color primaryColor) {
     if (_menuMessage == null || _menuPosition == null) {
       return const SizedBox.shrink();
     }
@@ -3107,7 +2663,7 @@ ${data.completionMessage}
 
     const double menuWidth = 220;
     const double reactionsHeight = 52;
-    const double menuItemsHeight = 270; // ✅ افزایش ارتفاع برای گزینه جدید
+    const double menuItemsHeight = 270;
     const double gap = 6;
     const double totalHeight = reactionsHeight + gap + menuItemsHeight;
 
@@ -3151,8 +2707,8 @@ ${data.completionMessage}
             width: menuWidth,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
+              color: theme.surfaceColor,
+              borderRadius: BorderRadius.circular(20),
               boxShadow: shadows,
             ),
             child: SizedBox(
@@ -3179,12 +2735,12 @@ ${data.completionMessage}
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF4A90E2).withValues(alpha: 0.15)
+                            ? primaryColor.withValues(alpha: 0.15)
                             : Colors.transparent,
                         shape: BoxShape.circle,
                         border: isSelected
                             ? Border.all(
-                                color: const Color(0xFF4A90E2),
+                                color: primaryColor,
                                 width: 1.5,
                               )
                             : null,
@@ -3209,8 +2765,8 @@ ${data.completionMessage}
             width: menuWidth,
             padding: const EdgeInsets.symmetric(vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
+              color: theme.surfaceColor,
+              borderRadius: BorderRadius.circular(20),
               boxShadow: shadows,
             ),
             child: Column(
@@ -3224,22 +2780,19 @@ ${data.completionMessage}
                     _setReplyTo(message);
                   },
                 ),
-
                 if (isOwnMessage && message.canBeEdited)
                   _buildPopupMenuItem(
                     icon: Icons.edit,
                     label: 'ویرایش',
                     onTap: () {
                       _closeMenu();
-                      _editMessage(message);
+                      _editMessage(message, primaryColor);
                     },
                   ),
-
-                // ✅ گزینه پین/لغو پین
                 _buildPopupMenuItem(
                   icon: isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                   label: isPinned ? 'لغو پین' : 'پین کردن',
-                  color: isPinned ? Colors.orange : const Color(0xFF4A90E2),
+                  color: isPinned ? Colors.orange : primaryColor,
                   onTap: () {
                     _closeMenu();
                     if (isPinned) {
@@ -3249,7 +2802,6 @@ ${data.completionMessage}
                     }
                   },
                 ),
-
                 _buildPopupMenuItem(
                   icon: Icons.copy,
                   label: 'کپی',
@@ -3258,17 +2810,15 @@ ${data.completionMessage}
                     _copyMessage(message);
                   },
                 ),
-
                 _buildPopupMenuItem(
                   icon: Icons.delete_outline,
                   label: 'حذف',
                   color: Colors.red,
                   onTap: () {
                     _closeMenu();
-                    _showDeleteOptionsDialog(message);
+                    _showDeleteOptionsDialog(message, primaryColor);
                   },
                 ),
-
                 _buildPopupMenuItem(
                   icon: Icons.share,
                   label: 'اشتراک‌گذاری',
@@ -3285,16 +2835,13 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ متد پین کردن پیام
   Future<void> _pinMessage(ChatMessage message) async {
     if (_userId == null) return;
 
     try {
       await _chatService.pinMessage(messageId: message.id, userId: _userId!);
 
-      // ✅ به‌روزرسانی محلی
       setState(() {
-        // پیدا کردن پیام در لیست و به‌روزرسانی
         final index = _messages.indexWhere((m) => m.id == message.id);
         if (index != -1) {
           _messages[index] = ChatMessage(
@@ -3324,7 +2871,6 @@ ${data.completionMessage}
           );
         }
 
-        // پاک کردن پین قبلی از سایر پیام‌ها
         for (int i = 0; i < _messages.length; i++) {
           if (_messages[i].id != message.id && _messages[i].isPinned) {
             _messages[i] = ChatMessage(
@@ -3378,12 +2924,10 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ متد لغو پین پیام
   Future<void> _unpinMessage(ChatMessage message) async {
     try {
       await _chatService.unpinMessage(messageId: message.id);
 
-      // ✅ به‌روزرسانی محلی
       setState(() {
         final index = _messages.indexWhere((m) => m.id == message.id);
         if (index != -1) {
@@ -3433,9 +2977,7 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  Widget _buildPinnedMessageBar() {
+  Widget _buildPinnedMessageBar(ThemeProvider theme, Color primaryColor) {
     if (_pinnedMessage == null) return const SizedBox.shrink();
 
     final message = _pinnedMessage!;
@@ -3444,20 +2986,22 @@ ${data.completionMessage}
 
     return GestureDetector(
       onTap: () {
-        print('📌 Clicked pinned message: ${message.id}');
         _scrollToPinnedMessage(message.id);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.orange.shade50,
-          border: Border(
-            bottom: BorderSide(color: Colors.orange.shade200, width: 1),
+          color: primaryColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: primaryColor.withValues(alpha: 0.2),
+            width: 1,
           ),
         ),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
-            const Icon(Icons.push_pin, color: Colors.orange, size: 16),
+            Icon(Icons.push_pin, color: primaryColor, size: 16),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -3468,13 +3012,16 @@ ${data.completionMessage}
                     '📌 پیام پین شده توسط $senderName',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.orange.shade700,
+                      color: primaryColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     message.content,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.textSecondaryColor,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -3483,7 +3030,7 @@ ${data.completionMessage}
             ),
             IconButton(
               icon: const Icon(Icons.close, size: 18),
-              color: Colors.grey.shade500,
+              color: theme.textSecondaryColor,
               onPressed: () => _unpinMessage(message),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -3494,7 +3041,6 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ آیتم منوی پاپ‌آپ (بدون فلش پایین)
   Widget _buildPopupMenuItem({
     required IconData icon,
     required String label,
@@ -3503,6 +3049,7 @@ ${data.completionMessage}
   }) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
@@ -3522,7 +3069,6 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ واکنش‌ها با قابلیت بستن منو
   Widget _buildReactionRow(ChatMessage message, {bool closeMenu = false}) {
     return SizedBox(
       height: 50,
@@ -3560,7 +3106,6 @@ ${data.completionMessage}
     );
   }
 
-  // ✅ نمایش منوی اکشن در کنار پیام
   void _showMessageActionsPopup(ChatMessage message, Offset position) {
     setState(() {
       _menuMessage = message;
@@ -3568,7 +3113,6 @@ ${data.completionMessage}
     });
   }
 
-  // ✅ بستن منو
   void _closeMenu() {
     setState(() {
       _menuMessage = null;
@@ -3577,26 +3121,20 @@ ${data.completionMessage}
   }
 
   Future<void> _getBuddyStatus(String buddyId) async {
-    // ✅ اگر صفحه mount نیست، خروج
     if (!mounted) return;
 
     try {
-      print('📊 Getting buddy status for: $buddyId');
-
       final profile = await _chatService.client
           .from('profiles')
           .select('last_seen_at, updated_at')
           .eq('user_id', buddyId)
           .maybeSingle();
 
-      // ✅ فقط اگر صفحه هنوز mount شده باشد
       if (mounted) {
         if (profile != null) {
           final lastSeen = profile['last_seen_at'] ?? profile['updated_at'];
-          print('📊 Profile found - last_seen: $lastSeen');
           _checkOnlineStatus(lastSeen);
         } else {
-          print('⚠️ Profile not found for buddy: $buddyId');
           setState(() {
             _isBuddyOnline = false;
           });
@@ -3612,9 +3150,6 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد کمکی برای پیدا کردن پیام پین شده
   ChatMessage? _findPinnedMessage(List<ChatMessage> messages) {
     try {
       return messages.firstWhere((m) => m.isPinned);
@@ -3622,8 +3157,6 @@ ${data.completionMessage}
       return null;
     }
   }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
 
   Future<void> _loadMessages() async {
     if (!mounted) return;
@@ -3633,9 +3166,6 @@ ${data.completionMessage}
     });
 
     try {
-      print('📊 _loadMessages: Fetching messages...');
-
-      // ✅ پاک کردن کلیدهای قبلی
       _messageKeys.clear();
 
       final messages = await _chatService.getMessagesHistory(
@@ -3643,14 +3173,11 @@ ${data.completionMessage}
         limit: 200,
       );
 
-      print('📊 _loadMessages: Got ${messages.length} messages');
-
       if (mounted) {
         setState(() {
           _messages = messages.reversed.toList();
           _isLoading = false;
 
-          // پیدا کردن پیام پین شده
           try {
             _pinnedMessage = _messages.firstWhere((m) => m.isPinned);
           } catch (e) {
@@ -3658,10 +3185,7 @@ ${data.completionMessage}
           }
         });
 
-        // ✅ علامت‌گذاری پیام‌ها به عنوان خوانده شده
         await _markMessagesAsRead();
-
-        print('📊 _loadMessages: Loaded ${_messages.length} messages');
       }
 
       _scrollToBottom();
@@ -3675,28 +3199,16 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ متد کمکی برای پیدا کردن پیام پین شده (ایمن)
-  ChatMessage? _findPinnedMessageSafely(List<ChatMessage> messages) {
-    try {
-      return messages.firstWhere((m) => m.isPinned);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // ✅ بارگذاری واکنش‌ها برای لیست پیام‌ها
   Future<List<ChatMessage>> _loadReactionsForMessages(
     List<ChatMessage> messages,
   ) async {
     if (messages.isEmpty) return messages;
 
     try {
-      // ✅ استفاده از متد جدید بدون join
       final allReactions = await _chatService.getConversationReactions(
         widget.conversation.id,
       );
 
-      // پر کردن واکنش‌ها برای هر پیام
       final updatedMessages = messages.map((msg) {
         final reactions = allReactions[msg.id];
         if (reactions != null && reactions.isNotEmpty) {
@@ -3732,15 +3244,11 @@ ${data.completionMessage}
     }
   }
 
-  /// ✅ اسکرول به انتهای صفحه
   void _scrollToBottom({bool animated = true}) {
     if (!mounted) return;
-
-    // اگر لیست خالی است یا کنترلر وجود ندارد
     if (_messages.isEmpty || !_scrollController.hasClients) return;
 
     try {
-      // در لیست با reverse: true، موقعیت 0 یعنی انتهای صفحه
       const double target = 0;
 
       if (animated) {
@@ -3753,7 +3261,6 @@ ${data.completionMessage}
         _scrollController.jumpTo(target);
       }
     } catch (e) {
-      // اگر خطا بود، روش جایگزین
       try {
         _scrollController.animateTo(
           0,
@@ -3766,19 +3273,15 @@ ${data.completionMessage}
     }
   }
 
-  /// ✅ دکمه شناور برای رفتن به انتهای صفحه
-  Widget _buildScrollToBottomButton() {
-    // فقط اگر بیش از 5 پیام باشد و کاربر در پایین نباشد نمایش داده شود
+  Widget _buildScrollToBottomButton(Color primaryColor) {
     if (_messages.length < 5) return const SizedBox.shrink();
 
-    // بررسی اینکه آیا کاربر در پایین صفحه است
     bool isAtBottom = true;
     if (_scrollController.hasClients) {
       final position = _scrollController.position;
-      isAtBottom = position.pixels < 50; // نزدیک به پایین
+      isAtBottom = position.pixels < 50;
     }
 
-    // اگر در پایین است، دکمه را نشان نده
     if (isAtBottom) return const SizedBox.shrink();
 
     return Positioned(
@@ -3790,11 +3293,11 @@ ${data.completionMessage}
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFF4A90E2),
+            color: primaryColor,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: primaryColor.withValues(alpha: 0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -3811,10 +3314,6 @@ ${data.completionMessage}
   }
 
   // ==================== ارسال پیام ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد ارسال پیام - باید metadata را درست ارسال کند
   Future<void> _sendMessage({
     String? text,
     MessageType type = MessageType.text,
@@ -3824,8 +3323,9 @@ ${data.completionMessage}
     final content = text ?? _messageController.text.trim();
 
     if (content.isEmpty && replyToId == null && _replyToMessage == null) return;
-    if (content.isEmpty && (replyToId != null || _replyToMessage != null))
+    if (content.isEmpty && (replyToId != null || _replyToMessage != null)) {
       return;
+    }
 
     if (_userId == null || _isSending) return;
 
@@ -3833,15 +3333,12 @@ ${data.completionMessage}
     final replyToIdToSend = replyToId ?? replyTo?.id;
 
     final typeString = type.toString().split('.').last;
-    print('📤 [DEBUG] _sendMessage called! type=$type, typeString=$typeString');
-    print('📤 [DEBUG] metadata: $metadata');
 
-    // ✅ ایجاد پیام موقت
     final tempMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       conversationId: widget.conversation.id,
       senderId: _userId!,
-      senderName: _myName, // ✅ استفاده از _myName
+      senderName: _myName,
       senderAvatar: null,
       content: content,
       type: type,
@@ -3881,8 +3378,6 @@ ${data.completionMessage}
         senderName: _myName,
       );
 
-      print('✅ [DEBUG] Message sent successfully!');
-
       setState(() {
         final index = _messages.indexWhere((msg) => msg.id == tempMessage.id);
         if (index != -1) {
@@ -3914,7 +3409,7 @@ ${data.completionMessage}
       await _updateLastSeen(_userId!);
       _scrollToBottom();
     } catch (e) {
-      print('❌ [DEBUG] Error sending message: $e');
+      print('❌ Error sending message: $e');
 
       setState(() {
         final index = _messages.indexWhere((msg) => msg.id == tempMessage.id);
@@ -3946,19 +3441,14 @@ ${data.completionMessage}
       await _chatService.client
           .from('profiles')
           .update({'last_seen_at': now}).eq('user_id', userId);
-      print('📊 Updated last_seen_at for user $userId to $now');
     } catch (e) {
       print('⚠️ Error updating last_seen: $e');
     }
   }
 
   // ==================== ارسال عکس ====================
-
-// lib/features/chat/screens/buddy_chat_screen.dart
-
   Future<void> _sendImage() async {
     try {
-      // ✅ انتخاب عکس از گالری
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
@@ -3966,14 +3456,8 @@ ${data.completionMessage}
         imageQuality: 80,
       );
 
-      if (image == null) {
-        print('⚠️ No image selected');
-        return;
-      }
+      if (image == null) return;
 
-      print('📸 Image selected: ${image.path}');
-
-      // ✅ ایجاد پیام موقت
       final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
 
       final tempMessage = ChatMessage(
@@ -4005,7 +3489,6 @@ ${data.completionMessage}
 
       _scrollToBottom();
 
-      // ✅ آپلود عکس
       final String imageUrl = await _uploadImage(image);
 
       if (imageUrl.isEmpty) {
@@ -4020,9 +3503,6 @@ ${data.completionMessage}
         return;
       }
 
-      print('✅ Image uploaded successfully: $imageUrl');
-
-      // ✅ ارسال پیام عکس
       final Map<String, dynamic> metadata = {
         'type': 'image',
         'width': 1024,
@@ -4033,21 +3513,17 @@ ${data.completionMessage}
       await _chatService.sendMessage(
         conversationId: widget.conversation.id,
         senderId: _userId!,
-        content: imageUrl, // ✅ URL عکس به عنوان محتوا ارسال می‌شود
-        type: 'image', // ✅ نوع image
+        content: imageUrl,
+        type: 'image',
         metadata: metadata,
         senderName: _myName,
       );
 
-      print('✅ Image message sent to database');
-
-      // ✅ حذف پیام موقت
       setState(() {
         _messages.removeWhere((msg) => msg.id == tempMessageId);
         _isSending = false;
       });
 
-      // ✅ بارگذاری مجدد پیام‌ها
       await _loadMessages();
 
       if (mounted) {
@@ -4074,18 +3550,12 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
   Future<String> _uploadImage(XFile imageFile) async {
     try {
-      // ✅ خواندن فایل عکس
       final File file = File(imageFile.path);
       final bytes = await file.readAsBytes();
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-      print('📸 Uploading image: $fileName');
-
-      // ✅ آپلود به Supabase Storage
       final String fileUrl = await _uploadFileToStorageHttp(
         fileBytes: bytes,
         fileName: fileName,
@@ -4100,13 +3570,9 @@ ${data.completionMessage}
   }
 
   // ==================== وضعیت تایپ ====================
-
-  // ✅ در متد _sendTypingStatus:
   Future<void> _sendTypingStatus(bool isTyping) async {
     if (_userId == null) return;
     try {
-      print('📊 Sending typing status: $isTyping');
-
       await _chatService.sendTypingStatus(
         conversationId: widget.conversation.id,
         userId: _userId!,
@@ -4121,13 +3587,11 @@ ${data.completionMessage}
     }
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ ارسال GIF با نوع صحیح
+  // ==================== ارسال GIF ====================
   void _sendGif(String gifName, String gifId) {
     _sendMessage(
       text: gifName,
-      type: MessageType.gif, // ✅ این باید MessageType.gif باشد
+      type: MessageType.gif,
       metadata: {'gif_id': gifId},
     );
     setState(() {
@@ -4135,15 +3599,11 @@ ${data.completionMessage}
     });
   }
 
-  // ==================== واکنش به پیام ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
+  // ==================== واکنش ====================
   Future<void> _toggleReaction(ChatMessage message, String emoji) async {
     if (_userId == null) return;
 
     try {
-      // ✅ 1. اجرای عملیات toggle در دیتابیس
       await _chatService.toggleReaction(
         messageId: message.id,
         userId: _userId!,
@@ -4151,31 +3611,25 @@ ${data.completionMessage}
       );
       await _updateLastSeen(_userId!);
 
-      // ✅ 2. به‌روزرسانی محلی واکنش‌ها (با منطق مشابه)
       setState(() {
         final index = _messages.indexWhere((msg) => msg.id == message.id);
         if (index != -1) {
           final currentMessage = _messages[index];
 
-          // دریافت واکنش‌های فعلی
           List<MessageReaction> currentReactions = List.from(
             currentMessage.reactions ?? [],
           );
 
-          // ✅ بررسی اینکه آیا کاربر قبلاً واکنش داده است
           final userReactionIndex = currentReactions.indexWhere(
             (r) => r.userId == _userId,
           );
 
           if (userReactionIndex != -1) {
-            // ✅ اگر کاربر قبلاً واکنش داده بود
             final existingEmoji = currentReactions[userReactionIndex].emoji;
 
             if (existingEmoji == emoji) {
-              // ✅ اگر همان ایموجی بود → حذف کن
               currentReactions.removeAt(userReactionIndex);
             } else {
-              // ✅ اگر ایموجی متفاوت بود → جایگزین کن
               currentReactions[userReactionIndex] = MessageReaction(
                 userId: _userId!,
                 emoji: emoji,
@@ -4184,7 +3638,6 @@ ${data.completionMessage}
               );
             }
           } else {
-            // ✅ اگر کاربر قبلاً واکنش نداده بود → اضافه کن
             currentReactions.add(
               MessageReaction(
                 userId: _userId!,
@@ -4195,7 +3648,6 @@ ${data.completionMessage}
             );
           }
 
-          // به‌روزرسانی پیام
           _messages[index] = ChatMessage(
             id: currentMessage.id,
             conversationId: currentMessage.conversationId,
@@ -4232,7 +3684,6 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ ورود به حالت انتخاب
   void _enterSelectMode(String messageId) {
     setState(() {
       _isSelectMode = true;
@@ -4240,7 +3691,6 @@ ${data.completionMessage}
     });
   }
 
-  // ✅ خروج از حالت انتخاب
   void _exitSelectMode() {
     setState(() {
       _isSelectMode = false;
@@ -4248,7 +3698,6 @@ ${data.completionMessage}
     });
   }
 
-  // ✅ انتخاب/لغو انتخاب یک پیام
   void _toggleMessageSelection(String messageId) {
     setState(() {
       if (_selectedMessageIds.contains(messageId)) {
@@ -4262,14 +3711,13 @@ ${data.completionMessage}
     });
   }
 
-  // ✅ حذف پیام‌های انتخاب شده
   Future<void> _deleteSelectedMessages() async {
     if (_selectedMessageIds.isEmpty) return;
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('حذف پیام‌های انتخاب شده'),
         content: Text(
           'آیا از حذف ${_selectedMessageIds.length} پیام انتخاب شده مطمئن هستید؟',
@@ -4289,7 +3737,6 @@ ${data.completionMessage}
 
     if (confirm == true && _userId != null) {
       try {
-        // حذف همه پیام‌های انتخاب شده
         for (var messageId in _selectedMessageIds) {
           final message = _messages.firstWhere((msg) => msg.id == messageId);
           if (message.senderId == _userId) {
@@ -4326,8 +3773,6 @@ ${data.completionMessage}
     }
   }
 
-  // ==================== پاسخ به پیام ====================
-
   void _setReplyTo(ChatMessage message) {
     setState(() {
       _replyToMessage = message;
@@ -4335,22 +3780,21 @@ ${data.completionMessage}
     _focusNode.requestFocus();
   }
 
-  // ==================== منوی پیام ====================
-
-  // ✅ دیالوگ انتخاب نوع حذف (نسخه ساده)
-  void _showDeleteOptionsDialog(ChatMessage message) {
+  void _showDeleteOptionsDialog(ChatMessage message, Color primaryColor) {
     final isOwnMessage = message.senderId == _userId;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('حذف پیام', textAlign: TextAlign.center),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ حذف برای من
             ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               leading: const Icon(Icons.person_remove, color: Colors.orange),
               title: const Text('حذف برای من'),
               subtitle: const Text('پیام فقط برای شما حذف میشود'),
@@ -4359,10 +3803,11 @@ ${data.completionMessage}
                 _deleteMessageForMe(message);
               },
             ),
-
-            // ✅ حذف برای همه (فقط برای پیام‌های خودتان)
             if (isOwnMessage)
               ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
                 title: const Text(
                   'حذف برای همه',
@@ -4386,18 +3831,13 @@ ${data.completionMessage}
     );
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ اشتراک‌گذاری با پشتیبانی از تصویر
   void _forwardMessage(ChatMessage message) async {
     try {
       final String appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
       final String appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
 
-      // ✅ اگر پیام تصویر است
       if (message.type == MessageType.image) {
-        // اشتراک‌گذاری با لینک تصویر
         final String shareText = '''
 📷 ${message.senderName ?? 'کاربر'} یک تصویر ارسال کرده:
 
@@ -4411,7 +3851,6 @@ ${data.completionMessage}
 
         await Share.share(shareText);
       } else {
-        // ✅ اشتراک‌گذاری متن معمولی
         final String shareText = '''
 📩 ${message.senderName ?? 'کاربر'} نوشته:
 
@@ -4447,12 +3886,11 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ حذف برای خودم
   Future<void> _deleteMessageForMe(ChatMessage message) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('حذف برای من'),
         content: const Text('آیا از حذف این پیام برای خودتان مطمئن هستید؟'),
         actions: [
@@ -4497,12 +3935,11 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ حذف برای همه
   Future<void> _deleteMessageForEveryone(ChatMessage message) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('حذف برای همه'),
         content: const Text('آیا از حذف این پیام برای همه مطمئن هستید؟'),
         actions: [
@@ -4550,13 +3987,11 @@ ${data.completionMessage}
     }
   }
 
-  // ✅ بررسی اینکه آیا کاربر فعلی به این پیام واکنش داده است
   bool _hasUserReacted(ChatMessage message) {
     if (_userId == null) return false;
     return message.reactions?.any((r) => r.userId == _userId) ?? false;
   }
 
-  // ✅ دریافت ایموجی واکنش کاربر - نسخه اصلاح شده
   String? _getUserReactionEmoji(ChatMessage message) {
     if (_userId == null) return null;
     if (message.reactions == null) return null;
@@ -4569,10 +4004,7 @@ ${data.completionMessage}
     return null;
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ متد ساخت ویجت واکنش‌ها - با هایلایت border آبی دور ایموجی کاربر
-  Widget _buildReactions(ChatMessage message) {
+  Widget _buildReactions(ChatMessage message, Color primaryColor) {
     final reactions = message.reactions;
     if (reactions == null || reactions.isEmpty) {
       return const SizedBox.shrink();
@@ -4597,14 +4029,12 @@ ${data.completionMessage}
             },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 1.5),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                // ✅ هایلایت border آبی دور ایموجی کاربر
                 border: isUserReacted
-                    ? Border.all(color: const Color(0xFF4A90E2), width: 1.5)
+                    ? Border.all(color: primaryColor, width: 1.5)
                     : null,
-                borderRadius: BorderRadius.circular(12),
-                // ✅ پس‌زمینه خالی (بدون رنگ)
+                borderRadius: BorderRadius.circular(14),
                 color: Colors.transparent,
               ),
               child: Row(
@@ -4614,20 +4044,17 @@ ${data.completionMessage}
                     emoji,
                     style: TextStyle(
                       fontSize: 15,
-                      color: isUserReacted
-                          ? const Color(0xFF4A90E2) // ✅ آبی برای کاربر
-                          : Colors.black87, // ✅ مشکی برای دیگران
+                      color: isUserReacted ? primaryColor : Colors.black87,
                     ),
                   ),
                   if (count > 1) ...[
-                    const SizedBox(width: 1),
+                    const SizedBox(width: 2),
                     Text(
                       '$count',
                       style: TextStyle(
                         fontSize: 10,
-                        color: isUserReacted
-                            ? const Color(0xFF4A90E2) // ✅ آبی برای کاربر
-                            : Colors.grey.shade600, // ✅ خاکستری برای دیگران
+                        color:
+                            isUserReacted ? primaryColor : Colors.grey.shade600,
                         fontWeight:
                             isUserReacted ? FontWeight.bold : FontWeight.w500,
                       ),
@@ -4642,9 +4069,6 @@ ${data.completionMessage}
     );
   }
 
-  // ==================== متدهای کمکی ====================
-
-  // ✅ متد جدید برای گروه‌بندی واکنش‌ها
   List<Map<String, dynamic>> _groupReactions(List<MessageReaction> reactions) {
     final Map<String, int> counts = {};
 
@@ -4685,11 +4109,7 @@ ${data.completionMessage}
   }
 
   // ==================== ویرایش و حذف ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ ویرایش پیام - طراحی مدرن (مثل تلگرام)
-  void _editMessage(ChatMessage message) {
+  void _editMessage(ChatMessage message, Color primaryColor) {
     final controller = TextEditingController(text: message.content);
     showDialog(
       context: context,
@@ -4701,12 +4121,12 @@ ${data.completionMessage}
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.edit_outlined,
-                color: Color(0xFF4A90E2),
+                color: primaryColor,
                 size: 22,
               ),
             ),
@@ -4734,7 +4154,7 @@ ${data.completionMessage}
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF4A90E2), width: 2),
+              borderSide: BorderSide(color: primaryColor, width: 2),
             ),
             contentPadding: const EdgeInsets.all(14),
             fillColor: Colors.grey.shade50,
@@ -4744,10 +4164,6 @@ ${data.completionMessage}
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.grey.shade600,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            ),
             child: const Text(
               'انصراف',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -4766,13 +4182,11 @@ ${data.completionMessage}
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A90E2),
+              backgroundColor: primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-              elevation: 0,
             ),
             child: const Text(
               'ذخیره تغییرات',
@@ -4784,64 +4198,10 @@ ${data.completionMessage}
             ),
           ),
         ],
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        elevation: 4,
       ),
     );
   }
 
-  Future<void> _deleteMessage(ChatMessage message) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('حذف پیام'),
-        content: const Text('آیا از حذف این پیام مطمئن هستید؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && _userId != null) {
-      try {
-        // ✅ حذف کامل از دیتابیس
-        await _chatService.deleteMessage(message.id, _userId!);
-
-        // ✅ حذف از لیست محلی
-        setState(() {
-          _messages.removeWhere((msg) => msg.id == message.id);
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('پیام حذف شد 🗑️'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا در حذف پیام: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  // ✅ کپی متن پیام با فرمت بهتر
   void _copyMessage(ChatMessage message) {
     final String appLink = 'https://innerhero.app/download';
     final String appName = 'قهرمان درون';
@@ -4855,7 +4215,6 @@ ${message.content}
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
-    // کپی در کلیپ‌بورد
     Clipboard.setData(ClipboardData(text: copyText));
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -4865,15 +4224,18 @@ ${message.content}
       ),
     );
   }
-  // ==================== ساخت پیام ====================
 
-  Widget _buildMessageBubble(ChatMessage message) {
+  // ==================== ساخت پیام ====================
+  Widget _buildMessageBubble(
+    ChatMessage message,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     final isMe = message.senderId == _userId;
     final isSystem = message.type == MessageType.system;
     final isSelected = _selectedMessageIds.contains(message.id);
     final isFailed = message.status == MessageStatus.failed;
 
-    // ✅ ایجاد یا بازیابی کلید برای این پیام
     if (!_messageKeys.containsKey(message.id)) {
       _messageKeys[message.id] = GlobalKey();
     }
@@ -4883,10 +4245,10 @@ ${message.content}
       return Container(
         key: key,
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           message.content,
@@ -4903,22 +4265,22 @@ ${message.content}
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
         decoration: BoxDecoration(
-          color: const Color(0xFF4A90E2).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
+          color: primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: const Color(0xFF4A90E2).withValues(alpha: 0.2),
+            color: primaryColor.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.reply, color: Color(0xFF4A90E2), size: 20),
+            Icon(Icons.reply, color: primaryColor, size: 20),
             const SizedBox(width: 8),
             Text(
               'پاسخ',
               style: TextStyle(
-                color: const Color(0xFF4A90E2),
+                color: primaryColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
@@ -4935,9 +4297,9 @@ ${message.content}
         margin: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF4A90E2).withValues(alpha: 0.08)
+              ? primaryColor.withValues(alpha: 0.08)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -4948,7 +4310,6 @@ ${message.content}
             children: [
               GestureDetector(
                 onTap: () {
-                  // ✅ اگر پیام ناموفق است، منوی ویژه نمایش بده
                   if (isFailed) {
                     _showFailedMessageOptions(message);
                     return;
@@ -4989,30 +4350,22 @@ ${message.content}
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
+                    horizontal: 14,
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: isMe ? const Color(0xFF4A90E2) : Colors.white,
-                    borderRadius: BorderRadius.circular(16).copyWith(
-                      bottomRight: isMe
-                          ? const Radius.circular(4)
-                          : const Radius.circular(16),
-                      bottomLeft: isMe
-                          ? const Radius.circular(16)
-                          : const Radius.circular(4),
-                    ),
+                    color: isMe ? primaryColor : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
                     border: message.isPinned
                         ? Border.all(color: Colors.orange, width: 2)
                         : _highlightedMessageId == message.id
-                            ? Border.all(
-                                color: const Color(0xFFFFA500), width: 2)
+                            ? Border.all(color: primaryColor, width: 2)
                             : null,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                       if (message.isPinned)
                         BoxShadow(
@@ -5022,11 +4375,10 @@ ${message.content}
                         ),
                       if (_highlightedMessageId == message.id)
                         BoxShadow(
-                          color: const Color(0xFFFFA500).withValues(alpha: 0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
-                      // ✅ سایه قرمز برای پیام‌های ناموفق
                       if (isFailed)
                         BoxShadow(
                           color: Colors.red.withValues(alpha: 0.2),
@@ -5039,7 +4391,6 @@ ${message.content}
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ✅ نمایش آیکون پین
                       if (message.isPinned)
                         Container(
                           margin: const EdgeInsets.only(bottom: 4),
@@ -5049,7 +4400,7 @@ ${message.content}
                           ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
@@ -5071,8 +4422,6 @@ ${message.content}
                             ],
                           ),
                         ),
-
-                      // ✅ ریپلای داخل حباب
                       if (message.replyTo != null)
                         GestureDetector(
                           onTap: () {
@@ -5081,20 +4430,20 @@ ${message.content}
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 4),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: 10,
+                              vertical: 6,
                             ),
                             decoration: BoxDecoration(
                               color: isMe
                                   ? Colors.white.withValues(alpha: 0.12)
                                   : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(12),
                               border: Border(
                                 left: BorderSide(
                                   color: isMe
-                                      ? const Color(0xFF90CAF9)
-                                      : const Color(0xFF4A90E2),
-                                  width: 2.5,
+                                      ? primaryColor.withValues(alpha: 0.6)
+                                      : primaryColor,
+                                  width: 3,
                                 ),
                               ),
                             ),
@@ -5107,36 +4456,35 @@ ${message.content}
                                   children: [
                                     Icon(
                                       Icons.reply_outlined,
-                                      size: 9,
+                                      size: 10,
                                       color: isMe
-                                          ? Colors.white.withValues(alpha: 0.6)
-                                          : const Color(0xFF4A90E2),
+                                          ? Colors.white.withValues(alpha: 0.7)
+                                          : primaryColor,
                                     ),
-                                    const SizedBox(width: 3),
+                                    const SizedBox(width: 4),
                                     Flexible(
                                       child: Text(
                                         _getReplyToSenderName(message),
                                         style: TextStyle(
-                                          fontSize: 9,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.w600,
                                           color: isMe
-                                              ? Colors.white.withValues(
-                                                  alpha: 0.7,
-                                                )
-                                              : const Color(0xFF4A90E2),
+                                              ? Colors.white
+                                                  .withValues(alpha: 0.8)
+                                              : primaryColor,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 1),
+                                const SizedBox(height: 2),
                                 Text(
                                   _truncateText(message.replyTo!.content, 40),
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 11,
                                     color: isMe
-                                        ? Colors.white.withValues(alpha: 0.55)
+                                        ? Colors.white.withValues(alpha: 0.6)
                                         : Colors.grey.shade600,
                                   ),
                                   maxLines: 1,
@@ -5146,13 +4494,14 @@ ${message.content}
                             ),
                           ),
                         ),
-
-                      // ✅ محتوای اصلی پیام
-                      _buildMessageContent(message, isMe),
-
-                      // ✅ زمان و وضعیت
+                      _buildMessageContent(
+                        message,
+                        isMe,
+                        theme,
+                        primaryColor,
+                      ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 3),
+                        padding: const EdgeInsets.only(top: 4),
                         child: Row(
                           mainAxisAlignment: isMe
                               ? MainAxisAlignment.end
@@ -5165,12 +4514,11 @@ ${message.content}
                                 fontSize: 9,
                                 color: isMe
                                     ? Colors.white.withValues(alpha: 0.6)
-                                    : Colors.grey.shade500,
+                                    : theme.textSecondaryColor,
                               ),
                             ),
                             if (isMe) ...[
                               const SizedBox(width: 4),
-                              // ✅ نمایش علامت تعجب قرمز برای پیام‌های ناموفق
                               if (isFailed)
                                 const Icon(
                                   Icons.error_outline,
@@ -5178,7 +4526,7 @@ ${message.content}
                                   color: Colors.red,
                                 )
                               else
-                                _buildStatusIcon(message.status),
+                                _buildStatusIcon(message.status, primaryColor),
                             ],
                           ],
                         ),
@@ -5187,9 +4535,7 @@ ${message.content}
                   ),
                 ),
               ),
-
-              // ✅ واکنش‌ها
-              _buildReactions(message),
+              _buildReactions(message, primaryColor),
             ],
           ),
         ),
@@ -5197,12 +4543,14 @@ ${message.content}
     );
   }
 
-  // ✅ نمایش گزینه‌های پیام ناموفق
   void _showFailedMessageOptions(ChatMessage message) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final primaryColor = theme.primaryColor;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) {
         return SafeArea(
@@ -5237,22 +4585,17 @@ ${message.content}
                 ),
                 const SizedBox(height: 16),
                 const Divider(height: 1),
-
-                // ✅ گزینه ارسال مجدد
                 _buildFailedMessageOption(
                   icon: Icons.refresh,
                   title: 'ارسال مجدد',
                   subtitle: 'تلاش مجدد برای ارسال پیام',
-                  color: Colors.blue,
+                  color: primaryColor,
                   onTap: () {
                     Navigator.pop(context);
                     _resendFailedMessage(message);
                   },
                 ),
-
                 const Divider(height: 1),
-
-                // ✅ گزینه کپی متن
                 _buildFailedMessageOption(
                   icon: Icons.copy,
                   title: 'کپی متن',
@@ -5263,10 +4606,7 @@ ${message.content}
                     _copyMessage(message);
                   },
                 ),
-
                 const Divider(height: 1),
-
-                // ✅ گزینه حذف
                 _buildFailedMessageOption(
                   icon: Icons.delete_outline,
                   title: 'حذف پیام',
@@ -5277,7 +4617,6 @@ ${message.content}
                     _deleteFailedMessage(message);
                   },
                 ),
-
                 const SizedBox(height: 8),
               ],
             ),
@@ -5287,7 +4626,6 @@ ${message.content}
     );
   }
 
-  // ✅ آیتم منوی پیام ناموفق
   Widget _buildFailedMessageOption({
     required IconData icon,
     required String title,
@@ -5296,11 +4634,14 @@ ${message.content}
     required VoidCallback onTap,
   }) {
     return ListTile(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 22),
       ),
@@ -5320,13 +4661,9 @@ ${message.content}
     );
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ ارسال مجدد پیام ناموفق
   Future<void> _resendFailedMessage(ChatMessage message) async {
     if (_userId == null) return;
 
-    // ✅ تغییر وضعیت به sending
     setState(() {
       final index = _messages.indexWhere((msg) => msg.id == message.id);
       if (index != -1) {
@@ -5345,7 +4682,6 @@ ${message.content}
         replyToId: message.replyToId,
       );
 
-      // ✅ ارسال موفق
       setState(() {
         final index = _messages.indexWhere((msg) => msg.id == message.id);
         if (index != -1) {
@@ -5364,7 +4700,6 @@ ${message.content}
         );
       }
     } catch (e) {
-      // ❌ ارسال مجدد ناموفق
       setState(() {
         final index = _messages.indexWhere((msg) => msg.id == message.id);
         if (index != -1) {
@@ -5383,7 +4718,6 @@ ${message.content}
     }
   }
 
-  // ✅ حذف پیام ناموفق
   void _deleteFailedMessage(ChatMessage message) {
     setState(() {
       _messages.removeWhere((msg) => msg.id == message.id);
@@ -5397,70 +4731,27 @@ ${message.content}
     );
   }
 
-  // ✅ دریافت نام واقعی فرستنده پیام ریپلای شده
   String _getReplyToSenderName(ChatMessage message) {
     if (message.replyTo == null) return 'کاربر';
 
     final replyTo = message.replyTo!;
 
-    // ✅ اگر فرستنده خود کاربر است
     if (replyTo.senderId == _userId) {
       return 'شما';
     }
 
-    // ✅ اگر نام فرستنده در replyTo ذخیره شده است
     if (replyTo.senderName != null && replyTo.senderName!.isNotEmpty) {
       return replyTo.senderName!;
     }
 
-    // ✅ اگر نام کاربر مقابل را داریم
     if (_buddyName != null && replyTo.senderId == _buddyId) {
       return _buddyName!;
     }
 
-    // ✅ اگر هیچکدام نبود، از دیتابیس دریافت کن
-    // (این بخش به صورت async قابل انجام است، اما برای سادگی مقدار پیش‌فرض برمیگرداند)
     return 'کاربر';
   }
 
-  void _loadSenderNameToCache(String userId) {
-    _chatService.client
-        .from('profiles')
-        .select('name')
-        .eq('user_id', userId)
-        .maybeSingle()
-        .then((profile) {
-      if (profile != null && profile['name'] != null && mounted) {
-        setState(() {
-          _userNameCache[userId] = profile['name'] as String;
-        });
-      }
-    }).catchError((e) {
-      print('⚠️ Error loading sender name: $e');
-    });
-  }
-
-  Future<String> _getSenderNameFromDatabase(String userId) async {
-    try {
-      final profile = await _chatService.client
-          .from('profiles')
-          .select('name')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      if (profile != null && profile['name'] != null) {
-        return profile['name'] as String;
-      }
-      return 'کاربر';
-    } catch (e) {
-      return 'کاربر';
-    }
-  }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ متد ساخت آیکون وضعیت پیام - نسخه کامل با وضعیت sending
-  Widget _buildStatusIcon(MessageStatus status) {
+  Widget _buildStatusIcon(MessageStatus status, Color primaryColor) {
     switch (status) {
       case MessageStatus.sending:
         return const SizedBox(
@@ -5487,14 +4778,13 @@ ${message.content}
         );
 
       case MessageStatus.seen:
-        return Icon(Icons.done_all, size: 14, color: Colors.blue.shade300);
+        return Icon(Icons.done_all, size: 14, color: primaryColor);
 
       case MessageStatus.failed:
         return Icon(Icons.error_outline, size: 14, color: Colors.red.shade300);
     }
   }
 
-  // ✅ متد کمکی برای محدود کردن متن
   String _truncateText(String text, int maxLength) {
     if (text.length <= maxLength) {
       return text;
@@ -5502,7 +4792,6 @@ ${message.content}
     return '${text.substring(0, maxLength)}...';
   }
 
-  // ✅ اصلاح متد بارگذاری پیام پین شده
   Future<void> _loadPinnedMessage() async {
     try {
       final pinned = await _chatService.getPinnedMessage(
@@ -5515,7 +4804,6 @@ ${message.content}
       }
     } catch (e) {
       print('❌ Error loading pinned message: $e');
-      // اگر خطا بود، پیام پین شده را null قرار بده
       if (mounted) {
         setState(() {
           _pinnedMessage = null;
@@ -5524,17 +4812,13 @@ ${message.content}
     }
   }
 
-  /// هایلایت پیام با رنگ برجسته
   void _highlightMessage(String messageId) {
-    // لغو هایلایت قبلی
     _highlightedMessageId = null;
 
-    // تنظیم هایلایت جدید
     setState(() {
       _highlightedMessageId = messageId;
     });
 
-    // بعد از 3 ثانیه هایلایت را بردار
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
@@ -5544,8 +4828,7 @@ ${message.content}
     });
   }
 
-  /// ✅ نشانگر تاریخ
-  Widget _buildDateMarker(DateTime date) {
+  Widget _buildDateMarker(DateTime date, ThemeProvider theme) {
     return FutureBuilder<String>(
       future: _getDateLabel(date),
       builder: (context, snapshot) {
@@ -5554,14 +4837,21 @@ ${message.content}
           margin: const EdgeInsets.symmetric(vertical: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
+            color: theme.surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade700,
+              color: theme.textSecondaryColor,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -5570,8 +4860,12 @@ ${message.content}
     );
   }
 
-  Widget _buildMessageContent(ChatMessage message, bool isMe) {
-    // ✅ اگر پیام در حال آپلود است
+  Widget _buildMessageContent(
+    ChatMessage message,
+    bool isMe,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     if (message.metadata != null && message.metadata!['is_uploading'] == true) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -5599,7 +4893,6 @@ ${message.content}
       );
     }
 
-    // ✅ اگر پیام ناموفق است
     if (message.status == MessageStatus.failed) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5607,7 +4900,7 @@ ${message.content}
           Text(
             message.content,
             style: TextStyle(
-              color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+              color: isMe ? Colors.white : theme.textColor,
               fontSize: 14,
             ),
           ),
@@ -5626,9 +4919,7 @@ ${message.content}
       );
     }
 
-    // ============================================================
-    // ✅ اولویت اول: کارت هدیه XP
-    // ============================================================
+    // ✅ کارت هدیه XP
     if (message.metadata != null &&
         message.metadata!['type'] == 'xp_gift_card') {
       try {
@@ -5657,16 +4948,14 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+            color: isMe ? Colors.white : theme.textColor,
             fontSize: 14,
           ),
         );
       }
     }
 
-    // ============================================================
-    // ✅ اولویت دوم: ویجت چالش (هم دعوت و هم فعال)
-    // ============================================================
+    // ✅ ویجت چالش
     if (message.metadata != null &&
         (message.metadata!['is_challenge_invite'] == true ||
             message.metadata!['is_active_challenge'] == true)) {
@@ -5675,13 +4964,12 @@ ${message.content}
         final challenge = _challengeCache[challengeId];
 
         if (challenge == null) {
-          // بارگذاری در پس‌زمینه
           _loadChallengeInBackground(challengeId);
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: const Text(
               '⏳ در حال بارگذاری چالش...',
@@ -5690,7 +4978,6 @@ ${message.content}
           );
         }
 
-        // ✅ اگر چالش فعال است، ویجت چالش فعال را نمایش بده
         if (challenge.status == ChallengeStatus.active) {
           return ActiveChallengeWidget(
             key: ValueKey('active_${challenge.id}'),
@@ -5730,7 +5017,6 @@ ${message.content}
           );
         }
 
-        // ✅ اگر چالش در حالت pending است، ویجت دعوت را نمایش بده
         if (challenge.status == ChallengeStatus.pending) {
           return ChallengeInviteWidget(
             key: ValueKey('invite_${challenge.id}'),
@@ -5754,7 +5040,6 @@ ${message.content}
           );
         }
 
-        // ✅ اگر چالش کامل، لغو یا رد شده است، وضعیت نهایی را نمایش بده
         if (challenge.status == ChallengeStatus.completed ||
             challenge.status == ChallengeStatus.cancelled ||
             challenge.status == ChallengeStatus.rejected) {
@@ -5766,7 +5051,6 @@ ${message.content}
           );
         }
 
-        // ✅ حالت پیش‌فرض: نمایش دعوت
         return ChallengeInviteWidget(
           key: ValueKey('default_${challenge.id}'),
           challenge: challenge,
@@ -5792,16 +5076,14 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+            color: isMe ? Colors.white : theme.textColor,
             fontSize: 14,
           ),
         );
       }
     }
 
-    // ============================================================
-    // ✅ اولویت سوم: ویجت لیست عادت‌های امروز
-    // ============================================================
+    // ✅ لیست امروز
     if (message.metadata != null &&
         message.metadata!['is_today_list_widget'] == true) {
       try {
@@ -5816,16 +5098,14 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+            color: isMe ? Colors.white : theme.textColor,
             fontSize: 14,
           ),
         );
       }
     }
 
-    // ============================================================
-    // ✅ اولویت چهارم: ویجت عملکرد هفتگی
-    // ============================================================
+    // ✅ عملکرد هفتگی
     if (message.metadata != null &&
         message.metadata!['is_performance_widget'] == true) {
       try {
@@ -5842,18 +5122,14 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+            color: isMe ? Colors.white : theme.textColor,
             fontSize: 14,
           ),
         );
       }
     }
 
-    // ============================================================
-    // ✅ اولویت پنجم: فایل و موزیک (با file_url)
-    // ============================================================
-
-    // ✅ در بخش _buildMessageContent
+    // ✅ فایل و موزیک
     if (message.metadata != null &&
         (message.metadata!['file_url'] != null ||
             message.metadata!['file_name'] != null)) {
@@ -5866,12 +5142,6 @@ ${message.content}
         fileType = 'audio';
       }
 
-      print('📊 Building FileMessageWidget:');
-      print('   - fileUrl: $fileUrl');
-      print('   - fileName: $fileName');
-      print('   - fileType: $fileType');
-      print('   - fileSize: $fileSize');
-
       return FileMessageWidget(
         key: ValueKey('file_${message.id}_${fileUrl.hashCode}'),
         fileUrl: fileUrl,
@@ -5882,33 +5152,24 @@ ${message.content}
       );
     }
 
-    // ============================================================
-    // ✅ اولویت ششم: کارت پیشرفت
-    // ============================================================
+    // ✅ کارت پیشرفت
     if (message.metadata != null &&
         message.metadata!['is_progress_card'] == true) {
-      return _buildProgressCard(message, isMe);
+      return _buildProgressCard(message, isMe, theme, primaryColor);
     }
 
-    // ============================================================
-    // ✅ اولویت هفتم: نوع پیام progress
-    // ============================================================
     if (message.type == MessageType.progress) {
-      return _buildProgressCard(message, isMe);
+      return _buildProgressCard(message, isMe, theme, primaryColor);
     }
 
-    // ✅ بررسی لینک لوکیشن
+    // ✅ لینک لوکیشن
     if (message.type == MessageType.text && _isLocationLink(message.content)) {
       return Container(
         width: 280,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF4A90E2) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isMe ? Colors.white24 : Colors.grey.shade200,
-            width: 1,
-          ),
+          color: isMe ? const Color(0xFF090909) : theme.surfaceColor,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
@@ -5917,7 +5178,7 @@ ${message.content}
               height: 36,
               decoration: BoxDecoration(
                 color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.location_on,
@@ -5935,14 +5196,14 @@ ${message.content}
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+                      color: isMe ? Colors.white : theme.textColor,
                     ),
                   ),
                   Text(
                     'مشاهده روی نقشه',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isMe ? Colors.white70 : Colors.grey.shade600,
+                      color: isMe ? Colors.white70 : theme.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -5950,7 +5211,7 @@ ${message.content}
             ),
             IconButton(
               icon: const Icon(Icons.open_in_new, size: 16),
-              color: isMe ? Colors.white : const Color(0xFF4A90E2),
+              color: isMe ? Colors.white : primaryColor,
               onPressed: () => _openInMap(message.content),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -5960,19 +5221,16 @@ ${message.content}
       );
     }
 
-    // ✅ بررسی اینکه آیا پیام حاوی شماره تماس است
+    // ✅ شماره تماس
     if (message.type == MessageType.text &&
         _isContactMessage(message.content)) {
-      return _buildContactMessage(message, isMe);
+      return _buildContactMessage(message, isMe, theme);
     }
 
-    // ============================================================
-    // ✅ بقیه موارد بر اساس نوع پیام
-    // ============================================================
     switch (message.type) {
       case MessageType.image:
         return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           child: Image.network(
             message.content,
             width: 200,
@@ -5990,12 +5248,12 @@ ${message.content}
                 height: 200,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Center(
+                child: Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF4A90E2),
+                    color: primaryColor,
                   ),
                 ),
               );
@@ -6015,7 +5273,7 @@ ${message.content}
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+                  color: isMe ? Colors.white : theme.textColor,
                   fontSize: 14,
                 ),
               ),
@@ -6024,25 +5282,21 @@ ${message.content}
         );
 
       default:
-        // ✅ نمایش متن با لینک‌های قابل کلیک
-        return _buildLinkifiedText(message.content, isMe);
+        return _buildLinkifiedText(message.content, isMe, theme, primaryColor);
     }
   }
 
-  // ============================================================
-  // ✅ متدهای کمکی
-  // ============================================================
-
-  /// ✅ بررسی اینکه آیا پیام حاوی شماره تماس است
   bool _isContactMessage(String content) {
     return content.contains('📞 شماره تماس') ||
         content.contains('👤 نام:') ||
         content.contains('📱 شماره:');
   }
 
-  /// ✅ ساخت ویجت شماره تماس
-  Widget _buildContactMessage(ChatMessage message, bool isMe) {
-    // استخراج اطلاعات از متن
+  Widget _buildContactMessage(
+    ChatMessage message,
+    bool isMe,
+    ThemeProvider theme,
+  ) {
     String name = '';
     String phone = '';
 
@@ -6059,12 +5313,8 @@ ${message.content}
       width: 280,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xFF4A90E2) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMe ? Colors.white24 : Colors.grey.shade200,
-          width: 1,
-        ),
+        color: isMe ? const Color(0xFF090909) : theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
@@ -6072,8 +5322,8 @@ ${message.content}
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.blue.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.contact_phone,
@@ -6091,14 +5341,14 @@ ${message.content}
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+                    color: isMe ? Colors.white : theme.textColor,
                   ),
                 ),
                 Text(
                   phone.isNotEmpty ? phone : 'شماره موجود نیست',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isMe ? Colors.white70 : Colors.grey.shade600,
+                    color: isMe ? Colors.white70 : theme.textSecondaryColor,
                   ),
                 ),
               ],
@@ -6107,7 +5357,7 @@ ${message.content}
           if (phone.isNotEmpty && phone != 'شماره موجود نیست')
             IconButton(
               icon: const Icon(Icons.phone, size: 16),
-              color: isMe ? Colors.white : const Color(0xFF4A90E2),
+              color: isMe ? Colors.white : Colors.blue,
               onPressed: () => _callPhoneNumber(phone),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -6117,9 +5367,7 @@ ${message.content}
     );
   }
 
-  /// ✅ تماس با شماره تلفن
   void _callPhoneNumber(String phone) {
-    // حذف کاراکترهای غیرمجاز
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
     if (cleanPhone.isNotEmpty) {
       final url = 'tel:$cleanPhone';
@@ -6127,9 +5375,7 @@ ${message.content}
     }
   }
 
-  // ✅ متد جدید برای بارگذاری چالش در پس‌زمینه
   void _loadChallengeInBackground(String challengeId) {
-    // اگر در حال بارگذاری است، صبر کن
     if (_loadingChallenges.contains(challengeId)) return;
 
     _loadingChallenges.add(challengeId);
@@ -6150,347 +5396,71 @@ ${message.content}
     });
   }
 
-  // ✅ متد ریفرش یک چالش خاص
   void _refreshChallenge(String challengeId) {
     _challengeCache.remove(challengeId);
     _loadChallengeInBackground(challengeId);
   }
-  // ==================== ویجت فایل ====================
 
-  Widget _buildFileMessageWidget({
-    required String fileName,
-    required int fileSize,
-    required bool isMusic,
-    required bool isMe,
-    String? filePath,
-    bool hasBytes = false,
-  }) {
-    final fileSizeString = _getFileSizeString(fileSize);
-
-    // ✅ اگر موزیک است، پلیر نمایش داده شود
-    if (isMusic) {
-      return _buildMusicPlayer(
-        fileName: fileName,
-        fileSizeString: fileSizeString,
-        isMe: isMe,
-        filePath: filePath,
-        hasBytes: hasBytes,
-      );
-    }
-
-    // ✅ نمایش فایل معمولی
-    return _buildFileCard(
-      fileName: fileName,
-      fileSizeString: fileSizeString,
-      isMe: isMe,
-      filePath: filePath,
-      hasBytes: hasBytes,
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.orange,
+      ),
     );
   }
 
-  // ==================== کارت فایل ====================
+  String _getWeekDayLetter(int index) {
+    const days = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+    return days[index];
+  }
 
-  Widget _buildFileCard({
-    required String fileName,
-    required String fileSizeString,
-    required bool isMe,
-    String? filePath,
-    bool hasBytes = false,
-  }) {
-    final bool isWeb = kIsWeb;
-    final bool canOpen = !isWeb && filePath != null && filePath.isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isMe ? Colors.blue.shade50 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMe ? Colors.blue.shade200 : Colors.grey.shade300,
-          width: 1,
+  Widget _buildProgressStat(
+    IconData icon,
+    String value,
+    String label,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 10,
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.insert_drive_file,
-                  color: Colors.blue,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      fileName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isMe ? Colors.black87 : Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      fileSizeString,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // ✅ دکمه دانلود (فقط در موبایل/دسکتاپ)
-              if (!isWeb)
-                IconButton(
-                  icon: const Icon(Icons.download, size: 20),
-                  color: Colors.blue,
-                  onPressed: () => _downloadFile(filePath, fileName),
-                  tooltip: 'دانلود فایل',
-                ),
-            ],
-          ),
-          // ✅ دکمه باز کردن فایل (فقط در موبایل/دسکتاپ)
-          if (canOpen)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: GestureDetector(
-                onTap: () => _openFile(filePath),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.open_in_browser,
-                        size: 14,
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'باز کردن فایل',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          // ✅ پیام برای وب
-          if (isWeb)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      size: 14,
-                      color: Colors.orange,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'در وب فقط می‌توانید دانلود کنید',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 
-  // ==================== پلیر موزیک ====================
-
-  Widget _buildMusicPlayer({
-    required String fileName,
-    required String fileSizeString,
-    required bool isMe,
-    String? filePath,
-    bool hasBytes = false,
-  }) {
-    final bool isWeb = kIsWeb;
-    final bool canPlay = isWeb
-        ? hasBytes
-        : (hasBytes || (filePath != null && File(filePath).existsSync()));
-
-    if (!canPlay) {
-      return _buildFileCard(
-        fileName: fileName,
-        fileSizeString: fileSizeString,
-        isMe: isMe,
-        filePath: filePath,
-        hasBytes: hasBytes,
-      );
-    }
-
-    // ✅ استفاده از StatefulWidget برای مدیریت وضعیت پلیر
-    return _MusicPlayerWidget(
-      fileName: fileName,
-      fileSizeString: fileSizeString,
-      isMe: isMe,
-      filePath: filePath,
-      hasBytes: hasBytes,
-      onDownload: () => _downloadFile(filePath, fileName),
-      onShowSnackBar: _showSnackBar,
-    );
-  }
-
-  // ==================== عملیات فایل ====================
-
-  Future<void> _openFile(String? filePath) async {
-    if (filePath == null || filePath.isEmpty) {
-      _showSnackBar('مسیر فایل موجود نیست');
-      return;
-    }
-
-    try {
-      // ✅ در وب، باز کردن فایل مستقیم ممکن نیست
-      if (kIsWeb) {
-        // روش جایگزین برای وب: نمایش پیام
-        _showSnackBar('در وب، فایل را دانلود کنید');
-        return;
-      }
-
-      final file = File(filePath);
-
-      if (!await file.exists()) {
-        _showSnackBar('فایل یافت نشد');
-        return;
-      }
-
-      // ✅ روش‌های مختلف برای باز کردن فایل
-      try {
-        // روش 1: url_launcher
-        final uri = Uri.file(filePath);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
-          return;
-        }
-      } catch (e) {
-        print('⚠️ url_launcher failed: $e');
-      }
-
-      try {
-        // روش 2: OpenFile (برای اندروید و iOS)
-        final result = await OpenFile.open(filePath);
-        if (result.type == ResultType.done) {
-          return;
-        }
-      } catch (e) {
-        print('⚠️ OpenFile failed: $e');
-      }
-
-      _showSnackBar('خطا در باز کردن فایل');
-    } catch (e) {
-      _showSnackBar('خطا: ${e.toString()}');
-    }
-  }
-
-  Future<void> _downloadFile(String? filePath, String fileName) async {
-    if (filePath == null || filePath.isEmpty) {
-      _showSnackBar('مسیر فایل موجود نیست');
-      return;
-    }
-
-    try {
-      // ✅ در وب، از bytes استفاده کن
-      if (kIsWeb) {
-        // روش جایگزین برای وب
-        _showSnackBar('در وب، فایل را با راست کلیک ذخیره کنید');
-        return;
-      }
-
-      final file = File(filePath);
-
-      if (!await file.exists()) {
-        _showSnackBar('فایل یافت نشد');
-        return;
-      }
-
-      // ✅ روش‌های مختلف برای دانلود
-      try {
-        // روش 1: FilePicker.saveFile
-        final result = await FilePicker.platform.saveFile(
-          dialogTitle: 'ذخیره فایل',
-          fileName: fileName,
-          bytes: await file.readAsBytes(),
-        );
-
-        if (result != null) {
-          _showSnackBar('✅ فایل با موفقیت ذخیره شد');
-          return;
-        }
-      } catch (e) {
-        print('⚠️ FilePicker save failed: $e');
-      }
-
-      // روش 2: ذخیره در دایرکتوری دانلود (اندروید/iOS)
-      try {
-        final downloadsDir = await getExternalStorageDirectory();
-        if (downloadsDir != null) {
-          final newPath = '${downloadsDir.path}/$fileName';
-          await file.copy(newPath);
-          _showSnackBar('✅ فایل با موفقیت ذخیره شد');
-          return;
-        }
-      } catch (e) {
-        print('⚠️ Could not save to downloads: $e');
-      }
-
-      // روش 3: ذخیره در دایرکتوری اسناد
-      try {
-        final appDir = await getApplicationDocumentsDirectory();
-        final newPath = '${appDir.path}/$fileName';
-        await file.copy(newPath);
-        _showSnackBar('✅ فایل با موفقیت ذخیره شد');
-        return;
-      } catch (e) {
-        print('⚠️ Could not save to documents: $e');
-      }
-
-      _showSnackBar('خطا در ذخیره فایل');
-    } catch (e) {
-      _showSnackBar('خطا: ${e.toString()}');
-    }
-  }
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  // ✅ اصلاح _buildProgressCard با عرض ثابت
-  Widget _buildProgressCard(ChatMessage message, bool isMe) {
+  Widget _buildProgressCard(
+    ChatMessage message,
+    bool isMe,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     final metadata = message.metadata ?? {};
     final streak = metadata['streak'] ?? 0;
     final completed = metadata['completed'] ?? 0;
@@ -6511,18 +5481,14 @@ ${message.content}
     final todayIndex = jalaliToday.weekDay - 1;
 
     return Container(
-      width: 280, // ✅ عرض ثابت و مناسب
+      width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4A90E2), Color(0xFF7C3AED)],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFF090909),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF4A90E2).withValues(alpha: 0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 12,
             spreadRadius: 2,
           ),
@@ -6534,7 +5500,7 @@ ${message.content}
         children: [
           Row(
             children: [
-              const Icon(Icons.trending_up, color: Colors.white, size: 16),
+              Icon(Icons.trending_up, color: primaryColor, size: 16),
               const SizedBox(width: 6),
               const Text(
                 'پیشرفت روزانه',
@@ -6548,14 +5514,14 @@ ${message.content}
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
                     const Icon(
                       Icons.local_fire_department,
-                      color: Colors.white,
+                      color: Colors.orange,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
@@ -6588,11 +5554,11 @@ ${message.content}
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: total > 0 ? completed / total : 0,
               backgroundColor: Colors.white.withValues(alpha: 0.2),
-              color: Colors.white,
+              color: primaryColor,
               minHeight: 4,
             ),
           ),
@@ -6621,7 +5587,7 @@ ${message.content}
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isActive
-                            ? Colors.white
+                            ? primaryColor
                             : isToday
                                 ? Colors.white.withValues(alpha: 0.3)
                                 : Colors.white.withValues(alpha: 0.1),
@@ -6632,7 +5598,7 @@ ${message.content}
                       child: isActive
                           ? const Icon(
                               Icons.check,
-                              color: Color(0xFF4A90E2),
+                              color: Colors.white,
                               size: 12,
                             )
                           : null,
@@ -6659,27 +5625,22 @@ ${message.content}
     );
   }
 
-  /// ✅ اسکرول دقیق به پیام با استفاده از GlobalKey
   void _scrollToMessage(String messageId) {
-    // 1. هایلایت پیام
     _highlightMessage(messageId);
 
-    // 2. پیدا کردن کلید پیام
     final key = _messageKeys[messageId];
     if (key == null) {
       _showSnackBar('پیام مورد نظر یافت نشد');
       return;
     }
 
-    // 3. صبر برای رندر شدن کامل
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        // ✅ استفاده از Scrollable.ensureVisible - دقیق‌ترین روش
         Scrollable.ensureVisible(
           key.currentContext!,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOutCubic,
-          alignment: 0.5, // وسط صفحه
+          alignment: 0.5,
         );
       } catch (e) {
         print('❌ Scroll error: $e');
@@ -6688,24 +5649,18 @@ ${message.content}
     });
   }
 
-  /// ✅ روش سوم: Fallback با محاسبه موقعیت بر اساس ایندکس
   void _scrollToMessageFallback(String messageId) {
     final index = _messages.indexWhere((msg) => msg.id == messageId);
     if (index == -1) return;
 
-    final reverseIndex = _messages.length - 1 - index;
-
-    // محاسبه موقعیت با تخمین ارتفاع
     double estimatedOffset = 0;
     final int startIdx = _messages.length - 1;
     final int endIdx = index;
 
     for (int i = startIdx; i > endIdx; i--) {
-      final msg = _messages[i];
-      estimatedOffset += _estimateSingleItemHeight(msg);
+      estimatedOffset += _estimateSingleItemHeight(_messages[i]);
     }
 
-    // اضافه کردن padding برای اطمینان
     estimatedOffset += 20;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -6713,10 +5668,6 @@ ${message.content}
       try {
         final maxOffset = _scrollController.position.maxScrollExtent;
         final target = estimatedOffset.clamp(0.0, maxOffset);
-
-        print(
-          '📊 Fallback scroll: index=$index, reverse=$reverseIndex, target=$target, max=$maxOffset',
-        );
 
         _scrollController.animateTo(
           target,
@@ -6729,15 +5680,12 @@ ${message.content}
     });
   }
 
-  /// ✅ تخمین ارتفاع یک پیام خاص
   double _estimateSingleItemHeight(ChatMessage message) {
-    double height = 70.0; // حداقل ارتفاع
+    double height = 70.0;
 
-    // بر اساس طول متن
     height += (message.content.length / 40) * 14;
     if (message.content.length > 100) height += 10;
 
-    // بر اساس نوع پیام
     switch (message.type) {
       case MessageType.image:
         height += 120;
@@ -6752,10 +5700,8 @@ ${message.content}
         break;
     }
 
-    // اگر ریپلای دارد
     if (message.replyTo != null) height += 40;
 
-    // اگر متادیتا دارد (چالش، کارت پیشرفت، و...)
     if (message.metadata != null) {
       if (message.metadata!['is_challenge_invite'] == true) height += 80;
       if (message.metadata!['is_progress_card'] == true) height += 70;
@@ -6768,786 +5714,181 @@ ${message.content}
     return height;
   }
 
-  /// ✅ روش دوم: محاسبه دقیق موقعیت با RenderBox و اسکرول
-  void _scrollToMessageWithRenderBox(String messageId) {
-    try {
-      final key = _messageKeys[messageId];
-      if (key == null) {
-        _scrollToMessageFallback(messageId);
-        return;
-      }
+  Future<void> _getHabitTimeToday(String habitId) async {
+    return;
+  }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          final context = key.currentContext;
-          if (context == null) {
-            _scrollToMessageFallback(messageId);
-            return;
+  // ==================== Build ====================
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
+    return Scaffold(
+      backgroundColor: theme.backgroundColor,
+      resizeToAvoidBottomInset: true,
+      appBar: _buildAppBar(theme, primaryColor),
+      body: GestureDetector(
+        onTap: () {
+          if (_menuMessage != null) {
+            _closeMenu();
           }
+        },
+        child: SafeArea(
+          child: Column(
+            children: [
+              const AudioPlayerHeader(),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        _buildPinnedMessageBar(theme, primaryColor),
+                        Expanded(
+                          child: _isLoading
+                              ? _buildLoadingState(primaryColor)
+                              : _messages.isEmpty
+                                  ? _buildEmptyState(theme, primaryColor)
+                                  : ListView.builder(
+                                      controller: _scrollController,
+                                      reverse: true,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      itemCount: _messages.length,
+                                      itemBuilder: (context, index) {
+                                        final message = _messages[
+                                            _messages.length - 1 - index];
+                                        final widgets = <Widget>[];
 
-          final RenderBox renderBox = context.findRenderObject() as RenderBox;
-          final Offset position = renderBox.localToGlobal(Offset.zero);
-          final Size size = renderBox.size;
+                                        if (index == _messages.length - 1) {
+                                          widgets.add(
+                                            _buildDateMarker(
+                                              message.createdAt,
+                                              theme,
+                                            ),
+                                          );
+                                        } else {
+                                          final nextMessage = _messages[
+                                              _messages.length - 2 - index];
+                                          if (!_isSameDay(
+                                            message.createdAt,
+                                            nextMessage.createdAt,
+                                          )) {
+                                            widgets.add(
+                                              _buildDateMarker(
+                                                message.createdAt,
+                                                theme,
+                                              ),
+                                            );
+                                          }
+                                        }
 
-          final screenHeight = MediaQuery.of(context).size.height;
-          final appBarHeight =
-              kToolbarHeight + MediaQuery.of(context).padding.top;
-          final bottomBarHeight = 80.0;
-
-          // محاسبه موقعیت مرکزی پیام
-          final centerY = position.dy + (size.height / 2);
-
-          // موقعیت هدف برای قرار دادن پیام در مرکز
-          final targetScrollOffset = centerY -
-              (screenHeight / 2) +
-              (appBarHeight / 2) +
-              (bottomBarHeight / 2);
-
-          final maxOffset = _scrollController.position.maxScrollExtent;
-          final safeTarget = targetScrollOffset.clamp(0.0, maxOffset);
-
-          print(
-            '📊 RenderBox scroll: position=${position.dy}, size=${size.height}, target=$safeTarget',
-          );
-
-          _scrollController.animateTo(
-            safeTarget,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
-          );
-        } catch (e) {
-          print('⚠️ RenderBox method failed: $e');
-          _scrollToMessageFallback(messageId);
-        }
-      });
-    } catch (e) {
-      print('⚠️ RenderBox error: $e');
-      _scrollToMessageFallback(messageId);
-    }
-  }
-
-  /// ✅ پیدا کردن Context یک پیام با استفاده از GlobalKey
-  BuildContext? _findMessageWidgetContext(String messageId) {
-    try {
-      // روش 1: استفاده از GlobalKey ذخیره شده
-      // ما باید در _buildMessageBubble یک GlobalKey ذخیره کنیم
-
-      // روش 2: جستجو در درخت ویجت
-      // این روش پیچیده است، از روش 3 استفاده می‌کنیم
-
-      // روش 3: استفاده از key در Widget tree
-      // اگر به هر پیام یک Key بدهیم، می‌توانیم با روش زیر پیدا کنیم
-
-      // برای سادگی، از روش مستقیم استفاده می‌کنیم:
-      // در _buildMessageBubble به Container اصلی کلید می‌دهیم
-      // و در اینجا با استفاده از آن کلید، context را پیدا می‌کنیم
-
-      // اما چون flutter نمی‌گذارد مستقیم از کلید استفاده کنیم،
-      // از روش fallback استفاده می‌کنیم
-
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// ✅ محاسبه موقعیت دقیق بر اساس موقعیت RenderBox
-  double _calculateExactOffset(Offset position, Size size) {
-    // در listView با reverse: true، موقعیت از پایین محاسبه می‌شود
-    // ما باید موقعیت را از پایین لیست محاسبه کنیم
-
-    // ارتفاع کل محتوای لیست را بدست می‌آوریم
-    final totalHeight = _messages.length * 85.0; // تقریبی
-
-    // موقعیت پیام از پایین لیست
-    final fromBottom = totalHeight - position.dy - size.height;
-
-    return fromBottom.clamp(0.0, totalHeight);
-  }
-
-  /// ✅ جستجوی موقعیت دقیق با روش باینری
-  void _findExactPositionWithBinarySearch(
-    String messageId,
-    int estimatedIndex,
-  ) {
-    if (!_scrollController.hasClients) return;
-
-    const int maxAttempts = 5;
-    int attempts = 0;
-    double low = 0;
-    double high = _scrollController.position.maxScrollExtent;
-    double mid = (low + high) / 2;
-
-    void attemptScroll() {
-      if (attempts >= maxAttempts || !mounted) {
-        // اگر نتوانستیم پیدا کنیم، به موقعیت تخمینی برویم
-        final target = (estimatedIndex * 85.0).clamp(0.0, high);
-        _scrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-        return;
-      }
-
-      attempts++;
-      _scrollController.jumpTo(mid);
-
-      // بررسی کنیم که آیا پیام در صفحه قابل مشاهده است
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!mounted || !_scrollController.hasClients) return;
-
-        // چک کردن اینکه آیا پیام مورد نظر در viewport است
-        final visible = _isMessageVisible(messageId);
-        if (visible) {
-          // پیدا شد! الان دقیق‌تر تنظیم کن
-          _adjustScrollToCenter(messageId);
-          return;
-        }
-
-        // اگر پیام در بالای viewport است، باید پایین‌تر برویم
-        // اگر در پایین است، باید بالاتر برویم
-        // اینجا باید بر اساس موقعیت پیام نسبت به viewport تصمیم بگیریم
-
-        // برای سادگی، از روش تخمینی استفاده می‌کنیم
-        final target = (estimatedIndex * 85.0).clamp(0.0, high);
-        _scrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
-
-    attemptScroll();
-  }
-
-  /// ✅ بررسی اینکه آیا پیام در صفحه قابل مشاهده است
-  bool _isMessageVisible(String messageId) {
-    // این متد باید بررسی کند که آیا پیام با id مشخص در viewport است
-    // برای سادگی، true برگردانید تا از حلقه بی‌نهایت جلوگیری شود
-    return true;
-  }
-
-  /// ✅ تنظیم دقیق اسکرول برای قرار دادن پیام در مرکز
-  void _adjustScrollToCenter(String messageId) {
-    // با استفاده از RenderBox موقعیت دقیق را پیدا کن
-    _scrollToMessageWithRenderBox(messageId);
-  }
-
-  /// ✅ تخمین ارتفاع هر آیتم بر اساس تعداد کلمات و نوع پیام
-  double _estimateItemHeight() {
-    // اگر پیام‌ها وجود ندارند، مقدار پیش‌فرض برگردان
-    if (_messages.isEmpty) return 85.0;
-
-    // میانگین ارتفاع پیام‌ها را محاسبه کن
-    // برای دقت بیشتر، فقط پیام‌های قابل مشاهده را در نظر بگیر
-    final visibleCount = _messages.length > 20 ? 20 : _messages.length;
-    double totalHeight = 0;
-    int count = 0;
-
-    for (int i = 0; i < visibleCount; i++) {
-      final msg = _messages[i];
-      // بر اساس نوع پیام و طول متن، ارتفاع را تخمین بزن
-      double estimated = 65.0; // حداقل ارتفاع
-      estimated += (msg.content.length / 40) * 15; // هر 40 کاراکتر 15 پیکسل
-      if (msg.content.length > 100) estimated += 10;
-
-      // پیام‌های با استیکر یا تصویر بزرگتر هستند
-      if (msg.type == MessageType.image) estimated += 80;
-      if (msg.type == MessageType.sticker) estimated += 40;
-      if (msg.type == MessageType.gif) estimated += 30;
-
-      // ریپلای‌ها بزرگتر هستند
-      if (msg.replyTo != null) estimated += 35;
-
-      // متادیتاهای خاص (چالش، کارت پیشرفت) بزرگتر هستند
-      if (msg.metadata != null) {
-        if (msg.metadata!['is_challenge_invite'] == true) estimated += 60;
-        if (msg.metadata!['is_progress_card'] == true) estimated += 50;
-        if (msg.metadata!['is_performance_widget'] == true) estimated += 40;
-      }
-
-      totalHeight += estimated;
-      count++;
-    }
-
-    if (count == 0) return 85.0;
-    return totalHeight / count;
-  }
-
-  /// ✅ نمایش پیام خطا
-  void _showSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  String _getWeekDayLetter(int index) {
-    const days = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-    return days[index];
-  }
-
-  Widget _buildProgressStat(
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementCard(ChatMessage message, bool isMe) {
-    final metadata = message.metadata ?? {};
-    final title = metadata['title'] ?? 'دستاورد جدید!';
-    final badge = metadata['badge'] ?? '🏆';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFA500), Color(0xFFFF6B6B)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Text(badge, style: const TextStyle(fontSize: 40)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            metadata['description'] ?? 'تبریک! شما به این دستاورد رسیدید! 🎉',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          if (metadata['xp'] != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '+${metadata['xp']} XP',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                                        widgets.add(
+                                          _buildMessageBubble(
+                                            message,
+                                            theme,
+                                            primaryColor,
+                                          ),
+                                        );
+                                        return Column(children: widgets);
+                                      },
+                                    ),
+                        ),
+                        _buildInputBar(theme, primaryColor),
+                      ],
+                    ),
+                    _buildMessageActionsPopup(theme, primaryColor),
+                    _buildScrollToBottomButton(primaryColor),
+                  ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState(Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
+          const SizedBox(height: 12),
+          const Text(
+            'در حال بارگذاری پیام‌ها...',
+            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+          ),
         ],
       ),
     );
   }
 
-  /// ✅ نمایش گزینه‌های لینک
-  void _showLinkOptions(String url, bool isMe) {
-    final bool isLocationLink = _isLocationLink(url);
-    final String displayUrl =
-        url.length > 50 ? '${url.substring(0, 50)}...' : url;
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    displayUrl,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                if (isLocationLink)
-                  _buildLinkOption(
-                    icon: Icons.map,
-                    title: 'باز کردن در نقشه',
-                    subtitle: 'مشاهده موقعیت روی نقشه',
-                    color: const Color(0xFF4A90E2),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openInMap(url);
-                    },
-                  ),
-                _buildLinkOption(
-                  icon: Icons.open_in_browser,
-                  title: 'باز کردن در مرورگر',
-                  subtitle: 'باز کردن لینک در مرورگر',
-                  color: const Color(0xFF2ECC71),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _launchUrl(url);
-                  },
-                ),
-                _buildLinkOption(
-                  icon: Icons.copy,
-                  title: 'کپی لینک',
-                  subtitle: 'کپی آدرس در کلیپ‌بورد',
-                  color: const Color(0xFFF39C12),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _copyLink(url);
-                  },
-                ),
-                _buildLinkOption(
-                  icon: Icons.share,
-                  title: 'اشتراک‌گذاری',
-                  subtitle: 'ارسال لینک برای دیگران',
-                  color: const Color(0xFF9B59B6),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _shareLink(url);
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
+  Widget _buildEmptyState(ThemeProvider theme, Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.chat_bubble_outline,
+              size: 48,
+              color: primaryColor,
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null) {
-      final file = result.files.first;
-
-      // ✅ 1. آپلود فایل به سرور
-      final String fileUrl = await _uploadFileToServer(file);
-
-      // ✅ 2. ارسال پیام با URL فایل (با await)
-      await _sendMessageWithFile(
-        // ✅ حالا این خط کار می‌کند
-        fileUrl: fileUrl,
-        fileName: file.name,
-        fileType: _getFileType(file.extension),
-        fileSize: file.size,
-      );
-    }
-  }
-
-  Future<String> _uploadFileToServer(
-    PlatformFile file, [
-    String? customFileName,
-  ]) async {
-    try {
-      final bytes = file.bytes;
-      // ✅ اگر نام سفارشی داده شده استفاده کن، وگرنه از نام اصلی استفاده کن
-      final fileName = customFileName ?? file.name;
-
-      final String path =
-          'chat_files/${DateTime.now().millisecondsSinceEpoch}_$fileName';
-
-      await _supabase.client.storage
-          .from('chat_files')
-          .uploadBinary(path, bytes!);
-
-      final String fileUrl =
-          _supabase.client.storage.from('chat_files').getPublicUrl(path);
-
-      print('📤 فایل آپلود شد: $fileUrl');
-
-      return fileUrl;
-    } catch (e) {
-      throw Exception('خطا در آپلود فایل: $e');
-    }
-  }
-
-  Future<void> _sendMessageWithFile({
-    required String fileUrl,
-    required String fileName,
-    required String fileType,
-    required int fileSize,
-  }) async {
-    // ارسال پیام به Supabase با metadata شامل URL عمومی
-    await _chatService.client.from('messages').insert({
-      'conversation_id': _conversationId,
-      'sender_id': _currentUserId,
-      'content': '📎 فایل ارسال شد',
-      'type': 'file',
-      'metadata': {
-        'fileUrl': fileUrl,
-        'fileName': fileName,
-        'fileType': fileType,
-        'fileSize': fileSize,
-      },
-    });
-    print('✅ [DEBUG] _sendMessageWithFile inserted successfully!');
-  }
-
-  String _getFileType(String? extension) {
-    if (extension == null) return 'document';
-    final ext = extension.toLowerCase();
-    if (['mp3', 'wav', 'aac', 'm4a'].contains(ext)) return 'audio';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) return 'image';
-    if (['mp4', 'avi', 'mov', 'mkv'].contains(ext)) return 'video';
-    if (['pdf'].contains(ext)) return 'pdf';
-    return 'document';
-  }
-
-  /// ✅ آیتم گزینه‌های لینک
-  Widget _buildLinkOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: color, size: 22),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFF1A1A2E),
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-      ),
-      onTap: onTap,
-    );
-  }
-
-  /// ✅ ساخت متن با لینک‌های قابل کلیک
-  Widget _buildLinkifiedText(String text, bool isMe) {
-    final elements = linkify(
-      text,
-      options: const LinkifyOptions(humanize: false),
-    );
-
-    return Wrap(
-      children: elements.map((element) {
-        if (element is LinkableElement) {
-          // ✅ لینک - قابل کلیک
-          return GestureDetector(
-            onTap: () => _showLinkOptions(element.url, isMe),
-            child: Text(
-              element.text,
-              style: TextStyle(
-                color: isMe ? Colors.white : const Color(0xFF4A90E2),
-                fontSize: 14,
-                decoration: TextDecoration.underline,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          );
-        } else {
-          // ✅ متن عادی
-          return Text(
-            element.text,
+          const SizedBox(height: 16),
+          Text(
+            'گفتگو را شروع کنید',
             style: TextStyle(
-              color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-              fontSize: 14,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: theme.textColor,
             ),
-          );
-        }
-      }).toList(),
-    );
-  }
-
-  /// ✅ بررسی اینکه آیا لینک مربوط به موقعیت مکانی است
-  bool _isLocationLink(String url) {
-    final locationPatterns = [
-      'openstreetmap.org',
-      'google.com/maps',
-      'maps.google.com',
-      'neshan.org',
-      'map.ir',
-      '/maps',
-      '?q=',
-      '?mlat=',
-      '?lat=',
-    ];
-
-    final lowerUrl = url.toLowerCase();
-    return locationPatterns.any((pattern) => lowerUrl.contains(pattern));
-  }
-
-  /// ✅ باز کردن لینک در مرورگر
-  Future<void> _launchUrl(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لینک معتبر نیست'),
-            backgroundColor: Colors.red,
           ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  /// ✅ باز کردن لینک در نقشه
-  void _openInMap(String url) {
-    // استخراج مختصات از لینک (اگر ممکن باشد)
-    final latLng = _extractLatLngFromUrl(url);
-
-    if (latLng != null) {
-      // اگر مختصات داشت، باز کردن در نقشه با مختصات دقیق
-      final mapUrl =
-          'https://www.openstreetmap.org/?mlat=${latLng.latitude}&mlon=${latLng.longitude}&zoom=16';
-      _launchUrl(mapUrl);
-    } else {
-      // اگر مختصات نداشت، خود لینک را باز کن
-      _launchUrl(url);
-    }
-  }
-
-  /// ✅ استخراج مختصات از لینک
-  LatLng? _extractLatLngFromUrl(String url) {
-    try {
-      // الگوی لینک OpenStreetMap
-      final regExp = RegExp(r'[?&]mlat=([\d.-]+)&mlon=([\d.-]+)');
-      final match = regExp.firstMatch(url);
-      if (match != null) {
-        final lat = double.tryParse(match.group(1) ?? '');
-        final lng = double.tryParse(match.group(2) ?? '');
-        if (lat != null && lng != null) {
-          return LatLng(lat, lng);
-        }
-      }
-
-      // الگوی لینک Google Maps
-      final googleRegExp = RegExp(r'[?&]q=([\d.-]+),([\d.-]+)');
-      final googleMatch = googleRegExp.firstMatch(url);
-      if (googleMatch != null) {
-        final lat = double.tryParse(googleMatch.group(1) ?? '');
-        final lng = double.tryParse(googleMatch.group(2) ?? '');
-        if (lat != null && lng != null) {
-          return LatLng(lat, lng);
-        }
-      }
-
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // ✅ کپی لینک در کلیپ‌بورد
-  void _copyLink(String url) {
-    Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('لینک کپی شد 📋'),
-        duration: Duration(seconds: 2),
+          const SizedBox(height: 6),
+          Text(
+            'با ${_buddyName ?? 'کاربر'} پیام دهید',
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.textSecondaryColor,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ✅ اشتراک‌گذاری لینک
-  void _shareLink(String url) async {
-    try {
-      final shareText = '''
-📍 لینک موقعیت مکانی
-━━━━━━━━━━━━━━━━━━━━
-🔗 $url
-━━━━━━━━━━━━━━━━━━━━
-📱 ارسال شده از اپلیکیشن قهرمان درون
-''';
-      await Share.share(shareText);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // ✅ دریافت تاریخ شمسی یا میلادی - نسخه اصلاح شده
-  Future<String> _getDateLabel(DateTime date) async {
-    final calendarType = await DateService.getCalendarType();
-
-    if (calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(date);
-      final now = Jalali.now();
-
-      // ✅ اگر امروز است
-      if (jalali.year == now.year &&
-          jalali.month == now.month &&
-          jalali.day == now.day) {
-        return 'امروز';
-      }
-
-      // ✅ محاسبه دیروز شمسی
-      final today = DateTime.now();
-      final yesterdayDate = today.subtract(const Duration(days: 1));
-      final jalaliYesterday = Jalali.fromDateTime(yesterdayDate);
-
-      if (jalali.year == jalaliYesterday.year &&
-          jalali.month == jalaliYesterday.month &&
-          jalali.day == jalaliYesterday.day) {
-        return 'دیروز';
-      }
-
-      // ✅ نمایش تاریخ شمسی
-      const monthNames = [
-        'فروردین',
-        'اردیبهشت',
-        'خرداد',
-        'تیر',
-        'مرداد',
-        'شهریور',
-        'مهر',
-        'آبان',
-        'آذر',
-        'دی',
-        'بهمن',
-        'اسفند',
-      ];
-      return '${jalali.day} ${monthNames[jalali.month - 1]}';
-    } else {
-      // ✅ تاریخ میلادی
-      final now = DateTime.now();
-
-      if (date.year == now.year &&
-          date.month == now.month &&
-          date.day == now.day) {
-        return 'Today';
-      }
-
-      final yesterday = now.subtract(const Duration(days: 1));
-      if (date.year == yesterday.year &&
-          date.month == yesterday.month &&
-          date.day == yesterday.day) {
-        return 'Yesterday';
-      }
-
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${date.day} ${monthNames[date.month - 1]}';
-    }
-  }
-
-  // ✅ دریافت فقط ساعت
-  String _getTimeOnly(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-  }
-
-  /// ✅ بررسی اینکه آیا دو تاریخ در یک روز هستند
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  // ==================== ویجت‌ها ====================
-
-  Widget _buildReplyPreview() {
+  // ==================== Reply Preview ====================
+  Widget _buildReplyPreview(ThemeProvider theme, Color primaryColor) {
     if (_replyToMessage == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+        color: theme.surfaceColor,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
       child: Row(
         children: [
+          Container(
+            width: 3,
+            height: 36,
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -7555,13 +5896,17 @@ ${message.content}
               children: [
                 Text(
                   'پاسخ به ${_replyToMessage!.senderName ?? "کاربر"}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(
                   _replyToMessage!.content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.textColor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -7584,13 +5929,14 @@ ${message.content}
     );
   }
 
-  Widget _buildStickerPicker() {
+  // ==================== Sticker Picker ====================
+  Widget _buildStickerPicker(ThemeProvider theme, Color primaryColor) {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -7605,9 +5951,13 @@ ${message.content}
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'استیکرها',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textColor,
+                ),
               ),
               Row(
                 children: [
@@ -7659,7 +6009,7 @@ ${message.content}
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Center(
                       child: Text(
@@ -7677,15 +6027,13 @@ ${message.content}
     );
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  Widget _buildGifPicker() {
+  Widget _buildGifPicker(ThemeProvider theme, Color primaryColor) {
     return Container(
       height: 200,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -7700,9 +6048,13 @@ ${message.content}
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'GIF',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textColor,
+                ),
               ),
               Row(
                 children: [
@@ -7743,7 +6095,6 @@ ${message.content}
                 final gif = _popularGifs[index];
                 return GestureDetector(
                   onTap: () {
-                    // ✅ ارسال با نوع GIF
                     _sendMessage(
                       text: gif['name']!,
                       type: MessageType.gif,
@@ -7757,7 +6108,7 @@ ${message.content}
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -7783,20 +6134,19 @@ ${message.content}
     );
   }
 
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  Widget _buildInputBar() {
+  // ==================== Input Bar ====================
+  Widget _buildInputBar(ThemeProvider theme, Color primaryColor) {
     return SafeArea(
       top: false,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_showStickerPicker) _buildStickerPicker(),
-          if (_showGifPicker) _buildGifPicker(),
+          if (_showStickerPicker) _buildStickerPicker(theme, primaryColor),
+          if (_showGifPicker) _buildGifPicker(theme, primaryColor),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.surfaceColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),
@@ -7807,17 +6157,15 @@ ${message.content}
             ),
             child: Column(
               children: [
-                // پیش‌نمایش پاسخ
-                _buildReplyPreview(),
-
+                _buildReplyPreview(theme, primaryColor),
                 Row(
                   children: [
-                    // ✅ دکمه چندرسانه‌ای (جدید)
+                    // دکمه چندرسانه‌ای
                     IconButton(
-                      onPressed: _showMediaMenuSheet,
-                      icon: const Icon(
+                      onPressed: () => _showMediaMenuSheet(theme, primaryColor),
+                      icon: Icon(
                         Icons.add_circle_outline,
-                        color: Color(0xFF4A90E2),
+                        color: primaryColor,
                       ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -7839,8 +6187,8 @@ ${message.content}
                             ? Icons.keyboard
                             : Icons.emoji_emotions,
                         color: _showStickerPicker
-                            ? const Color(0xFF4A90E2)
-                            : Colors.grey.shade600,
+                            ? primaryColor
+                            : theme.textSecondaryColor,
                       ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -7881,7 +6229,7 @@ ${message.content}
                                     child: Icon(
                                       Icons.reply,
                                       size: 16,
-                                      color: const Color(0xFF4A90E2),
+                                      color: primaryColor,
                                     ),
                                   )
                                 : null,
@@ -7918,7 +6266,7 @@ ${message.content}
                                 (_messageController.text.isEmpty &&
                                     _replyToMessage == null)
                             ? Colors.grey.shade300
-                            : const Color(0xFF4A90E2),
+                            : primaryColor,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -7954,12 +6302,11 @@ ${message.content}
     );
   }
 
-  // ==================== AppBar ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  /// ✅ اصلاح متد _buildAppBar - بدون پلیر موزیک (با ChangeNotifier)
-  PreferredSizeWidget _buildAppBar() {
+  // ==================== App Bar ====================
+  PreferredSizeWidget _buildAppBar(
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
     if (_isSelectMode) {
       return AppBar(
         leading: IconButton(
@@ -7970,9 +6317,9 @@ ${message.content}
           '${_selectedMessageIds.length} پیام انتخاب شده',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -8001,12 +6348,15 @@ ${message.content}
         },
         child: Row(
           children: [
-            // آواتار با دایره وضعیت
             Stack(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey.shade200,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
                   child: _buddyAvatar != null && _buddyAvatar!.isNotEmpty
                       ? ClipOval(
                           child: Image.network(
@@ -8014,22 +6364,27 @@ ${message.content}
                             width: 40,
                             height: 40,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Text(
-                              _buddyName?.substring(0, 1).toUpperCase() ?? '?',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                _buddyName?.substring(0, 1).toUpperCase() ??
+                                    '?',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                ),
                               ),
                             ),
                           ),
                         )
-                      : Text(
-                          _buddyName?.substring(0, 1).toUpperCase() ?? '?',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
+                      : Center(
+                          child: Text(
+                            _buddyName?.substring(0, 1).toUpperCase() ?? '?',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
                           ),
                         ),
                 ),
@@ -8064,11 +6419,11 @@ ${message.content}
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (_isBuddyTyping)
-                    const Text(
+                    Text(
                       'در حال تایپ...',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.orange,
+                        color: primaryColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -8078,27 +6433,25 @@ ${message.content}
           ],
         ),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.surfaceColor,
       elevation: 0,
-      foregroundColor: const Color(0xFF1A1A2E),
+      foregroundColor: theme.textColor,
       actions: [
         IconButton(
           icon: const Icon(Icons.more_vert),
-          onPressed: _showHeaderMenu,
+          onPressed: () => _showHeaderMenu(theme, primaryColor),
           tooltip: 'گزینه‌های بیشتر',
         ),
       ],
     );
   }
 
-  /// ✅ متد کمکی برای فرمت زمان
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60);
     final seconds = duration.inSeconds.remainder(60);
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
-  /// ✅ استخراج نام فایل از URL
   String _extractFileName(String? url) {
     if (url == null || url.isEmpty) return '';
     try {
@@ -8118,154 +6471,12 @@ ${message.content}
     }
   }
 
-  // ==================== Build ====================
-
-  // lib/features/chat/screens/buddy_chat_screen.dart
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      resizeToAvoidBottomInset: true,
-      appBar: _buildAppBar(),
-      body: GestureDetector(
-        onTap: () {
-          if (_menuMessage != null) {
-            _closeMenu();
-          }
-        },
-        child: SafeArea(
-          child: Column(
-            children: [
-              // ✅ فقط هدر جدید را نگه دارید
-              const AudioPlayerHeader(),
-
-              // ✅ بقیه محتوا
-              Expanded(
-                child: Stack(
-                  children: [
-                    Column(
-                      children: [
-                        _buildPinnedMessageBar(),
-                        Expanded(
-                          child: _isLoading
-                              ? _buildLoadingState()
-                              : _messages.isEmpty
-                                  ? _buildEmptyState()
-                                  : ListView.builder(
-                                      controller: _scrollController,
-                                      reverse: true,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      itemCount: _messages.length,
-                                      itemBuilder: (context, index) {
-                                        final message = _messages[
-                                            _messages.length - 1 - index];
-                                        final widgets = <Widget>[];
-
-                                        if (index == _messages.length - 1) {
-                                          widgets.add(
-                                            _buildDateMarker(message.createdAt),
-                                          );
-                                        } else {
-                                          final nextMessage = _messages[
-                                              _messages.length - 2 - index];
-                                          if (!_isSameDay(
-                                            message.createdAt,
-                                            nextMessage.createdAt,
-                                          )) {
-                                            widgets.add(
-                                              _buildDateMarker(
-                                                  message.createdAt),
-                                            );
-                                          }
-                                        }
-
-                                        widgets
-                                            .add(_buildMessageBubble(message));
-                                        return Column(children: widgets);
-                                      },
-                                    ),
-                        ),
-                        _buildInputBar(),
-                      ],
-                    ),
-                    _buildMessageActionsPopup(),
-                    _buildScrollToBottomButton(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  // ==================== حالت‌ها ====================
-
-  /// ✅ حالت بارگذاری
-  Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(color: Color(0xFF4A90E2), strokeWidth: 2),
-          SizedBox(height: 12),
-          Text(
-            'در حال بارگذاری پیام‌ها...',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// ✅ حالت خالی
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4A90E2).withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.chat_bubble_outline,
-              size: 48,
-              color: Color(0xFF4A90E2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'گفتگو را شروع کنید',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'با ${_buddyName ?? 'کاربر'} پیام دهید',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          ),
-        ],
-      ),
-    );
-  }
   // ==================== متدهای کمکی ====================
-
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
 
     if (diff.inDays == 0) {
-      // امروز: فقط ساعت
       return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
       return 'دیروز';
@@ -8277,11 +6488,372 @@ ${message.content}
       return '${diff.inDays ~/ 30} ماه پیش';
     }
   }
+
+  Future<String> _getDateLabel(DateTime date) async {
+    final calendarType = await DateService.getCalendarType();
+
+    if (calendarType == 'jalali') {
+      final jalali = Jalali.fromDateTime(date);
+      final now = Jalali.now();
+
+      if (jalali.year == now.year &&
+          jalali.month == now.month &&
+          jalali.day == now.day) {
+        return 'امروز';
+      }
+
+      final today = DateTime.now();
+      final yesterdayDate = today.subtract(const Duration(days: 1));
+      final jalaliYesterday = Jalali.fromDateTime(yesterdayDate);
+
+      if (jalali.year == jalaliYesterday.year &&
+          jalali.month == jalaliYesterday.month &&
+          jalali.day == jalaliYesterday.day) {
+        return 'دیروز';
+      }
+
+      const monthNames = [
+        'فروردین',
+        'اردیبهشت',
+        'خرداد',
+        'تیر',
+        'مرداد',
+        'شهریور',
+        'مهر',
+        'آبان',
+        'آذر',
+        'دی',
+        'بهمن',
+        'اسفند',
+      ];
+      return '${jalali.day} ${monthNames[jalali.month - 1]}';
+    } else {
+      final now = DateTime.now();
+
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
+        return 'Today';
+      }
+
+      final yesterday = now.subtract(const Duration(days: 1));
+      if (date.year == yesterday.year &&
+          date.month == yesterday.month &&
+          date.day == yesterday.day) {
+        return 'Yesterday';
+      }
+
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      return '${date.day} ${monthNames[date.month - 1]}';
+    }
+  }
+
+  String _getTimeOnly(DateTime time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool _isLocationLink(String url) {
+    final locationPatterns = [
+      'openstreetmap.org',
+      'google.com/maps',
+      'maps.google.com',
+      'neshan.org',
+      'map.ir',
+      '/maps',
+      '?q=',
+      '?mlat=',
+      '?lat=',
+    ];
+
+    final lowerUrl = url.toLowerCase();
+    return locationPatterns.any((pattern) => lowerUrl.contains(pattern));
+  }
+
+  Future<void> _launchUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لینک معتبر نیست'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطا: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _openInMap(String url) {
+    final latLng = _extractLatLngFromUrl(url);
+
+    if (latLng != null) {
+      final mapUrl =
+          'https://www.openstreetmap.org/?mlat=${latLng.latitude}&mlon=${latLng.longitude}&zoom=16';
+      _launchUrl(mapUrl);
+    } else {
+      _launchUrl(url);
+    }
+  }
+
+  LatLng? _extractLatLngFromUrl(String url) {
+    try {
+      final regExp = RegExp(r'[?&]mlat=([\d.-]+)&mlon=([\d.-]+)');
+      final match = regExp.firstMatch(url);
+      if (match != null) {
+        final lat = double.tryParse(match.group(1) ?? '');
+        final lng = double.tryParse(match.group(2) ?? '');
+        if (lat != null && lng != null) {
+          return LatLng(lat, lng);
+        }
+      }
+
+      final googleRegExp = RegExp(r'[?&]q=([\d.-]+),([\d.-]+)');
+      final googleMatch = googleRegExp.firstMatch(url);
+      if (googleMatch != null) {
+        final lat = double.tryParse(googleMatch.group(1) ?? '');
+        final lng = double.tryParse(googleMatch.group(2) ?? '');
+        if (lat != null && lng != null) {
+          return LatLng(lat, lng);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _copyLink(String url) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('لینک کپی شد 📋'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _shareLink(String url) async {
+    try {
+      final shareText = '''
+📍 لینک موقعیت مکانی
+━━━━━━━━━━━━━━━━━━━━
+🔗 $url
+━━━━━━━━━━━━━━━━━━━━
+📱 ارسال شده از اپلیکیشن قهرمان درون
+''';
+      await Share.share(shareText);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطا: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showLinkOptions(
+    String url,
+    bool isMe,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
+    final bool isLocationLink = _isLocationLink(url);
+    final String displayUrl =
+        url.length > 50 ? '${url.substring(0, 50)}...' : url;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    displayUrl,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.textSecondaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                if (isLocationLink)
+                  _buildLinkOption(
+                    icon: Icons.map,
+                    title: 'باز کردن در نقشه',
+                    subtitle: 'مشاهده موقعیت روی نقشه',
+                    color: primaryColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _openInMap(url);
+                    },
+                  ),
+                _buildLinkOption(
+                  icon: Icons.open_in_browser,
+                  title: 'باز کردن در مرورگر',
+                  subtitle: 'باز کردن لینک در مرورگر',
+                  color: primaryColor,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchUrl(url);
+                  },
+                ),
+                _buildLinkOption(
+                  icon: Icons.copy,
+                  title: 'کپی لینک',
+                  subtitle: 'کپی آدرس در کلیپ‌بورد',
+                  color: Colors.orange,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _copyLink(url);
+                  },
+                ),
+                _buildLinkOption(
+                  icon: Icons.share,
+                  title: 'اشتراک‌گذاری',
+                  subtitle: 'ارسال لینک برای دیگران',
+                  color: Colors.purple,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _shareLink(url);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLinkOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: color, size: 22),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildLinkifiedText(
+    String text,
+    bool isMe,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
+    final elements = linkify(
+      text,
+      options: const LinkifyOptions(humanize: false),
+    );
+
+    return Wrap(
+      children: elements.map((element) {
+        if (element is LinkableElement) {
+          return GestureDetector(
+            onTap: () =>
+                _showLinkOptions(element.url, isMe, theme, primaryColor),
+            child: Text(
+              element.text,
+              style: TextStyle(
+                color: isMe ? Colors.white : primaryColor,
+                fontSize: 14,
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          );
+        } else {
+          return Text(
+            element.text,
+            style: TextStyle(
+              color: isMe ? Colors.white : theme.textColor,
+              fontSize: 14,
+            ),
+          );
+        }
+      }).toList(),
+    );
+  }
 }
 
+// ==================== Models ====================
 class MediaMenuItem {
   final IconData icon;
-  final String title; // ✅ می‌تواند خالی باشد
+  final String title;
   final Color color;
   final VoidCallback onTap;
 
@@ -8291,287 +6863,4 @@ class MediaMenuItem {
     required this.color,
     required this.onTap,
   });
-}
-
-// ✅ این کلاس باید با سرویس جدید کار کند
-class _MusicPlayerWidget extends StatefulWidget {
-  final String fileName;
-  final String fileSizeString;
-  final bool isMe;
-  final String? filePath;
-  final bool hasBytes;
-  final VoidCallback onDownload;
-  final Function(String) onShowSnackBar;
-
-  const _MusicPlayerWidget({
-    required this.fileName,
-    required this.fileSizeString,
-    required this.isMe,
-    this.filePath,
-    required this.hasBytes,
-    required this.onDownload,
-    required this.onShowSnackBar,
-  });
-
-  @override
-  State<_MusicPlayerWidget> createState() => _MusicPlayerWidgetState();
-}
-
-class _MusicPlayerWidgetState extends State<_MusicPlayerWidget> {
-  late AudioPlayerService _audioService; // ✅ تغییر به AudioPlayerService
-  late final String _playUrl;
-  bool _isLoading = false;
-
-  Duration _position = Duration.zero;
-  Duration _duration = Duration.zero;
-  bool _isPlaying = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _audioService = Provider.of<AudioPlayerService>(
-      context,
-      listen: false,
-    ); // ✅ تغییر
-    _playUrl = widget.filePath ?? '';
-
-    _position = _audioService.position;
-    _duration = _audioService.duration;
-    _isPlaying = _audioService.isPlayingUrl(_playUrl);
-
-    _audioService.addListener(_onAudioServiceChanged);
-  }
-
-  @override
-  void dispose() {
-    _audioService.removeListener(_onAudioServiceChanged);
-    super.dispose();
-  }
-
-  void _onAudioServiceChanged() {
-    if (!mounted) return;
-
-    final bool isThisPlaying = _audioService.isPlayingUrl(_playUrl);
-
-    setState(() {
-      _position = _audioService.position;
-      _duration = _audioService.duration;
-      _isPlaying = isThisPlaying;
-    });
-  }
-
-  Future<void> _togglePlayback() async {
-    if (kIsWeb) {
-      widget.onShowSnackBar('پخش موزیک در وب به زودی اضافه می‌شود');
-      return;
-    }
-
-    if (widget.filePath == null || widget.filePath!.isEmpty) {
-      widget.onShowSnackBar('فایل موزیک یافت نشد');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final file = File(widget.filePath!);
-      if (!await file.exists()) {
-        widget.onShowSnackBar('فایل موزیک یافت نشد');
-        return;
-      }
-      await _audioService.togglePlayback(widget.filePath!);
-    } catch (e) {
-      widget.onShowSnackBar('خطا در پخش موزیک');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  void _seekTo(double value) {
-    final newPosition = Duration(
-      milliseconds: (value * _duration.inMilliseconds).toInt(),
-    );
-    _audioService.seek(newPosition);
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes.remainder(60);
-    final seconds = duration.inSeconds.remainder(60);
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isThisPlaying = _isPlaying;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: widget.isMe ? Colors.purple.shade50 : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: widget.isMe ? Colors.purple.shade200 : Colors.grey.shade300,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ✅ هدر
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.music_note,
-                  color: Colors.purple,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.fileName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: widget.isMe ? Colors.black87 : Colors.black87,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      widget.fileSizeString,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!kIsWeb)
-                IconButton(
-                  icon: const Icon(Icons.download, size: 20),
-                  color: Colors.purple,
-                  onPressed: widget.onDownload,
-                  tooltip: 'دانلود موزیک',
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // ✅ پلیر با نوار پیشرفت
-          Row(
-            children: [
-              // دکمه پلی/مکث
-              GestureDetector(
-                onTap: _isLoading ? null : _togglePlayback,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: isThisPlaying ? Colors.purple : Colors.purple,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.purple.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Icon(
-                          isThisPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // نوار پیشرفت با زمان
-              Expanded(
-                child: Column(
-                  children: [
-                    SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 4,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 8,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 12,
-                        ),
-                        activeTrackColor: Colors.purple,
-                        inactiveTrackColor: Colors.grey.shade300,
-                        thumbColor: Colors.purple,
-                        overlayColor: Colors.purple.withValues(alpha: 0.2),
-                      ),
-                      child: Slider(
-                        value: _duration.inMilliseconds > 0
-                            ? (_position.inMilliseconds /
-                                    _duration.inMilliseconds)
-                                .clamp(0.0, 1.0)
-                            : 0.0,
-                        onChanged:
-                            _duration.inMilliseconds > 0 ? _seekTo : null,
-                        min: 0,
-                        max: 1,
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDuration(_position),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          _formatDuration(_duration),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -5,9 +5,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:location/location.dart'; // ✅ جایگزین geolocator
+import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -32,7 +34,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   static const LatLng _defaultPosition = LatLng(35.6892, 51.3890);
 
-  final Location _location = Location(); // ✅ استفاده از Location
+  final Location _location = Location();
 
   @override
   void initState() {
@@ -64,7 +66,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return;
       }
 
-      // ✅ دریافت موقعیت فعلی با Location
       final locationData = await _location.getLocation();
 
       if (locationData.latitude != null && locationData.longitude != null) {
@@ -94,7 +95,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  // ✅ بقیه متدها به همین صورت باقی می‌مانند
   Future<void> _getAddress(LatLng position) async {
     try {
       final url = Uri.parse(
@@ -137,6 +137,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   void _addMarker(LatLng position) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final primaryColor = theme.primaryColor;
+
     setState(() {
       _markers.clear();
       _markers.add(
@@ -144,7 +147,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           width: 40,
           height: 40,
           point: position,
-          child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+          child: Icon(Icons.location_on, color: primaryColor, size: 40),
         ),
       );
     });
@@ -168,16 +171,23 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'انتخاب لوکیشن',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: theme.textColor,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         centerTitle: true,
         actions: [
           TextButton(
@@ -186,8 +196,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               'ارسال',
               style: TextStyle(
                 color: _isLocationSelected
-                    ? const Color(0xFF4A90E2)
-                    : Colors.grey.shade400,
+                    ? primaryColor
+                    : theme.textSecondaryColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -195,21 +205,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         ],
       ),
       body: _isLoading
-          ? _buildLoadingState()
+          ? _buildLoadingState(primaryColor)
           : _errorMessage.isNotEmpty
-              ? _buildErrorState()
-              : _buildMapContent(),
+              ? _buildErrorState(theme, primaryColor)
+              : _buildMapContent(theme, primaryColor),
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
+  Widget _buildLoadingState(Color primaryColor) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: Color(0xFF4A90E2), strokeWidth: 2),
-          SizedBox(height: 16),
-          Text(
+          CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
+          const SizedBox(height: 16),
+          const Text(
             'در حال دریافت موقعیت...',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
@@ -218,29 +228,50 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(ThemeProvider theme, Color primaryColor) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.location_off, size: 64, color: Colors.red.shade300),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.location_off,
+                size: 48,
+                color: Colors.red.shade300,
+              ),
+            ),
+            const SizedBox(height: 20),
             Text(
               _errorMessage,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.textSecondaryColor,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _initializeLocation,
-              icon: const Icon(Icons.refresh),
-              label: const Text('تلاش مجدد'),
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              label: const Text(
+                'تلاش مجدد',
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A90E2),
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
                 ),
               ),
             ),
@@ -250,33 +281,52 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  Widget _buildMapContent() {
+  Widget _buildMapContent(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
         if (_address.isNotEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+              color: theme.surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: primaryColor.withValues(alpha: 0.15),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.location_on,
-                  color: Color(0xFF4A90E2),
-                  size: 18,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.location_on,
+                    color: primaryColor,
+                    size: 16,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _address,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade700,
+                      color: theme.textColor,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -305,12 +355,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.surfaceColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, -2),
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -4),
               ),
             ],
           ),
@@ -329,14 +382,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       _getAddress(_currentPosition!);
                     }
                   },
-                  icon: const Icon(Icons.my_location, size: 18),
-                  label: const Text('موقعیت فعلی'),
+                  icon: Icon(Icons.my_location, size: 18, color: primaryColor),
+                  label: Text(
+                    'موقعیت فعلی',
+                    style: TextStyle(color: primaryColor),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4A90E2),
-                    side: const BorderSide(color: Color(0xFF4A90E2)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),
@@ -358,16 +414,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.send, size: 18),
+                  icon: const Icon(Icons.send, size: 18, color: Colors.white),
                   label: Text(
                     _isLocationSelected ? 'ارسال لوکیشن' : 'انتخاب روی نقشه',
+                    style: const TextStyle(color: Colors.white),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4A90E2),
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                 ),

@@ -13,6 +13,7 @@ import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/services/local_storage_service.dart';
 import 'dart:async';
+import 'dart:ui';
 
 class ExploreScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -2223,81 +2224,91 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   Widget _buildTabBar(Color primaryColor) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      padding: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF090909),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: false,
-        labelPadding: EdgeInsets.zero,
-        indicatorSize: TabBarIndicatorSize.tab,
-        // ✅ حذف کن — این باعث خطا می‌شه
-        // indicatorPadding: const EdgeInsets.all(2),
-        indicator: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              primaryColor,
-              Color.lerp(primaryColor, Colors.black, 0.15)!,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(22),
-        ),
-        dividerColor: Colors.transparent,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-        labelStyle: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-        tabs: _tabs.map((tab) {
-          return Tab(
-            height: 58,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(tab['icon'], size: 20),
-                const SizedBox(height: 3),
-                Text(
-                  tab['label'],
-                  style: const TextStyle(fontSize: 10),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              // ✅ پس‌زمینه سبز (رنگ تم) با شفافیت ملایم
+              color: primaryColor.withValues(alpha: 0.90),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1,
+              ),
             ),
-          );
-        }).toList(),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: false,
+              labelPadding: EdgeInsets.zero,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                // ✅ تب انتخاب شده: سفید
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              dividerColor: Colors.transparent,
+              // ✅ متن تب انتخاب شده: مشکی (روی سفید)
+              labelColor: const Color(0xFF090909),
+              // ✅ متن تب غیرفعال: سفید (روی سبز)
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
+              labelStyle: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: _tabs.map((tab) {
+                return Tab(
+                  height: 58,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(tab['icon'], size: 20),
+                      const SizedBox(height: 3),
+                      Text(
+                        tab['label'],
+                        style: const TextStyle(fontSize: 10),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildMainContent(Color primaryColor) {
-    return Column(
+    return Stack(
       children: [
-        // ✅ تب‌های جدید
-        _buildTabBar(primaryColor),
-
-        const SizedBox(height: 8),
-
-        Expanded(
+        // ✅ محتوای کامل صفحه (تمام ارتفاع)
+        Positioned.fill(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             switchInCurve: Curves.easeOutCubic,
@@ -2345,6 +2356,14 @@ class _ExploreScreenState extends State<ExploreScreen>
               ],
             ),
           ),
+        ),
+
+        // ✅ تب‌بار شناور (Sticky + Blur)
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _buildTabBar(primaryColor),
         ),
       ],
     );

@@ -1,7 +1,9 @@
 // lib/features/chat/screens/chat_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/chat_service.dart';
+import '/providers/theme_provider.dart';
 import '/features/chat/models/conversation_model.dart';
 import 'ai_chat_screen.dart';
 import 'buddy_finder_screen.dart';
@@ -39,7 +41,6 @@ class _ChatScreenState extends State<ChatScreen>
   Future<void> _loadData() async {
     final user = await _chatService.getCurrentUser();
     if (user != null) {
-      // ✅ به‌روزرسانی last_seen_at هنگام ورود به صفحه چت
       await _updateLastSeen(user.id);
 
       try {
@@ -66,8 +67,8 @@ class _ChatScreenState extends State<ChatScreen>
     try {
       await _chatService.client
           .from('profiles')
-          .update({'last_seen_at': DateTime.now().toIso8601String()})
-          .eq('user_id', userId);
+          .update({'last_seen_at': DateTime.now().toIso8601String()}).eq(
+              'user_id', userId);
     } catch (e) {
       // خطا را نادیده بگیر
     }
@@ -90,9 +91,6 @@ class _ChatScreenState extends State<ChatScreen>
         return;
       }
 
-      print('📊 Current user: ${currentUser.id}');
-      print('📊 Conversation members: ${conv.memberIds}');
-
       String otherUserId = '';
       for (var id in conv.memberIds) {
         if (id != currentUser.id) {
@@ -102,7 +100,6 @@ class _ChatScreenState extends State<ChatScreen>
       }
 
       if (otherUserId.isEmpty) {
-        print('⚠️ Member not found in conversation, fetching from database...');
         final membersResponse = await _chatService.client
             .from('conversation_members')
             .select('user_id')
@@ -118,7 +115,6 @@ class _ChatScreenState extends State<ChatScreen>
       }
 
       if (otherUserId.isEmpty) {
-        print('❌ Could not find other user in conversation');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -129,8 +125,6 @@ class _ChatScreenState extends State<ChatScreen>
         }
         return;
       }
-
-      print('✅ Other user found: $otherUserId');
 
       await _chatService.deleteConversationForBoth(conv.id);
 
@@ -235,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('حذف هم‌مسیر'),
         content: Text(
           'آیا از حذف هم‌مسیر "${conv.displayName}" مطمئن هستید؟\n'
@@ -262,7 +256,7 @@ class _ChatScreenState extends State<ChatScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('مسدود کردن کاربر'),
         content: Text(
           'آیا از مسدود کردن "${conv.displayName}" مطمئن هستید؟\n'
@@ -291,11 +285,11 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  void _showBuddyOptions(Conversation conv) {
+  void _showBuddyOptions(Conversation conv, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
@@ -374,53 +368,90 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: const Text('گپ و گفتگو'),
-        backgroundColor: Colors.white,
+        title: Text(
+          'گپ و گفتگو',
+          style: TextStyle(color: theme.textColor),
+        ),
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: const Color(0xFF4A90E2),
-            indicatorWeight: 3,
-            labelColor: const Color(0xFF4A90E2),
-            unselectedLabelColor: Colors.grey.shade500,
-            labelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF090909),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            unselectedLabelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+            child: TabBar(
+              controller: _tabController,
+              labelPadding: EdgeInsets.zero,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    primaryColor,
+                    Color.lerp(primaryColor, Colors.black, 0.15)!,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              dividerColor: Colors.transparent,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+              labelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: const [
+                Tab(height: 44, text: 'هم‌مسیرها'),
+                Tab(height: 44, text: 'گروه‌ها'),
+                Tab(height: 44, text: 'کانال‌ها'),
+              ],
             ),
-            tabs: const [
-              Tab(text: 'هم‌مسیرها'),
-              Tab(text: 'گروه‌ها'),
-              Tab(text: 'کانال‌ها'),
-            ],
           ),
         ),
       ),
       body: Column(
         children: [
-          // ✅ بخش پین شده: چت با هوش مصنوعی
-          _buildAIChatCard(),
+          // ✅ کارت AI
+          _buildAIChatCard(theme, primaryColor),
           const SizedBox(height: 6),
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [_buildBuddyTab(), _buildSquadTab(), _buildArenaTab()],
+              children: [
+                _buildBuddyTab(theme, primaryColor),
+                _buildSquadTab(theme, primaryColor),
+                _buildArenaTab(theme, primaryColor),
+              ],
             ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showNewConversationDialog(),
-        backgroundColor: const Color(0xFF4A90E2),
+        onPressed: () => _showNewConversationDialog(theme, primaryColor),
+        backgroundColor: primaryColor,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_comment, color: Colors.white),
       ),
@@ -429,7 +460,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   // ==================== کارت چت با AI ====================
 
-  Widget _buildAIChatCard() {
+  Widget _buildAIChatCard(ThemeProvider theme, Color primaryColor) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -441,15 +472,11 @@ class _ChatScreenState extends State<ChatScreen>
         margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF9B59B6), Color(0xFF7C3AED)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: primaryColor,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF9B59B6).withValues(alpha: 0.15),
+              color: primaryColor.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 3),
             ),
@@ -462,7 +489,7 @@ class _ChatScreenState extends State<ChatScreen>
               height: 44,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: const Center(
                 child: Text('🤖', style: TextStyle(fontSize: 24)),
@@ -534,16 +561,15 @@ class _ChatScreenState extends State<ChatScreen>
 
   // ==================== تب‌ها ====================
 
-  Widget _buildBuddyTab() {
+  Widget _buildBuddyTab(ThemeProvider theme, Color primaryColor) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+      return Center(
+        child: CircularProgressIndicator(color: primaryColor),
       );
     }
 
-    final buddyConversations = _conversations
-        .where((c) => c.type == ConversationType.buddy)
-        .toList();
+    final buddyConversations =
+        _conversations.where((c) => c.type == ConversationType.buddy).toList();
 
     if (buddyConversations.isEmpty) {
       return _buildEmptyState(
@@ -552,6 +578,8 @@ class _ChatScreenState extends State<ChatScreen>
         subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
         buttonText: 'پیدا کردن هم‌مسیر',
         onPressed: _showBuddyFinder,
+        theme: theme,
+        primaryColor: primaryColor,
       );
     }
 
@@ -560,21 +588,24 @@ class _ChatScreenState extends State<ChatScreen>
       itemCount: buddyConversations.length,
       itemBuilder: (context, index) {
         final conv = buddyConversations[index];
-        return _buildConversationItem(conv);
+        return _buildConversationItem(
+          conv,
+          theme: theme,
+          primaryColor: primaryColor,
+        );
       },
     );
   }
 
-  Widget _buildSquadTab() {
+  Widget _buildSquadTab(ThemeProvider theme, Color primaryColor) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+      return Center(
+        child: CircularProgressIndicator(color: primaryColor),
       );
     }
 
-    final squadConversations = _conversations
-        .where((c) => c.type == ConversationType.squad)
-        .toList();
+    final squadConversations =
+        _conversations.where((c) => c.type == ConversationType.squad).toList();
 
     if (squadConversations.isEmpty) {
       return _buildEmptyState(
@@ -582,7 +613,9 @@ class _ChatScreenState extends State<ChatScreen>
         title: 'هنوز گروهی ندارید',
         subtitle: 'یک گروه بسازید یا به گروهی بپیوندید',
         buttonText: 'ساخت گروه جدید',
-        onPressed: _showCreateSquadDialog,
+        onPressed: () => _showCreateSquadDialog(theme, primaryColor),
+        theme: theme,
+        primaryColor: primaryColor,
       );
     }
 
@@ -591,21 +624,25 @@ class _ChatScreenState extends State<ChatScreen>
       itemCount: squadConversations.length,
       itemBuilder: (context, index) {
         final conv = squadConversations[index];
-        return _buildConversationItem(conv, isSquad: true);
+        return _buildConversationItem(
+          conv,
+          isSquad: true,
+          theme: theme,
+          primaryColor: primaryColor,
+        );
       },
     );
   }
 
-  Widget _buildArenaTab() {
+  Widget _buildArenaTab(ThemeProvider theme, Color primaryColor) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF4A90E2)),
+      return Center(
+        child: CircularProgressIndicator(color: primaryColor),
       );
     }
 
-    final arenaConversations = _conversations
-        .where((c) => c.type == ConversationType.arena)
-        .toList();
+    final arenaConversations =
+        _conversations.where((c) => c.type == ConversationType.arena).toList();
 
     if (arenaConversations.isEmpty) {
       return _buildEmptyState(
@@ -614,6 +651,8 @@ class _ChatScreenState extends State<ChatScreen>
         subtitle: 'با شرکت در چالش‌ها، کانال‌های جدید فعال می‌شوند',
         buttonText: 'مشاهده چالش‌ها',
         onPressed: () {},
+        theme: theme,
+        primaryColor: primaryColor,
       );
     }
 
@@ -622,19 +661,24 @@ class _ChatScreenState extends State<ChatScreen>
       itemCount: arenaConversations.length,
       itemBuilder: (context, index) {
         final conv = arenaConversations[index];
-        return _buildConversationItem(conv, isArena: true);
+        return _buildConversationItem(
+          conv,
+          isArena: true,
+          theme: theme,
+          primaryColor: primaryColor,
+        );
       },
     );
   }
 
   // ==================== ویجت گفتگو ====================
 
-  // lib/features/chat/screens/chat_screen.dart
-
   Widget _buildConversationItem(
     Conversation conv, {
     bool isSquad = false,
     bool isArena = false,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     final displayName = conv.displayName;
     final lastMessage = conv.lastMessage ?? 'شروع گفتگو';
@@ -647,7 +691,7 @@ class _ChatScreenState extends State<ChatScreen>
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: Colors.red,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
@@ -672,7 +716,7 @@ class _ChatScreenState extends State<ChatScreen>
             context: context,
             builder: (context) => AlertDialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
               ),
               title: const Text('حذف هم‌مسیر'),
               content: Text(
@@ -732,8 +776,8 @@ class _ChatScreenState extends State<ChatScreen>
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: theme.surfaceColor,
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -749,14 +793,8 @@ class _ChatScreenState extends State<ChatScreen>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color:
-                      (isSquad
-                              ? const Color(0xFF9B59B6)
-                              : isArena
-                              ? const Color(0xFFFFA500)
-                              : const Color(0xFF4A90E2))
-                          .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
                   child: Text(
@@ -767,7 +805,7 @@ class _ChatScreenState extends State<ChatScreen>
               ),
               const SizedBox(width: 12),
 
-              // ✅ اطلاعات - با Expanded برای گرفتن فضای باقیمانده
+              // ✅ اطلاعات
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,17 +813,18 @@ class _ChatScreenState extends State<ChatScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
-                          displayName,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E),
+                        Flexible(
+                          child: Text(
+                            displayName,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: theme.textColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        // ✅ نشان آنلاین بودن (فقط برای هم‌مسیرها)
                         if (isBuddy && conv.isBuddyOnline)
                           Container(
                             margin: const EdgeInsets.only(left: 6),
@@ -803,7 +842,7 @@ class _ChatScreenState extends State<ChatScreen>
                       lastMessage,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: theme.textSecondaryColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -812,12 +851,12 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
               ),
 
-              // ✅ منوی سه نقطه (فقط برای هم‌مسیرها)
+              // ✅ منوی سه نقطه
               if (isBuddy)
                 IconButton(
-                  onPressed: () => _showBuddyOptions(conv),
+                  onPressed: () => _showBuddyOptions(conv, primaryColor),
                   icon: const Icon(Icons.more_vert, size: 18),
-                  color: Colors.grey.shade500,
+                  color: theme.textSecondaryColor,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -827,6 +866,7 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
+
   // ==================== حالت خالی ====================
 
   Widget _buildEmptyState({
@@ -835,6 +875,8 @@ class _ChatScreenState extends State<ChatScreen>
     required String subtitle,
     required String buttonText,
     required VoidCallback onPressed,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     return Center(
       child: Padding(
@@ -842,33 +884,47 @@ class _ChatScreenState extends State<ChatScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 56,
+                color: primaryColor.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 20),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.textSecondaryColor,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onPressed,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A90E2),
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+                  horizontal: 28,
+                  vertical: 14,
                 ),
                 elevation: 0,
               ),
@@ -889,11 +945,11 @@ class _ChatScreenState extends State<ChatScreen>
 
   // ==================== دیالوگ‌ها ====================
 
-  void _showNewConversationDialog() {
+  void _showNewConversationDialog(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
@@ -922,24 +978,33 @@ class _ChatScreenState extends State<ChatScreen>
                   icon: Icons.person_add,
                   title: 'هم‌مسیر جدید',
                   subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
-                  color: const Color(0xFF4A90E2),
+                  color: primaryColor,
                   onTap: _showBuddyFinder,
+                  primaryColor: primaryColor,
                 ),
                 const SizedBox(height: 8),
                 _buildOptionTile(
                   icon: Icons.group_add,
                   title: 'ساخت گروه جدید',
                   subtitle: 'با دوستانتان یک گروه بسازید',
-                  color: const Color(0xFF9B59B6),
-                  onTap: _showCreateSquadDialog,
+                  color: primaryColor,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCreateSquadDialog(theme, primaryColor);
+                  },
+                  primaryColor: primaryColor,
                 ),
                 const SizedBox(height: 8),
                 _buildOptionTile(
                   icon: Icons.qr_code_scanner,
                   title: 'پیوستن به گروه',
                   subtitle: 'با کد دعوت وارد شوید',
-                  color: const Color(0xFFFFA500),
-                  onTap: _showJoinSquadDialog,
+                  color: primaryColor,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showJoinSquadDialog(primaryColor);
+                  },
+                  primaryColor: primaryColor,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -956,6 +1021,7 @@ class _ChatScreenState extends State<ChatScreen>
     required String subtitle,
     required Color color,
     required VoidCallback onTap,
+    required Color primaryColor,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -964,7 +1030,7 @@ class _ChatScreenState extends State<ChatScreen>
         height: 40,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 20),
       ),
@@ -986,24 +1052,22 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  void _showCreateSquadDialog() {
-    Navigator.pop(context);
+  void _showCreateSquadDialog(ThemeProvider theme, Color primaryColor) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('ساخت گروه به زودی اضافه می‌شود'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('ساخت گروه به زودی اضافه می‌شود'),
+        backgroundColor: primaryColor,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  void _showJoinSquadDialog() {
-    Navigator.pop(context);
+  void _showJoinSquadDialog(Color primaryColor) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('پیوستن به گروه با کد دعوت به زودی اضافه می‌شود'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('پیوستن به گروه با کد دعوت به زودی اضافه می‌شود'),
+        backgroundColor: primaryColor,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

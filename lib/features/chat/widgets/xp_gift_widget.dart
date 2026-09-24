@@ -1,6 +1,8 @@
 // lib/features/chat/widgets/xp_gift_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class XPGiftWidget extends StatelessWidget {
   final int amount;
@@ -20,22 +22,25 @@ class XPGiftWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFFFA500).withValues(alpha: 0.1),
-            const Color(0xFFFFD700).withValues(alpha: 0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFFFFA500).withValues(alpha: 0.3),
+          color: primaryColor.withValues(alpha: 0.3),
           width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.1),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,31 +48,42 @@ class XPGiftWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.stars, color: Color(0xFFFFA500), size: 24),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.stars, color: primaryColor, size: 22),
+              ),
+              const SizedBox(width: 10),
               Text(
                 '🎁 هدیه XP',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFFFFA500),
+                  color: primaryColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             '$senderName به $receiverName $amount XP هدیه داد!',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: theme.textColor,
+            ),
           ),
           if (message.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               '"$message"',
               style: TextStyle(
                 fontSize: 13,
                 fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
+                color: theme.textSecondaryColor,
               ),
             ),
           ],

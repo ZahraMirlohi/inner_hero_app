@@ -250,11 +250,11 @@ class _PackagesTabState extends State<PackagesTab> {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+      padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // ✅ از 12 به 100
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ─── بسته‌های فعال ───
+          // ─── بسته‌های فعال (افقی) ───
           if (activePackages.isNotEmpty) ...[
             _buildSectionHeader(
               icon: Icons.check_circle,
@@ -263,28 +263,52 @@ class _PackagesTabState extends State<PackagesTab> {
               count: activePackages.length,
             ),
             const SizedBox(height: 12),
-            ...activePackages.map(
-              (package) => _PackageCard(
-                package: package,
-                isActive: true,
-                primaryColor: primaryColor,
-                onChanged: () {
-                  widget.onRefresh();
-                  _loadActivePackages();
+            // ✅ اسکرول افقی
+            SizedBox(
+              height: 260, // ✅ ارتفاع ثابت برای کارت‌های فعال
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                itemCount: activePackages.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: SizedBox(
+                      width: 260, // ✅ عرض ثابت برای هر کارت
+                      child: _PackageCard(
+                        package: activePackages[index],
+                        isActive: true,
+                        primaryColor: primaryColor,
+                        primaryLight: themeProviderLight(context),
+                        onChanged: () {
+                          widget.onRefresh();
+                          _loadActivePackages();
+                        },
+                        onDeactivate: () => _showDeactivateDialog(
+                          activePackages[index],
+                          primaryColor,
+                        ),
+                        // ✅ اصلاح شد
+                        onView: () => _showPackageDetailDialog(
+                          // ✅ دیالوگ جدید
+                          activePackages[index],
+                          primaryColor,
+                        ),
+                      ),
+                    ),
+                  );
                 },
-                onDeactivate: () =>
-                    _showDeactivateDialog(package, primaryColor),
               ),
             ),
             const SizedBox(height: 24),
           ],
 
-          // ─── بسته‌های موجود ───
+          // ─── بسته‌های موجود (عمودی) ───
           if (inactivePackages.isNotEmpty) ...[
             _buildSectionHeader(
               icon: Icons.inventory_2,
               title: 'بسته‌های موجود',
-              color: const Color(0xFFFFA500),
+              color: primaryColor,
               count: inactivePackages.length,
             ),
             const SizedBox(height: 12),
@@ -293,6 +317,7 @@ class _PackagesTabState extends State<PackagesTab> {
                 package: package,
                 isActive: false,
                 primaryColor: primaryColor,
+                primaryLight: themeProviderLight(context),
                 onChanged: () {
                   widget.onRefresh();
                   _loadActivePackages();
@@ -307,6 +332,413 @@ class _PackagesTabState extends State<PackagesTab> {
     );
   }
 
+  Color themeProviderLight(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.primaryLight;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 📋 دیالوگ مشاهده جزئیات بسته (فقط خواندنی)
+  // ═══════════════════════════════════════════════════════════
+  void _showPackageDetailDialog(Package package, Color primaryColor) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.85,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                children: [
+                  // ─── نشانگر کشیدن ───
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      width: 60,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
+                  // ─── محتوای اسکرول‌شونده ───
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ═══════════════════════════════════════
+                          // ─── هدر: آیکون + عنوان + بج «فعال» ───
+                          // ═══════════════════════════════════════
+                          Row(
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          primaryColor.withValues(alpha: 0.30),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _getIconData(package.icon),
+                                    color: Colors.white,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      package.title,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF090909),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          _getCategoryText(package.category),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: Color(0xFF73786B),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        // ✅ بج «فعال»
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: primaryColor.withValues(
+                                                alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.check_circle,
+                                                size: 11,
+                                                color: primaryColor,
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                'فعال',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ═══════════════════════════════════════
+                          // ─── توضیحات ───
+                          // ═══════════════════════════════════════
+                          Text(
+                            package.description,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF090909),
+                              height: 1.6,
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ═══════════════════════════════════════
+                          // ─── اطلاعات بسته ───
+                          // ═══════════════════════════════════════
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: primaryColor.withValues(alpha: 0.15),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                _buildPreviewInfoRow(
+                                  icon: Icons.checklist,
+                                  label: 'تعداد عادت‌ها',
+                                  value: '${package.habits.length} عادت',
+                                  primaryColor: primaryColor,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildPreviewInfoRow(
+                                  icon: Icons.stars,
+                                  label: 'پاداش XP',
+                                  value: '+${package.xpReward} XP',
+                                  primaryColor: primaryColor,
+                                  iconColor: const Color(0xFFFFA500),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildPreviewInfoRow(
+                                  icon: Icons.emoji_events,
+                                  label: 'نشان',
+                                  value: package.badge,
+                                  primaryColor: primaryColor,
+                                  iconColor: const Color(0xFF9B59B6),
+                                ),
+                                const SizedBox(height: 12),
+                                _buildPreviewInfoRow(
+                                  icon: Icons.category,
+                                  label: 'دسته‌بندی',
+                                  value: _getCategoryText(package.category),
+                                  primaryColor: primaryColor,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // ═══════════════════════════════════════
+                          // ─── لیست عادت‌ها ───
+                          // ═══════════════════════════════════════
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.list_alt,
+                                  color: primaryColor,
+                                  size: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'عادت‌های این بسته',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF090909),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${package.habits.length}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // لیست همه عادت‌ها
+                          ...package.habits.map((habit) {
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFF090909)
+                                      .withValues(alpha: 0.06),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  // آیکون عادت
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          primaryColor.withValues(alpha: 0.10),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        _getIconData(habit.iconName),
+                                        size: 18,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // عنوان + توضیحات
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          habit.title,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF090909),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (habit.description.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            habit.description,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF73786B),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // فرکانس
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          primaryColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      _getFrequencyText(habit.frequencyType),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ═══════════════════════════════════════
+                  // ─── دکمه بستن (ثابت پایین) ───
+                  // ═══════════════════════════════════════
+                  Container(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      12,
+                      20,
+                      MediaQuery.of(context).padding.bottom + 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(
+                        top: BorderSide(
+                          color:
+                              const Color(0xFF090909).withValues(alpha: 0.06),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF090909),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'بستن',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // ═══════════════════════════════════════════════════════════
   // 🏷️ هدر بخش
   // ═══════════════════════════════════════════════════════════
@@ -316,42 +748,51 @@ class _PackagesTabState extends State<PackagesTab> {
     required Color color,
     required int count,
   }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 16),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '$count',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: color,
+    return Center(
+      // ✅ وسط‌چین
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF090909).withValues(alpha: 0.08), // ✅ مشکی
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF090909), // ✅ مشکی
+              size: 16,
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF090909), // ✅ مشکی
+            ),
+          ),
+          const SizedBox(width: 8),
+          // ✅ شمارنده کنار عنوان
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFF090909).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF090909),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -545,7 +986,10 @@ class _PackagesTabState extends State<PackagesTab> {
   // ═══════════════════════════════════════════════════════════
 // 📋 دیالوگ پیش‌نمایش و فعال‌سازی بسته
 // ═══════════════════════════════════════════════════════════
-  void _showActivatePreviewDialog(Package package, Color primaryColor) {
+  void _showActivatePreviewDialog(
+    Package package,
+    Color primaryColor,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1103,41 +1547,76 @@ class _PackageCard extends StatelessWidget {
   final Package package;
   final bool isActive;
   final Color primaryColor;
+  final Color primaryLight; // ✅ اضافه شد
   final VoidCallback onChanged;
   final VoidCallback? onActivate;
   final VoidCallback? onDeactivate;
+  final VoidCallback? onView; // ✅ اضافه شد
 
   const _PackageCard({
     required this.package,
     required this.isActive,
     required this.primaryColor,
+    required this.primaryLight,
     required this.onChanged,
     this.onActivate,
     this.onDeactivate,
+    this.onView,
   });
+
+  // ✅ پالت رنگ‌های پاستیلی ساده
+  static const List<Color> _pastelColors = [
+    Color(0xFFFFE0B2), // نارنجی پاستیلی
+    Color(0xFFB3E5FC), // آبی پاستیلی
+    Color(0xFFC8E6C9), // سبز پاستیلی
+    Color(0xFFF8BBD0), // صورتی پاستیلی
+    Color(0xFFD1C4E9), // بنفش پاستیلی
+    Color(0xFFFFF9C4), // زرد پاستیلی
+  ];
+
+  // ✅ انتخاب رنگ پاستیلی بر اساس hashCode پکیج
+  Color get _iconBgColor {
+    final index = package.id.hashCode.abs() % _pastelColors.length;
+    return _pastelColors[index];
+  }
+
+  // ✅ رنگ تیره‌تر برای آیکون (هم‌خانواده با پاستیلی)
+  Color get _iconColor {
+    final index = package.id.hashCode.abs() % _pastelColors.length;
+    const darkerColors = [
+      Color.fromARGB(255, 255, 130, 58), // نارنجی تیره
+      Color.fromARGB(255, 42, 154, 189), // آبی تیره
+      Color.fromARGB(255, 95, 125, 46), // سبز تیره
+      Color.fromARGB(255, 175, 66, 126), // صورتی تیره
+      Color.fromARGB(255, 124, 73, 182), // بنفش تیره
+      Color.fromARGB(255, 255, 153, 57), // زرد تیره
+    ];
+    return darkerColors[index];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // ═══════════════════════════════════════════════════════
-    // 🎨 رنگ‌بندی بر اساس حالت
-    // ═══════════════════════════════════════════════════════
-    final Color cardColor = isActive ? primaryColor : Colors.white;
-    final Color borderColor = isActive ? Colors.transparent : Colors.white;
-    final double borderWidth = isActive ? 0 : 2.5;
+    // ✅ کارت فعال: رنگ اصلی | کارت غیرفعال: سفید
+    final Color cardColor =
+        isActive ? const Color.fromARGB(255, 216, 124, 159) : Colors.white;
+
+    // ✅ رنگ متن: روی رنگ اصلی → مشکی | روی سفید → مشکی
     const Color textColor = Color(0xFF090909);
+
+    // ✅ رنگ متن‌های ثانویه: روی رنگ اصلی → نیمه‌شفاف مشکی | روی سفید → خاکستری
     final Color subtleTextColor = isActive
-        ? Colors.black.withValues(alpha: 0.65) // مشکی نیمه‌شفاف روی رنگ تم
+        ? const Color(0xFF090909).withValues(alpha: 0.7)
         : const Color(0xFF73786B);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: isActive ? EdgeInsets.zero : const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: isActive
-                ? primaryColor.withValues(alpha: 0.30)
-                : Colors.black.withValues(alpha: 0.08),
+                ? primaryColor.withValues(alpha: 0.35) // ✅ سایه رنگی
+                : Colors.black.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1145,25 +1624,24 @@ class _PackageCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: cardColor,
+          color: cardColor, // ✅ رنگ اصلی برای فعال
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: borderColor,
-            width: borderWidth,
-          ),
+          border: isActive
+              ? null // ✅ بدون بوردر برای فعال
+              : null,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               // ═══════════════════════════════════════════════
-              // ─── ردیف اول: عنوان + آیکون شناور ───
+              // ─── ردیف اول: عنوان + آیکون ───
               // ═══════════════════════════════════════════════
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // عنوان و توضیحات
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,7 +1649,7 @@ class _PackageCard extends StatelessWidget {
                         Text(
                           package.title,
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                             height: 1.3,
@@ -1179,56 +1657,49 @@ class _PackageCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Container(
-                          width: 40,
+                          width: 32,
                           height: 2,
                           decoration: BoxDecoration(
                             color: isActive
-                                ? Colors.white.withValues(alpha: 0.4)
-                                : primaryColor.withValues(alpha: 0.3),
+                                ? Colors.white.withValues(alpha: 0.5)
+                                : const Color(0xFFC57B97)
+                                    .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-
-                  // ✅ آیکون شناور
-                  _buildFloatingIcon(isActive),
+                  const SizedBox(width: 10),
+                  _buildFloatingIcon(),
                 ],
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // ═══════════════════════════════════════════════
               // ─── توضیحات ───
-              // ═══════════════════════════════════════════════
               Text(
                 package.description,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: subtleTextColor,
+                  fontSize: 12,
+                  color: subtleTextColor, // ✅
                   height: 1.5,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // ═══════════════════════════════════════════════
               // ─── پیش‌نمایش عادت‌ها ───
-              // ═══════════════════════════════════════════════
-              _buildHabitPreview(isActive),
+              _buildHabitPreview(),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // ═══════════════════════════════════════════════
-              // ─── ردیف پایین: اطلاعات + دکمه ───
-              // ═══════════════════════════════════════════════
-              _buildBottomRow(isActive, textColor),
+              // ─── ردیف پایین: اطلاعات + دکمه‌ها ───
+              _buildBottomRow(),
             ],
           ),
         ),
@@ -1237,60 +1708,47 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎨 آیکون شناور (Floating Icon)
+  // 🎨 آیکون شناور با پس‌زمینه پاستیلی
   // ═══════════════════════════════════════════════════════════
-  Widget _buildFloatingIcon(bool isActive) {
+  Widget _buildFloatingIcon() {
     return Container(
-      width: 56,
-      height: 56,
+      width: 50,
+      height: 50,
       decoration: BoxDecoration(
-        // ✅ پس‌زمینه جعبه: همیشه مشکی
-        color: const Color(0xFF090909),
-        borderRadius: BorderRadius.circular(18),
+        color: _iconBgColor, // ✅ پس‌زمینه پاستیلی
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          // ✅ سایه مشکی پررنگ‌تر برای عمق
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.30),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-          // ✅ سایه رنگی ملایم برای هماهنگی با تم
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: _iconBgColor.withValues(alpha: 0.5),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Center(
         child: Icon(
           _getIconData(package.icon),
-          // ✅ خود آیکون: همیشه سفید
-          color: Colors.white,
-          size: 28,
+          color: _iconColor, // ✅ آیکون رنگ تیره هم‌خانواده
+          size: 26,
         ),
       ),
     );
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📋 پیش‌نمایش عادت‌ها (Habit Preview)
+  // 📋 پیش‌نمایش عادت‌ها
   // ═══════════════════════════════════════════════════════════
-  Widget _buildHabitPreview(bool isActive) {
+  Widget _buildHabitPreview() {
     final habits = package.habits.take(3).toList();
     final remaining = package.habits.length - habits.length;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isActive
-            ? Colors.white.withValues(alpha: 0.15)
-            : const Color(0xFFF7FCEB),
-        borderRadius: BorderRadius.circular(16),
+        color: const Color.fromARGB(255, 233, 233, 233),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isActive
-              ? Colors.white.withValues(alpha: 0.2)
-              : primaryColor.withValues(alpha: 0.08),
+          color: const Color(0xFFC57B97).withValues(alpha: 0.10),
           width: 1,
         ),
       ),
@@ -1298,35 +1756,30 @@ class _PackageCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...habits.map((habit) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.only(bottom: 5),
                 child: Row(
                   children: [
-                    // آیکون عادت
                     Container(
-                      width: 20,
-                      height: 20,
+                      width: 18,
+                      height: 18,
                       decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.white.withValues(alpha: 0.25)
-                            : primaryColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
+                        color: const Color(0xFFC57B97).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: Icon(
                         _getIconData(habit.iconName),
-                        size: 12,
-                        color: isActive ? Colors.white : primaryColor,
+                        size: 11,
+                        color: const Color(0xFFC57B97),
                       ),
                     ),
                     const SizedBox(width: 8),
-                    // عنوان عادت
                     Expanded(
                       child: Text(
                         habit.title,
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: const TextStyle(
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color:
-                              isActive ? Colors.white : const Color(0xFF090909),
+                          color: Color(0xFF090909),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1340,12 +1793,10 @@ class _PackageCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 '... و $remaining عادت دیگر',
-                style: TextStyle(
-                  fontSize: 11,
+                style: const TextStyle(
+                  fontSize: 10,
                   fontStyle: FontStyle.italic,
-                  color: isActive
-                      ? Colors.white.withValues(alpha: 0.7)
-                      : const Color(0xFF73786B),
+                  color: Color(0xFF73786B),
                 ),
               ),
             ),
@@ -1355,31 +1806,35 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎯 ردیف پایین: اطلاعات + دکمه
+  // 🎯 ردیف پایین: اطلاعات + دکمه‌ها
   // ═══════════════════════════════════════════════════════════
-  Widget _buildBottomRow(bool isActive, Color textColor) {
+  Widget _buildBottomRow() {
     return Row(
       children: [
         // تعداد عادت‌ها
         _buildInfoChip(
           icon: Icons.checklist,
-          label: '${package.habits.length} عادت',
-          isActive: isActive,
+          label: '${package.habits.length}',
         ),
         const SizedBox(width: 6),
         // XP
         _buildInfoChip(
           icon: Icons.stars,
-          label: '+${package.xpReward} XP',
-          isActive: isActive,
+          label: '+${package.xpReward}',
           iconColor: const Color(0xFFFFA500),
         ),
         const Spacer(),
-        // دکمه فعال/غیرفعال
-        if (isActive && onDeactivate != null)
-          _buildDeactivateButton(onDeactivate!)
-        else if (!isActive && onActivate != null)
-          _buildActivateButton(onActivate!, textColor),
+
+        // ✅ دکمه‌ها
+        if (isActive && onDeactivate != null && onView != null) ...[
+          // دکمه مشاهده (مشکی روی سبز، خوانا)
+          _buildViewButton(onView!),
+          const SizedBox(width: 6),
+          // دکمه غیرفعال (primaryLight — روی سبز متفاوت است)
+          _buildDeactivateButton(onDeactivate!),
+        ] else if (!isActive && onActivate != null) ...[
+          _buildActivateButton(onActivate!),
+        ],
       ],
     );
   }
@@ -1390,28 +1845,28 @@ class _PackageCard extends StatelessWidget {
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
-    required bool isActive,
     Color? iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
+        // ✅ روی فعال: سفید نیمه‌شفاف | روی غیرفعال: مشکی ملایم
         color: isActive
-            ? Colors.white.withValues(alpha: 0.2)
+            ? Colors.white.withValues(alpha: 0.25)
             : const Color(0xFF090909).withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            size: 12,
+            size: 11,
             color: isActive
                 ? Colors.white
                 : (iconColor ?? const Color(0xFF090909)),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 3),
           Text(
             label,
             style: TextStyle(
@@ -1426,35 +1881,86 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🟢 دکمه فعال‌سازی
+  // ✅ دکمه مشاهده (مشکی)
   // ═══════════════════════════════════════════════════════════
-  Widget _buildActivateButton(VoidCallback onActivate, Color textColor) {
+  // ✅ دکمه مشاهده — روی کارت فعال: سفید با متن مشکی | روی کارت غیرفعال: مشکی
+  Widget _buildViewButton(VoidCallback onView) {
     return GestureDetector(
-      onTap: onActivate,
+      onTap: onView,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(14),
+          color: isActive
+              ? const Color.fromARGB(255, 0, 0, 0) // ✅ روی سبز: سفید
+              : const Color.fromARGB(255, 255, 255, 255), // روی سفید: مشکی
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.visibility_outlined,
+              size: 12,
+              color: isActive
+                  ? const Color.fromARGB(255, 255, 255, 255)
+                  : const Color.fromARGB(255, 0, 0, 0),
+            ),
+            const SizedBox(width: 3),
+            Text(
+              'مشاهده',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: isActive
+                    ? const Color.fromARGB(255, 255, 255, 255)
+                    : const Color.fromARGB(255, 0, 0, 0),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ دکمه غیرفعال — روی کارت فعال: سفید با متن مشکی | روی غیرفعال: primaryLight
+  Widget _buildDeactivateButton(VoidCallback onDeactivate) {
+    return GestureDetector(
+      onTap: onDeactivate,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.white.withValues(alpha: 0.95) // ✅ روی سبز: سفید
+              : const Color.fromARGB(
+                  255, 209, 180, 255), // روی سفید: primaryLight
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF090909).withValues(alpha: 0.10),
+            width: 1,
+          ),
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_arrow_rounded, size: 16, color: Colors.white),
-            SizedBox(width: 4),
+            Icon(
+              Icons.delete_outline,
+              size: 12,
+              color: Color(0xFF090909),
+            ),
+            SizedBox(width: 3),
             Text(
-              'فعال‌سازی',
+              'غیرفعال',
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF090909),
               ),
             ),
           ],
@@ -1464,24 +1970,20 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ⚫ دکمه غیرفعال‌سازی (مشکی مثل چالش‌ها)
+  // 🟢 دکمه فعال‌سازی (مشکی)
   // ═══════════════════════════════════════════════════════════
-  Widget _buildDeactivateButton(VoidCallback onDeactivate) {
+  Widget _buildActivateButton(VoidCallback onActivate) {
     return GestureDetector(
-      onTap: onDeactivate,
+      onTap: onActivate,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 0, 0, 0),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: const Color(0xFF090909),
-            width: 1.2,
-          ),
+          color: const Color(0xFF090909), // ✅ مشکی
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 4,
+              color: Colors.black.withValues(alpha: 0.20),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1489,10 +1991,12 @@ class _PackageCard extends StatelessWidget {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(Icons.play_arrow_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 4),
             Text(
-              'غیرفعال',
+              'فعال‌سازی',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),

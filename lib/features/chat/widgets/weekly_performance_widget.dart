@@ -1,8 +1,10 @@
 // lib/features/chat/widgets/weekly_performance_widget.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/weekly_habit_performance.dart';
+import '/providers/theme_provider.dart';
 
 class WeeklyPerformanceWidget extends StatelessWidget {
   final WeeklyHabitPerformance data;
@@ -16,16 +18,18 @@ class WeeklyPerformanceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     final weekDayLetters = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
     final successPercent = (data.successRate * 100).toInt();
-    final motivationalMessage = data.getMotivationalMessage();
 
     return Container(
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xFF4A90E2) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -33,6 +37,10 @@ class WeeklyPerformanceWidget extends StatelessWidget {
             offset: const Offset(0, 2),
           ),
         ],
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,38 +49,63 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           // ==================== هدر ====================
           Row(
             children: [
-              const Text('📊', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 8),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.analytics,
+                  color: primaryColor,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'عملکرد هفتگی عادت‌ها',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'عملکرد هفتگی',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textColor,
+                      ),
+                    ),
+                    Text(
+                      _formatWeekRange(data.weekStart, data.weekEnd),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: isMe
-                      ? Colors.white.withValues(alpha: 0.2)
-                      : Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(12),
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   '$successPercent%',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: isMe ? Colors.white : const Color(0xFF4A90E2),
+                    color: primaryColor,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
 
           // ==================== آمار خلاصه ====================
           Row(
@@ -81,23 +114,24 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                 label: 'کل عادت‌ها',
                 value: '${data.totalHabits}',
                 icon: Icons.fitness_center,
-                isMe: isMe,
+                theme: theme,
+                primaryColor: primaryColor,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildMiniStat(
                 label: 'انجام شده',
                 value: '${data.completedHabits}',
                 icon: Icons.check_circle,
-                color: Colors.green,
-                isMe: isMe,
+                theme: theme,
+                primaryColor: primaryColor,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildMiniStat(
                 label: 'موفقیت',
                 value: '$successPercent%',
                 icon: Icons.trending_up,
-                color: successPercent >= 70 ? Colors.green : Colors.orange,
-                isMe: isMe,
+                theme: theme,
+                primaryColor: primaryColor,
               ),
             ],
           ),
@@ -106,16 +140,17 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           // ==================== جدول عادت‌ها ====================
           if (data.habits.isNotEmpty) ...[
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isMe
-                    ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(10),
+                color: primaryColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: primaryColor.withValues(alpha: 0.1),
+                ),
               ),
               child: Column(
                 children: [
-                  // ✅ هدر روزهای هفته
+                  // هدر روزهای هفته
                   Row(
                     children: [
                       const SizedBox(width: 30),
@@ -131,12 +166,8 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                                     ? FontWeight.bold
                                     : FontWeight.normal,
                                 color: isToday
-                                    ? (isMe
-                                        ? Colors.white
-                                        : const Color(0xFF4A90E2))
-                                    : (isMe
-                                        ? Colors.white70
-                                        : Colors.grey.shade500),
+                                    ? primaryColor
+                                    : theme.textSecondaryColor,
                               ),
                             ),
                           ),
@@ -144,31 +175,28 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                       }),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
 
-                  // ✅ ردیف هر عادت
+                  // ردیف هر عادت
                   ...data.habits.take(6).map((habit) {
-                    final iconColor = Color(habit.iconColor);
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
-                          // آیکون عادت
                           Container(
                             width: 24,
                             height: 24,
                             decoration: BoxDecoration(
-                              color: iconColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
+                              color: primaryColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               _getIconData(habit.iconName),
-                              color: iconColor,
+                              color: primaryColor,
                               size: 14,
                             ),
                           ),
                           const SizedBox(width: 4),
-                          // روزهای هفته
                           ...List.generate(7, (index) {
                             final isActive = habit.weekStatus[index];
                             final isToday = index == Jalali.now().weekDay - 1;
@@ -176,46 +204,35 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                             return Expanded(
                               child: Center(
                                 child: Container(
-                                  width: 18,
-                                  height: 18,
+                                  width: 20,
+                                  height: 20,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isActive
-                                        ? (isMe
-                                            ? Colors.white
-                                            : const Color(0xFF4A90E2))
+                                        ? primaryColor
                                         : isToday
-                                            ? (isMe
-                                                ? Colors.white.withValues(
-                                                    alpha: 0.2,
-                                                  )
-                                                : Colors.grey.shade300)
+                                            ? primaryColor.withValues(
+                                                alpha: 0.15,
+                                              )
                                             : Colors.transparent,
                                     border: isToday && !isActive
                                         ? Border.all(
-                                            color: isMe
-                                                ? Colors.white70
-                                                : const Color(0xFF4A90E2),
+                                            color: primaryColor,
                                             width: 1.5,
                                           )
                                         : null,
                                   ),
                                   child: isActive
-                                      ? Icon(
+                                      ? const Icon(
                                           Icons.check,
-                                          size: 10,
-                                          color: isMe
-                                              ? const Color(0xFF4A90E2)
-                                              : Colors.white,
+                                          size: 11,
+                                          color: Colors.white,
                                         )
                                       : isToday
                                           ? Container(
-                                              width: 4,
-                                              height: 4,
+                                              margin: const EdgeInsets.all(6),
                                               decoration: BoxDecoration(
-                                                color: isMe
-                                                    ? Colors.white70
-                                                    : const Color(0xFF4A90E2),
+                                                color: primaryColor,
                                                 shape: BoxShape.circle,
                                               ),
                                             )
@@ -236,17 +253,14 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           const SizedBox(height: 10),
 
           // ==================== فوتر ====================
-          const SizedBox(height: 4),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                '${data.userName} • ${_formatWeekRange(data.weekStart, data.weekEnd)}',
+                data.userName,
                 style: TextStyle(
                   fontSize: 9,
-                  color: isMe
-                      ? Colors.white.withValues(alpha: 0.6)
-                      : Colors.grey.shade500,
+                  color: theme.textSecondaryColor,
                 ),
               ),
             ],
@@ -256,45 +270,38 @@ class WeeklyPerformanceWidget extends StatelessWidget {
     );
   }
 
-  // ==================== ویجت‌های کمکی ====================
-
   Widget _buildMiniStat({
     required String label,
     required String value,
     required IconData icon,
-    Color? color,
-    required bool isMe,
+    required ThemeProvider theme,
+    required Color primaryColor,
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
-          color:
-              isMe ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
+          color: primaryColor.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 14,
-              color: color ?? (isMe ? Colors.white70 : Colors.grey.shade600),
-            ),
-            const SizedBox(height: 2),
+            Icon(icon, size: 16, color: primaryColor),
+            const SizedBox(height: 4),
             Text(
               value,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isMe ? Colors.white : const Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
             Text(
               label,
               style: TextStyle(
                 fontSize: 8,
-                color: isMe ? Colors.white70 : Colors.grey.shade500,
+                color: theme.textSecondaryColor,
               ),
             ),
           ],
@@ -302,8 +309,6 @@ class WeeklyPerformanceWidget extends StatelessWidget {
       ),
     );
   }
-
-  // ==================== متدهای کمکی ====================
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
@@ -330,20 +335,6 @@ class WeeklyPerformanceWidget extends StatelessWidget {
       default:
         return Icons.fitness_center;
     }
-  }
-
-  Color _getMotivationColor(int percent) {
-    if (percent >= 80) return Colors.green;
-    if (percent >= 60) return Colors.orange;
-    if (percent >= 40) return Colors.blue;
-    return Colors.grey;
-  }
-
-  IconData _getMotivationIcon(int percent) {
-    if (percent >= 80) return Icons.emoji_events;
-    if (percent >= 60) return Icons.thumb_up;
-    if (percent >= 40) return Icons.trending_up;
-    return Icons.rocket;
   }
 
   String _formatWeekRange(DateTime start, DateTime end) {

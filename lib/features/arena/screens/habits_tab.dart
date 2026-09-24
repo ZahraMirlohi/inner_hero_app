@@ -6,7 +6,6 @@ import '/services/supabase_service.dart';
 import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import '../category_selection_screen.dart';
-// ✅ استفاده از alias برای edit_habit_screen
 import '../edit_habit_screen.dart' as edit_habit;
 import '../edit_task_screen.dart';
 import '/../providers/sync_provider.dart';
@@ -100,18 +99,14 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
           builder: (_) => edit_habit.EditHabitScreen(habit: habit)),
     );
 
-    // ✅ بعد از برگشت از ویرایش، اجباری reload کن
     if (result == true && mounted) {
       print('🔄 Habit edited, reloading data...');
 
-      // ✅ پاک کردن کش
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
       if (syncProvider.isOnline) {
-        // ✅ در حالت آنلاین، از Supabase بخوان
         await _loadHabits();
       } else {
-        // ✅ در حالت آفلاین، از LocalStorage بخوان
         final updatedHabits = syncProvider.habits;
         setState(() {
           _habits = updatedHabits
@@ -210,15 +205,15 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                       children: [
                         Icon(
                           Icons.fitness_center_outlined,
-                          size: 80,
+                          size: 64, // ✅ از 80 به 64
                           color: Colors.grey.shade300,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Text(
                           'هیچ عادتی ندارید',
                           style: TextStyle(color: Colors.grey.shade500),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
                           'روی دکمه + در پایین صفحه کلیک کنید',
                           style: TextStyle(
@@ -230,8 +225,10 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                     ),
                   )
                 : ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12, // ✅ از 16 به 12
+                      vertical: 6, // ✅ از 8 به 6
+                    ),
                     itemCount: _habits.length,
                     itemBuilder: (context, index) {
                       final habit = _habits[index];

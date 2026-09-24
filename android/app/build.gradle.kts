@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.inner_hero_app"
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName

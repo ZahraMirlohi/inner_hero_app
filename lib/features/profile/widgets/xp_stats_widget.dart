@@ -16,12 +16,10 @@ class XpStatsWidget extends StatelessWidget {
     required this.xpToNextLevel,
   });
 
-  @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ محاسبه مستقیم برای اطمینان
     final currentLevelXp = (level - 1) * 100;
     final xpInCurrentLevel = totalXp - currentLevelXp;
     final progressPercent = xpInCurrentLevel / 100;
@@ -30,34 +28,38 @@ class XpStatsWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: primaryColor,
+        color: Colors.white, // ✅ سفید به جای primaryColor
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'سکه‌ها و پیشرفت',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          // ✅ عنوان وسط‌چین + بولد + مشکی
+          const Center(
+            child: Text(
+              'سکه‌ها و سطح',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF090909),
+              ),
             ),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildXpStat('کل سکه‌ها', '$totalXp', Icons.stars),
-              _buildXpStat('لول', '$level', Icons.emoji_events),
-              _buildXpStat('نیاز به لول بعدی', '$xpNeeded', Icons.trending_up),
+              _buildXpStat('کل سکه‌ها', '$totalXp', Icons.stars, primaryColor),
+              _buildXpStat('لول', '$level', Icons.emoji_events, primaryColor),
+              _buildXpStat('نیاز به لول بعدی', '$xpNeeded', Icons.trending_up,
+                  primaryColor),
             ],
           ),
           const SizedBox(height: 16),
@@ -69,17 +71,17 @@ class XpStatsWidget extends StatelessWidget {
                 children: [
                   Text(
                     'پیشرفت به لول ${level + 1}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Color(0xFF73786B),
                     ),
                   ),
                   Text(
                     '${(progressPercent * 100).toInt()}%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: primaryColor,
                     ),
                   ),
                 ],
@@ -89,8 +91,8 @@ class XpStatsWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: progressPercent.clamp(0.0, 1.0),
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  color: Colors.white,
+                  backgroundColor: Colors.grey.shade200,
+                  color: primaryColor,
                   minHeight: 8,
                 ),
               ),
@@ -100,14 +102,15 @@ class XpStatsWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: primaryColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '$xpNeeded سکه تا لول بعدی',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.9),
+                color: primaryColor,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -116,31 +119,31 @@ class XpStatsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildXpStat(String label, String value, IconData icon) {
+  Widget _buildXpStat(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
+            color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: Colors.white, size: 20),
+          child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: color,
           ),
         ),
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: Color(0xFF73786B),
           ),
           textAlign: TextAlign.center,
         ),

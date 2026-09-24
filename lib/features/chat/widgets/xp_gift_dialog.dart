@@ -1,6 +1,8 @@
 // lib/features/chat/widgets/xp_gift_dialog.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class XPGiftDialog extends StatefulWidget {
   final String senderName;
@@ -24,23 +26,37 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
   final List<int> _presetAmounts = [5, 10, 20, 50, 100];
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: theme.surfaceColor,
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFA500).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: primaryColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.stars, color: Color(0xFFFFA500), size: 28),
+            child: Icon(Icons.stars, color: primaryColor, size: 26),
           ),
           const SizedBox(width: 12),
-          const Text(
+          Text(
             '🎁 هدیه XP',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: theme.textColor,
+            ),
           ),
         ],
       ),
@@ -52,16 +68,21 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
           children: [
             Text(
               'ارسال هدیه برای ${widget.receiverName}',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.textSecondaryColor,
+              ),
             ),
             const SizedBox(height: 16),
-
-            const Text(
+            Text(
               'مقدار XP:',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: theme.textColor,
+              ),
             ),
             const SizedBox(height: 8),
-
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -80,54 +101,64 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFFFFA500)
-                          : Colors.grey.shade100,
+                          ? primaryColor
+                          : primaryColor.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
                       border: isSelected
                           ? null
-                          : Border.all(color: Colors.grey.shade300),
+                          : Border.all(
+                              color: primaryColor.withValues(alpha: 0.2),
+                            ),
                     ),
                     child: Text(
                       '$amount XP',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : Colors.grey.shade700,
+                        color: isSelected ? Colors.white : primaryColor,
                       ),
                     ),
                   ),
                 );
               }).toList(),
             ),
-
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 16),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'سفارشی:',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: theme.textColor,
+                    ),
                   ),
                 ),
                 Container(
-                  width: 80,
+                  width: 100,
                   height: 44,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: primaryColor.withValues(alpha: 0.3),
+                    ),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Center(
                     child: DropdownButton<int>(
                       value: _selectedAmount,
                       underline: const SizedBox(),
+                      dropdownColor: theme.surfaceColor,
                       items: List.generate(50, (i) => (i + 1) * 5).map((value) {
                         return DropdownMenuItem(
                           value: value,
                           child: Center(
                             child: Text(
                               value.toString(),
-                              style: const TextStyle(fontSize: 14),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: theme.textColor,
+                              ),
                             ),
                           ),
                         );
@@ -144,44 +175,43 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             TextField(
               controller: _messageController,
               maxLines: 2,
               decoration: InputDecoration(
                 hintText: 'پیام همراه هدیه (اختیاری)...',
+                hintStyle: TextStyle(color: theme.textSecondaryColor),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.all(12),
+                fillColor: primaryColor.withValues(alpha: 0.05),
+                contentPadding: const EdgeInsets.all(14),
               ),
             ),
-
-            const SizedBox(height: 8),
-
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
+                color: primaryColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: primaryColor.withValues(alpha: 0.15),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                  Icon(Icons.info_outline, color: primaryColor, size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'موجودی شما: ${widget.maxXP} XP',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
+                        color: primaryColor,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -194,7 +224,10 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('انصراف', style: TextStyle(color: Colors.grey)),
+          child: Text(
+            'انصراف',
+            style: TextStyle(color: theme.textSecondaryColor),
+          ),
         ),
         ElevatedButton(
           onPressed: _selectedAmount > widget.maxXP
@@ -206,11 +239,11 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
                   });
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFFA500),
+            backgroundColor: primaryColor,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
           child: Row(

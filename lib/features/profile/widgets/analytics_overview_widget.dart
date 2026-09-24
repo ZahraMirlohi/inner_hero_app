@@ -315,34 +315,36 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // هدر
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'پیشرفت امروز',
+          const Center(
+            child: Text(
+              'پیشرفت امروز',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF090909),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ✅ دکمه «جزئیات بیشتر» زیر عنوان (وسط‌چین)
+          Center(
+            child: TextButton(
+              onPressed: widget.onTapMore,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'جزئیات بیشتر ›',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textColor,
+                  color: primaryColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
               ),
-              TextButton(
-                onPressed: widget.onTapMore,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: Text(
-                  'جزئیات بیشتر ›',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 16),
 

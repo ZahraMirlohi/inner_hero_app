@@ -148,15 +148,15 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                       children: [
                         Icon(
                           Icons.assignment_outlined,
-                          size: 80,
+                          size: 64, // ✅ از 80 به 64
                           color: Colors.grey.shade300,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         Text(
                           'هیچ وظیفه‌ای ندارید',
                           style: TextStyle(color: Colors.grey.shade500),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
                           'روی دکمه + در پایین صفحه کلیک کنید',
                           style: TextStyle(
@@ -168,7 +168,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12), // ✅ از 16 به 12
                     itemCount: _tasks.length,
                     itemBuilder: (context, index) {
                       final task = _tasks[index];
