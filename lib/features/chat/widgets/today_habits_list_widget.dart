@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/today_habits_list.dart';
+import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
 
 class TodayHabitsListWidget extends StatelessWidget {
@@ -19,30 +20,36 @@ class TodayHabitsListWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+
+    // ✅ رنگ‌های استاندارد بر اساس تم روز/شب
+    // - من: روز → primaryLight | شب → primaryColor
+    // - مقابل: روز → سفید | شب → مشکی
+    final Color bgColor =
+        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
 
     final jalaliDate = Jalali.fromDateTime(data.date);
-    final dateString =
-        '${jalaliDate.day} ${_getMonthName(jalaliDate.month)} ${jalaliDate.year}';
+    final dateString = '${jalaliDate.day} ${_getMonthName(jalaliDate.month)}';
     final rate = (data.completionRate * 100).toInt();
 
     return Container(
       width: 280,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
+        color: bgColor, // ✅ پس‌زمینه پویا
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,15 +59,15 @@ class TodayHabitsListWidget extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.checklist,
-                  color: primaryColor,
+                  color: textColor,
                   size: 22,
                 ),
               ),
@@ -72,16 +79,16 @@ class TodayHabitsListWidget extends StatelessWidget {
                     Text(
                       'لیست امروز',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: theme.textColor,
+                        color: textColor,
                       ),
                     ),
                     Text(
                       dateString,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: theme.textSecondaryColor,
+                        fontSize: 10,
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -89,19 +96,19 @@ class TodayHabitsListWidget extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 8,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '$rate%',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                    color: textColor,
                   ),
                 ),
               ),
@@ -111,28 +118,31 @@ class TodayHabitsListWidget extends StatelessWidget {
 
           // ==================== آمار ====================
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
             decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(14),
+              color: textColor.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatItem(
-                  label: 'کل',
-                  value: '${data.totalItems}',
-                  theme: theme,
+                  'کل',
+                  '${data.totalItems}',
+                  textColor,
+                  textSecondary,
                 ),
                 _buildStatItem(
-                  label: 'انجام شده',
-                  value: '${data.completedItems}',
-                  theme: theme,
+                  'انجام شده',
+                  '${data.completedItems}',
+                  textColor,
+                  textSecondary,
                 ),
                 _buildStatItem(
-                  label: 'باقیمانده',
-                  value: '${data.totalItems - data.completedItems}',
-                  theme: theme,
+                  'باقیمانده',
+                  '${data.totalItems - data.completedItems}',
+                  textColor,
+                  textSecondary,
                 ),
               ],
             ),
@@ -141,47 +151,81 @@ class TodayHabitsListWidget extends StatelessWidget {
 
           // ==================== لیست عادت‌ها ====================
           if (data.habits.isNotEmpty) ...[
-            _buildSectionLabel('📌 عادت‌ها', theme),
+            _buildSectionLabel('📌 عادت‌ها', textSecondary),
             const SizedBox(height: 4),
             ...data.habits.map(
-              (habit) => _buildHabitItem(habit, theme, primaryColor),
+              (h) => _buildHabitItem(h, textColor, textSecondary, bgColor),
             ),
             const SizedBox(height: 8),
           ],
 
           // ==================== لیست تسک‌ها ====================
           if (data.tasks.isNotEmpty) ...[
-            _buildSectionLabel('📌 تسک‌ها', theme),
+            _buildSectionLabel('📌 تسک‌ها', textSecondary),
             const SizedBox(height: 4),
             ...data.tasks.map(
-              (task) => _buildTaskItem(task, theme, primaryColor),
+              (t) => _buildTaskItem(t, textColor, textSecondary, bgColor),
             ),
             const SizedBox(height: 8),
           ],
 
           // ==================== لیست چالش‌ها ====================
           if (data.challenges.isNotEmpty) ...[
-            _buildSectionLabel('🏆 چالش‌ها', theme),
+            _buildSectionLabel('🏆 چالش‌ها', textSecondary),
             const SizedBox(height: 4),
             ...data.challenges.map(
-              (challenge) =>
-                  _buildChallengeItem(challenge, theme, primaryColor),
+              (c) => _buildChallengeItem(c, textColor, textSecondary, bgColor),
             ),
             const SizedBox(height: 8),
           ],
 
           // ==================== لیست ماموریت‌ها ====================
           if (data.quests.isNotEmpty) ...[
-            _buildSectionLabel('🎯 ماموریت‌ها', theme),
+            _buildSectionLabel('🎯 ماموریت‌ها', textSecondary),
             const SizedBox(height: 4),
             ...data.quests.map(
-              (quest) => _buildQuestItem(quest, theme, primaryColor),
+              (q) => _buildQuestItem(q, textColor, textSecondary, bgColor),
             ),
-            const SizedBox(height: 8),
+          ],
+
+          // ==================== پیام پایانی ====================
+          if (data.totalItems > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: textColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    rate >= 80
+                        ? Icons.local_fire_department
+                        : rate >= 50
+                            ? Icons.trending_up
+                            : Icons.emoji_emotions_outlined,
+                    color: textColor,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      data.completionMessage,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
 
           // ==================== فوتر ====================
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -189,7 +233,7 @@ class TodayHabitsListWidget extends StatelessWidget {
                 data.userName,
                 style: TextStyle(
                   fontSize: 9,
-                  color: theme.textSecondaryColor,
+                  color: textSecondary,
                 ),
               ),
             ],
@@ -199,45 +243,70 @@ class TodayHabitsListWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionLabel(String label, ThemeProvider theme) {
+  // ==================== ویجت‌های کمکی ====================
+
+  Widget _buildSectionLabel(String label, Color textSecondary) {
     return Text(
       label,
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w600,
-        color: theme.textSecondaryColor,
+        color: textSecondary,
       ),
     );
   }
 
-  // ==================== ویجت‌های آیتم‌ها ====================
+  Widget _buildStatItem(
+    String label,
+    String value,
+    Color textColor,
+    Color textSecondary,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 9, color: textSecondary),
+        ),
+      ],
+    );
+  }
 
+  // ==================== آیتم عادت ====================
   Widget _buildHabitItem(
     TodayHabitItem habit,
-    ThemeProvider theme,
-    Color primaryColor,
+    Color textColor,
+    Color textSecondary,
+    Color bgColor,
   ) {
     final isCompleted = habit.isCompleted;
     final isChallenge = habit.isChallenge;
     final isQuest = habit.isQuest;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: isCompleted
-                  ? primaryColor.withValues(alpha: 0.12)
-                  : primaryColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              color: textColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               _getIconData(habit.iconName),
-              color: primaryColor,
-              size: 15,
+              color: textColor,
+              size: 14,
             ),
           ),
           const SizedBox(width: 8),
@@ -245,9 +314,9 @@ class TodayHabitsListWidget extends StatelessWidget {
             child: Text(
               habit.title,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? theme.textSecondaryColor : theme.textColor,
+                color: isCompleted ? textSecondary : textColor,
                 fontWeight: isCompleted ? FontWeight.normal : FontWeight.w500,
               ),
               maxLines: 1,
@@ -256,40 +325,41 @@ class TodayHabitsListWidget extends StatelessWidget {
           ),
           if (isChallenge)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               margin: const EdgeInsets.only(left: 4),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '🏆',
-                style: TextStyle(fontSize: 10, color: primaryColor),
+                style: TextStyle(fontSize: 9, color: textColor),
               ),
             ),
           if (isQuest)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               margin: const EdgeInsets.only(left: 4),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 '🎯',
-                style: TextStyle(fontSize: 10, color: primaryColor),
+                style: TextStyle(fontSize: 9, color: textColor),
               ),
             ),
           const SizedBox(width: 4),
           Container(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCompleted ? primaryColor : Colors.grey.shade200,
+              color:
+                  isCompleted ? textColor : textColor.withValues(alpha: 0.15),
             ),
             child: isCompleted
-                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                ? Icon(Icons.check, size: 11, color: bgColor)
                 : null,
           ),
         ],
@@ -297,30 +367,30 @@ class TodayHabitsListWidget extends StatelessWidget {
     );
   }
 
+  // ==================== آیتم تسک ====================
   Widget _buildTaskItem(
     TodayTaskItem task,
-    ThemeProvider theme,
-    Color primaryColor,
+    Color textColor,
+    Color textSecondary,
+    Color bgColor,
   ) {
     final isCompleted = task.isCompleted;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: isCompleted
-                  ? primaryColor.withValues(alpha: 0.12)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
+              color: textColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.assignment,
-              color: isCompleted ? primaryColor : theme.textSecondaryColor,
-              size: 15,
+              color: isCompleted ? textSecondary : textColor,
+              size: 14,
             ),
           ),
           const SizedBox(width: 8),
@@ -328,9 +398,9 @@ class TodayHabitsListWidget extends StatelessWidget {
             child: Text(
               task.title,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? theme.textSecondaryColor : theme.textColor,
+                color: isCompleted ? textSecondary : textColor,
                 fontWeight: isCompleted ? FontWeight.normal : FontWeight.w500,
               ),
               maxLines: 1,
@@ -339,14 +409,15 @@ class TodayHabitsListWidget extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Container(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCompleted ? primaryColor : Colors.grey.shade200,
+              color:
+                  isCompleted ? textColor : textColor.withValues(alpha: 0.15),
             ),
             child: isCompleted
-                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                ? Icon(Icons.check, size: 11, color: bgColor)
                 : null,
           ),
         ],
@@ -354,30 +425,32 @@ class TodayHabitsListWidget extends StatelessWidget {
     );
   }
 
+  // ==================== آیتم چالش ====================
   Widget _buildChallengeItem(
     TodayChallengeItem challenge,
-    ThemeProvider theme,
-    Color primaryColor,
+    Color textColor,
+    Color textSecondary,
+    Color bgColor,
   ) {
     final isCompleted = challenge.isCompleted;
     final progress = challenge.progress;
     final totalDays = challenge.totalDays;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: textColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.flag,
-              color: primaryColor,
-              size: 15,
+              color: textColor,
+              size: 14,
             ),
           ),
           const SizedBox(width: 8),
@@ -385,9 +458,9 @@ class TodayHabitsListWidget extends StatelessWidget {
             child: Text(
               '🏆 ${challenge.title}',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? theme.textSecondaryColor : theme.textColor,
+                color: isCompleted ? textSecondary : textColor,
                 fontWeight: isCompleted ? FontWeight.normal : FontWeight.w500,
               ),
               maxLines: 1,
@@ -396,31 +469,32 @@ class TodayHabitsListWidget extends StatelessWidget {
           ),
           if (!isCompleted)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               margin: const EdgeInsets.only(left: 4),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '$progress/$totalDays',
                 style: TextStyle(
-                  fontSize: 10,
-                  color: primaryColor,
+                  fontSize: 9,
+                  color: textColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           const SizedBox(width: 4),
           Container(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCompleted ? primaryColor : Colors.grey.shade200,
+              color:
+                  isCompleted ? textColor : textColor.withValues(alpha: 0.15),
             ),
             child: isCompleted
-                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                ? Icon(Icons.check, size: 11, color: bgColor)
                 : null,
           ),
         ],
@@ -428,30 +502,32 @@ class TodayHabitsListWidget extends StatelessWidget {
     );
   }
 
+  // ==================== آیتم ماموریت ====================
   Widget _buildQuestItem(
     TodayQuestItem quest,
-    ThemeProvider theme,
-    Color primaryColor,
+    Color textColor,
+    Color textSecondary,
+    Color bgColor,
   ) {
     final isCompleted = quest.isCompleted;
     final progress = quest.progress;
     final targetCount = quest.targetCount;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: textColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.stars,
-              color: primaryColor,
-              size: 15,
+              color: textColor,
+              size: 14,
             ),
           ),
           const SizedBox(width: 8),
@@ -459,9 +535,9 @@ class TodayHabitsListWidget extends StatelessWidget {
             child: Text(
               '🎯 ${quest.title}',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? theme.textSecondaryColor : theme.textColor,
+                color: isCompleted ? textSecondary : textColor,
                 fontWeight: isCompleted ? FontWeight.normal : FontWeight.w500,
               ),
               maxLines: 1,
@@ -470,31 +546,32 @@ class TodayHabitsListWidget extends StatelessWidget {
           ),
           if (!isCompleted)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               margin: const EdgeInsets.only(left: 4),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 '$progress/$targetCount',
                 style: TextStyle(
-                  fontSize: 10,
-                  color: primaryColor,
+                  fontSize: 9,
+                  color: textColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           const SizedBox(width: 4),
           Container(
-            width: 20,
-            height: 20,
+            width: 18,
+            height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isCompleted ? primaryColor : Colors.grey.shade200,
+              color:
+                  isCompleted ? textColor : textColor.withValues(alpha: 0.15),
             ),
             child: isCompleted
-                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                ? Icon(Icons.check, size: 11, color: bgColor)
                 : null,
           ),
         ],
@@ -502,34 +579,7 @@ class TodayHabitsListWidget extends StatelessWidget {
     );
   }
 
-  // ==================== ویجت‌های کمکی ====================
-
-  Widget _buildStatItem({
-    required String label,
-    required String value,
-    required ThemeProvider theme,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: theme.textColor,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 9,
-            color: theme.textSecondaryColor,
-          ),
-        ),
-      ],
-    );
-  }
+  // ==================== متدهای کمکی ====================
 
   IconData _getIconData(String iconName) {
     switch (iconName) {

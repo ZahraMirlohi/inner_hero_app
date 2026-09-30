@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
-import '/services/date_service.dart';
 import '/providers/theme_provider.dart';
+import 'animated_check_overlay.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -12,6 +12,7 @@ class TaskCard extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final Function(String)? onToggleSubTask;
 
   const TaskCard({
     super.key,
@@ -20,6 +21,7 @@ class TaskCard extends StatefulWidget {
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
+    this.onToggleSubTask,
   });
 
   @override
@@ -66,14 +68,10 @@ class _TaskCardState extends State<TaskCard>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final Color primaryColor = themeProvider.primaryColor;
-    final Color primaryLight = themeProvider.primaryLight; // ✅ اضافه شد
 
-    // ✅ رنگ کارت تسک - مشتق روشن رنگ اصلی
-    final Color cardColor = widget.isCompleted
-        ? const Color(0xFFF5F5F5)
-        : primaryLight; // ✅ از primaryLight استفاده می‌کند
+    final Color cardColor =
+        widget.isCompleted ? const Color(0xFFF5F5F5) : primaryColor;
 
-    // ✅ رنگ آیکون داخل دایره مشکی = هم‌رنگ باکس کارت
     final Color iconColor =
         widget.isCompleted ? Colors.grey.shade500 : cardColor;
 
@@ -91,13 +89,11 @@ class _TaskCardState extends State<TaskCard>
             behavior: HitTestBehavior.opaque,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              // ✅ اجبار به LTR برای اینکه دایره در راست قرار گیرد
               child: Directionality(
                 textDirection: TextDirection.ltr,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // ✅ MAIN PILL - سمت چپ
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -121,7 +117,6 @@ class _TaskCardState extends State<TaskCard>
                           children: [
                             Row(
                               children: [
-                                // ✅ عنوان - راست‌چین
                                 Expanded(
                                   child: Text(
                                     widget.task.title,
@@ -136,7 +131,6 @@ class _TaskCardState extends State<TaskCard>
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    // ✅ اجبار به RTL برای متن فارسی
                                     textDirection: TextDirection.rtl,
                                   ),
                                 ),
@@ -201,13 +195,12 @@ class _TaskCardState extends State<TaskCard>
                         ),
                       ),
                     ),
-
-                    // ✅ فاصله بین باکس کارت و دایره آیکون
                     const SizedBox(width: 10),
-
-                    // ✅ دایره آیکون - سمت راست
-                    GestureDetector(
+                    AnimatedCheckOverlay(
                       onTap: widget.onToggle,
+                      checkColor: widget.isCompleted
+                          ? Colors.white
+                          : const Color(0xFF090909),
                       child: Container(
                         width: 38,
                         height: 38,
@@ -260,37 +253,114 @@ class _TaskCardState extends State<TaskCard>
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: primaryColor.withOpacity(0.15),
+                    color: Colors.grey.shade200,
                     width: 1,
                   ),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildActionButton(
-                    icon: widget.isCompleted
-                        ? Icons.refresh
-                        : Icons.check_circle_outline,
-                    label: widget.isCompleted ? 'برگردان' : 'انجام',
-                    color: widget.isCompleted ? Colors.orange : primaryColor,
-                    onTap: widget.onToggle,
-                    isCompleted: widget.isCompleted,
+                  // ─── دکمه‌های عملیات ───
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: widget.isCompleted
+                            ? Icons.refresh
+                            : Icons.check_circle_outline,
+                        label: widget.isCompleted ? 'برگردان' : 'انجام',
+                        color: widget.isCompleted
+                            ? Colors.orange
+                            : const Color(0xFF090909),
+                        onTap: widget.onToggle,
+                        isCompleted: widget.isCompleted,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.edit_outlined,
+                        label: 'ویرایش',
+                        color: const Color(0xFFF59E0B),
+                        onTap: widget.onEdit,
+                        isCompleted: widget.isCompleted,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.delete_outline,
+                        label: 'حذف',
+                        color: const Color(0xFFEF4444),
+                        onTap: widget.onDelete,
+                        isCompleted: widget.isCompleted,
+                      ),
+                    ],
                   ),
-                  _buildActionButton(
-                    icon: Icons.edit_outlined,
-                    label: 'ویرایش',
-                    color: const Color(0xFFF59E0B),
-                    onTap: widget.onEdit,
-                    isCompleted: widget.isCompleted,
-                  ),
-                  _buildActionButton(
-                    icon: Icons.delete_outline,
-                    label: 'حذف',
-                    color: const Color(0xFFEF4444),
-                    onTap: widget.onDelete,
-                    isCompleted: widget.isCompleted,
-                  ),
+
+                  // ✅ لیست زیرتسک‌ها (بدون عنوان)
+                  if (widget.task.subTasks.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    ...widget.task.subTasks.map((subTask) {
+                      final isChecked =
+                          widget.task.completedSubTasks.contains(subTask);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: InkWell(
+                          onTap: widget.isCompleted
+                              ? null
+                              : () => widget.onToggleSubTask?.call(subTask),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isChecked
+                                        ? const Color(0xFF090909)
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: isChecked
+                                          ? const Color(0xFF090909)
+                                          : Colors.grey.shade400,
+                                      width: 1.8,
+                                    ),
+                                  ),
+                                  child: isChecked
+                                      ? const Icon(
+                                          Icons.check,
+                                          size: 14,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    subTask,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isChecked
+                                          ? Colors.grey.shade500
+                                          : const Color(0xFF090909),
+                                      decoration: isChecked
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ],
               ),
             ),
@@ -328,11 +398,7 @@ class _TaskCardState extends State<TaskCard>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: Colors.white,
-            ),
+            child: Icon(icon, size: 16, color: Colors.white),
           ),
           const SizedBox(height: 3),
           Text(

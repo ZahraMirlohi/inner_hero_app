@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/services/xp_gift_service.dart';
 import '/providers/theme_provider.dart';
+import '../utils/chat_colors.dart';
 
 class XPGiftCardWidget extends StatefulWidget {
   final String giftId;
@@ -128,16 +129,27 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
+    // ✅ رنگ‌های استاندارد
+    final Color bgColor = widget.isMe
+        ? ChatColors.myBubble(theme)
+        : ChatColors.otherBubble(theme);
+    final Color textColor = widget.isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = widget.isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
+
     if (!_isInitialized) {
       return Container(
         width: 280,
         height: 120,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: theme.surfaceColor,
+          color: bgColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: primaryColor.withValues(alpha: 0.15),
+            color: textColor.withValues(alpha: 0.15),
           ),
         ),
         child: Center(
@@ -146,7 +158,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
             height: 24,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: primaryColor,
+              color: textColor,
             ),
           ),
         ),
@@ -157,18 +169,17 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
       width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color:
-              _isDelivered ? primaryColor : primaryColor.withValues(alpha: 0.3),
+          color: _isDelivered ? textColor : textColor.withValues(alpha: 0.3),
           width: _isDelivered ? 2 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -176,19 +187,19 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ==================== هدر ====================
+          // هدر
           Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
+                  color: textColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   _isDelivered ? Icons.check_circle : Icons.stars,
-                  color: primaryColor,
+                  color: textColor,
                   size: 22,
                 ),
               ),
@@ -200,16 +211,16 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                     Text(
                       _isDelivered ? '✅ هدیه دریافت شد' : '🎁 هدیه XP',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
+                        color: textColor,
                       ),
                     ),
                     Text(
                       'از ${widget.senderName} به ${widget.receiverName}',
                       style: TextStyle(
                         fontSize: 10,
-                        color: theme.textSecondaryColor,
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -221,15 +232,15 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
+                  color: textColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
                   '${widget.amount} XP',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                    color: textColor,
                   ),
                 ),
               ),
@@ -243,10 +254,10 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.06),
+                color: textColor.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: primaryColor.withValues(alpha: 0.12),
+                  color: textColor.withValues(alpha: 0.12),
                 ),
               ),
               child: Text(
@@ -254,63 +265,59 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
-                  color: theme.textColor,
+                  color: textColor,
                 ),
               ),
             ),
 
           const SizedBox(height: 10),
 
-          // دکمه دریافت (فقط برای گیرنده)
+          // دکمه دریافت
           if (!_isDelivered && !widget.isMe)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : () => _receiveGift(primaryColor),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: textColor,
+                  foregroundColor: bgColor,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: bgColor,
                         ),
                       )
-                    : const Text(
+                    : Text(
                         'دریافت هدیه 🎁',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: bgColor,
                         ),
                       ),
               ),
             ),
 
-          // وضعیت دریافت شده
+          // وضعیت
           if (_isDelivered)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
+                color: textColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: primaryColor,
-                    size: 14,
-                  ),
+                  Icon(Icons.check_circle, color: textColor, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     widget.isMe
@@ -318,7 +325,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                         : 'هدیه دریافت شد ✅',
                     style: TextStyle(
                       fontSize: 11,
-                      color: primaryColor,
+                      color: textColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -326,31 +333,26 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
               ),
             ),
 
-          // وضعیت در انتظار (برای فرستنده)
           if (!_isDelivered && widget.isMe)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.08),
+                color: textColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.orange.withValues(alpha: 0.2),
+                  color: textColor.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.hourglass_empty,
-                    color: Colors.orange,
-                    size: 14,
-                  ),
+                  Icon(Icons.hourglass_empty, color: textColor, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     'در انتظار دریافت توسط ${widget.receiverName}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.orange.shade700,
+                      color: textColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

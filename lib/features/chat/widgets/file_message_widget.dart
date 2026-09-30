@@ -11,6 +11,7 @@ import 'package:open_file/open_file.dart';
 import '/services/audio_player_service.dart';
 import '/services/download_service.dart';
 import '/providers/theme_provider.dart';
+import '../utils/chat_colors.dart';
 
 class FileMessageWidget extends StatefulWidget {
   final String fileUrl;
@@ -50,9 +51,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   bool _isDisposed = false;
   bool _isInitialized = false;
   bool _isUpdating = false;
-
-  // ✅ رنگ ثابت مشکی برای همه ویجت‌های فایل
-  static const Color kBlack = Color(0xFF090909);
 
   @override
   void initState() {
@@ -113,10 +111,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     if (_isDownloading || _isDisposed) return;
 
     if (mounted) {
+      final theme = Provider.of<ThemeProvider>(context, listen: false);
+      final textColor = widget.isMe
+          ? ChatColors.myBubbleText(theme)
+          : ChatColors.otherBubbleText(theme);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('⬇️ شروع دانلود ${widget.fileName}'),
-          backgroundColor: kBlack,
+          backgroundColor: textColor,
           duration: const Duration(seconds: 1),
         ),
       );
@@ -127,10 +130,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       fileName: widget.fileName,
       onComplete: () {
         if (mounted) {
+          final theme = Provider.of<ThemeProvider>(context, listen: false);
+          final textColor = widget.isMe
+              ? ChatColors.myBubbleText(theme)
+              : ChatColors.otherBubbleText(theme);
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('✅ ${widget.fileName} دانلود شد'),
-              backgroundColor: kBlack,
+              backgroundColor: textColor,
               duration: const Duration(seconds: 2),
             ),
           );
@@ -140,10 +148,10 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       onError: () {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ خطا در دانلود ${widget.fileName}'),
+            const SnackBar(
+              content: Text('❌ خطا در دانلود'),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 2),
+              duration: Duration(seconds: 2),
             ),
           );
           setState(() {});
@@ -216,10 +224,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
 
   void _showMessage(String message) {
     if (mounted) {
+      final theme = Provider.of<ThemeProvider>(context, listen: false);
+      final textColor = widget.isMe
+          ? ChatColors.myBubbleText(theme)
+          : ChatColors.otherBubbleText(theme);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: kBlack,
+          backgroundColor: textColor,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -272,23 +285,37 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+
+    // ✅ رنگ‌های پویا بر اساس تم روز/شب و اینکه پیام من است یا مقابل
+    final Color bgColor = widget.isMe
+        ? ChatColors.myBubble(theme)
+        : ChatColors.otherBubble(theme);
+    final Color textColor = widget.isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = widget.isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
 
     if (widget.fileType == 'audio') {
       if (_isDownloading) {
-        return _buildDownloadingCard(primaryColor);
+        return _buildDownloadingCard(bgColor, textColor, textSecondary);
       }
       if (!_isDownloaded) {
-        return _buildDownloadCard(primaryColor);
+        return _buildDownloadCard(bgColor, textColor, textSecondary);
       }
-      return _buildAudioPlayer(primaryColor);
+      return _buildAudioPlayer(bgColor, textColor, textSecondary);
     }
 
-    return _buildFileCard(primaryColor);
+    return _buildFileCard(bgColor, textColor, textSecondary);
   }
 
-  // ✅ کارت فایل — مشکی
-  Widget _buildFileCard(Color primaryColor) {
+  // ✅ کارت فایل
+  Widget _buildFileCard(
+    Color bgColor,
+    Color textColor,
+    Color textSecondary,
+  ) {
     final bool isDownloading = _downloadService.isDownloading(widget.fileUrl);
     final bool isDownloaded = _downloadService.isDownloaded(widget.fileUrl);
     final double progress = _downloadService.getProgress(widget.fileUrl);
@@ -296,15 +323,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     return GestureDetector(
       onTap: isDownloaded ? _openFile : null,
       child: Container(
-        width: 280,
-        padding: const EdgeInsets.all(12),
+        width: 260,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: kBlack, // ✅ مشکی
-          borderRadius: BorderRadius.circular(20),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -312,40 +339,40 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: isDownloading
                   ? Center(
                       child: SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: primaryColor,
+                          color: textColor,
                         ),
                       ),
                     )
                   : Icon(
                       _getFileIcon(),
-                      color: primaryColor,
-                      size: 24,
+                      color: textColor,
+                      size: 22,
                     ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.fileName,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -355,10 +382,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         ? 'در حال دانلود... ${(progress * 100).toInt()}%'
                         : _formatFileSize(widget.fileSize),
                     style: TextStyle(
-                      fontSize: 11,
-                      color: isDownloading
-                          ? primaryColor
-                          : Colors.white.withValues(alpha: 0.6),
+                      fontSize: 10,
+                      color: isDownloading ? textColor : textSecondary,
                       fontWeight:
                           isDownloading ? FontWeight.w600 : FontWeight.normal,
                     ),
@@ -369,31 +394,27 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
             GestureDetector(
               onTap: isDownloading ? null : _downloadFile,
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: isDownloading
-                      ? Colors.grey.shade800
-                      : primaryColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isDownloading
-                        ? Colors.grey.shade700
-                        : primaryColor.withValues(alpha: 0.4),
+                    color: textColor.withValues(alpha: 0.2),
                   ),
                 ),
                 child: isDownloading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.grey,
+                          color: textColor,
                         ),
                       )
                     : Icon(
                         Icons.download_rounded,
-                        color: primaryColor,
-                        size: 18,
+                        color: textColor,
+                        size: 16,
                       ),
               ),
             ),
@@ -403,20 +424,24 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ کارت دانلود — مشکی
-  Widget _buildDownloadCard(Color primaryColor) {
+  // ✅ کارت دانلود
+  Widget _buildDownloadCard(
+    Color bgColor,
+    Color textColor,
+    Color textSecondary,
+  ) {
     return GestureDetector(
       onTap: _downloadFile,
       child: Container(
-        width: 280,
-        padding: const EdgeInsets.all(12),
+        width: 260,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: kBlack, // ✅ مشکی
-          borderRadius: BorderRadius.circular(20),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -424,29 +449,29 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.download,
-                color: primaryColor,
-                size: 24,
+                color: textColor,
+                size: 22,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.fileName,
-                    style: const TextStyle(
-                      fontSize: 14,
+                    style: TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: textColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -454,8 +479,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                   Text(
                     '${_formatFileSize(widget.fileSize)} • برای باز کردن دانلود کنید',
                     style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 10,
+                      color: textSecondary,
                     ),
                   ),
                 ],
@@ -463,19 +488,22 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
             ),
             Container(
               padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
+                horizontal: 10,
+                vertical: 5,
               ),
               decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(14),
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: textColor.withValues(alpha: 0.2),
+                ),
               ),
-              child: const Text(
+              child: Text(
                 'دانلود',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textColor,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ),
@@ -485,18 +513,22 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ کارت در حال دانلود — مشکی
-  Widget _buildDownloadingCard(Color primaryColor) {
+  // ✅ کارت در حال دانلود
+  Widget _buildDownloadingCard(
+    Color bgColor,
+    Color textColor,
+    Color textSecondary,
+  ) {
     return Container(
-      width: 280,
-      padding: const EdgeInsets.all(12),
+      width: 260,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: kBlack, // ✅ مشکی
-        borderRadius: BorderRadius.circular(20),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -506,29 +538,29 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.download,
-                  color: primaryColor,
-                  size: 24,
+                  color: textColor,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.fileName,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: TextStyle(
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: textColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -536,20 +568,20 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                     Text(
                       'در حال دانلود...',
                       style: TextStyle(
-                        fontSize: 11,
-                        color: primaryColor,
+                        fontSize: 10,
+                        color: textColor,
                       ),
                     ),
                   ],
                 ),
               ),
               SizedBox(
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   value: _downloadProgress > 0 ? _downloadProgress : null,
-                  color: primaryColor,
+                  color: textColor,
                 ),
               ),
             ],
@@ -559,8 +591,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: _downloadProgress > 0 ? _downloadProgress : null,
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              color: primaryColor,
+              backgroundColor: textColor.withValues(alpha: 0.15),
+              color: textColor,
               minHeight: 4,
             ),
           ),
@@ -569,8 +601,12 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ پلیر موزیک — مشکی
-  Widget _buildAudioPlayer(Color primaryColor) {
+  // ✅ پلیر موزیک
+  Widget _buildAudioPlayer(
+    Color bgColor,
+    Color textColor,
+    Color textSecondary,
+  ) {
     final bool showLoading = _isLoading || _isBuffering;
     final bool isThisPlaying = _isPlaying;
     final bool isCurrent = _audioService.currentUrl == _getPlayUrl();
@@ -585,15 +621,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     return GestureDetector(
       onTap: _openFile,
       child: Container(
-        width: 280,
-        padding: const EdgeInsets.all(12),
+        width: 260,
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: kBlack, // ✅ مشکی
-          borderRadius: BorderRadius.circular(20),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
               offset: const Offset(0, 2),
             ),
           ],
@@ -604,29 +640,27 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
             Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: showLoading
-                        ? Colors.grey.shade800
-                        : primaryColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(14),
+                    color: textColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: showLoading
-                      ? const Center(
+                      ? Center(
                           child: SizedBox(
-                            width: 18,
-                            height: 18,
+                            width: 16,
+                            height: 16,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.grey,
+                              color: textColor,
                             ),
                           ),
                         )
                       : Icon(
                           Icons.music_note,
-                          color: primaryColor,
-                          size: 22,
+                          color: textColor,
+                          size: 20,
                         ),
                 ),
                 const SizedBox(width: 10),
@@ -636,10 +670,10 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                     children: [
                       Text(
                         widget.fileName,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: textColor,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -648,7 +682,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         _formatFileSize(widget.fileSize),
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: textSecondary,
                         ),
                       ),
                     ],
@@ -657,18 +691,18 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 GestureDetector(
                   onTap: _downloadFile,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      color: textColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: primaryColor.withValues(alpha: 0.4),
+                        color: textColor.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Icon(
                       Icons.download_rounded,
-                      color: primaryColor,
-                      size: 18,
+                      color: textColor,
+                      size: 16,
                     ),
                   ),
                 ),
@@ -680,36 +714,29 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 GestureDetector(
                   onTap: showLoading ? null : _togglePlayback,
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
-                      color: showLoading ? Colors.grey.shade800 : primaryColor,
+                      color: showLoading
+                          ? textColor.withValues(alpha: 0.2)
+                          : textColor,
                       shape: BoxShape.circle,
-                      boxShadow: showLoading
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                     ),
                     child: showLoading
-                        ? const Center(
+                        ? Center(
                             child: SizedBox(
-                              width: 18,
-                              height: 18,
+                              width: 16,
+                              height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: textColor,
                               ),
                             ),
                           )
                         : Icon(
                             isThisPlaying ? Icons.pause : Icons.play_arrow,
-                            color: Colors.white,
-                            size: 20,
+                            color: bgColor,
+                            size: 18,
                           ),
                   ),
                 ),
@@ -721,18 +748,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         data: SliderThemeData(
                           trackHeight: 3,
                           thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 6,
+                            enabledThumbRadius: 5,
                           ),
                           overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 10,
+                            overlayRadius: 9,
                           ),
-                          activeTrackColor:
-                              showLoading ? Colors.grey.shade700 : primaryColor,
-                          inactiveTrackColor:
-                              Colors.white.withValues(alpha: 0.15),
-                          thumbColor:
-                              showLoading ? Colors.grey.shade700 : primaryColor,
-                          overlayColor: primaryColor.withValues(alpha: 0.2),
+                          activeTrackColor: textColor,
+                          inactiveTrackColor: textColor.withValues(alpha: 0.15),
+                          thumbColor: textColor,
+                          overlayColor: textColor.withValues(alpha: 0.2),
                         ),
                         child: Slider(
                           value: displayDuration.inMilliseconds > 0
@@ -756,7 +780,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                             _formatDuration(displayPosition),
                             style: TextStyle(
                               fontSize: 9,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -764,7 +788,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                             _formatDuration(displayDuration),
                             style: TextStyle(
                               fontSize: 9,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              color: textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -785,7 +809,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                         : '⏳ در حال بارگذاری...',
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

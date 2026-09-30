@@ -15,6 +15,8 @@ import 'package:shamsi_date/shamsi_date.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../features/arena/models/habit_completion.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -38,13 +40,36 @@ class SupabaseService {
     }
   }
 
+  Future<bool> ensureValidSession() async {
+    try {
+      // ✅ چند بار تلاش کن تا از refresh در پس‌زمینه مطمئن بشی
+      for (int i = 0; i < 5; i++) {
+        final session = client.auth.currentSession;
+        if (session != null) {
+          print('✅ [SESSION] Valid for user: ${session.user.id}');
+          return true;
+        }
+        print('⏳ [SESSION] Attempt ${i + 1}/5: waiting for auto-refresh...');
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      print('⚠️ [SESSION] No session after 5 retries');
+      return false;
+    } catch (e) {
+      print('❌ [SESSION] Error: $e');
+      return false;
+    }
+  }
+
   // ==================== Auth ====================
 
   Future<AuthResponse> login(String email, String password) async {
-    return await client.auth.signInWithPassword(
+    final response = await client.auth.signInWithPassword(
       email: email,
       password: password,
     );
+    // دیگر نیازی به ذخیره دستی session نیست
+    return response;
   }
 
   Future<AuthResponse> signup(
@@ -52,135 +77,47 @@ class SupabaseService {
     String password,
     String name,
   ) async {
-    // ✅ تولید ID یکتا قبل از ثبت‌نام
     final uniqueId = UniqueIdGenerator.generateSecure();
-
-    return await client.auth.signUp(
+    final response = await client.auth.signUp(
       email: email,
       password: password,
       data: {
         'name': name,
         'email': email,
-        'unique_id': uniqueId, // ✅ ارسال unique_id به Supabase
+        'unique_id': uniqueId,
       },
     );
+    // دیگر نیازی به ذخیره دستی session نیست
+    return response;
   }
 
   Future<void> logout() async {
     await client.auth.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('user_id');
     _cachedUser = null;
     _userCacheTime = null;
   }
 
+  // ✅ متد getCurrentUser را می‌توان ساده‌تر کرد
   Future<User?> getCurrentUser() async {
-    try {
-      if (_cachedUser != null &&
-          _userCacheTime != null &&
-          DateTime.now().difference(_userCacheTime!) < _userCacheDuration) {
-        return _cachedUser;
-      }
-
-      try {
-        final user = client.auth.currentUser;
-        if (user != null) {
-          _cachedUser = user;
-          _userCacheTime = DateTime.now();
-          return user;
-        }
-      } catch (e) {
-        if (_cachedUser != null) {
-          return _cachedUser;
-        }
-      }
-
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final savedUserId = prefs.getString('user_id');
-        if (savedUserId != null) {
-          final response = await client
-              .from('profiles')
-              .select('user_id, created_at')
-              .eq('user_id', savedUserId)
-              .maybeSingle();
-
-          if (response != null) {
-            _cachedUser = User(
-              id: savedUserId,
-              appMetadata: {},
-              userMetadata: {},
-              aud: 'authenticated',
-              createdAt: DateTime.now().toIso8601String(),
-            );
-            _userCacheTime = DateTime.now();
-            return _cachedUser;
-          }
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      return null;
-    } catch (e) {
+    if (_cachedUser != null &&
+        _userCacheTime != null &&
+        DateTime.now().difference(_userCacheTime!) < _userCacheDuration) {
       return _cachedUser;
     }
+
+    final user = client.auth.currentUser;
+    if (user != null) {
+      _cachedUser = user;
+      _userCacheTime = DateTime.now();
+      return user;
+    }
+
+    return null;
   }
 
   void clearUserCache() {
     _cachedUser = null;
     _userCacheTime = null;
-  }
-
-  // lib/services/supabase_service.dart
-
-  /// ✅ اضافه کردن متد برای رفرش توکن
-  Future<bool> refreshSession() async {
-    try {
-      final session = client.auth.currentSession;
-      if (session == null) {
-        print('⚠️ No active session to refresh');
-        return false;
-      }
-
-      // ✅ تلاش برای رفرش توکن
-      await client.auth.refreshSession();
-      print('✅ Session refreshed successfully');
-      return true;
-    } catch (e) {
-      print('❌ Error refreshing session: $e');
-      return false;
-    }
-  }
-
-  /// ✅ متد بررسی و رفرش توکن در صورت نیاز
-  Future<bool> ensureValidSession() async {
-    try {
-      final session = client.auth.currentSession;
-      if (session == null) {
-        print('⚠️ No active session');
-        return false;
-      }
-
-      // ✅ بررسی انقضای توکن (5 دقیقه قبل از انقضا)
-      final expiresAt = session.expiresAt;
-      if (expiresAt != null) {
-        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        final timeLeft = expiresAt - now;
-
-        if (timeLeft < 300) {
-          // کمتر از 5 دقیقه
-          print('⏰ Token expires soon, refreshing...');
-          await client.auth.refreshSession();
-          print('✅ Token refreshed');
-        }
-      }
-
-      return true;
-    } catch (e) {
-      print('❌ Error ensuring valid session: $e');
-      return false;
-    }
   }
 
   // ==================== Profiles ====================
@@ -2362,6 +2299,20 @@ class SupabaseService {
       print('❌ Error starting quest: $e');
       rethrow;
     }
+  }
+
+  /// ✅ بررسی وضعیت session
+  void debugSession() {
+    final session = client.auth.currentSession;
+    final user = client.auth.currentUser;
+
+    print('🔍 ===== SESSION DEBUG =====');
+    print('🔍 currentUser: ${user?.id}');
+    print('🔍 currentSession: ${session?.accessToken?.substring(0, 20)}...');
+    print('🔍 session.expiresAt: ${session?.expiresAt}');
+    print('🔍 now: ${DateTime.now().millisecondsSinceEpoch ~/ 1000}');
+    print('🔍 isExpired: ${session?.isExpired}');
+    print('🔍 =========================');
   }
 
   int _parseColor(String colorStr) {

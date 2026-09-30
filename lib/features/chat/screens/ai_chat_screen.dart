@@ -334,34 +334,34 @@ class _AIChatScreenState extends State<AIChatScreen>
 
     if (isSystem) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message.content,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          ],
+        child: Text(
+          message.content,
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
         ),
       );
     }
 
+    // ✅ رنگ‌های حباب
+    final Color myBubbleColor =
+        theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
+    final Color otherBubbleColor =
+        theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
+    final Color bubbleColor = isAI ? otherBubbleColor : myBubbleColor;
+    final Color textColor = isAI ? theme.textColor : const Color(0xFF090909);
+
     return Align(
       alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
+        margin: const EdgeInsets.symmetric(vertical: 2),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.of(context).size.width * 0.72,
         ),
         child: Column(
           crossAxisAlignment:
@@ -369,22 +369,22 @@ class _AIChatScreenState extends State<AIChatScreen>
           children: [
             if (isAI)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 6),
+                padding: const EdgeInsets.only(bottom: 3, left: 6),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Text('🤖', style: TextStyle(fontSize: 10)),
+                      child: const Text('🤖', style: TextStyle(fontSize: 9)),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
                       'مربی هوش مصنوعی',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: primaryColor,
                       ),
@@ -392,15 +392,20 @@ class _AIChatScreenState extends State<AIChatScreen>
                   ],
                 ),
               ),
+
+            // ✅ حباب کوچک‌تر
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 11,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: isAI ? theme.surfaceColor : const Color(0xFF090909),
-                borderRadius: BorderRadius.circular(24),
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 6,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -408,18 +413,35 @@ class _AIChatScreenState extends State<AIChatScreen>
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isAI ? theme.textColor : Colors.white,
-                  fontSize: 14,
-                  height: 1.5,
+                  color: textColor,
+                  fontSize: 13,
+                  height: 1.4,
                 ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              _formatTime(message.createdAt),
-              style: TextStyle(
-                fontSize: 10,
-                color: theme.textSecondaryColor,
+
+            // ✅ ساعت + وضعیت (خارج از حباب)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.createdAt),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: theme.textSecondaryColor,
+                    ),
+                  ),
+                  if (!isAI) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.check,
+                      size: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

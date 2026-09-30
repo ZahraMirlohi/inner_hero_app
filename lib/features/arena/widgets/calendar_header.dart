@@ -80,15 +80,36 @@ class _CalendarHeaderState extends State<CalendarHeader>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final selectedIndex = _monthDates.indexWhere(
+      if (!mounted || !_scrollController.hasClients) return;
+
+      // ✅ اول دنبال روز جاری بگرد
+      final now = DateTime.now();
+      int targetIndex = _monthDates.indexWhere(
         (date) =>
-            date.year == widget.selectedDate.year &&
-            date.month == widget.selectedDate.month &&
-            date.day == widget.selectedDate.day,
+            date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day,
       );
-      if (selectedIndex != -1 && _scrollController.hasClients) {
+
+      // ✅ اگر روز جاری در این ماه نبود، از selectedDate استفاده کن
+      if (targetIndex == -1) {
+        targetIndex = _monthDates.indexWhere(
+          (date) =>
+              date.year == widget.selectedDate.year &&
+              date.month == widget.selectedDate.month &&
+              date.day == widget.selectedDate.day,
+        );
+      }
+
+      if (targetIndex != -1) {
+        // ✅ محاسبه موقعیت دقیق اسکرول
+        final double itemWidth = 56 + 8; // عرض هر آیتم + margin
+        final double screenWidth = MediaQuery.of(context).size.width;
+        final double targetOffset =
+            (targetIndex * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
+
         _scrollController.animateTo(
-          selectedIndex * 68.0,
+          targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );

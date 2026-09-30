@@ -449,11 +449,21 @@ class _ChatScreenState extends State<ChatScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showNewConversationDialog(theme, primaryColor),
-        backgroundColor: primaryColor,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add_comment, color: Colors.white),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding:
+            const EdgeInsets.only(bottom: 90), // ✅ فاصله از منوی ناوبری اصلی
+        child: FloatingActionButton(
+          onPressed: () => _showNewConversationDialog(theme, primaryColor),
+          backgroundColor: primaryColor,
+          shape: const CircleBorder(),
+          elevation: 6,
+          child: const Icon(
+            Icons.add_comment,
+            color: Colors.white,
+            size: 26,
+          ),
+        ),
       ),
     );
   }

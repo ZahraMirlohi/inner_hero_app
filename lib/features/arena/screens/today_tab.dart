@@ -1363,13 +1363,15 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // ==================== ویجت‌های Swipe (Dismissible) ====================
 
+  // ==================== ویجت‌های Swipe (Dismissible) ====================
+
   Widget _buildSwipeableHabitItem(Habit habit, Color primaryColor) {
     final bool isQuest = habit.questId != null;
     final bool isChallenge = habit.challengeId != null;
     final bool isEditable = !isQuest && !isChallenge;
 
     return Dismissible(
-      key: UniqueKey(),
+      key: ValueKey('dismissible_habit_${habit.id}'), // ✅ ValueKey ثابت
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1392,12 +1394,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: HabitCard(
+        key: ValueKey('habit_card_${habit.id}'), // ✅ کلید ثابت بر اساس ID
         habit: habit,
         isCompleted: false,
         onToggle: () => _markHabitCompleted(habit),
         onEdit: isEditable ? () => _editHabit(habit) : () {},
         onDelete: isEditable ? () => _deleteHabit(habit) : () {},
         onTimer: isEditable ? () => _showTimerDialog(habit) : null,
+        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit), // ✅
         onTap: () {
           Navigator.push(
             context,
@@ -1415,10 +1419,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     final bool isChallenge = habit.challengeId != null;
     final bool isEditable = !isQuest && !isChallenge;
 
-    final key = ValueKey('completed_habit_${habit.id}');
-
     return Dismissible(
-      key: key,
+      key: ValueKey(
+          'dismissible_completed_habit_${habit.id}'), // ✅ ValueKey ثابت
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1441,12 +1444,15 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: HabitCard(
+        key: ValueKey(
+            'completed_habit_card_${habit.id}'), // ✅ کلید ثابت بر اساس ID
         habit: habit,
         isCompleted: true,
         onToggle: () => _unmarkHabit(habit),
         onEdit: isEditable ? () => _editHabit(habit) : () {},
         onDelete: isEditable ? () => _deleteHabit(habit) : () {},
         onTimer: isEditable ? () => _showTimerDialog(habit) : null,
+        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit), // ✅
         onTap: () {
           Navigator.push(
             context,
@@ -1460,10 +1466,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   }
 
   Widget _buildSwipeableTaskItem(Task task, Color primaryColor) {
-    final key = ValueKey('task_${task.id}');
-
     return Dismissible(
-      key: key,
+      key: ValueKey('dismissible_task_${task.id}'), // ✅
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1486,20 +1490,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: TaskCard(
+        key: ValueKey('task_card_${task.id}'), // ✅
         task: task,
         isCompleted: false,
         onToggle: () => _markTaskCompleted(task),
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
+        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask), // ✅
       ),
     );
   }
 
   Widget _buildSwipeableCompletedTaskItem(Task task, Color primaryColor) {
-    final key = ValueKey('completed_task_${task.id}');
-
     return Dismissible(
-      key: key,
+      key: ValueKey('dismissible_completed_task_${task.id}'), // ✅
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1522,11 +1526,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: TaskCard(
+        key: ValueKey('completed_task_card_${task.id}'), // ✅
         task: task,
         isCompleted: true,
         onToggle: () => _unmarkTask(task),
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
+        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask), // ✅
       ),
     );
   }

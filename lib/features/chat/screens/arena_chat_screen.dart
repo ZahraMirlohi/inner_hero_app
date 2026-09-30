@@ -484,15 +484,15 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
 
     if (isSystem) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
         ),
       );
     }
@@ -501,16 +501,16 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
       return Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.all(12),
+          margin: const EdgeInsets.symmetric(vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
             color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
             'این پیام حذف شده است',
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: Colors.grey.shade500,
               fontStyle: FontStyle.italic,
             ),
@@ -519,12 +519,21 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
       );
     }
 
+    // ✅ رنگ‌های حباب
+    final Color myBubbleColor =
+        theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
+    final Color otherBubbleColor =
+        theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
+    final Color bubbleColor = isMe ? myBubbleColor : otherBubbleColor;
+    final Color textColor = isMe ? const Color(0xFF090909) : theme.textColor;
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
+        margin: const EdgeInsets.only(bottom: 2),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.of(context).size.width * 0.72,
         ),
         child: Column(
           crossAxisAlignment:
@@ -536,21 +545,26 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 child: Text(
                   message.senderName ?? 'کاربر',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: primaryColor,
                   ),
                 ),
               ),
+
+            // ✅ حباب کوچک‌تر
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 11,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF090909) : theme.surfaceColor,
-                borderRadius: BorderRadius.circular(24),
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 6,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -558,19 +572,35 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isMe ? Colors.white : theme.textColor,
-                  fontSize: 14,
+                  color: textColor,
+                  fontSize: 13,
+                  height: 1.4,
                 ),
               ),
             ),
+
+            // ✅ ساعت + وضعیت (خارج از حباب)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                _formatTime(message.createdAt),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isMe ? Colors.white70 : theme.textSecondaryColor,
-                ),
+              padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(message.createdAt),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: theme.textSecondaryColor,
+                    ),
+                  ),
+                  if (isMe) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.check,
+                      size: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

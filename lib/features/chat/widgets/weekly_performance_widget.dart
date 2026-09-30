@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/weekly_habit_performance.dart';
+import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
 
 class WeeklyPerformanceWidget extends StatelessWidget {
@@ -19,7 +20,15 @@ class WeeklyPerformanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+
+    final Color bgColor =
+        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
 
     final weekDayLetters = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
     final successPercent = (data.successRate * 100).toInt();
@@ -28,38 +37,34 @@ class WeeklyPerformanceWidget extends StatelessWidget {
       width: 280,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.2),
-          width: 1,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ==================== هدر ====================
+          // هدر
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.analytics,
-                  color: primaryColor,
-                  size: 22,
+                  color: textColor,
+                  size: 20,
                 ),
               ),
               const SizedBox(width: 10),
@@ -70,16 +75,16 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                     Text(
                       'عملکرد هفتگی',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: theme.textColor,
+                        color: textColor,
                       ),
                     ),
                     Text(
                       _formatWeekRange(data.weekStart, data.weekEnd),
                       style: TextStyle(
-                        fontSize: 11,
-                        color: theme.textSecondaryColor,
+                        fontSize: 10,
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -87,19 +92,19 @@ class WeeklyPerformanceWidget extends StatelessWidget {
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 8,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   '$successPercent%',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                    color: textColor,
                   ),
                 ),
               ),
@@ -107,53 +112,37 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // ==================== آمار خلاصه ====================
+          // آمار
           Row(
             children: [
               _buildMiniStat(
-                label: 'کل عادت‌ها',
-                value: '${data.totalHabits}',
-                icon: Icons.fitness_center,
-                theme: theme,
-                primaryColor: primaryColor,
-              ),
-              const SizedBox(width: 8),
+                  'کل', '${data.totalHabits}', textColor, textSecondary),
+              const SizedBox(width: 6),
+              _buildMiniStat('انجام شده', '${data.completedHabits}', textColor,
+                  textSecondary),
+              const SizedBox(width: 6),
               _buildMiniStat(
-                label: 'انجام شده',
-                value: '${data.completedHabits}',
-                icon: Icons.check_circle,
-                theme: theme,
-                primaryColor: primaryColor,
-              ),
-              const SizedBox(width: 8),
-              _buildMiniStat(
-                label: 'موفقیت',
-                value: '$successPercent%',
-                icon: Icons.trending_up,
-                theme: theme,
-                primaryColor: primaryColor,
-              ),
+                  'موفقیت', '$successPercent%', textColor, textSecondary),
             ],
           ),
           const SizedBox(height: 12),
 
-          // ==================== جدول عادت‌ها ====================
+          // جدول
           if (data.habits.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(14),
+                color: textColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: primaryColor.withValues(alpha: 0.1),
+                  color: textColor.withValues(alpha: 0.1),
                 ),
               ),
               child: Column(
                 children: [
-                  // هدر روزهای هفته
                   Row(
                     children: [
-                      const SizedBox(width: 30),
+                      const SizedBox(width: 28),
                       ...List.generate(7, (index) {
                         final isToday = index == Jalali.now().weekDay - 1;
                         return Expanded(
@@ -165,9 +154,7 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                                 fontWeight: isToday
                                     ? FontWeight.bold
                                     : FontWeight.normal,
-                                color: isToday
-                                    ? primaryColor
-                                    : theme.textSecondaryColor,
+                                color: isToday ? textColor : textSecondary,
                               ),
                             ),
                           ),
@@ -176,67 +163,54 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-
-                  // ردیف هر عادت
                   ...data.habits.take(6).map((habit) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
                           Container(
-                            width: 24,
-                            height: 24,
+                            width: 22,
+                            height: 22,
                             decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.15),
+                              color: textColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               _getIconData(habit.iconName),
-                              color: primaryColor,
-                              size: 14,
+                              color: textColor,
+                              size: 12,
                             ),
                           ),
                           const SizedBox(width: 4),
                           ...List.generate(7, (index) {
                             final isActive = habit.weekStatus[index];
                             final isToday = index == Jalali.now().weekDay - 1;
-
                             return Expanded(
                               child: Center(
                                 child: Container(
-                                  width: 20,
-                                  height: 20,
+                                  width: 18,
+                                  height: 18,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isActive
-                                        ? primaryColor
-                                        : isToday
-                                            ? primaryColor.withValues(
-                                                alpha: 0.15,
-                                              )
-                                            : Colors.transparent,
+                                        ? textColor
+                                        : (isToday
+                                            ? textColor.withValues(alpha: 0.15)
+                                            : Colors.transparent),
                                     border: isToday && !isActive
                                         ? Border.all(
-                                            color: primaryColor,
+                                            color: textColor,
                                             width: 1.5,
                                           )
                                         : null,
                                   ),
                                   child: isActive
-                                      ? const Icon(
+                                      ? Icon(
                                           Icons.check,
-                                          size: 11,
-                                          color: Colors.white,
+                                          size: 10,
+                                          color: bgColor,
                                         )
-                                      : isToday
-                                          ? Container(
-                                              margin: const EdgeInsets.all(6),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor,
-                                                shape: BoxShape.circle,
-                                              ),
-                                            )
-                                          : null,
+                                      : null,
                                 ),
                               ),
                             );
@@ -249,59 +223,40 @@ class WeeklyPerformanceWidget extends StatelessWidget {
               ),
             ),
           ],
-
-          const SizedBox(height: 10),
-
-          // ==================== فوتر ====================
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                data.userName,
-                style: TextStyle(
-                  fontSize: 9,
-                  color: theme.textSecondaryColor,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildMiniStat({
-    required String label,
-    required String value,
-    required IconData icon,
-    required ThemeProvider theme,
-    required Color primaryColor,
-  }) {
+  Widget _buildMiniStat(
+    String label,
+    String value,
+    Color textColor,
+    Color textSecondary,
+  ) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
+          color: textColor.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: primaryColor),
-            const SizedBox(height: 4),
             Text(
               value,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: theme.textColor,
+                color: textColor,
               ),
             ),
             Text(
               label,
               style: TextStyle(
                 fontSize: 8,
-                color: theme.textSecondaryColor,
+                color: textSecondary,
               ),
             ),
           ],

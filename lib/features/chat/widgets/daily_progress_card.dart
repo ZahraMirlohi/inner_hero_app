@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
 
 class DailyProgressCard extends StatelessWidget {
@@ -10,6 +11,7 @@ class DailyProgressCard extends StatelessWidget {
   final int completedHabitsToday;
   final int totalHabitsToday;
   final List<bool> weekDays;
+  final bool isMe; // ✅ اضافه شد
 
   const DailyProgressCard({
     super.key,
@@ -17,12 +19,22 @@ class DailyProgressCard extends StatelessWidget {
     required this.completedHabitsToday,
     required this.totalHabitsToday,
     required this.weekDays,
+    this.isMe = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+
+    // ✅ رنگ‌های استاندارد
+    final Color bgColor =
+        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
 
     final double progress =
         totalHabitsToday > 0 ? completedHabitsToday / totalHabitsToday : 0.0;
@@ -32,35 +44,32 @@ class DailyProgressCard extends StatelessWidget {
     final todayIndex = Jalali.now().weekDay - 1;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(24),
+        color:
+            bgColor, // ✅ پس‌زمینه: primaryLight یا primaryColor یا سفید یا مشکی
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.1),
-          width: 1,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ============== هدر ==============
+          // هدر
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'پیشرفت روزانه',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: theme.textColor,
+                  color: textColor, // ✅ متن تیره روی پس‌زمینه روشن
                 ),
               ),
               Row(
@@ -68,24 +77,24 @@ class DailyProgressCard extends StatelessWidget {
                   Icon(
                     Icons.local_fire_department,
                     size: 16,
-                    color: primaryColor,
+                    color: textColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '$currentStreak روز پیاپی',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: primaryColor,
+                      color: textColor,
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-          // ============== نوار پیشرفت هفتگی ==============
+          // روزهای هفته
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
@@ -95,33 +104,24 @@ class DailyProgressCard extends StatelessWidget {
               return Column(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isActive
-                          ? primaryColor
-                          : isToday
-                              ? primaryColor.withValues(alpha: 0.15)
-                              : Colors.grey.shade100,
-                      border: isToday && !isActive
-                          ? Border.all(color: primaryColor, width: 2)
-                          : null,
+                          ? textColor.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isActive
+                            ? textColor
+                            : textColor.withValues(alpha: 0.25),
+                        width: isToday ? 2 : 1,
+                      ),
                     ),
                     child: Center(
                       child: isActive
-                          ? const Icon(
-                              Icons.check,
-                              size: 16,
-                              color: Colors.white,
-                            )
-                          : isToday
-                              ? Icon(
-                                  Icons.circle,
-                                  size: 6,
-                                  color: primaryColor,
-                                )
-                              : null,
+                          ? Icon(Icons.check, size: 14, color: textColor)
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -131,16 +131,16 @@ class DailyProgressCard extends StatelessWidget {
                       fontSize: 10,
                       fontWeight:
                           isActive ? FontWeight.w600 : FontWeight.normal,
-                      color: isActive ? primaryColor : theme.textSecondaryColor,
+                      color: textColor,
                     ),
                   ),
                 ],
               );
             }),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // ============== آمار امروز ==============
+          // آمار
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -150,17 +150,17 @@ class DailyProgressCard extends StatelessWidget {
                   Text(
                     'عادت‌های امروز',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: theme.textColor,
+                      color: textColor,
                     ),
                   ),
                   Text(
                     '$completedHabitsToday از $totalHabitsToday',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: theme.textColor,
+                      color: textColor,
                     ),
                   ),
                 ],
@@ -170,9 +170,9 @@ class DailyProgressCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: Colors.grey.shade200,
-                  color: primaryColor,
-                  minHeight: 8,
+                  backgroundColor: textColor.withValues(alpha: 0.15),
+                  color: textColor,
+                  minHeight: 6,
                 ),
               ),
               const SizedBox(height: 4),
@@ -186,7 +186,7 @@ class DailyProgressCard extends StatelessWidget {
                           : '🌱 تازه شروع کردی!',
                   style: TextStyle(
                     fontSize: 11,
-                    color: theme.textSecondaryColor,
+                    color: textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

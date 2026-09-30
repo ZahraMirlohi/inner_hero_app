@@ -34,6 +34,7 @@ import '../models/challenge_invite.dart';
 import '../models/weekly_habit_performance.dart';
 import '../models/today_habits_list.dart';
 import '../models/xp_gift.dart';
+import '../utils/chat_colors.dart';
 
 // ✅ ویجت‌ها
 import '../widgets/file_message_widget.dart';
@@ -54,6 +55,7 @@ import '/services/today_habits_service.dart';
 import '/services/xp_gift_service.dart';
 import 'user_profile_screen.dart';
 import 'location_picker_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BuddyChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -404,6 +406,45 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
+  // ✅ رنگ تیک وضعیت (خارج از حباب)
+  Color _getStatusColor(bool isMe, MessageStatus status, ThemeProvider theme) {
+    if (status == MessageStatus.seen) {
+      return isMe
+          ? const Color(0xFF4FC3F7) // آبی روشن (دیده شده)
+          : theme.primaryColor;
+    }
+    return Colors.grey.shade500;
+  }
+
+  // ✅ رنگ متن ساعت (خارج از حباب)
+  Color _getTimeColor(ThemeProvider theme) {
+    return theme.textSecondaryColor;
+  }
+
+  // ✅ رنگ حباب پیام من
+  // - روز → primaryLight
+  // - شب → primaryColor
+  Color _getMyBubbleColor(ThemeProvider theme) {
+    return theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
+  }
+
+  // ✅ رنگ حباب کاربر مقابل
+  // - روز → سفید
+  // - شب → مشکی (#1E1E1E)
+  Color _getOtherBubbleColor(ThemeProvider theme) {
+    return theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+  }
+
+  // ✅ رنگ متن حباب من
+  Color _getMyBubbleTextColor(ThemeProvider theme) {
+    return const Color(0xFF090909); // مشکی (روی رنگ روشن)
+  }
+
+  // ✅ رنگ متن حباب کاربر مقابل
+  Color _getOtherBubbleTextColor(ThemeProvider theme) {
+    return theme.textColor;
+  }
+
   // ✅ متد دریافت چالش کش شده
   Future<ChallengeInvite?> _getCachedChallenge(String challengeId) async {
     if (_loadingChallenges.contains(challengeId)) {
@@ -493,10 +534,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       controller: scrollController,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5,
-                        childAspectRatio: 1.0,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
+                        crossAxisCount: 4, // ✅ از 5 به 4 برای فضای بیشتر
+                        childAspectRatio: 0.85, // ✅ نسبت ارتفاع
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 12,
                       ),
                       itemCount: _getMediaMenuItems(theme, primaryColor).length,
                       itemBuilder: (context, index) {
@@ -522,26 +563,37 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         Navigator.pop(context);
         item.onTap();
       },
-      child: Container(
-        decoration: const BoxDecoration(color: Colors.transparent),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                item.icon,
-                color: item.color,
-                size: 28,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // ✅ آیکون کوچک‌تر
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: item.color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
+            child: Icon(
+              item.icon,
+              color: item.color,
+              size: 22, // ✅ از 28 به 22
+            ),
+          ),
+          const SizedBox(height: 6),
+          // ✅ برچسب زیر آیکون
+          Text(
+            item.title,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: item.color,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -555,63 +607,63 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     return [
       MediaMenuItem(
         icon: Icons.image,
-        title: '',
-        color: primaryColor,
+        title: 'عکس',
+        color: const Color(0xFF9C27B0), // بنفش
         onTap: _sendImage,
       ),
       MediaMenuItem(
         icon: Icons.location_on,
-        title: '',
-        color: primaryColor,
+        title: 'لوکیشن',
+        color: const Color(0xFF2ECC71), // سبز
         onTap: _sendLocation,
       ),
       if (!isWeb)
         MediaMenuItem(
           icon: Icons.contact_phone,
-          title: '',
-          color: primaryColor,
+          title: 'مخاطب',
+          color: const Color(0xFF3498DB), // آبی
           onTap: _sendContact,
         ),
       MediaMenuItem(
         icon: Icons.attach_file,
-        title: '',
-        color: primaryColor,
+        title: 'فایل',
+        color: const Color(0xFFE67E22), // نارنجی
         onTap: _sendFile,
       ),
       MediaMenuItem(
         icon: Icons.music_note,
-        title: '',
-        color: primaryColor,
+        title: 'موزیک',
+        color: const Color(0xFFE91E63), // صورتی
         onTap: _sendMusic,
       ),
       MediaMenuItem(
         icon: Icons.trending_up,
-        title: '',
-        color: primaryColor,
+        title: 'پیشرفت',
+        color: const Color(0xFF1ABC9C), // فیروزه‌ای
         onTap: _sendDailyProgressCard,
       ),
       MediaMenuItem(
         icon: Icons.analytics,
-        title: '',
-        color: primaryColor,
+        title: 'گزارش',
+        color: const Color(0xFF7C3AED), // بنفش تیره
         onTap: _sendWeeklyPerformance,
       ),
       MediaMenuItem(
         icon: Icons.checklist,
-        title: '',
-        color: primaryColor,
+        title: 'لیست امروز',
+        color: const Color(0xFFF39C12), // زرد
         onTap: _sendTodayHabitsList,
       ),
       MediaMenuItem(
         icon: Icons.emoji_events,
-        title: '',
-        color: primaryColor,
+        title: 'چالش',
+        color: const Color(0xFFFFA500), // طلایی
         onTap: () => _showCreateChallengeDialog(theme, primaryColor),
       ),
       MediaMenuItem(
         icon: Icons.stars,
-        title: '',
-        color: primaryColor,
+        title: 'هدیه XP',
+        color: const Color(0xFFFFC107), // زرد طلایی
         onTap: _sendXPGift,
       ),
     ];
@@ -911,6 +963,18 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
   // ==================== ارسال فایل ====================
   Future<void> _sendFile() async {
+    final isValid = await _supabase.ensureValidSession();
+    if (!isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -1059,6 +1123,18 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
   // ==================== ارسال موزیک ====================
   Future<void> _sendMusic() async {
+    final isValid = await _supabase.ensureValidSession();
+    if (!isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     try {
       final result = await FilePicker.platform.pickFiles(
         allowMultiple: false,
@@ -1662,11 +1738,21 @@ ${data.completionMessage}
         return '';
       }
 
+      // ✅ اطمینان از معتبر بودن session
+      final isValid = await _supabase.ensureValidSession();
+      if (!isValid) {
+        _showSnackBar('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید');
+        return '';
+      }
+
+      // ✅ حالا session معتبر است
       final session = _supabase.client.auth.currentSession;
       if (session == null) {
         _showSnackBar('جلسه کاربری معتبر نیست');
         return '';
       }
+
+      final String accessToken = session.accessToken;
 
       final extension = fileName.contains('.')
           ? fileName.substring(fileName.lastIndexOf('.'))
@@ -1695,7 +1781,7 @@ ${data.completionMessage}
       final response = await http.put(
         Uri.parse(storageUrl),
         headers: {
-          'Authorization': 'Bearer ${session.accessToken}',
+          'Authorization': 'Bearer $accessToken',
           'Content-Type': contentType,
           'x-upsert': 'true',
         },
@@ -2385,34 +2471,10 @@ ${data.completionMessage}
     _clearChatHistory(primaryColor);
   }
 
-  Future<bool> _ensureValidSession() async {
-    try {
-      final session = _chatService.client.auth.currentSession;
-      if (session == null) {
-        return false;
-      }
-
-      final expiresAt = session.expiresAt;
-      if (expiresAt != null) {
-        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        if (expiresAt - now < 60) {
-          try {
-            await _chatService.client.auth.refreshSession();
-          } catch (e) {
-            return false;
-          }
-        }
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   Future<void> _clearChatHistory(Color primaryColor) async {
     if (_userId == null) return;
 
-    final isValid = await _ensureValidSession();
+    final isValid = await _supabase.ensureValidSession();
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3320,10 +3382,28 @@ ${data.completionMessage}
     Map<String, dynamic>? metadata,
     String? replyToId,
   }) async {
-    final content = text ?? _messageController.text.trim();
+    // ✅ تعریف content
+    final String content = text ?? _messageController.text.trim();
 
-    if (content.isEmpty && replyToId == null && _replyToMessage == null) return;
+    if (content.isEmpty && replyToId == null && _replyToMessage == null) {
+      return;
+    }
     if (content.isEmpty && (replyToId != null || _replyToMessage != null)) {
+      return;
+    }
+
+    if (_userId == null || _isSending) return;
+
+    final isValid = await _supabase.ensureValidSession();
+    if (!isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -3448,6 +3528,18 @@ ${data.completionMessage}
 
   // ==================== ارسال عکس ====================
   Future<void> _sendImage() async {
+    final isValid = await _supabase.ensureValidSession();
+    if (!isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -4244,29 +4336,39 @@ ${message.content}
     if (isSystem) {
       return Container(
         key: key,
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: const TextStyle(fontSize: 11, color: Colors.grey),
         ),
       );
     }
+
+    // ✅ تشخیص ویجت
+    final bool isWidgetMessage = _isWidgetMessage(message);
+
+    // ✅ رنگ‌های حباب
+    final Color myBubbleColor = _getMyBubbleColor(theme);
+    final Color otherBubbleColor = _getOtherBubbleColor(theme);
+    final Color bubbleColor = isMe ? myBubbleColor : otherBubbleColor;
+    final Color textColor =
+        isMe ? _getMyBubbleTextColor(theme) : _getOtherBubbleTextColor(theme);
 
     return Dismissible(
       key: Key(message.id),
       direction: DismissDirection.startToEnd,
       background: Container(
-        margin: const EdgeInsets.only(bottom: 6),
+        margin: const EdgeInsets.only(bottom: 4),
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
+        padding: const EdgeInsets.only(left: 16),
         decoration: BoxDecoration(
           color: primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: primaryColor.withValues(alpha: 0.3),
             width: 1,
@@ -4275,14 +4377,14 @@ ${message.content}
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.reply, color: primaryColor, size: 20),
-            const SizedBox(width: 8),
+            Icon(Icons.reply, color: primaryColor, size: 18),
+            const SizedBox(width: 6),
             Text(
               'پاسخ',
               style: TextStyle(
                 color: primaryColor,
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: 12,
               ),
             ),
           ],
@@ -4294,12 +4396,12 @@ ${message.content}
       },
       child: Container(
         key: key,
-        margin: const EdgeInsets.only(bottom: 6),
+        margin: const EdgeInsets.only(bottom: 2),
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor.withValues(alpha: 0.08)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -4349,72 +4451,77 @@ ${message.content}
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isMe ? primaryColor : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: message.isPinned
-                        ? Border.all(color: Colors.orange, width: 2)
-                        : _highlightedMessageId == message.id
-                            ? Border.all(color: primaryColor, width: 2)
-                            : null,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                      if (message.isPinned)
-                        BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 1,
+                  padding: isWidgetMessage
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 6,
                         ),
-                      if (_highlightedMessageId == message.id)
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          spreadRadius: 2,
+                  decoration: isWidgetMessage
+                      ? null
+                      : BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(18),
+                          border: message.isPinned
+                              ? Border.all(color: Colors.orange, width: 2)
+                              : _highlightedMessageId == message.id
+                                  ? Border.all(color: primaryColor, width: 2)
+                                  : null,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                            if (message.isPinned)
+                              BoxShadow(
+                                color: Colors.orange.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                              ),
+                            if (_highlightedMessageId == message.id)
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                              ),
+                            if (isFailed)
+                              BoxShadow(
+                                color: Colors.red.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                          ],
                         ),
-                      if (isFailed)
-                        BoxShadow(
-                          color: Colors.red.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          spreadRadius: 2,
-                        ),
-                    ],
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (message.isPinned)
+                      // پیام پین شده
+                      if (message.isPinned && !isWidgetMessage)
                         Container(
-                          margin: const EdgeInsets.only(bottom: 4),
+                          margin: const EdgeInsets.only(bottom: 3),
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 5,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 Icons.push_pin,
-                                size: 12,
+                                size: 9,
                                 color: Colors.orange,
                               ),
-                              SizedBox(width: 4),
+                              SizedBox(width: 3),
                               Text(
                                 'پین شده',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 8,
                                   color: Colors.orange,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -4422,26 +4529,33 @@ ${message.content}
                             ],
                           ),
                         ),
+
+                      // reply preview
                       if (message.replyTo != null)
                         GestureDetector(
                           onTap: () {
                             _scrollToMessage(message.replyToId!);
                           },
                           child: Container(
-                            margin: const EdgeInsets.only(bottom: 4),
+                            margin: const EdgeInsets.only(bottom: 3),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                              horizontal: 6,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: isMe
-                                  ? Colors.white.withValues(alpha: 0.12)
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(12),
+                              color: isWidgetMessage
+                                  ? (isMe
+                                      ? myBubbleColor.withValues(alpha: 0.6)
+                                      : otherBubbleColor.withValues(alpha: 0.6))
+                                  : (isMe
+                                      ? const Color(0xFF090909)
+                                          .withValues(alpha: 0.08)
+                                      : Colors.grey.shade100),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border(
                                 left: BorderSide(
                                   color: isMe
-                                      ? primaryColor.withValues(alpha: 0.6)
+                                      ? primaryColor.withValues(alpha: 0.8)
                                       : primaryColor,
                                   width: 3,
                                 ),
@@ -4456,21 +4570,22 @@ ${message.content}
                                   children: [
                                     Icon(
                                       Icons.reply_outlined,
-                                      size: 10,
+                                      size: 9,
                                       color: isMe
-                                          ? Colors.white.withValues(alpha: 0.7)
+                                          ? const Color(0xFF090909)
+                                              .withValues(alpha: 0.9)
                                           : primaryColor,
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 3),
                                     Flexible(
                                       child: Text(
                                         _getReplyToSenderName(message),
                                         style: TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.w600,
                                           color: isMe
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.8)
+                                              ? const Color(0xFF090909)
+                                                  .withValues(alpha: 0.9)
                                               : primaryColor,
                                         ),
                                         overflow: TextOverflow.ellipsis,
@@ -4478,14 +4593,15 @@ ${message.content}
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 1),
                                 Text(
                                   _truncateText(message.replyTo!.content, 40),
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 9,
                                     color: isMe
-                                        ? Colors.white.withValues(alpha: 0.6)
-                                        : Colors.grey.shade600,
+                                        ? const Color(0xFF090909)
+                                            .withValues(alpha: 0.8)
+                                        : Colors.grey.shade700,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -4494,53 +4610,87 @@ ${message.content}
                             ),
                           ),
                         ),
+
+                      // محتوا
                       _buildMessageContent(
                         message,
                         isMe,
                         theme,
                         primaryColor,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
-                          mainAxisAlignment: isMe
-                              ? MainAxisAlignment.end
-                              : MainAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _getTimeOnly(message.createdAt),
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: isMe
-                                    ? Colors.white.withValues(alpha: 0.6)
-                                    : theme.textSecondaryColor,
-                              ),
-                            ),
-                            if (isMe) ...[
-                              const SizedBox(width: 4),
-                              if (isFailed)
-                                const Icon(
-                                  Icons.error_outline,
-                                  size: 14,
-                                  color: Colors.red,
-                                )
-                              else
-                                _buildStatusIcon(message.status, primaryColor),
-                            ],
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ),
+
+              // واکنش‌ها
               _buildReactions(message, primaryColor),
+
+              // ✅ ساعت + وضعیت بازدید (خارج از حباب)
+              Padding(
+                padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                child: Row(
+                  mainAxisAlignment:
+                      isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _getTimeOnly(message.createdAt),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: _getTimeColor(theme),
+                      ),
+                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 4),
+                      if (isFailed)
+                        const Icon(
+                          Icons.error_outline,
+                          size: 12,
+                          color: Colors.red,
+                        )
+                      else
+                        _buildStatusIcon(
+                          message.status,
+                          primaryColor,
+                          isMe: true,
+                        ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // ✅ تشخیص پیام‌های ویجتی (که نباید پس‌زمینه حباب داشته باشند)
+  bool _isWidgetMessage(ChatMessage message) {
+    if (message.metadata == null) return false;
+
+    final meta = message.metadata!;
+
+    // ویجت‌هایی که نباید داخل حباب باشند
+    if (meta['is_progress_card'] == true) return true;
+    if (meta['is_performance_widget'] == true) return true;
+    if (meta['is_today_list_widget'] == true) return true;
+    if (meta['is_challenge_invite'] == true) return true;
+    if (meta['is_active_challenge'] == true) return true;
+    if (meta['type'] == 'xp_gift_card') return true;
+    if (meta['file_url'] != null || meta['file_name'] != null) return true;
+
+    // لوکیشن و شماره تماس
+    if (message.type == MessageType.text && _isLocationLink(message.content)) {
+      return true;
+    }
+    if (message.type == MessageType.text &&
+        _isContactMessage(message.content)) {
+      return true;
+    }
+
+    return false;
   }
 
   void _showFailedMessageOptions(ChatMessage message) {
@@ -4751,37 +4901,42 @@ ${message.content}
     return 'کاربر';
   }
 
-  Widget _buildStatusIcon(MessageStatus status, Color primaryColor) {
+  Widget _buildStatusIcon(
+    MessageStatus status,
+    Color primaryColor, {
+    bool isMe = true,
+  }) {
+    // ✅ رنگ تیک (چون خارج از حباب است، رنگ‌ها ثابت)
+    final Color checkColor = status == MessageStatus.seen
+        ? (isMe ? const Color(0xFF4FC3F7) : primaryColor)
+        : Colors.grey.shade500;
+
     switch (status) {
       case MessageStatus.sending:
-        return const SizedBox(
-          width: 14,
-          height: 14,
+        return SizedBox(
+          width: 12,
+          height: 12,
           child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            color: Colors.white70,
+            strokeWidth: 1.2,
+            color: checkColor,
           ),
         );
 
       case MessageStatus.sent:
-        return Icon(
-          Icons.check,
-          size: 14,
-          color: Colors.white.withValues(alpha: 0.6),
-        );
-
       case MessageStatus.delivered:
+      case MessageStatus.seen:
         return Icon(
           Icons.done_all,
-          size: 14,
-          color: Colors.white.withValues(alpha: 0.6),
+          size: 13,
+          color: checkColor,
         );
 
-      case MessageStatus.seen:
-        return Icon(Icons.done_all, size: 14, color: primaryColor);
-
       case MessageStatus.failed:
-        return Icon(Icons.error_outline, size: 14, color: Colors.red.shade300);
+        return const Icon(
+          Icons.error_outline,
+          size: 13,
+          color: Colors.red,
+        );
     }
   }
 
@@ -4900,7 +5055,7 @@ ${message.content}
           Text(
             message.content,
             style: TextStyle(
-              color: isMe ? Colors.white : theme.textColor,
+              color: isMe ? const Color(0xFF090909) : theme.textColor,
               fontSize: 14,
             ),
           ),
@@ -4948,7 +5103,7 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : theme.textColor,
+            color: isMe ? const Color(0xFF090909) : theme.textColor,
             fontSize: 14,
           ),
         );
@@ -5076,7 +5231,7 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : theme.textColor,
+            color: isMe ? const Color(0xFF090909) : theme.textColor,
             fontSize: 14,
           ),
         );
@@ -5091,15 +5246,15 @@ ${message.content}
         return TodayHabitsListWidget(
           key: ValueKey('today_${message.id}'),
           data: data,
-          isMe: isMe,
+          isMe: isMe, // ← ✅ این خط حیاتی است
         );
       } catch (e) {
         print('❌ Error building today list widget: $e');
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : theme.textColor,
-            fontSize: 14,
+            color: isMe ? const Color(0xFF090909) : theme.textColor,
+            fontSize: 13,
           ),
         );
       }
@@ -5122,7 +5277,7 @@ ${message.content}
         return Text(
           message.content,
           style: TextStyle(
-            color: isMe ? Colors.white : theme.textColor,
+            color: isMe ? const Color(0xFF090909) : theme.textColor,
             fontSize: 14,
           ),
         );
@@ -5168,7 +5323,8 @@ ${message.content}
         width: 280,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF090909) : theme.surfaceColor,
+          color:
+              isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -5177,12 +5333,13 @@ ${message.content}
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: (isMe ? ChatColors.myBubbleText(theme) : theme.textColor)
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.location_on,
-                color: Colors.green,
+                color: isMe ? ChatColors.myBubbleText(theme) : theme.textColor,
                 size: 18,
               ),
             ),
@@ -5196,14 +5353,18 @@ ${message.content}
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: isMe ? Colors.white : theme.textColor,
+                      color: isMe
+                          ? ChatColors.myBubbleText(theme)
+                          : theme.textColor,
                     ),
                   ),
                   Text(
                     'مشاهده روی نقشه',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isMe ? Colors.white70 : theme.textSecondaryColor,
+                      color: isMe
+                          ? ChatColors.myBubbleTextSecondary(theme)
+                          : theme.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -5211,7 +5372,7 @@ ${message.content}
             ),
             IconButton(
               icon: const Icon(Icons.open_in_new, size: 16),
-              color: isMe ? Colors.white : primaryColor,
+              color: isMe ? ChatColors.myBubbleText(theme) : theme.primaryColor,
               onPressed: () => _openInMap(message.content),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -5273,7 +5434,7 @@ ${message.content}
               child: Text(
                 message.content,
                 style: TextStyle(
-                  color: isMe ? Colors.white : theme.textColor,
+                  color: isMe ? const Color(0xFF090909) : theme.textColor,
                   fontSize: 14,
                 ),
               ),
@@ -5722,12 +5883,13 @@ ${message.content}
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+    final Color accentColor =
+        theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       resizeToAvoidBottomInset: true,
-      appBar: _buildAppBar(theme, primaryColor),
+      appBar: _buildAppBar(theme, accentColor),
       body: GestureDetector(
         onTap: () {
           if (_menuMessage != null) {
@@ -5743,12 +5905,12 @@ ${message.content}
                   children: [
                     Column(
                       children: [
-                        _buildPinnedMessageBar(theme, primaryColor),
+                        _buildPinnedMessageBar(theme, accentColor),
                         Expanded(
                           child: _isLoading
-                              ? _buildLoadingState(primaryColor)
+                              ? _buildLoadingState(accentColor)
                               : _messages.isEmpty
-                                  ? _buildEmptyState(theme, primaryColor)
+                                  ? _buildEmptyState(theme, accentColor)
                                   : ListView.builder(
                                       controller: _scrollController,
                                       reverse: true,
@@ -5789,18 +5951,18 @@ ${message.content}
                                           _buildMessageBubble(
                                             message,
                                             theme,
-                                            primaryColor,
+                                            accentColor,
                                           ),
                                         );
                                         return Column(children: widgets);
                                       },
                                     ),
                         ),
-                        _buildInputBar(theme, primaryColor),
+                        _buildInputBar(theme, accentColor),
                       ],
                     ),
-                    _buildMessageActionsPopup(theme, primaryColor),
-                    _buildScrollToBottomButton(primaryColor),
+                    _buildMessageActionsPopup(theme, accentColor),
+                    _buildScrollToBottomButton(accentColor),
                   ],
                 ),
               ),

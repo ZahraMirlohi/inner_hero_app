@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/challenge_invite.dart';
+import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
 
 class ActiveChallengeWidget extends StatefulWidget {
@@ -34,15 +35,25 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    final isCreator = widget.challenge.creatorId == widget.currentUserId;
+    // ✅ تشخیص اینکه کاربر فعلی فرستنده است یا گیرنده
+    final bool isMe = widget.challenge.creatorId == widget.currentUserId;
+
+    // ✅ رنگ‌های استاندارد
+    final Color bgColor =
+        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
+
     final opponentId =
-        isCreator ? widget.challenge.opponentId : widget.challenge.creatorId;
-    final opponentName = isCreator
-        ? widget.challenge.opponentName
-        : widget.challenge.creatorName;
-    final myName = isCreator
-        ? widget.challenge.creatorName
-        : widget.challenge.opponentName;
+        isMe ? widget.challenge.opponentId : widget.challenge.creatorId;
+    final opponentName =
+        isMe ? widget.challenge.opponentName : widget.challenge.creatorName;
+    final myName =
+        isMe ? widget.challenge.creatorName : widget.challenge.opponentName;
 
     final currentDay = widget.challenge.currentDay;
     final totalDays = widget.challenge.duration;
@@ -68,21 +79,21 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
 
     return Container(
       width: 280,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: textColor.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
-        border: Border.all(
-          color: primaryColor.withValues(alpha: 0.3),
-          width: 2,
-        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,19 +103,19 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
+                  color: textColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.emoji_events,
-                  color: primaryColor,
-                  size: 24,
+                  color: textColor,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,9 +123,9 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                     Text(
                       widget.challenge.title,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: theme.textColor,
+                        color: textColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -124,27 +135,27 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                         Text(
                           'روز $currentDay از $totalDays',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: theme.textSecondaryColor,
+                            fontSize: 10,
+                            color: textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 6,
+                            vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            color: textColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${(progress * 100).toInt()}%',
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
-                              color: primaryColor,
+                              color: textColor,
                             ),
                           ),
                         ),
@@ -155,23 +166,23 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
               ),
               // نوار پیشرفت دایره‌ای
               SizedBox(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
                     CircularProgressIndicator(
                       value: progress,
-                      backgroundColor: Colors.grey.shade200,
-                      color: primaryColor,
-                      strokeWidth: 4,
+                      backgroundColor: textColor.withValues(alpha: 0.15),
+                      color: textColor,
+                      strokeWidth: 3.5,
                     ),
                     Text(
                       '${(progress * 100).toInt()}%',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        color: theme.textColor,
+                        color: textColor,
                       ),
                     ),
                   ],
@@ -179,28 +190,28 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // ==================== نوار پیشرفت خطی ====================
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.grey.shade200,
-              color: primaryColor,
-              minHeight: 8,
+              backgroundColor: textColor.withValues(alpha: 0.15),
+              color: textColor,
+              minHeight: 6,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // ==================== لیست عادت‌های امروز ====================
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
+              color: textColor.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: primaryColor.withValues(alpha: 0.12),
+                color: textColor.withValues(alpha: 0.12),
               ),
             ),
             child: Column(
@@ -211,45 +222,45 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                     Text(
                       '📋 امروز',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: theme.textColor,
+                        color: textColor,
                       ),
                     ),
                     const Spacer(),
                     if (isMyDayCompleted)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 7,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
+                          color: textColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
                           '✅ انجام شد',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
-                            color: primaryColor,
+                            color: textColor,
                           ),
                         ),
                       )
                     else if (canComplete)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 7,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.orange.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
                           '⏳ در انتظار',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: Colors.orange,
                           ),
@@ -267,23 +278,22 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                     habit.id,
                     opponentId,
                   );
-                  final iconColor = primaryColor;
 
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.only(bottom: 5),
                     child: Row(
                       children: [
                         Container(
-                          width: 28,
-                          height: 28,
+                          width: 24,
+                          height: 24,
                           decoration: BoxDecoration(
-                            color: iconColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
+                            color: textColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             _getIconData(habit.iconName),
-                            color: iconColor,
-                            size: 16,
+                            color: textColor,
+                            size: 14,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -291,12 +301,14 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                           child: Text(
                             habit.title,
                             style: TextStyle(
-                              fontSize: 13,
-                              color: theme.textColor,
+                              fontSize: 11,
+                              color: textColor,
                               decoration: isCompletedByMe
                                   ? TextDecoration.lineThrough
                                   : null,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         _buildUserCheck(
@@ -304,15 +316,17 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                           isMe: true,
                           canToggle: canComplete || canUncomplete,
                           onTap: () => _toggleHabit(habit.id),
-                          primaryColor: primaryColor,
+                          textColor: textColor,
+                          bgColor: bgColor,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         _buildUserCheck(
                           isCompleted: isCompletedByOpponent,
                           isMe: false,
                           canToggle: false,
                           onTap: null,
-                          primaryColor: primaryColor,
+                          textColor: textColor,
+                          bgColor: bgColor,
                         ),
                       ],
                     ),
@@ -321,7 +335,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // ==================== آمار مقایسه‌ای ====================
           Row(
@@ -333,11 +347,11 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                   completedDays: myCompletedDays,
                   totalDays: totalDays,
                   isMe: true,
-                  primaryColor: primaryColor,
-                  theme: theme,
+                  textColor: textColor,
+                  textSecondary: textSecondary,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Flexible(
                 flex: 1,
                 child: _buildUserStat(
@@ -345,57 +359,59 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                   completedDays: opponentCompletedDays,
                   totalDays: totalDays,
                   isMe: false,
-                  primaryColor: primaryColor,
-                  theme: theme,
+                  textColor: textColor,
+                  textSecondary: textSecondary,
                 ),
               ),
             ],
           ),
 
           // ==================== دکمه‌های اقدام ====================
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    _showReminderDialog(primaryColor);
+                    _showReminderDialog(textColor);
                   },
-                  icon: Icon(Icons.alarm, size: 18, color: primaryColor),
+                  icon: Icon(Icons.alarm, size: 14, color: textColor),
                   label: Text(
                     'یادآوری',
-                    style: TextStyle(fontSize: 12, color: primaryColor),
+                    style: TextStyle(fontSize: 11, color: textColor),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    side: BorderSide(color: primaryColor),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side: BorderSide(
+                      color: textColor.withValues(alpha: 0.3),
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    _showCancelDialog();
+                    _showCancelDialog(textColor, bgColor);
                   },
                   icon: const Icon(
                     Icons.exit_to_app,
-                    size: 18,
+                    size: 14,
                     color: Colors.red,
                   ),
                   label: const Text(
                     'انصراف',
-                    style: TextStyle(fontSize: 12, color: Colors.red),
+                    style: TextStyle(fontSize: 11, color: Colors.red),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
                     side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -414,29 +430,28 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     required bool isMe,
     required bool canToggle,
     required VoidCallback? onTap,
-    required Color primaryColor,
+    required Color textColor,
+    required Color bgColor,
   }) {
     return GestureDetector(
       onTap: canToggle ? onTap : null,
       child: Container(
-        width: 24,
-        height: 24,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isCompleted
-              ? primaryColor
-              : (isMe ? Colors.grey.shade200 : Colors.grey.shade100),
+          color: isCompleted ? textColor : textColor.withValues(alpha: 0.15),
           border: isMe && !isCompleted && canToggle
               ? Border.all(
-                  color: primaryColor.withValues(alpha: 0.5),
+                  color: textColor.withValues(alpha: 0.5),
                   width: 1.5,
                 )
               : null,
         ),
         child: isCompleted
-            ? const Icon(Icons.check, size: 14, color: Colors.white)
+            ? Icon(Icons.check, size: 12, color: bgColor)
             : isMe && canToggle
-                ? Icon(Icons.add, size: 14, color: primaryColor)
+                ? Icon(Icons.add, size: 12, color: textColor)
                 : null,
       ),
     );
@@ -447,25 +462,20 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     required int completedDays,
     required int totalDays,
     required bool isMe,
-    required Color primaryColor,
-    required ThemeProvider theme,
+    required Color textColor,
+    required Color textSecondary,
   }) {
     final isCompleted = completedDays >= totalDays;
     final displayName = isMe ? 'من' : name;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       decoration: BoxDecoration(
-        color:
-            isMe ? primaryColor.withValues(alpha: 0.08) : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(14),
+        color: textColor.withValues(alpha: isMe ? 0.1 : 0.06),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isMe
-              ? (isCompleted
-                  ? primaryColor
-                  : primaryColor.withValues(alpha: 0.3))
-              : Colors.grey.shade200,
-          width: isMe ? 1.5 : 0.5,
+          color: isCompleted ? textColor : textColor.withValues(alpha: 0.2),
+          width: isMe ? 1.5 : 0.8,
         ),
       ),
       child: Column(
@@ -489,7 +499,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                      color: isMe ? primaryColor : theme.textSecondaryColor,
+                      color: textColor,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -504,11 +514,10 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: isCompleted ? primaryColor : theme.textColor,
+              color: textColor,
             ),
           ),
-          if (isCompleted)
-            Icon(Icons.emoji_events, size: 10, color: primaryColor),
+          if (isCompleted) Icon(Icons.emoji_events, size: 10, color: textColor),
         ],
       ),
     );
@@ -547,15 +556,15 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     }
   }
 
-  void _showCancelDialog() {
-    final theme = Provider.of<ThemeProvider>(context, listen: false);
-    final primaryColor = theme.primaryColor;
+  void _showCancelDialog(Color textColor, Color bgColor) {
     final penalty = (widget.challenge.xpReward * 0.2).toInt();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         title: const Text('انصراف از چالش'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -568,7 +577,9 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
               decoration: BoxDecoration(
                 color: Colors.red.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -584,7 +595,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                       style: TextStyle(
                         color: Colors.red.shade700,
                         fontWeight: FontWeight.w500,
-                        fontSize: 13,
+                        fontSize: 12,
                       ),
                     ),
                   ),
@@ -617,11 +628,13 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     );
   }
 
-  void _showReminderDialog(Color primaryColor) {
+  void _showReminderDialog(Color textColor) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         title: const Text('⏰ یادآوری'),
         content: const Text(
           'یادآوری برای هم‌مسیر شما ارسال خواهد شد.\n\n'
@@ -638,7 +651,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
               widget.onSendReminder();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
+              backgroundColor: textColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),

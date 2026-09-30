@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/habit_model.dart';
 import '../screens/habit_detail_screen.dart';
 import '/providers/theme_provider.dart';
+import 'animated_check_overlay.dart';
 
 class HabitCard extends StatefulWidget {
   final Habit habit;
@@ -14,6 +15,7 @@ class HabitCard extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback? onTimer;
   final VoidCallback? onTap;
+  final Function(String)? onToggleSubHabit;
 
   const HabitCard({
     super.key,
@@ -24,6 +26,7 @@ class HabitCard extends StatefulWidget {
     required this.onDelete,
     this.onTimer,
     this.onTap,
+    this.onToggleSubHabit,
   });
 
   @override
@@ -74,30 +77,17 @@ class _HabitCardState extends State<HabitCard>
     final bool isChallenge = widget.habit.challengeId != null;
     final bool isQuest = widget.habit.questId != null;
 
-    // ✅ رنگ باکس کارت:
-    // - چالش/ماموریت → رنگ تم اپلیکیشن (primaryColor)
-    // - انجام شده → خاکستری ملایم
-    // - عادت معمولی → رنگ انتخاب شده توسط کاربر
     Color getCardColor() {
-      if (widget.isCompleted) {
-        return const Color(0xFFF5F5F5);
-      }
-      if (isChallenge || isQuest) {
-        return primaryColor; // ✅ رنگ تم اپلیکیشن
-      }
+      if (widget.isCompleted) return const Color(0xFFF5F5F5);
+      if (isChallenge || isQuest) return primaryColor;
       final savedColor = widget.habit.backgroundColor;
-      if (savedColor != 0) {
-        return Color(savedColor);
-      }
+      if (savedColor != 0) return Color(savedColor);
       return primaryColor;
     }
 
     final Color cardColor = getCardColor();
-
-    // ✅ رنگ آیکون داخل دایره مشکی = هم‌رنگ باکس کارت
     final Color iconColor =
         widget.isCompleted ? Colors.grey.shade500 : cardColor;
-
     const Color textColor = Color(0xFF090909);
 
     return Container(
@@ -112,13 +102,11 @@ class _HabitCardState extends State<HabitCard>
             behavior: HitTestBehavior.opaque,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              // ✅ اجبار به LTR برای اینکه دایره در راست قرار گیرد
               child: Directionality(
                 textDirection: TextDirection.ltr,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // ✅ MAIN PILL - سمت چپ
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -140,7 +128,6 @@ class _HabitCardState extends State<HabitCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ردیف اول: عنوان + برچسب
                             Row(
                               children: [
                                 if (isChallenge || isQuest) ...[
@@ -160,7 +147,6 @@ class _HabitCardState extends State<HabitCard>
                                   ),
                                   const SizedBox(width: 4),
                                 ],
-                                // ✅ عنوان - راست‌چین و با اولویت پر کردن فضا
                                 Expanded(
                                   child: Text(
                                     widget.habit.title,
@@ -175,14 +161,12 @@ class _HabitCardState extends State<HabitCard>
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    // ✅ اجبار به RTL برای متن فارسی
                                     textDirection: TextDirection.rtl,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
-                            // ردیف دوم: XP + تگ‌ها
                             Row(
                               children: [
                                 if (!widget.isCompleted)
@@ -263,13 +247,12 @@ class _HabitCardState extends State<HabitCard>
                         ),
                       ),
                     ),
-
-                    // ✅ فاصله بین باکس کارت و دایره آیکون
                     const SizedBox(width: 10),
-
-                    // ✅ دایره آیکون - سمت راست
-                    GestureDetector(
+                    AnimatedCheckOverlay(
                       onTap: widget.onToggle,
+                      checkColor: widget.isCompleted
+                          ? Colors.white
+                          : const Color(0xFF090909),
                       child: Container(
                         width: 38,
                         height: 38,
@@ -320,62 +303,138 @@ class _HabitCardState extends State<HabitCard>
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: primaryColor.withOpacity(0.15),
+                    color: Colors.grey.shade200,
                     width: 1,
                   ),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildActionButton(
-                    icon: widget.isCompleted
-                        ? Icons.refresh
-                        : Icons.check_circle_outline,
-                    label: widget.isCompleted ? 'برگردان' : 'انجام',
-                    color: widget.isCompleted ? Colors.orange : primaryColor,
-                    onTap: widget.onToggle,
-                    isCompleted: widget.isCompleted,
+                  // ─── دکمه‌های عملیات ───
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: widget.isCompleted
+                            ? Icons.refresh
+                            : Icons.check_circle_outline,
+                        label: widget.isCompleted ? 'برگردان' : 'انجام',
+                        color:
+                            widget.isCompleted ? Colors.orange : primaryColor,
+                        onTap: widget.onToggle,
+                        isCompleted: widget.isCompleted,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.info_outline,
+                        label: 'جزئیات',
+                        color: const Color(0xFF3B82F6),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  HabitDetailScreen(habit: widget.habit),
+                            ),
+                          );
+                        },
+                        isCompleted: widget.isCompleted,
+                      ),
+                      if (!isChallenge && !isQuest && widget.onTimer != null)
+                        _buildActionButton(
+                          icon: Icons.timer_outlined,
+                          label: 'تایمر',
+                          color: const Color(0xFF8B5CF6),
+                          onTap: widget.onTimer!,
+                          isCompleted: widget.isCompleted,
+                        ),
+                      if (!isChallenge && !isQuest)
+                        _buildActionButton(
+                          icon: Icons.edit_outlined,
+                          label: 'ویرایش',
+                          color: const Color(0xFFF59E0B),
+                          onTap: widget.onEdit,
+                          isCompleted: widget.isCompleted,
+                        ),
+                      if (!isChallenge && !isQuest)
+                        _buildActionButton(
+                          icon: Icons.delete_outline,
+                          label: 'حذف',
+                          color: const Color(0xFFEF4444),
+                          onTap: widget.onDelete,
+                          isCompleted: widget.isCompleted,
+                        ),
+                    ],
                   ),
-                  _buildActionButton(
-                    icon: Icons.info_outline,
-                    label: 'جزئیات',
-                    color: const Color(0xFF3B82F6),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              HabitDetailScreen(habit: widget.habit),
+
+                  // ✅ لیست زیرعادت‌ها (بدون عنوان)
+                  if (widget.habit.subHabits.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    ...widget.habit.subHabits.map((subHabit) {
+                      final isChecked =
+                          widget.habit.completedSubHabits.contains(subHabit);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: InkWell(
+                          onTap: widget.isCompleted
+                              ? null
+                              : () => widget.onToggleSubHabit?.call(subHabit),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isChecked
+                                        ? primaryColor
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: isChecked
+                                          ? primaryColor
+                                          : Colors.grey.shade400,
+                                      width: 1.8,
+                                    ),
+                                  ),
+                                  child: isChecked
+                                      ? const Icon(
+                                          Icons.check,
+                                          size: 14,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    subHabit,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isChecked
+                                          ? Colors.grey.shade500
+                                          : const Color(0xFF090909),
+                                      decoration: isChecked
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
-                    },
-                    isCompleted: widget.isCompleted,
-                  ),
-                  if (!isChallenge && !isQuest && widget.onTimer != null)
-                    _buildActionButton(
-                      icon: Icons.timer_outlined,
-                      label: 'تایمر',
-                      color: const Color(0xFF8B5CF6),
-                      onTap: widget.onTimer!,
-                      isCompleted: widget.isCompleted,
-                    ),
-                  if (!isChallenge && !isQuest)
-                    _buildActionButton(
-                      icon: Icons.edit_outlined,
-                      label: 'ویرایش',
-                      color: const Color(0xFFF59E0B),
-                      onTap: widget.onEdit,
-                      isCompleted: widget.isCompleted,
-                    ),
-                  if (!isChallenge && !isQuest)
-                    _buildActionButton(
-                      icon: Icons.delete_outline,
-                      label: 'حذف',
-                      color: const Color(0xFFEF4444),
-                      onTap: widget.onDelete,
-                      isCompleted: widget.isCompleted,
-                    ),
+                    }),
+                  ],
                 ],
               ),
             ),
@@ -385,18 +444,13 @@ class _HabitCardState extends State<HabitCard>
     );
   }
 
-  // ==================== ویجت‌های کمکی ====================
-
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
     bool isCompleted = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 6,
-        vertical: 2,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.5),
         borderRadius: BorderRadius.circular(10),
@@ -451,11 +505,7 @@ class _HabitCardState extends State<HabitCard>
                 ),
               ],
             ),
-            child: Icon(
-              icon,
-              size: 16,
-              color: Colors.white,
-            ),
+            child: Icon(icon, size: 16, color: Colors.white),
           ),
           const SizedBox(height: 3),
           Text(
@@ -470,8 +520,6 @@ class _HabitCardState extends State<HabitCard>
       ),
     );
   }
-
-  // ==================== متدهای کمکی ====================
 
   IconData _getIconData(String iconName) {
     switch (iconName) {

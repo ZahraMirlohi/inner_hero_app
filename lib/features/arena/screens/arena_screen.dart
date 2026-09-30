@@ -192,7 +192,7 @@ class _ArenaScreenState extends State<ArenaScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FCEB),
-      bottomNavigationBar: const SizedBox(height: 130),
+      bottomNavigationBar: const SizedBox(height: 150),
       body: Column(
         children: [
           // هدر تقویم
