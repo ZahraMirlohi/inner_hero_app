@@ -1,7 +1,9 @@
 // lib/features/explore/widgets/quest_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
+import '/providers/theme_provider.dart';
 
 class QuestCard extends StatelessWidget {
   final Quest quest;
@@ -27,6 +29,8 @@ class QuestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+
     // ═══════════════════════════════════════════════════════
     // 🎨 رنگ‌بندی بدنه کارت
     // ═══════════════════════════════════════════════════════
@@ -36,20 +40,27 @@ class QuestCard extends StatelessWidget {
     final Color subtleTextColor;
 
     if (isCompleted) {
-      bodyColor = const Color(0xFFF0FDF4);
-      borderColor = Colors.green.shade200;
+      // ✅ کارت تکمیل شده
+      bodyColor = theme.isDarkMode
+          ? const Color(0xFF1B3D2A) // سبز تیره
+          : const Color(0xFFF0FDF4);
+      borderColor =
+          theme.isDarkMode ? Colors.green.shade700 : Colors.green.shade200;
       borderWidth = 2;
-      subtleTextColor = Colors.green.shade700;
+      subtleTextColor =
+          theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
     } else if (isActive) {
+      // ✅ کارت فعال (رنگی)
       bodyColor = primaryColor;
       borderColor = Colors.transparent;
       borderWidth = 0;
       subtleTextColor = Colors.black.withValues(alpha: 0.65);
     } else {
-      bodyColor = Colors.white;
-      borderColor = Colors.white;
+      // ✅ کارت جدید (تم‌محور)
+      bodyColor = theme.cardColor;
+      borderColor = theme.cardColor;
       borderWidth = 2.5;
-      subtleTextColor = const Color(0xFF73786B);
+      subtleTextColor = theme.textSecondaryColor;
     }
 
     return GestureDetector(
@@ -64,7 +75,9 @@ class QuestCard extends StatelessWidget {
                   ? primaryColor.withValues(alpha: 0.30)
                   : isCompleted
                       ? Colors.green.withValues(alpha: 0.15)
-                      : Colors.black.withValues(alpha: 0.08),
+                      : Colors.black.withValues(
+                          alpha: theme.isDarkMode ? 0.30 : 0.08,
+                        ),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -79,9 +92,6 @@ class QuestCard extends StatelessWidget {
               width: borderWidth,
             ),
           ),
-          // ═══════════════════════════════════════════════════
-          // 📐 چیدمان Row: اطلاعات چپ + هدر راست
-          // ═══════════════════════════════════════════════════
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -93,13 +103,14 @@ class QuestCard extends StatelessWidget {
                     isActive,
                     isCompleted,
                     subtleTextColor,
+                    theme,
                   ),
                 ),
 
                 const SizedBox(width: 12),
 
-                // ─── بخش راست: هدر (آیکون + عنوان) ───
-                _buildRightHeader(isActive, isCompleted),
+                // ─── بخش راست: هدر ───
+                _buildRightHeader(isActive, isCompleted, theme),
               ],
             ),
           ),
@@ -108,13 +119,11 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📋 بخش چپ: اطلاعات
-  // ═══════════════════════════════════════════════════════════
   Widget _buildLeftContent(
     bool isActive,
     bool isCompleted,
     Color subtleTextColor,
+    ThemeProvider theme,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,19 +142,19 @@ class QuestCard extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        // ─── نوار پیشرفت (فقط برای فعال) ───
+        // ─── نوار پیشرفت ───
         if (isActive && progress != null) ...[
-          _buildProgressBar(progress!),
+          _buildProgressBar(progress!, theme),
           const SizedBox(height: 12),
         ],
 
-        // ─── بج تکمیل (برای completed) ───
+        // ─── بج تکمیل ───
         if (isCompleted) ...[
-          _buildCompletedBanner(),
+          _buildCompletedBanner(theme),
           const SizedBox(height: 12),
         ],
 
-        // ─── تگ‌های اطلاعاتی (عمودی) ───
+        // ─── تگ‌های اطلاعاتی ───
         Wrap(
           spacing: 6,
           runSpacing: 6,
@@ -155,6 +164,7 @@ class QuestCard extends StatelessWidget {
               label: '${quest.targetCount} روز',
               isActive: isActive,
               isCompleted: isCompleted,
+              theme: theme,
             ),
             _buildInfoChip(
               icon: Icons.stars,
@@ -162,6 +172,7 @@ class QuestCard extends StatelessWidget {
               isActive: isActive,
               isCompleted: isCompleted,
               iconColor: const Color(0xFFFFA500),
+              theme: theme,
             ),
             if (isCompleted)
               _buildInfoChip(
@@ -170,20 +181,23 @@ class QuestCard extends StatelessWidget {
                 isActive: false,
                 isCompleted: true,
                 iconColor: const Color(0xFF9B59B6),
+                theme: theme,
               ),
           ],
         ),
 
         const SizedBox(height: 12),
 
-        // ─── دکمه (شروع/غیرفعال/تکمیل) ───
-        _buildActionButton(isActive, isCompleted),
+        _buildActionButton(isActive, isCompleted, theme),
       ],
     );
   }
 
-  Widget _buildRightHeader(bool isActive, bool isCompleted) {
-    // رنگ‌بندی بر اساس حالت
+  Widget _buildRightHeader(
+    bool isActive,
+    bool isCompleted,
+    ThemeProvider theme,
+  ) {
     final Color headerBg;
     final Color headerBorder;
     final double headerBorderWidth;
@@ -199,23 +213,25 @@ class QuestCard extends StatelessWidget {
       iconColor = Colors.white;
       titleColor = const Color(0xFF090909);
     } else if (isCompleted) {
-      headerBg = Colors.white;
+      headerBg = theme.isDarkMode ? const Color(0xFF1B3D2A) : Colors.white;
       headerBorder = Colors.green;
       headerBorderWidth = 2;
       iconBoxBg = const Color(0xFF090909);
       iconColor = Colors.white;
-      titleColor = const Color(0xFF090909);
+      titleColor = theme.textColor;
     } else {
-      headerBg = Colors.white;
-      headerBorder = const Color(0xFF090909);
+      // ✅ کارت جدید (تم‌محور)
+      headerBg = theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white;
+      headerBorder =
+          theme.isDarkMode ? const Color(0xFF444444) : const Color(0xFF090909);
       headerBorderWidth = 2;
-      iconBoxBg = primaryColor; // ✅ سبز (رنگ تم) — قبلاً 0xFF090909 بود
+      iconBoxBg = primaryColor;
       iconColor = Colors.white;
-      titleColor = const Color(0xFF090909);
+      titleColor = theme.textColor;
     }
 
     return SizedBox(
-      width: 90, // ✅ کمی پهن‌تر برای فونت بزرگ‌تر
+      width: 90,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
@@ -227,7 +243,9 @@ class QuestCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
+              color: Colors.black.withValues(
+                alpha: theme.isDarkMode ? 0.3 : 0.06,
+              ),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -238,9 +256,8 @@ class QuestCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ─── جعبه آیکون ───
             Container(
-              width: 34, // ✅ از 32 به 34
+              width: 34,
               height: 34,
               decoration: BoxDecoration(
                 color: iconBoxBg,
@@ -257,19 +274,16 @@ class QuestCard extends StatelessWidget {
                 child: Icon(
                   _getIconData(quest.icon),
                   color: iconColor,
-                  size: 18, // ✅ از 17 به 18
+                  size: 18,
                 ),
               ),
             ),
-
             const SizedBox(height: 6),
-
-            // ─── عنوان (فونت بزرگ‌تر) ───
             Text(
               quest.title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12, // ✅ از 10 به 12
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: titleColor,
                 height: 2,
@@ -278,8 +292,6 @@ class QuestCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               softWrap: true,
             ),
-
-            // ─── بج تکمیل (برای completed) ───
             if (isCompleted) ...[
               const SizedBox(height: 6),
               Container(
@@ -318,10 +330,7 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📊 نوار پیشرفت
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildProgressBar(int currentProgress) {
+  Widget _buildProgressBar(int currentProgress, ThemeProvider theme) {
     final double value = quest.targetCount > 0
         ? (currentProgress / quest.targetCount).clamp(0.0, 1.0)
         : 0.0;
@@ -356,10 +365,7 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ✅ بنر تکمیل
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildCompletedBanner() {
+  Widget _buildCompletedBanner(ThemeProvider theme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -381,7 +387,9 @@ class QuestCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Colors.green.shade700,
+              color: theme.isDarkMode
+                  ? Colors.green.shade300
+                  : Colors.green.shade700,
             ),
           ),
         ],
@@ -389,14 +397,12 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🏷️ Info Chip
-  // ═══════════════════════════════════════════════════════════
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
     required bool isActive,
     required bool isCompleted,
+    required ThemeProvider theme,
     Color? iconColor,
   }) {
     final Color bgColor;
@@ -407,10 +413,14 @@ class QuestCard extends StatelessWidget {
       fgColor = const Color(0xFF090909);
     } else if (isCompleted) {
       bgColor = Colors.green.withValues(alpha: 0.12);
-      fgColor = Colors.green.shade700;
+      fgColor =
+          theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
     } else {
-      bgColor = const Color(0xFF090909).withValues(alpha: 0.06);
-      fgColor = const Color(0xFF090909);
+      // ✅ کارت جدید (تم‌محور)
+      bgColor = theme.isDarkMode
+          ? const Color(0xFF2A2A2A)
+          : const Color(0xFF090909).withValues(alpha: 0.06);
+      fgColor = theme.textColor;
     }
 
     return Container(
@@ -441,10 +451,11 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🎯 دکمه اقدام (شروع/غیرفعال/تکمیل)
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildActionButton(bool isActive, bool isCompleted) {
+  Widget _buildActionButton(
+    bool isActive,
+    bool isCompleted,
+    ThemeProvider theme,
+  ) {
     if (isCompleted) {
       return _buildCompletedBadge();
     } else if (isActive && onCancel != null) {
@@ -455,9 +466,6 @@ class QuestCard extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🚀 دکمه شروع
-  // ═══════════════════════════════════════════════════════════
   Widget _buildStartButton() {
     return GestureDetector(
       onTap: onStart,
@@ -465,7 +473,7 @@ class QuestCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF090909), // ✅ مشکی
+          color: const Color(0xFF090909),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -495,9 +503,6 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ⚫ دکمه غیرفعال
-  // ═══════════════════════════════════════════════════════════
   Widget _buildCancelButton() {
     return GestureDetector(
       onTap: onCancel,
@@ -533,9 +538,6 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ✅ بج تکمیل
-  // ═══════════════════════════════════════════════════════════
   Widget _buildCompletedBadge() {
     return Container(
       width: double.infinity,
@@ -574,9 +576,6 @@ class QuestCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🎨 آیکون‌ها
-  // ═══════════════════════════════════════════════════════════
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'fitness_center':

@@ -26,6 +26,7 @@ import '/services/supabase_service.dart';
 import '/services/audio_player_service.dart';
 import '/services/date_service.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 // ✅ مدل‌ها
 import '../models/message_model.dart';
@@ -856,6 +857,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor, // ✅
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -872,11 +874,12 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'ارسال شماره تماس',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
+                color: theme.textColor, // ✅
               ),
             ),
           ],
@@ -886,30 +889,38 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           children: [
             TextField(
               controller: nameController,
+              style: TextStyle(color: theme.textColor), // ✅
               decoration: InputDecoration(
                 hintText: 'نام مخاطب',
+                hintStyle: TextStyle(color: theme.textSecondaryColor), // ✅
                 prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A) // ✅
+                    : Colors.grey.shade50,
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneController,
+              style: TextStyle(color: theme.textColor), // ✅
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 hintText: 'شماره تماس',
+                hintStyle: TextStyle(color: theme.textSecondaryColor), // ✅
                 prefixIcon: Icon(Icons.phone_outlined, color: primaryColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A) // ✅
+                    : Colors.grey.shade50,
               ),
             ),
           ],
@@ -2023,6 +2034,7 @@ ${data.completionMessage}
   void _showHeaderMenu(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: theme.surfaceColor, // ✅
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -2038,17 +2050,18 @@ ${data.completionMessage}
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor, // ✅
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'گزینه‌های گفتگو',
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
+                    color: theme.textColor, // ✅
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2063,8 +2076,9 @@ ${data.completionMessage}
                     _toggleMuteChat(primaryColor);
                   },
                   color: _isChatMuted ? Colors.green : primaryColor,
+                  theme: theme, // ✅
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: theme.borderColor), // ✅
                 _buildMenuTile(
                   icon: Icons.search,
                   title: 'جستجو در گفتگو',
@@ -2074,8 +2088,9 @@ ${data.completionMessage}
                     _showSearchInChat(primaryColor);
                   },
                   color: primaryColor,
+                  theme: theme,
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: theme.borderColor),
                 _buildMenuTile(
                   icon: Icons.delete_sweep,
                   title: 'پاک کردن تاریخچه',
@@ -2085,8 +2100,9 @@ ${data.completionMessage}
                     _confirmClearHistory(primaryColor);
                   },
                   color: Colors.orange,
+                  theme: theme,
                 ),
-                const Divider(height: 1),
+                Divider(height: 1, color: theme.borderColor),
                 _buildMenuTile(
                   icon: Icons.exit_to_app,
                   title: 'حذف گفتگو',
@@ -2096,6 +2112,7 @@ ${data.completionMessage}
                     _confirmDeleteConversation(primaryColor);
                   },
                   color: Colors.red,
+                  theme: theme,
                 ),
                 const SizedBox(height: 8),
               ],
@@ -2112,6 +2129,7 @@ ${data.completionMessage}
     required String subtitle,
     required VoidCallback onTap,
     required Color color,
+    required ThemeProvider theme, // ✅ پارامتر جدید
   }) {
     return ListTile(
       leading: Container(
@@ -2124,16 +2142,24 @@ ${data.completionMessage}
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w500,
+          color: theme.textColor, // ✅
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        style: TextStyle(
+          fontSize: 12,
+          color: theme.textSecondaryColor, // ✅
+        ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: theme.textSecondaryColor, // ✅
+        size: 20,
+      ),
       onTap: onTap,
     );
   }
@@ -2157,6 +2183,7 @@ ${data.completionMessage}
   // ==================== جستجو در چت ====================
   void _showSearchInChat(Color primaryColor) {
     final TextEditingController searchController = TextEditingController();
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     final FocusNode focusNode = FocusNode();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2218,7 +2245,9 @@ ${data.completionMessage}
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: Colors.grey.shade50,
+                fillColor: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade50,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
@@ -2347,6 +2376,10 @@ ${data.completionMessage}
   }
 
   void _showSearchResultsSheet(List<ChatMessage> results, String query) {
+    // ✅ CalendarProvider رو بگیرید
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -2432,22 +2465,22 @@ ${data.completionMessage}
                                 msg.senderName ?? 'کاربر',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: Colors.grey.shade600,
+                                  color: theme.textSecondaryColor, // ✅
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                _formatTime(msg.createdAt),
+                                _formatTime(msg.createdAt, calendar),
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: Colors.grey.shade500,
+                                  color: theme.textSecondaryColor, // ✅
                                 ),
                               ),
                             ],
                           ),
-                          trailing: const Icon(
+                          trailing: Icon(
                             Icons.chevron_right,
-                            color: Colors.grey,
+                            color: theme.textSecondaryColor, // ✅
                             size: 20,
                           ),
                           onTap: () {
@@ -2589,23 +2622,36 @@ ${data.completionMessage}
     );
   }
 
+// lib/features/chat/screens/buddy_chat_screen.dart
+
+  bool _isDeleting = false; // ✅ flag جدید
+
   Future<void> _deleteConversation() async {
-    if (_userId == null) return;
+    if (_userId == null || _isDeleting) return; // ✅ چک flag
+
+    setState(() {
+      _isDeleting = true;
+    });
 
     try {
       await _chatService.deleteConversationForBoth(widget.conversation.id);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('گفتگو حذف شد 🗑️'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('گفتگو حذف شد 🗑️'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // ✅ برگشت با true
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا: ${e.toString()}'),
@@ -4203,11 +4249,12 @@ ${data.completionMessage}
   // ==================== ویرایش و حذف ====================
   void _editMessage(ChatMessage message, Color primaryColor) {
     final controller = TextEditingController(text: message.content);
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         title: Row(
           children: [
             Container(
@@ -4249,7 +4296,9 @@ ${data.completionMessage}
               borderSide: BorderSide(color: primaryColor, width: 2),
             ),
             contentPadding: const EdgeInsets.all(14),
-            fillColor: Colors.grey.shade50,
+            fillColor: theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : Colors.grey.shade50,
             filled: true,
           ),
         ),
@@ -4339,12 +4388,15 @@ ${message.content}
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          color: theme.systemBubble, // ✅ جدید
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.textSecondaryColor, // ✅
+          ),
         ),
       );
     }
@@ -4983,35 +5035,34 @@ ${message.content}
     });
   }
 
-  Widget _buildDateMarker(DateTime date, ThemeProvider theme) {
-    return FutureBuilder<String>(
-      future: _getDateLabel(date),
-      builder: (context, snapshot) {
-        final label = snapshot.data ?? '...';
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: theme.surfaceColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+  Widget _buildDateMarker(
+    DateTime date,
+    ThemeProvider theme,
+    CalendarProvider calendar,
+  ) {
+    final label = _getDateLabel(date, calendar);
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: theme.textSecondaryColor,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        );
-      },
+        ],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: theme.textSecondaryColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 
@@ -5582,23 +5633,23 @@ ${message.content}
     IconData icon,
     String value,
     String label,
-    Color color,
+    Color textColor,
   ) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: textColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 18),
+            Icon(icon, color: textColor, size: 18),
             const SizedBox(height: 2),
             Text(
               value,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -5606,7 +5657,7 @@ ${message.content}
             Text(
               label,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
+                color: textColor.withValues(alpha: 0.7),
                 fontSize: 10,
               ),
             ),
@@ -5641,17 +5692,27 @@ ${message.content}
     final jalaliToday = Jalali.fromDateTime(DateTime.now());
     final todayIndex = jalaliToday.weekDay - 1;
 
+    // ✅ رنگ‌های استاندارد با ChatColors
+    final Color bgColor =
+        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme)
+        : ChatColors.otherBubbleText(theme);
+    final Color textSecondary = isMe
+        ? ChatColors.myBubbleTextSecondary(theme)
+        : ChatColors.otherBubbleTextSecondary(theme);
+
     return Container(
       width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF090909),
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 12,
-            spreadRadius: 2,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -5661,12 +5722,12 @@ ${message.content}
         children: [
           Row(
             children: [
-              Icon(Icons.trending_up, color: primaryColor, size: 16),
+              Icon(Icons.trending_up, color: textColor, size: 16),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'پیشرفت روزانه',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textColor,
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
@@ -5675,20 +5736,20 @@ ${message.content}
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: textColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.local_fire_department,
-                      color: Colors.orange,
+                      color: textColor,
                       size: 12,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '$streak روز',
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                      style: TextStyle(color: textColor, fontSize: 11),
                     ),
                   ],
                 ),
@@ -5702,14 +5763,14 @@ ${message.content}
                 Icons.check_circle,
                 '$completed',
                 'انجام شده',
-                Colors.green,
+                textColor,
               ),
               const SizedBox(width: 8),
               _buildProgressStat(
                 Icons.pending,
                 '${total - completed}',
                 'باقیمانده',
-                Colors.orange,
+                textColor,
               ),
             ],
           ),
@@ -5718,8 +5779,8 @@ ${message.content}
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: total > 0 ? completed / total : 0,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              color: primaryColor,
+              backgroundColor: textColor.withValues(alpha: 0.15),
+              color: textColor,
               minHeight: 4,
             ),
           ),
@@ -5727,7 +5788,7 @@ ${message.content}
           Text(
             '${total > 0 ? ((completed / total) * 100).toInt() : 0}% تکمیل شده',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: textSecondary,
               fontSize: 10,
             ),
           ),
@@ -5748,18 +5809,18 @@ ${message.content}
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isActive
-                            ? primaryColor
+                            ? textColor
                             : isToday
-                                ? Colors.white.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.1),
+                                ? textColor.withValues(alpha: 0.2)
+                                : textColor.withValues(alpha: 0.08),
                         border: isToday && !isActive
-                            ? Border.all(color: Colors.white, width: 1.5)
+                            ? Border.all(color: textColor, width: 1.5)
                             : null,
                       ),
                       child: isActive
-                          ? const Icon(
+                          ? Icon(
                               Icons.check,
-                              color: Colors.white,
+                              color: bgColor,
                               size: 12,
                             )
                           : null,
@@ -5772,8 +5833,8 @@ ${message.content}
                         fontWeight:
                             isActive ? FontWeight.bold : FontWeight.normal,
                         color: isActive
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.5),
+                            ? textColor
+                            : textColor.withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -5883,6 +5944,7 @@ ${message.content}
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
     final Color accentColor =
         theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
 
@@ -5929,19 +5991,19 @@ ${message.content}
                                             _buildDateMarker(
                                               message.createdAt,
                                               theme,
+                                              calendar, // ✅ پاس بدید
                                             ),
                                           );
                                         } else {
                                           final nextMessage = _messages[
                                               _messages.length - 2 - index];
-                                          if (!_isSameDay(
-                                            message.createdAt,
-                                            nextMessage.createdAt,
-                                          )) {
+                                          if (!_isSameDay(message.createdAt,
+                                              nextMessage.createdAt)) {
                                             widgets.add(
                                               _buildDateMarker(
                                                 message.createdAt,
                                                 theme,
+                                                calendar, // ✅ پاس بدید
                                               ),
                                             );
                                           }
@@ -6170,7 +6232,10 @@ ${message.content}
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      // ✅ با تم هماهنگ
+                      color: theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Center(
@@ -6269,7 +6334,10 @@ ${message.content}
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      // ✅ با تم هماهنگ
+                      color: theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Column(
@@ -6282,7 +6350,10 @@ ${message.content}
                         const SizedBox(height: 4),
                         Text(
                           gif['name']!,
-                          style: const TextStyle(fontSize: 10),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.textSecondaryColor,
+                          ),
                         ),
                       ],
                     ),
@@ -6424,10 +6495,8 @@ ${message.content}
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: _isSending ||
-                                (_messageController.text.isEmpty &&
-                                    _replyToMessage == null)
-                            ? Colors.grey.shade300
+                        color: _isSending || _messageController.text.isEmpty
+                            ? theme.disabledButtonBackground // ✅ جدید
                             : primaryColor,
                         shape: BoxShape.circle,
                       ),
@@ -6634,92 +6703,38 @@ ${message.content}
   }
 
   // ==================== متدهای کمکی ====================
-  String _formatTime(DateTime time) {
+  String _formatTime(DateTime time, CalendarProvider calendar) {
     final now = DateTime.now();
-    final diff = now.difference(time);
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(time.year, time.month, time.day);
+    final diff = today.difference(target).inDays;
 
-    if (diff.inDays == 0) {
+    if (diff == 0) {
+      // امروز: ساعت
       return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    } else if (diff.inDays == 1) {
-      return 'دیروز';
-    } else if (diff.inDays < 7) {
-      return '${diff.inDays} روز پیش';
-    } else if (diff.inDays < 30) {
-      return '${diff.inDays ~/ 7} هفته پیش';
+    } else if (diff == 1) {
+      // دیروز
+      return calendar.isJalali ? 'دیروز' : 'Yesterday';
     } else {
-      return '${diff.inDays ~/ 30} ماه پیش';
+      // ✅ قبل‌تر: تاریخ کامل با نام ماه
+      return calendar.formatWithMonthName(time);
     }
   }
 
-  Future<String> _getDateLabel(DateTime date) async {
-    final calendarType = await DateService.getCalendarType();
+  /// ✅ لیبل تاریخ بین پیام‌ها: امروز، دیروز، یا تاریخ کامل
+  String _getDateLabel(DateTime date, CalendarProvider calendar) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(target).inDays;
 
-    if (calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(date);
-      final now = Jalali.now();
-
-      if (jalali.year == now.year &&
-          jalali.month == now.month &&
-          jalali.day == now.day) {
-        return 'امروز';
-      }
-
-      final today = DateTime.now();
-      final yesterdayDate = today.subtract(const Duration(days: 1));
-      final jalaliYesterday = Jalali.fromDateTime(yesterdayDate);
-
-      if (jalali.year == jalaliYesterday.year &&
-          jalali.month == jalaliYesterday.month &&
-          jalali.day == jalaliYesterday.day) {
-        return 'دیروز';
-      }
-
-      const monthNames = [
-        'فروردین',
-        'اردیبهشت',
-        'خرداد',
-        'تیر',
-        'مرداد',
-        'شهریور',
-        'مهر',
-        'آبان',
-        'آذر',
-        'دی',
-        'بهمن',
-        'اسفند',
-      ];
-      return '${jalali.day} ${monthNames[jalali.month - 1]}';
+    if (diff == 0) {
+      return calendar.isJalali ? 'امروز' : 'Today';
+    } else if (diff == 1) {
+      return calendar.isJalali ? 'دیروز' : 'Yesterday';
     } else {
-      final now = DateTime.now();
-
-      if (date.year == now.year &&
-          date.month == now.month &&
-          date.day == now.day) {
-        return 'Today';
-      }
-
-      final yesterday = now.subtract(const Duration(days: 1));
-      if (date.year == yesterday.year &&
-          date.month == yesterday.month &&
-          date.day == yesterday.day) {
-        return 'Yesterday';
-      }
-
-      const monthNames = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec',
-      ];
-      return '${date.day} ${monthNames[date.month - 1]}';
+      // ✅ تاریخ کامل با نام ماه
+      return calendar.formatWithMonthName(date);
     }
   }
 
@@ -6982,6 +6997,15 @@ ${message.content}
       options: const LinkifyOptions(humanize: false),
     );
 
+    // ✅ رنگ متن پویا بر اساس ChatColors
+    final Color textColor = isMe
+        ? ChatColors.myBubbleText(theme) // مشکی (روز و شب)
+        : ChatColors.otherBubbleText(theme); // theme.textColor
+
+    final Color linkColor = isMe
+        ? const Color(0xFF090909) // مشکی برای لینک
+        : primaryColor;
+
     return Wrap(
       children: elements.map((element) {
         if (element is LinkableElement) {
@@ -6991,9 +7015,10 @@ ${message.content}
             child: Text(
               element.text,
               style: TextStyle(
-                color: isMe ? Colors.white : primaryColor,
+                color: linkColor,
                 fontSize: 14,
                 decoration: TextDecoration.underline,
+                decorationColor: linkColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -7002,7 +7027,7 @@ ${message.content}
           return Text(
             element.text,
             style: TextStyle(
-              color: isMe ? Colors.white : theme.textColor,
+              color: textColor,
               fontSize: 14,
             ),
           );

@@ -1,5 +1,9 @@
+// lib/features/explore/widgets/daily_spark.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
 
 class DailySpark extends StatefulWidget {
   const DailySpark({super.key});
@@ -22,21 +26,32 @@ class _DailySparkState extends State<DailySpark> {
   Future<void> _loadDailySpark() async {
     try {
       final spark = await _supabase.getDailySpark();
-      setState(() {
-        _dailySpark = spark;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _dailySpark = spark;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+
     if (_isLoading) {
-      return const SizedBox(
+      return SizedBox(
         height: 80,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: theme.primaryColor,
+          ),
+        ),
       );
     }
 
@@ -46,21 +61,30 @@ class _DailySparkState extends State<DailySpark> {
 
     final spark = _dailySpark[DateTime.now().day % _dailySpark.length];
 
+    // ✅ در تم شب از گرادیانت تیره‌تر استفاده کن
+    final List<Color> gradientColors = theme.isDarkMode
+        ? [
+            const Color(0xFFB85C1F), // نارنجی تیره
+            const Color(0xFFA84040), // قرمز تیره
+          ]
+        : [
+            const Color(0xFFFFB347).withAlpha(230),
+            const Color(0xFFFF6B6B).withAlpha(230),
+          ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFFFB347).withAlpha(230),
-            const Color(0xFFFF6B6B).withAlpha(230),
-          ],
+          colors: gradientColors,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF6B6B).withAlpha(40),
+            color:
+                const Color(0xFFFF6B6B).withAlpha(theme.isDarkMode ? 60 : 40),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -79,8 +103,8 @@ class _DailySparkState extends State<DailySpark> {
               spark['type'] == 'quote'
                   ? Icons.format_quote
                   : spark['type'] == 'challenge'
-                  ? Icons.bolt
-                  : Icons.lightbulb,
+                      ? Icons.bolt
+                      : Icons.lightbulb,
               color: Colors.white,
               size: 28,
             ),
@@ -94,9 +118,12 @@ class _DailySparkState extends State<DailySpark> {
                   spark['type'] == 'quote'
                       ? '✨ جرقه روزانه'
                       : spark['type'] == 'challenge'
-                      ? '⚡ چالش روزانه'
-                      : '💡 واقعیت علمی',
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                          ? '⚡ چالش روزانه'
+                          : '💡 واقعیت علمی',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(

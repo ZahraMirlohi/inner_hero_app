@@ -1,6 +1,6 @@
 // lib/services/audio_player_service.dart
 
-import 'dart:async'; // ✅ این خط را اضافه کنید
+import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';
 
@@ -23,13 +23,11 @@ class AudioPlayerService extends ChangeNotifier {
   String? _currentFileName;
   bool _isDisposed = false;
 
-  // ✅ Stream subscriptions برای مدیریت بهتر
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<ProcessingState>? _processingStateSubscription;
 
-  // ✅ Getters
   bool get isPlaying => _isPlaying;
   bool get isLoading => _isLoading;
   bool get isBuffering => _isBuffering;
@@ -39,17 +37,15 @@ class AudioPlayerService extends ChangeNotifier {
   String? get currentFileName => _currentFileName;
 
   void _init() {
-    // ✅ گوش دادن به position
     _positionSubscription = _player.positionStream.listen((position) {
       if (_isDisposed) return;
       _position = position;
       notifyListeners();
     });
 
-    // ✅ گوش دادن به duration
     _durationSubscription = _player.durationStream.listen((duration) {
       if (_isDisposed) return;
-      if (duration != null) {
+      if (duration != null && duration.inMilliseconds > 0) {
         _duration = duration;
         _isLoading = false;
         _isBuffering = false;
@@ -57,12 +53,10 @@ class AudioPlayerService extends ChangeNotifier {
       }
     });
 
-    // ✅ گوش دادن به playerState (برای isPlaying)
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       if (_isDisposed) return;
       _isPlaying = state.playing;
 
-      // ✅ اگر پلی شد و duration مشخص نیست، isLoading = true
       if (_isPlaying && _duration.inMilliseconds == 0) {
         _isLoading = true;
       } else if (_duration.inMilliseconds > 0) {
@@ -72,16 +66,13 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
     });
 
-    // ✅ گوش دادن به processingState (برای buffering و خطا)
     _processingStateSubscription = _player.processingStateStream.listen((
       state,
     ) {
       if (_isDisposed) return;
 
-      // ✅ وضعیت buffering
       _isBuffering = state == ProcessingState.buffering;
 
-      // ✅ اگر به پایان رسید
       if (state == ProcessingState.completed) {
         _isPlaying = false;
         _position = Duration.zero;
@@ -90,7 +81,6 @@ class AudioPlayerService extends ChangeNotifier {
         notifyListeners();
       }
 
-      // ✅ اگر خطا رخ داد
       if (state == ProcessingState.idle && _isLoading) {
         _isLoading = false;
         _isBuffering = false;
@@ -108,19 +98,16 @@ class AudioPlayerService extends ChangeNotifier {
 
     debugPrint('🎵 [AudioPlayerService] play() called for: $url');
 
-    // ✅ اگر همان آهنگ در حال پخش است
     if (_currentUrl == url && _isPlaying) {
       debugPrint('🎵 Already playing this URL');
       return;
     }
 
-    // ✅ اگر آهنگ متفاوت است، متوقف کن
     if (_currentUrl != url) {
       await stop();
     }
 
     try {
-      // ✅ تنظیم وضعیت لودینگ
       _isLoading = true;
       _isBuffering = false;
       _currentUrl = url;
@@ -130,16 +117,25 @@ class AudioPlayerService extends ChangeNotifier {
       notifyListeners();
 
       debugPrint('🎵 Setting audio source...');
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(url)));
+
+      // ✅ Timeout 30 ثانیه‌ای برای جلوگیری از گیر کردن
+      await _player.setAudioSource(AudioSource.uri(Uri.parse(url))).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          debugPrint('❌ [AudioPlayerService] Timeout loading audio');
+          throw TimeoutException('Audio loading timeout');
+        },
+      );
 
       debugPrint('🎵 Starting playback...');
       await _player.play();
 
       debugPrint('🎵 Playback started successfully');
 
-      // ✅ بعد از 2 ثانیه اگر still loading، false کن
-      Future.delayed(const Duration(seconds: 2), () {
+      // ✅ بعد از 5 ثانیه اگر still loading، false کن
+      Future.delayed(const Duration(seconds: 5), () {
         if (_isLoading && !_isDisposed) {
+          debugPrint('⚠️ Force loading=false after timeout');
           _isLoading = false;
           notifyListeners();
         }
@@ -151,6 +147,9 @@ class AudioPlayerService extends ChangeNotifier {
       _currentUrl = null;
       _currentFileName = null;
       notifyListeners();
+
+      // ✅ اگه خطا داد، دوباره به کاربر اطلاع بده
+      rethrow;
     }
   }
 
@@ -179,6 +178,7 @@ class AudioPlayerService extends ChangeNotifier {
       _isLoading = false;
       _isBuffering = false;
       _position = Duration.zero;
+      _duration = Duration.zero; // ✅ حالا duration هم صفر میشه
       _currentUrl = null;
       _currentFileName = null;
       notifyListeners();
@@ -193,28 +193,19 @@ class AudioPlayerService extends ChangeNotifier {
     if (url.isEmpty) return;
 
     debugPrint('🎵 [AudioPlayerService] togglePlayback() called');
-    debugPrint(
-      '🎵 currentUrl=$_currentUrl, isPlaying=$_isPlaying, targetUrl=$url',
-    );
 
-    // ✅ اگر همان آهنگ در حال پخش است → مکث
     if (_currentUrl == url && _isPlaying) {
       await pause();
-    }
-    // ✅ اگر همان آهنگ است ولی متوقف شده → پلی
-    else if (_currentUrl == url && !_isPlaying) {
+    } else if (_currentUrl == url && !_isPlaying) {
       try {
         await _player.play();
         _isPlaying = true;
         notifyListeners();
       } catch (e) {
         debugPrint('❌ Resume error: $e');
-        // اگر خطا داد، از اول پلی کن
         await play(url, fileName: fileName);
       }
-    }
-    // ✅ آهنگ جدید → پلی
-    else {
+    } else {
       await play(url, fileName: fileName);
     }
   }
@@ -233,9 +224,27 @@ class AudioPlayerService extends ChangeNotifier {
     }
   }
 
-  /// ✅ بررسی آیا آهنگ مشخصی در حال پخش است
   bool isPlayingUrl(String url) {
     return _currentUrl == url && _isPlaying;
+  }
+
+  /// ✅ آزادسازی منابع
+  Future<void> releasePlayer() async {
+    if (_isDisposed) return;
+    try {
+      await _player.stop();
+      _isPlaying = false;
+      _isLoading = false;
+      _isBuffering = false;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+      _currentUrl = null;
+      _currentFileName = null;
+      notifyListeners();
+      debugPrint('🎵 Player released');
+    } catch (e) {
+      debugPrint('❌ Release error: $e');
+    }
   }
 
   @override

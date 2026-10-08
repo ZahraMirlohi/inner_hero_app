@@ -5,13 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class DailyProgressCard extends StatelessWidget {
   final int currentStreak;
   final int completedHabitsToday;
   final int totalHabitsToday;
   final List<bool> weekDays;
-  final bool isMe; // ✅ اضافه شد
+  final bool isMe;
 
   const DailyProgressCard({
     super.key,
@@ -25,13 +26,15 @@ class DailyProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
 
-    // ✅ رنگ‌های استاندارد
-    final Color bgColor =
-        isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
+    // ✅ رنگ‌های استاندارد بر اساس ChatColors
+    final Color bgColor = isMe
+        ? ChatColors.myBubble(theme) // روز: primaryLight | شب: primaryColor
+        : ChatColors.otherBubble(theme); // روز: سفید | شب: مشکی
     final Color textColor = isMe
-        ? ChatColors.myBubbleText(theme)
-        : ChatColors.otherBubbleText(theme);
+        ? ChatColors.myBubbleText(theme) // مشکی
+        : ChatColors.otherBubbleText(theme); // theme.textColor
     final Color textSecondary = isMe
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
@@ -40,14 +43,16 @@ class DailyProgressCard extends StatelessWidget {
         totalHabitsToday > 0 ? completedHabitsToday / totalHabitsToday : 0.0;
     final int progressPercent = (progress * 100).toInt();
 
-    final weekDaysLabels = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-    final todayIndex = Jalali.now().weekDay - 1;
+    // ✅ حروف روزهای هفته از CalendarProvider
+    final weekDaysLabels = calendar.weekDayHeaders;
+
+    // ✅ ایندکس امروز بر اساس تقویم
+    final int todayIndex = _getTodayIndex(calendar);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:
-            bgColor, // ✅ پس‌زمینه: primaryLight یا primaryColor یا سفید یا مشکی
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -69,7 +74,7 @@ class DailyProgressCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: textColor, // ✅ متن تیره روی پس‌زمینه روشن
+                  color: textColor,
                 ),
               ),
               Row(
@@ -98,7 +103,7 @@ class DailyProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
-              final isActive = weekDays[index];
+              final isActive = weekDays.length > index && weekDays[index];
               final isToday = index == todayIndex;
 
               return Column(
@@ -196,5 +201,17 @@ class DailyProgressCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// ✅ محاسبه ایندکس امروز در هفته
+  /// شمسی: 0=شنبه، میلادی: 0=Monday
+  int _getTodayIndex(CalendarProvider calendar) {
+    if (calendar.isJalali) {
+      final j = Jalali.now();
+      return j.weekDay - 1; // 0=شنبه
+    } else {
+      final d = DateTime.now();
+      return d.weekday - 1; // 0=Monday
+    }
   }
 }

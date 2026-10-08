@@ -1,6 +1,8 @@
 // lib/widgets/custom_bottom_nav_bar.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class BottomNavItem {
   final IconData icon;
@@ -117,6 +119,24 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
     final double totalItemsWidth = _itemSize * widget.items.length;
     final double totalSpacing = availableWidth - totalItemsWidth;
     final double spacing = totalSpacing / (widget.items.length - 1);
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
+    // ✅ رنگ‌های تم‌محور
+    // - در تم شب: پس‌زمینه سفید
+    // - در تم روز: پس‌زمینه مشکی
+    final Color navBarColor =
+        theme.isDarkMode ? Colors.white : const Color(0xFF090909);
+
+    // ✅ رنگ آیکون‌های غیرفعال
+    // - در تم شب: خاکستری متوسط (خوانا روی سفید)
+    // - در تم روز: خاکستری تیره (خوانا روی مشکی)
+    final Color inactiveIconColor =
+        theme.isDarkMode ? Colors.grey.shade400 : const Color(0xFF6A6A6A);
+
+    // ✅ رنگ آیکون انتخاب‌شده (داخل دایره primaryColor)
+    // - در هر دو تم: مشکی (چون دایره primaryColor روشنه)
+    const Color activeIconColor = Color(0xFF090909);
 
     const double inactiveVerticalOffset = 7;
 
@@ -131,23 +151,30 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
             height: _containerHeight,
             padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909),
+              // ✅ تم‌محور
+              color: navBarColor,
               borderRadius: BorderRadius.circular(_containerHeight / 2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: Colors.black.withValues(
+                    alpha: theme.isDarkMode ? 0.15 : 0.06,
+                  ),
                   blurRadius: 2,
                   spreadRadius: 0,
                   offset: const Offset(0, 1),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.10),
+                  color: Colors.black.withValues(
+                    alpha: theme.isDarkMode ? 0.2 : 0.10,
+                  ),
                   blurRadius: 8,
                   spreadRadius: 0,
                   offset: const Offset(0, 4),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: Colors.black.withValues(
+                    alpha: theme.isDarkMode ? 0.25 : 0.08,
+                  ),
                   blurRadius: 20,
                   spreadRadius: 0,
                   offset: const Offset(0, 10),
@@ -157,7 +184,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // ✅ دایره سبز متحرک
+                // ✅ دایره رنگی متحرک
                 AnimatedBuilder(
                   animation: _slideAnimation,
                   builder: (context, child) {
@@ -176,14 +203,14 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                             child: Container(
                               width: _itemSize,
                               height: _itemSize,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFB0CC5D),
+                              decoration: BoxDecoration(
+                                color: primaryColor,
                                 shape: BoxShape.circle,
                               ),
                               child: Center(
                                 child: Icon(
                                   widget.items[widget.currentIndex].icon,
-                                  color: const Color(0xFF090909),
+                                  color: activeIconColor,
                                   size: _iconSize,
                                 ),
                               ),
@@ -217,7 +244,8 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                                 child: Center(
                                   child: Icon(
                                     widget.items[index].icon,
-                                    color: const Color(0xFF6A6A6A),
+                                    // ✅ تم‌محور
+                                    color: inactiveIconColor,
                                     size: _iconSize,
                                   ),
                                 ),

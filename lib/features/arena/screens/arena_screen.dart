@@ -33,7 +33,6 @@ class _ArenaScreenState extends State<ArenaScreen>
   DateTime? _lastRefreshTime;
   static const Duration _minRefreshInterval = Duration(milliseconds: 500);
 
-  // ✅ انیمیشن پروگرس بار افقی
   late AnimationController _progressAnimationController;
   late Animation<double> _progressAnimation;
   double _currentProgress = 0.0;
@@ -48,7 +47,6 @@ class _ArenaScreenState extends State<ArenaScreen>
 
   bool _isMenuOpen = false;
 
-  // ✅ عرض استاندارد برای همه کادرها
   static const double _horizontalMargin = 16.0;
 
   @override
@@ -191,7 +189,7 @@ class _ArenaScreenState extends State<ArenaScreen>
     final Color primaryColor = themeProvider.primaryColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FCEB),
+      backgroundColor: themeProvider.backgroundColor,
       bottomNavigationBar: const SizedBox(height: 150),
       body: Column(
         children: [
@@ -207,18 +205,18 @@ class _ArenaScreenState extends State<ArenaScreen>
           Consumer<SyncProvider>(
             builder: (context, syncProvider, child) {
               if (!syncProvider.isOnline || syncProvider.hasOfflineOperations) {
-                return _buildOfflineStatusBar(syncProvider, primaryColor);
+                return _buildOfflineStatusBar(syncProvider, themeProvider);
               }
               return const SizedBox.shrink();
             },
           ),
 
           // پروگرس بار
-          _buildHorizontalProgressBar(primaryColor),
+          _buildHorizontalProgressBar(themeProvider),
 
           const SizedBox(height: 6),
 
-          // ✅ تب‌بار جدید
+          // تب‌بار
           _CustomTabBar(
             currentIndex: _selectedIndex,
             onTap: _onTabChanged,
@@ -230,14 +228,15 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ),
             primaryColor: primaryColor,
-            spacing: 8.0, // ✅ فاصله بین تب‌ها - خودتان تغییر دهید
-            height: 62.0, // ✅ ارتفاع کادر
-            selectedCircleSize: 46.0, // ✅ ارتفاع دایره انتخاب شده
+            themeProvider: themeProvider,
+            spacing: 8.0,
+            height: 62.0,
+            selectedCircleSize: 46.0,
           ),
 
           const SizedBox(height: 6),
 
-          // ✅ کادر اصلی - سفید با سایه زیبا
+          // کادر اصلی
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: _horizontalMargin),
@@ -262,7 +261,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                 clipper: const _BottomNotchClipper(),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: themeProvider.cardColor,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -293,15 +292,18 @@ class _ArenaScreenState extends State<ArenaScreen>
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _buildFloatingMenuButton(primaryColor),
+      floatingActionButton: _buildFloatingMenuButton(themeProvider),
     );
   }
 
   // ==================== پروگرس بار افقی ====================
 
-  Widget _buildHorizontalProgressBar(Color primaryColor) {
-    final Color progressColor = const Color(0xFF090909);
+  Widget _buildHorizontalProgressBar(ThemeProvider theme) {
+    final Color primaryColor = theme.primaryColor;
     final int percent = (_currentProgress * 100).toInt();
+    // ✅ در تم شب از رنگ روشن‌تر استفاده کن تا متن/آیکون خوانا باشد
+    final Color progressColor =
+        theme.isDarkMode ? theme.primaryColor : const Color(0xFF090909);
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -310,11 +312,12 @@ class _ArenaScreenState extends State<ArenaScreen>
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color:
+                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -327,7 +330,9 @@ class _ArenaScreenState extends State<ArenaScreen>
               Container(
                 height: 24,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -347,11 +352,17 @@ class _ArenaScreenState extends State<ArenaScreen>
                             width: progressWidth,
                             height: 24,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF2A2A2A),
-                                  Color(0xFF090909),
-                                ],
+                              gradient: LinearGradient(
+                                colors: theme.isDarkMode
+                                    ? [
+                                        theme.primaryColor
+                                            .withValues(alpha: 0.7),
+                                        theme.primaryColor,
+                                      ]
+                                    : const [
+                                        Color(0xFF2A2A2A),
+                                        Color(0xFF090909),
+                                      ],
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                               ),
@@ -425,7 +436,9 @@ class _ArenaScreenState extends State<ArenaScreen>
                         decoration: BoxDecoration(
                           color: _currentProgress > 0.1
                               ? Colors.white.withValues(alpha: 0.9)
-                              : Colors.grey.shade400,
+                              : (theme.isDarkMode
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade400),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -433,7 +446,9 @@ class _ArenaScreenState extends State<ArenaScreen>
                           size: 10,
                           color: _currentProgress > 0.1
                               ? const Color(0xFF090909)
-                              : Colors.grey.shade600,
+                              : (theme.isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600),
                         ),
                       ),
                       const Spacer(),
@@ -443,7 +458,9 @@ class _ArenaScreenState extends State<ArenaScreen>
                         decoration: BoxDecoration(
                           color: _currentProgress >= 1.0
                               ? Colors.white
-                              : Colors.grey.shade400,
+                              : (theme.isDarkMode
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade400),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -451,7 +468,9 @@ class _ArenaScreenState extends State<ArenaScreen>
                           size: 10,
                           color: _currentProgress >= 1.0
                               ? const Color(0xFF090909)
-                              : Colors.grey.shade600,
+                              : (theme.isDarkMode
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600),
                         ),
                       ),
                     ],
@@ -498,7 +517,8 @@ class _ArenaScreenState extends State<ArenaScreen>
 
   // ==================== Floating Menu Button ====================
 
-  Widget _buildFloatingMenuButton(Color primaryColor) {
+  Widget _buildFloatingMenuButton(ThemeProvider theme) {
+    final Color primaryColor = theme.primaryColor;
     final double totalWidth = 320;
     final double buttonSize = 56;
 
@@ -523,6 +543,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                   icon: Icons.fitness_center,
                   label: 'عادت جدید',
                   color: primaryColor,
+                  theme: theme,
                   onTap: _openAddHabit,
                 ),
               ),
@@ -542,6 +563,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                   icon: Icons.assignment,
                   label: 'وظیفه جدید',
                   color: primaryColor,
+                  theme: theme,
                   onTap: _openAddTask,
                 ),
               ),
@@ -589,7 +611,9 @@ class _ArenaScreenState extends State<ArenaScreen>
                       child: Icon(
                         _isMenuOpen ? Icons.close : Icons.add,
                         key: ValueKey(_isMenuOpen),
-                        color: const Color(0xFF090909),
+                        color: theme.isDarkMode
+                            ? const Color(0xFF090909)
+                            : const Color(0xFF090909),
                         size: 32,
                       ),
                     ),
@@ -609,6 +633,7 @@ class _ArenaScreenState extends State<ArenaScreen>
     required IconData icon,
     required String label,
     required Color color,
+    required ThemeProvider theme,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -616,11 +641,12 @@ class _ArenaScreenState extends State<ArenaScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.cardColor,
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
+              color:
+                  Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.15),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -649,8 +675,8 @@ class _ArenaScreenState extends State<ArenaScreen>
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF090909),
+              style: TextStyle(
+                color: theme.textColor,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -663,7 +689,9 @@ class _ArenaScreenState extends State<ArenaScreen>
 
   // ==================== نوار وضعیت آفلاین/آنلاین ====================
 
-  Widget _buildOfflineStatusBar(SyncProvider syncProvider, Color primaryColor) {
+  Widget _buildOfflineStatusBar(
+      SyncProvider syncProvider, ThemeProvider theme) {
+    final Color primaryColor = theme.primaryColor;
     String statusText;
     IconData statusIcon;
     Color statusColor = primaryColor;
@@ -691,11 +719,12 @@ class _ArenaScreenState extends State<ArenaScreen>
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color:
+                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.04),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -708,9 +737,9 @@ class _ArenaScreenState extends State<ArenaScreen>
           Expanded(
             child: Text(
               statusText,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
-                color: Color(0xFF090909),
+                color: theme.textColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -727,7 +756,7 @@ class _ArenaScreenState extends State<ArenaScreen>
           if (syncProvider.isOnline)
             IconButton(
               icon: const Icon(Icons.refresh, size: 18),
-              color: const Color(0xFFB0CC5D),
+              color: primaryColor,
               onPressed: _refreshAllTabs,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -756,14 +785,10 @@ class _CustomTabBar extends StatefulWidget {
   final Function(int) onTap;
   final List<_TabBarItem> items;
   final Color primaryColor;
+  final ThemeProvider themeProvider;
 
-  // ✅ فاصله بین تب‌ها (قابل تنظیم)
   final double spacing;
-
-  // ✅ ارتفاع کادر
   final double height;
-
-  // ✅ اندازه آیکون انتخاب شده (دایره)
   final double selectedCircleSize;
 
   const _CustomTabBar({
@@ -771,7 +796,8 @@ class _CustomTabBar extends StatefulWidget {
     required this.onTap,
     required this.items,
     required this.primaryColor,
-    this.spacing = 8.0, // ✅ فاصله پیش‌فرض
+    required this.themeProvider,
+    this.spacing = 8.0,
     this.height = 62.0,
     this.selectedCircleSize = 46.0,
   });
@@ -786,7 +812,6 @@ class _CustomTabBarState extends State<_CustomTabBar>
   late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
 
-  // ✅ اندازه‌های ثابت
   static const double _horizontalPadding = 8;
   static const double _iconSize = 20;
   static const double _selectedIconSize = 20;
@@ -862,9 +887,10 @@ class _CustomTabBarState extends State<_CustomTabBar>
 
   @override
   Widget build(BuildContext context) {
+    final theme = widget.themeProvider;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      // ✅ اجبار به LTR برای اینکه ترتیب تب‌ها به‌هم نریزد
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: LayoutBuilder(
@@ -872,7 +898,6 @@ class _CustomTabBarState extends State<_CustomTabBar>
             final double availableWidth =
                 outerConstraints.maxWidth - (_horizontalPadding * 2);
 
-            // ✅ محاسبه عرض هر تب با احتساب فاصله‌ها
             final double totalSpacing =
                 widget.spacing * (widget.items.length - 1);
             final double itemWidth =
@@ -882,21 +907,27 @@ class _CustomTabBarState extends State<_CustomTabBar>
               height: widget.height,
               padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.cardColor,
                 borderRadius: BorderRadius.circular(widget.height / 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: Colors.black.withValues(
+                      alpha: theme.isDarkMode ? 0.3 : 0.06,
+                    ),
                     blurRadius: 2,
                     offset: const Offset(0, 1),
                   ),
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
+                    color: Colors.black.withValues(
+                      alpha: theme.isDarkMode ? 0.4 : 0.10,
+                    ),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
+                    color: Colors.black.withValues(
+                      alpha: theme.isDarkMode ? 0.3 : 0.08,
+                    ),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -905,7 +936,6 @@ class _CustomTabBarState extends State<_CustomTabBar>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // ✅ دایره رنگی متحرک
                   AnimatedBuilder(
                     animation: _slideAnimation,
                     builder: (context, child) {
@@ -939,7 +969,6 @@ class _CustomTabBarState extends State<_CustomTabBar>
                                       size: _selectedIconSize,
                                     ),
                                     const SizedBox(width: 5),
-                                    // ✅ متن در RTL رندر شود (داخل Directionality جداگانه)
                                     Directionality(
                                       textDirection: TextDirection.rtl,
                                       child: Text(
@@ -960,8 +989,6 @@ class _CustomTabBarState extends State<_CustomTabBar>
                       );
                     },
                   ),
-
-                  // ✅ همه آیتم‌ها
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: List.generate(widget.items.length, (index) {
@@ -988,7 +1015,7 @@ class _CustomTabBarState extends State<_CustomTabBar>
                                 : Center(
                                     child: Icon(
                                       widget.items[index].icon,
-                                      color: const Color(0xFF73786B),
+                                      color: theme.textSecondaryColor,
                                       size: _iconSize,
                                     ),
                                   ),

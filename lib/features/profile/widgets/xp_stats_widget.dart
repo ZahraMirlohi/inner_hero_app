@@ -16,6 +16,7 @@ class XpStatsWidget extends StatelessWidget {
     required this.xpToNextLevel,
   });
 
+  @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
@@ -28,11 +29,12 @@ class XpStatsWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white, // ✅ سفید به جای primaryColor
+        color: theme.surfaceColor, // ✅ از تم
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color:
+                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -41,14 +43,14 @@ class XpStatsWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ عنوان وسط‌چین + بولد + مشکی
-          const Center(
+          // عنوان
+          Center(
             child: Text(
               'سکه‌ها و سطح',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF090909),
+                color: theme.textColor, // ✅ از تم
               ),
             ),
           ),
@@ -56,10 +58,12 @@ class XpStatsWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildXpStat('کل سکه‌ها', '$totalXp', Icons.stars, primaryColor),
-              _buildXpStat('لول', '$level', Icons.emoji_events, primaryColor),
+              _buildXpStat(
+                  'کل سکه‌ها', '$totalXp', Icons.stars, primaryColor, theme),
+              _buildXpStat(
+                  'لول', '$level', Icons.emoji_events, primaryColor, theme),
               _buildXpStat('نیاز به لول بعدی', '$xpNeeded', Icons.trending_up,
-                  primaryColor),
+                  primaryColor, theme),
             ],
           ),
           const SizedBox(height: 16),
@@ -71,9 +75,9 @@ class XpStatsWidget extends StatelessWidget {
                 children: [
                   Text(
                     'پیشرفت به لول ${level + 1}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF73786B),
+                      color: theme.textSecondaryColor, // ✅ از تم
                     ),
                   ),
                   Text(
@@ -91,7 +95,9 @@ class XpStatsWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: progressPercent.clamp(0.0, 1.0),
-                  backgroundColor: Colors.grey.shade200,
+                  backgroundColor: theme.isDarkMode
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.shade200, // ✅ از تم
                   color: primaryColor,
                   minHeight: 8,
                 ),
@@ -119,7 +125,13 @@ class XpStatsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildXpStat(String label, String value, IconData icon, Color color) {
+  Widget _buildXpStat(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+    ThemeProvider theme,
+  ) {
     return Column(
       children: [
         Container(
@@ -141,9 +153,9 @@ class XpStatsWidget extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
-            color: Color(0xFF73786B),
+            color: theme.textSecondaryColor, // ✅ از تم
           ),
           textAlign: TextAlign.center,
         ),

@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:inner_hero_app/providers/calendar_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,14 +16,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    // ✅ اولویت اول: dart-define
     String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
     String supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
 
     print('🎯 SUPABASE_URL from dart-define: "$supabaseUrl"');
     print('🎯 SUPABASE_ANON_KEY length: ${supabaseAnonKey.length}');
 
-    // ✅ اگر dart-define خالی بود، از .env استفاده کن
     if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
       print('📄 Trying to load .env file...');
       await dotenv.load(fileName: ".env");
@@ -33,21 +32,31 @@ void main() async {
       print('🎯 Using dart-define values');
     }
 
-    // ✅ بررسی نهایی
     if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
       throw Exception('SUPABASE_URL or SUPABASE_ANON_KEY is empty!');
     }
 
     print('🔑 SUPABASE_URL: $supabaseUrl');
-    print(
-        '🔑 SUPABASE_ANON_KEY: ${supabaseAnonKey.substring(0, supabaseAnonKey.length > 20 ? 20 : supabaseAnonKey.length)}...');
 
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+        autoRefreshToken: true,
+      ),
     );
 
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null && session.isExpired) {
+      print('⚠️ Expired session found, signing out...');
+      await Supabase.instance.client.auth.signOut();
+    }
+
     await LocalStorageService().init();
+
+    final themeProvider = ThemeProvider();
+    await Future.delayed(const Duration(milliseconds: 100));
 
     runApp(
       MultiProvider(
@@ -55,7 +64,8 @@ void main() async {
           ChangeNotifierProvider(create: (_) => SyncProvider()),
           ChangeNotifierProvider(create: (_) => AudioPlayerService()),
           ChangeNotifierProvider(create: (_) => DownloadService()),
-          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ChangeNotifierProvider.value(value: themeProvider),
+          ChangeNotifierProvider(create: (_) => CalendarProvider()),
         ],
         child: const HeroApp(),
       ),

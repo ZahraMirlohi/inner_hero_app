@@ -31,7 +31,6 @@ class _AIChatScreenState extends State<AIChatScreen>
   String? _conversationId;
   String? _userId;
 
-  // پیشنهادات سریع
   final List<String> _quickSuggestions = [
     'چطور می‌تونم امروز بهتر باشم؟',
     'به من انگیزه بده 🚀',
@@ -137,14 +136,12 @@ class _AIChatScreenState extends State<AIChatScreen>
       });
     }
 
-    // ذخیره پیام کاربر
     await _chatService.sendMessage(
       conversationId: _conversationId!,
       senderId: _userId!,
       content: text,
     );
 
-    // دریافت پاسخ از AI
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
     final response = await _aiService.getResponse(
       userId: _userId!,
@@ -153,7 +150,6 @@ class _AIChatScreenState extends State<AIChatScreen>
       profile: syncProvider.profile,
     );
 
-    // ذخیره پاسخ AI
     await _chatService.sendMessage(
       conversationId: _conversationId!,
       senderId: 'ai',
@@ -255,10 +251,7 @@ class _AIChatScreenState extends State<AIChatScreen>
       ),
       body: Column(
         children: [
-          // Quick Suggestions
           _buildQuickSuggestions(theme, primaryColor),
-
-          // Messages
           Expanded(
             child: _messages.isEmpty
                 ? _buildEmptyState(theme, primaryColor)
@@ -276,8 +269,6 @@ class _AIChatScreenState extends State<AIChatScreen>
                     },
                   ),
           ),
-
-          // Input Bar
           _buildInputBar(theme, primaryColor),
         ],
       ),
@@ -337,12 +328,17 @@ class _AIChatScreenState extends State<AIChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          // ✅ رنگ پس‌زمینه system message با تم هماهنگ
+          color:
+              theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.textSecondaryColor, // ✅
+          ),
         ),
       );
     }
@@ -392,8 +388,6 @@ class _AIChatScreenState extends State<AIChatScreen>
                   ],
                 ),
               ),
-
-            // ✅ حباب کوچک‌تر
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 11,
@@ -419,8 +413,6 @@ class _AIChatScreenState extends State<AIChatScreen>
                 ),
               ),
             ),
-
-            // ✅ ساعت + وضعیت (خارج از حباب)
             Padding(
               padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
               child: Row(
@@ -438,7 +430,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                     Icon(
                       Icons.check,
                       size: 12,
-                      color: Colors.grey.shade500,
+                      color: theme.textSecondaryColor, // ✅
                     ),
                   ],
                 ],
@@ -509,7 +501,10 @@ class _AIChatScreenState extends State<AIChatScreen>
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.06),
+                  // ✅ ورودی متن با تم هماهنگ
+                  color: theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : primaryColor.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: primaryColor.withValues(alpha: 0.15),
@@ -518,6 +513,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                 child: TextField(
                   controller: _messageController,
                   focusNode: _focusNode,
+                  style: TextStyle(color: theme.textColor),
                   decoration: InputDecoration(
                     hintText: 'پیام خود را بنویسید...',
                     hintStyle: TextStyle(
@@ -540,7 +536,11 @@ class _AIChatScreenState extends State<AIChatScreen>
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _isLoading ? Colors.grey.shade300 : primaryColor,
+                color: _isLoading
+                    ? (theme.isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.grey.shade300)
+                    : primaryColor,
                 shape: BoxShape.circle,
                 boxShadow: _isLoading
                     ? null

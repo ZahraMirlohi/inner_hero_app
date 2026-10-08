@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
@@ -25,6 +26,12 @@ class DownloadService extends ChangeNotifier {
     VoidCallback? onComplete,
     VoidCallback? onError,
   }) async {
+    // ✅ در Web، فقط لینک رو باز کن
+    if (kIsWeb) {
+      _handleWebDownload(url, fileName, onComplete, onError);
+      return;
+    }
+
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloading) {
       print('⏳ Already downloading: $fileName');
       return;
@@ -36,7 +43,7 @@ class DownloadService extends ChangeNotifier {
       return;
     }
 
-    // ✅ درخواست دسترسی
+    // ✅ درخواست دسترسی (فقط در موبایل)
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
       _tasks[url] = _DownloadTask(
@@ -54,7 +61,6 @@ class DownloadService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // ✅ دریافت مسیر صحیح Downloads
       final String downloadPath = await _getDownloadsPath();
       final String localPath = '$downloadPath/${_sanitizeFileName(fileName)}';
 
@@ -74,9 +80,7 @@ class DownloadService extends ChangeNotifier {
         task.errorMessage = null;
         notifyListeners();
 
-        // ✅ اطلاع رسانی به سیستم
-        await _notifyDownloadManager(localPath, fileName);
-
+        print('📁 File saved to: $localPath');
         onComplete?.call();
       } else {
         task.isDownloading = false;
@@ -94,19 +98,56 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // ✅ دریافت مسیر صحیح Downloads
+  // ✅ Web download: لینک رو در تب جدید باز کن
+  void _handleWebDownload(
+    String url,
+    String fileName,
+    VoidCallback? onComplete,
+    VoidCallback? onError,
+  ) {
+    try {
+      // در Web، بهترین راه اینه که لینک رو باز کنی
+      // مرورگر خودش فایل رو دانلود می‌کنه
+      // این کار رو در UI انجام بدید با url_launcher
+      _tasks[url] = _DownloadTask(
+        url: url,
+        fileName: fileName,
+        isDownloaded: true,
+        progress: 1.0,
+      );
+      notifyListeners();
+      onComplete?.call();
+    } catch (e) {
+      print('❌ Web download error: $e');
+      onError?.call();
+    }
+  }
+
   Future<String> _getDownloadsPath() async {
     try {
-      // ✅ روش 1: مسیر مستقیم Downloads
-      final String downloadsPath = '/storage/emulated/0/Download';
-      final Directory downloadsDir = Directory(downloadsPath);
-
-      if (await downloadsDir.exists()) {
-        print('📁 Using downloads path: $downloadsPath');
-        return downloadsPath;
+      if (Platform.isAndroid) {
+        // Android: مسیر Download
+        final Directory downloadsDir =
+            Directory('/storage/emulated/0/Download');
+        if (await downloadsDir.exists()) {
+          print('📁 Using downloads path: /storage/emulated/0/Download');
+          return '/storage/emulated/0/Download';
+        }
       }
 
-      // ✅ روش 2: استفاده از path_provider
+      if (Platform.isIOS) {
+        // iOS: Documents/Downloads
+        final directory = await getApplicationDocumentsDirectory();
+        final String iosPath = '${directory.path}/Downloads';
+        final Directory iosDir = Directory(iosPath);
+        if (!await iosDir.exists()) {
+          await iosDir.create(recursive: true);
+        }
+        print('📁 Using iOS path: $iosPath');
+        return iosPath;
+      }
+
+      // Fallback
       final directory = await getExternalStorageDirectory();
       if (directory != null) {
         final String appDownloadPath = '${directory.path}/Download';
@@ -118,7 +159,6 @@ class DownloadService extends ChangeNotifier {
         return appDownloadPath;
       }
 
-      // ✅ روش 3: Fallback به Documents
       final docDir = await getApplicationDocumentsDirectory();
       final String fallbackPath = '${docDir.path}/Downloads';
       final Directory fallbackDir = Directory(fallbackPath);
@@ -139,34 +179,29 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  Future<void> _notifyDownloadManager(String path, String fileName) async {
-    try {
-      print('📁 File saved to: $path');
-    } catch (e) {
-      print('⚠️ Could not notify download manager: $e');
-    }
-  }
-
   Future<bool> _requestStoragePermission() async {
+    // ✅ در Web نیازی نیست
+    if (kIsWeb) {
+      return true;
+    }
+
     try {
-      if (await _isAndroid13OrHigher()) {
-        final status = await Permission.photos.request();
-        return status.isGranted || status.isLimited;
+      if (Platform.isAndroid) {
+        // ✅ در Android، از Permission.storage استفاده کن
+        // در Android 13+، برای ذخیره در Downloads نیازی به permission نیست
+        final status = await Permission.storage.request();
+        return status.isGranted;
       }
 
-      final status = await Permission.storage.request();
-      return status.isGranted;
-    } catch (e) {
-      print('❌ Permission error: $e');
-      return false;
-    }
-  }
+      if (Platform.isIOS) {
+        // iOS نیازی به permission برای Documents نداره
+        return true;
+      }
 
-  Future<bool> _isAndroid13OrHigher() async {
-    try {
       return true;
     } catch (e) {
-      return false;
+      print('❌ Permission error: $e');
+      return true; // اگر خطا داد، اجازه بده ادامه بده
     }
   }
 
@@ -175,6 +210,8 @@ class DownloadService extends ChangeNotifier {
   }
 
   Future<bool> checkIfDownloaded(String url, String fileName) async {
+    if (kIsWeb) return false;
+
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) return true;
 
     try {

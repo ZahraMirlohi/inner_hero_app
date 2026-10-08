@@ -101,8 +101,8 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     final progress = widget.habit.subHabits.isEmpty
         ? 0.0
@@ -111,7 +111,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.white,
+      color: theme.cardColor,
       elevation: 2,
       child: Column(
         children: [
@@ -135,17 +135,20 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
             ),
             title: Text(
               widget.habit.title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF090909),
+                color: theme.textColor,
               ),
             ),
             subtitle: Text(
               widget.habit.description.isEmpty
                   ? 'بدون توضیحات'
                   : widget.habit.description,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF73786B)),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -159,7 +162,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -174,7 +177,7 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                 const SizedBox(width: 8),
                 Icon(
                   _isExpanded ? Icons.expand_less : Icons.expand_more,
-                  color: const Color(0xFF73786B),
+                  color: theme.textSecondaryColor,
                 ),
               ],
             ),
@@ -187,7 +190,9 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
           if (_isExpanded && widget.habit.subHabits.isNotEmpty)
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF7FCEB),
+                color: theme.isDarkMode
+                    ? const Color(0xFF1A1A1A)
+                    : const Color(0xFFF7FCEB),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
@@ -195,18 +200,18 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
               ),
               child: Column(
                 children: [
-                  const Divider(height: 1, color: Color(0xFFE8EDF2)),
+                  Divider(height: 1, color: theme.borderColor),
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'زیرعادت‌ها',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF090909),
+                            color: theme.textColor,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -217,12 +222,15 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                                 _toggleSubHabit(subHabit, value),
                             title: Text(
                               subHabit,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF090909),
+                                color: theme.textColor,
                               ),
                             ),
                             activeColor: primaryColor,
+                            checkColor: theme.isDarkMode
+                                ? const Color(0xFF090909)
+                                : Colors.white,
                             contentPadding: EdgeInsets.zero,
                             dense: true,
                           ),
@@ -231,16 +239,16 @@ class _HabitExpansionTileState extends State<HabitExpansionTile> {
                           const SizedBox(height: 12),
                           LinearProgressIndicator(
                             value: progress,
-                            backgroundColor: const Color(0xFFE8EDF2),
+                            backgroundColor: theme.borderColor,
                             color: primaryColor,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'پیشرفت: ${(progress * 100).toInt()}%',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF73786B),
+                              color: theme.textSecondaryColor,
                             ),
                           ),
                         ],

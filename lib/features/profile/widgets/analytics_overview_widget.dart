@@ -44,7 +44,6 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
   bool _isLoading = true;
   bool _isRefreshing = false;
 
-  // ✅ انیمیشن‌های لودینگ ساده
   late AnimationController _loadingController;
   late Animation<double> _rotationAnimation;
 
@@ -284,7 +283,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         });
       }
     } catch (e) {
-      print('❌ Error loading stats: $e');
+      debugPrint('❌ Error loading stats: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -301,11 +300,13 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
+        color: theme.surfaceColor, // ✅ از تم
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -315,19 +316,19 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // هدر
-          const Center(
+          Center(
             child: Text(
               'پیشرفت امروز',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF090909),
+                color: theme.textColor, // ✅ از تم
               ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // ✅ دکمه «جزئیات بیشتر» زیر عنوان (وسط‌چین)
+          // دکمه «جزئیات بیشتر»
           Center(
             child: TextButton(
               onPressed: widget.onTapMore,
@@ -349,9 +350,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           const SizedBox(height: 16),
 
           if (_isLoading)
-            _buildModernLoadingIndicator(primaryColor)
+            _buildModernLoadingIndicator(primaryColor, theme)
           else ...[
-            _buildCompletionRateCard(primaryColor, theme.textColor),
+            _buildCompletionRateCard(primaryColor, theme),
             const SizedBox(height: 16),
             _buildStatRow(
               icon: Icons.fitness_center,
@@ -359,7 +360,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               total: _todayHabits,
               completed: _todayHabitsCompleted,
               color: primaryColor,
-              textColor: theme.textColor,
+              theme: theme,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -368,7 +369,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               total: _todayTasks,
               completed: _todayTasksCompleted,
               color: primaryColor,
-              textColor: theme.textColor,
+              theme: theme,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -377,7 +378,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               total: _todayChallenges,
               completed: _todayChallengesCompleted,
               color: primaryColor,
-              textColor: theme.textColor,
+              theme: theme,
             ),
             const SizedBox(height: 10),
             _buildStatRow(
@@ -386,19 +387,22 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               total: _todayQuests,
               completed: _todayQuestsCompleted,
               color: primaryColor,
-              textColor: theme.textColor,
+              theme: theme,
             ),
             const SizedBox(height: 16),
-            _buildMotivationalMessage(primaryColor),
+            _buildMotivationalMessage(primaryColor, theme),
           ],
         ],
       ),
     );
   }
 
-  // ==================== لودینگ ساده ====================
+  // ==================== لودینگ ====================
 
-  Widget _buildModernLoadingIndicator(Color primaryColor) {
+  Widget _buildModernLoadingIndicator(
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     return SizedBox(
       height: 140,
       child: Center(
@@ -415,7 +419,12 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                     height: 36,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade200, width: 3),
+                      border: Border.all(
+                        color: theme.isDarkMode
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.grey.shade200,
+                        width: 3,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(3),
@@ -439,7 +448,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey.shade600,
+                    color: theme.textSecondaryColor,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -474,15 +483,21 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     );
   }
 
-  // ==================== بقیه ویجت‌ها ====================
+  // ==================== کارت نرخ تکمیل ====================
 
-  Widget _buildCompletionRateCard(Color primaryColor, Color textColor) {
+  Widget _buildCompletionRateCard(Color primaryColor, ThemeProvider theme) {
     final percent = (_completionRate * 100).toInt();
+
+    // ✅ در تم شب از primary استفاده می‌کنیم، در تم روز مشکی
+    final Color cardColor =
+        theme.isDarkMode ? primaryColor : const Color(0xFF090909);
+    final Color contentColor =
+        theme.isDarkMode ? const Color(0xFF090909) : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF090909),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -490,20 +505,20 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'نرخ تکمیل امروز',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white,
+                  color: contentColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 '$percent%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: contentColor,
                 ),
               ),
             ],
@@ -513,8 +528,8 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: _completionRate,
-              backgroundColor: Colors.white.withValues(alpha: 0.3),
-              color: Colors.white,
+              backgroundColor: contentColor.withValues(alpha: 0.3),
+              color: contentColor,
               minHeight: 8,
             ),
           ),
@@ -523,7 +538,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             _getCompletionMessage(percent),
             style: TextStyle(
               fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.9),
+              color: contentColor.withValues(alpha: 0.9),
             ),
           ),
         ],
@@ -531,23 +546,33 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     );
   }
 
+  // ==================== ردیف آمار ====================
+
   Widget _buildStatRow({
     required IconData icon,
     required String label,
     required int total,
     required int completed,
     required Color color,
-    required Color textColor,
+    required ThemeProvider theme,
   }) {
     final bool hasItems = total > 0;
     final bool allDone = hasItems && completed == total;
 
+    // ✅ رنگ پس‌زمینه ردیف
+    final Color rowBg = theme.isDarkMode
+        ? Colors.white.withValues(alpha: 0.05)
+        : color.withValues(alpha: 0.06);
+    final Color rowBorder = theme.isDarkMode
+        ? Colors.white.withValues(alpha: 0.1)
+        : color.withValues(alpha: 0.12);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
+        color: rowBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.12), width: 1),
+        border: Border.all(color: rowBorder, width: 1),
       ),
       child: Row(
         children: [
@@ -555,7 +580,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: theme.isDarkMode ? 0.2 : 0.12),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 20),
@@ -567,7 +592,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: textColor,
+                color: theme.textColor, // ✅ از تم
               ),
             ),
           ),
@@ -601,7 +626,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           ] else ...[
             Text(
               'هیچی',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor, // ✅ از تم
+              ),
             ),
           ],
         ],
@@ -625,7 +653,12 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     }
   }
 
-  Widget _buildMotivationalMessage(Color primaryColor) {
+  // ==================== پیام انگیزشی ====================
+
+  Widget _buildMotivationalMessage(
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     final bool hasItems = _totalItems > 0;
     final bool allDone = hasItems && _totalItems == _totalCompleted;
 
@@ -633,17 +666,26 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: theme.isDarkMode
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            Icon(Icons.emoji_emotions, color: Colors.grey.shade400, size: 20),
+            Icon(
+              Icons.emoji_emotions,
+              color: theme.textSecondaryColor,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'برای امروز هیچ کاری تعیین نکردی! یک عادت یا تسک جدید اضافه کن 🎯',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.textSecondaryColor,
+                ),
               ),
             ),
           ],
@@ -655,9 +697,11 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.green.withValues(alpha: 0.1),
+          color: Colors.green.withValues(alpha: theme.isDarkMode ? 0.2 : 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: Colors.green.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
@@ -669,7 +713,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: Colors.green.shade700,
+                  color: theme.isDarkMode
+                      ? Colors.green.shade300
+                      : Colors.green.shade700,
                 ),
               ),
             ),
@@ -682,9 +728,11 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: primaryColor.withValues(alpha: 0.1),
+        color: primaryColor.withValues(alpha: theme.isDarkMode ? 0.2 : 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: primaryColor.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [

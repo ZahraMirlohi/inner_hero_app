@@ -2,7 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
+import '/providers/theme_provider.dart';
 
 class WeeklyStreakWidget extends StatefulWidget {
   final String userId;
@@ -34,7 +36,6 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
       final now = DateTime.now();
       final jalaliNow = Jalali.fromDateTime(now);
 
-      // ✅ شروع هفته از شنبه (weekDay = 1)
       final daysToSubtract = jalaliNow.weekDay - 1;
       final weekStart = now.subtract(Duration(days: daysToSubtract));
 
@@ -70,22 +71,24 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ روزهای هفته شمسی به ترتیب شنبه تا جمعه
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     final weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
-    // ✅ محاسبه روز امروز در تقویم شمسی
     final jalaliToday = Jalali.fromDateTime(DateTime.now());
     final todayIndex = jalaliToday.weekDay - 1;
-    final isTodayActive = _weekDays[todayIndex];
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -96,12 +99,12 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'استریک هفتگی',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A2E),
+                  color: theme.textColor,
                 ),
               ),
               Container(
@@ -110,15 +113,15 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${widget.weeklyStreak} روز',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF2563EB),
+                    color: primaryColor,
                   ),
                 ),
               ),
@@ -139,28 +142,32 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isActive
-                          ? const Color(0xFF2563EB)
+                          ? primaryColor
                           : isToday
-                          ? const Color(0xFF2563EB).withValues(alpha: 0.2)
-                          : Colors.grey.shade200,
+                              ? primaryColor.withValues(alpha: 0.2)
+                              : (theme.isDarkMode
+                                  ? const Color(0xFF2A2A2A)
+                                  : Colors.grey.shade200),
                       border: isToday && !isActive
-                          ? Border.all(color: const Color(0xFF2563EB), width: 2)
+                          ? Border.all(color: primaryColor, width: 2)
                           : null,
                     ),
                     child: Center(
                       child: isActive
-                          ? const Icon(
+                          ? Icon(
                               Icons.check,
-                              color: Colors.white,
+                              color: theme.isDarkMode
+                                  ? const Color(0xFF090909)
+                                  : Colors.white,
                               size: 20,
                             )
                           : isToday
-                          ? const Icon(
-                              Icons.circle,
-                              color: Color(0xFF2563EB),
-                              size: 8,
-                            )
-                          : const SizedBox(),
+                              ? Icon(
+                                  Icons.circle,
+                                  color: primaryColor,
+                                  size: 8,
+                                )
+                              : const SizedBox(),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -168,12 +175,9 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
                     weekDays[index],
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isActive
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isActive
-                          ? const Color(0xFF2563EB)
-                          : Colors.grey.shade500,
+                      fontWeight:
+                          isActive ? FontWeight.bold : FontWeight.normal,
+                      color: isActive ? primaryColor : theme.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -184,12 +188,16 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _getStreakColor().withValues(alpha: 0.1),
+              color: _getStreakColor(primaryColor).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                Icon(_getStreakIcon(), color: _getStreakColor(), size: 24),
+                Icon(
+                  _getStreakIcon(),
+                  color: _getStreakColor(primaryColor),
+                  size: 24,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -197,7 +205,7 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: _getStreakColor(),
+                      color: _getStreakColor(primaryColor),
                     ),
                   ),
                 ),
@@ -223,13 +231,13 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
     }
   }
 
-  Color _getStreakColor() {
+  Color _getStreakColor(Color primaryColor) {
     if (widget.weeklyStreak == 0) {
       return Colors.grey.shade600;
     } else if (widget.weeklyStreak < 3) {
       return const Color(0xFFFFA500);
     } else if (widget.weeklyStreak < 5) {
-      return const Color(0xFF2563EB);
+      return primaryColor;
     } else {
       return const Color(0xFF7C3AED);
     }

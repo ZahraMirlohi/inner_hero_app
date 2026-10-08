@@ -1,14 +1,14 @@
-// lib/features/profile/widgets/analytics_detail_screen.dart
+// lib/features/profile/screens/analytics_detail_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
-import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class AnalyticsDetailScreen extends StatefulWidget {
   final String userId;
@@ -30,7 +30,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   int _bestStreak = 0;
   Habit? _bestStreakHabit;
   bool _isLoading = true;
-  String _calendarType = 'jalali';
 
   List<double> _successData = [0.2, 0.5, 0.3, 0.7, 0.4, 0.6, 0.1];
 
@@ -62,17 +61,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   @override
   void initState() {
     super.initState();
-    _loadCalendarType();
     _loadData();
-  }
-
-  Future<void> _loadCalendarType() async {
-    final calendarType = await DateService.getCalendarType();
-    if (mounted) {
-      setState(() {
-        _calendarType = calendarType;
-      });
-    }
   }
 
   Future<void> _loadData() async {
@@ -200,7 +189,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       return habitStreaks;
     } catch (e) {
-      print('❌ Error calculating habit streaks: $e');
       return {};
     }
   }
@@ -246,11 +234,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         _bestStreakHabit = habit;
       }
     }
-
-    print(
-      '📊 Best habit: ${_bestStreakHabit?.title} with $maxHabitStreak days',
-    );
-    print('📊 All habit streaks: $habitStreaks');
   }
 
   Future<void> _calculateSuccessData() async {
@@ -273,10 +256,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       allDateTimes.add(date);
     }
 
-    print(
-      '📊 Date range: ${allDates.first} to ${allDates.last} (${allDates.length} days)',
-    );
-
     final habitIds = activeHabits.map((h) => h.id).toList();
     Map<String, Set<String>> completions = {};
 
@@ -287,8 +266,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           .eq('user_id', widget.userId)
           .inFilter('habit_id', habitIds);
 
-      print('📊 Found ${response.length} completions');
-
       for (var item in response) {
         final habitId = item['habit_id'] as String;
         final date = item['date'] as String;
@@ -296,12 +273,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           completions.putIfAbsent(habitId, () => {}).add(date);
         }
       }
-
-      print(
-        '📊 Completions by habit: ${completions.keys.length} habits have completions',
-      );
     } catch (e) {
-      print('❌ Error fetching completions: $e');
       _calculateSuccessDataFallback();
       return;
     }
@@ -338,33 +310,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       if (totalItems > 0) {
         successRates[dayIndex] = completedItems / totalItems;
-        print(
-          '📊 Day ${_getWeekDayName(dayIndex)}: $completedItems / $totalItems = ${(successRates[dayIndex] * 100).toInt()}%',
-        );
       } else {
         successRates[dayIndex] = 0.0;
-        print('📊 Day ${_getWeekDayName(dayIndex)}: No items');
       }
     }
-
-    print('📊 Final success rates: $successRates');
 
     setState(() {
       _successData = successRates;
     });
-  }
-
-  String _getWeekDayName(int index) {
-    const days = [
-      'شنبه',
-      'یکشنبه',
-      'دوشنبه',
-      'سه‌شنبه',
-      'چهارشنبه',
-      'پنج‌شنبه',
-      'جمعه',
-    ];
-    return days[index];
   }
 
   void _calculateSuccessDataFallback() {
@@ -421,31 +374,20 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     });
   }
 
-  Map<String, Set<String>> _completionCache = {};
-
-  DateTime _getWeekStart(DateTime date) {
-    if (_calendarType == 'jalali') {
+  // ✅ متدهای کمکی با CalendarProvider
+  DateTime _getWeekStart(DateTime date, CalendarProvider calendar) {
+    if (calendar.isJalali) {
       final jalali = Jalali.fromDateTime(date);
       final daysToSubtract = jalali.weekDay - 1;
-      print(
-        '📅 Jalali weekDay: ${jalali.weekDay}, daysToSubtract: $daysToSubtract',
-      );
-      final result = date.subtract(Duration(days: daysToSubtract));
-      print('📅 Week start (Jalali): $result');
-      return result;
+      return date.subtract(Duration(days: daysToSubtract));
     } else {
       final daysToSubtract = date.weekday % 7;
-      print(
-        '📅 Gregorian weekday: ${date.weekday}, daysToSubtract: $daysToSubtract',
-      );
-      final result = date.subtract(Duration(days: daysToSubtract));
-      print('📅 Week start (Gregorian): $result');
-      return result;
+      return date.subtract(Duration(days: daysToSubtract));
     }
   }
 
-  int _getCurrentWeekdayIndex() {
-    if (_calendarType == 'jalali') {
+  int _getCurrentWeekdayIndex(CalendarProvider calendar) {
+    if (calendar.isJalali) {
       final jalaliNow = Jalali.now();
       return jalaliNow.weekDay - 1;
     } else {
@@ -453,24 +395,30 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     }
   }
 
-  List<String> _getWeekDayLetters() {
-    if (_calendarType == 'jalali') {
-      return ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-    } else {
-      return ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    }
+  List<String> _getWeekDayLetters(CalendarProvider calendar) {
+    return calendar.weekDayHeaders;
   }
 
-  List<Map<String, dynamic>> _getBestWeekDays() {
-    const weekDays = [
-      'شنبه',
-      'یک‌شنبه',
-      'دوشنبه',
-      'سه‌شنبه',
-      'چهارشنبه',
-      'پنج‌شنبه',
-      'جمعه',
-    ];
+  List<Map<String, dynamic>> _getBestWeekDays(CalendarProvider calendar) {
+    final weekDays = calendar.isJalali
+        ? [
+            'شنبه',
+            'یک‌شنبه',
+            'دوشنبه',
+            'سه‌شنبه',
+            'چهارشنبه',
+            'پنج‌شنبه',
+            'جمعه'
+          ]
+        : [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+          ];
     final List<Map<String, dynamic>> result = [];
 
     final Map<int, int> dayActivityCount = {};
@@ -479,8 +427,13 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     }
 
     for (var date in _activeDays) {
-      final jalali = Jalali.fromDateTime(date);
-      final weekday = jalali.weekDay - 1;
+      int weekday;
+      if (calendar.isJalali) {
+        final jalali = Jalali.fromDateTime(date);
+        weekday = jalali.weekDay - 1;
+      } else {
+        weekday = date.weekday % 7;
+      }
       dayActivityCount[weekday] = (dayActivityCount[weekday] ?? 0) + 1;
     }
 
@@ -503,6 +456,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
     final primaryColor = theme.primaryColor;
 
     return Scaffold(
@@ -514,16 +468,20 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               children: [
                 _buildSlideHeader(primaryColor, theme),
                 const SizedBox(height: 4),
-                _buildSlideDots(primaryColor),
+                _buildSlideDots(primaryColor, theme),
                 const SizedBox(height: 12),
-                Expanded(child: _buildCarouselSlides(primaryColor, theme)),
+                Expanded(
+                  child: _buildCarouselSlides(
+                    primaryColor,
+                    theme,
+                    calendar,
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
             ),
     );
   }
-
-  // ==================== اپبار ====================
 
   PreferredSizeWidget _buildAppBar(ThemeProvider theme, Color primaryColor) {
     return AppBar(
@@ -551,8 +509,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ],
     );
   }
-
-  // ==================== هدر اسلایدها ====================
 
   Widget _buildSlideHeader(Color primaryColor, ThemeProvider theme) {
     return Container(
@@ -587,15 +543,18 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 ),
                 Text(
                   _slideSubtitles[_currentSlide],
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.textSecondaryColor, // ✅ از theme
+                  ),
                 ),
               ],
             ),
           ),
           Row(
             children: [
-              _buildSwipeHint(Icons.chevron_left, isLeft: true),
-              _buildSwipeHint(Icons.chevron_right, isLeft: false),
+              _buildSwipeHint(Icons.chevron_left, isLeft: true, theme: theme),
+              _buildSwipeHint(Icons.chevron_right, isLeft: false, theme: theme),
             ],
           ),
         ],
@@ -603,7 +562,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
-  Widget _buildSwipeHint(IconData icon, {required bool isLeft}) {
+  Widget _buildSwipeHint(IconData icon,
+      {required bool isLeft, required ThemeProvider theme}) {
     final isVisible =
         (isLeft && _currentSlide > 0) || (!isLeft && _currentSlide < 3);
     return AnimatedOpacity(
@@ -613,22 +573,27 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.grey.shade100,
+          // ✅ تم‌محور
+          color:
+              theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200, width: 0.5),
+          border: Border.all(
+            color: theme.borderColor,
+            width: 0.5,
+          ),
         ),
         child: Icon(
           icon,
           size: 18,
-          color: isVisible ? Colors.grey.shade600 : Colors.grey.shade200,
+          color: isVisible
+              ? theme.textSecondaryColor
+              : theme.textSecondaryColor.withValues(alpha: 0.3),
         ),
       ),
     );
   }
 
-  // ==================== نشانگر اسلایدها (دات‌ها) ====================
-
-  Widget _buildSlideDots(Color primaryColor) {
+  Widget _buildSlideDots(Color primaryColor, ThemeProvider theme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -642,7 +607,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             width: isActive ? 32 : 8,
             height: 4,
             decoration: BoxDecoration(
-              color: isActive ? primaryColor : Colors.grey.shade300,
+              color: isActive
+                  ? primaryColor
+                  : (theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.grey.shade300),
               borderRadius: BorderRadius.circular(2),
             ),
           );
@@ -651,9 +620,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
-  // ==================== Carousel Slider ====================
-
-  Widget _buildCarouselSlides(Color primaryColor, ThemeProvider theme) {
+  Widget _buildCarouselSlides(
+    Color primaryColor,
+    ThemeProvider theme,
+    CalendarProvider calendar,
+  ) {
     return CarouselSlider(
       carouselController: _carouselController,
       options: CarouselOptions(
@@ -669,36 +640,36 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         },
       ),
       items: [
-        _buildCalendarSlide(primaryColor, theme),
-        _buildHabitsDetailSlide(primaryColor, theme),
-        _buildRecordsSlide(primaryColor, theme),
+        _buildCalendarSlide(primaryColor, theme, calendar),
+        _buildHabitsDetailSlide(primaryColor, theme, calendar),
+        _buildRecordsSlide(primaryColor, theme, calendar),
         _buildFailureChartSlide(primaryColor, theme),
       ],
     );
   }
 
   // ==================== اسلاید ۱: تاریخچه کلی ====================
-
-  Widget _buildCalendarSlide(Color primaryColor, ThemeProvider theme) {
+  Widget _buildCalendarSlide(
+    Color primaryColor,
+    ThemeProvider theme,
+    CalendarProvider calendar,
+  ) {
     String monthName;
     String yearText;
     int daysInMonth;
     int firstDayWeekday;
 
-    if (_calendarType == 'jalali') {
+    if (calendar.isJalali) {
       final jalali = Jalali.fromDateTime(_currentMonth);
       monthName = _getJalaliMonthName(jalali.month);
       yearText = jalali.year.toString();
-      daysInMonth = _getJalaliDaysInMonth(jalali.year, jalali.month);
+      daysInMonth = calendar.daysInMonth(jalali.year, jalali.month);
       firstDayWeekday = _getJalaliWeekday(jalali.year, jalali.month, 1);
     } else {
       monthName = _getGregorianMonthName(_currentMonth.month);
       yearText = _currentMonth.year.toString();
-      daysInMonth = DateTime(
-        _currentMonth.year,
-        _currentMonth.month + 1,
-        0,
-      ).day;
+      daysInMonth =
+          DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
       firstDayWeekday =
           DateTime(_currentMonth.year, _currentMonth.month, 1).weekday % 7;
     }
@@ -726,7 +697,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 IconButton(
                   onPressed: () {
                     setState(() {
-                      if (_calendarType == 'jalali') {
+                      if (calendar.isJalali) {
                         final jalali = Jalali.fromDateTime(_currentMonth);
                         int newMonth = jalali.month - 1;
                         int newYear = jalali.year;
@@ -734,11 +705,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                           newMonth = 12;
                           newYear--;
                         }
-                        _currentMonth = Jalali(
-                          newYear,
-                          newMonth,
-                          1,
-                        ).toDateTime();
+                        _currentMonth =
+                            Jalali(newYear, newMonth, 1).toDateTime();
                       } else {
                         _currentMonth = DateTime(
                           _currentMonth.year,
@@ -762,7 +730,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 IconButton(
                   onPressed: () {
                     setState(() {
-                      if (_calendarType == 'jalali') {
+                      if (calendar.isJalali) {
                         final jalali = Jalali.fromDateTime(_currentMonth);
                         int newMonth = jalali.month + 1;
                         int newYear = jalali.year;
@@ -770,11 +738,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                           newMonth = 1;
                           newYear++;
                         }
-                        _currentMonth = Jalali(
-                          newYear,
-                          newMonth,
-                          1,
-                        ).toDateTime();
+                        _currentMonth =
+                            Jalali(newYear, newMonth, 1).toDateTime();
                       } else {
                         _currentMonth = DateTime(
                           _currentMonth.year,
@@ -791,7 +756,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ),
             const SizedBox(height: 12),
             _buildCalendarGrid(
-                primaryColor, theme, daysInMonth, firstDayWeekday),
+              primaryColor,
+              theme,
+              daysInMonth,
+              firstDayWeekday,
+              calendar,
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -824,8 +794,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
     );
   }
-
-  // ==================== متدهای کمکی تقویم ====================
 
   String _getJalaliMonthName(int month) {
     const months = [
@@ -863,13 +831,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     return months[month - 1];
   }
 
-  int _getJalaliDaysInMonth(int year, int month) {
-    if (month <= 6) return 31;
-    if (month <= 11) return 30;
-    final date = Jalali(year, month, 1);
-    return (date.isLeapYear == true) ? 30 : 29;
-  }
-
   int _getJalaliWeekday(int year, int month, int day) {
     final jalali = Jalali(year, month, day);
     return jalali.weekDay - 1;
@@ -880,11 +841,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     ThemeProvider theme,
     int daysInMonth,
     int firstDayWeekday,
+    CalendarProvider calendar,
   ) {
-    final weekDays = _calendarType == 'jalali'
-        ? ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']
-        : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
+    final weekDays = calendar.weekDayHeaders;
     final now = DateTime.now();
 
     return Column(
@@ -898,7 +857,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade600,
+                    color: theme.textSecondaryColor, // ✅
                   ),
                 ),
               ),
@@ -921,14 +880,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             }
 
             DateTime date;
-            if (_calendarType == 'jalali') {
+            if (calendar.isJalali) {
               final jalali = Jalali.fromDateTime(_currentMonth);
               date = Jalali(jalali.year, jalali.month, day).toDateTime();
             } else {
               date = DateTime(_currentMonth.year, _currentMonth.month, day);
             }
 
-            final isToday = _isToday(date);
+            final isToday = _isToday(date, calendar);
             final isActive = _activeDays.any(
               (d) =>
                   d.year == date.year &&
@@ -961,7 +920,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                         : isToday
                             ? primaryColor
                             : isFuture
-                                ? Colors.grey.shade300
+                                // ✅ در تم شب روشن‌تر
+                                ? theme.textSecondaryColor
+                                    .withValues(alpha: 0.4)
                                 : theme.textColor,
                   ),
                 ),
@@ -973,9 +934,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
-  bool _isToday(DateTime date) {
+  bool _isToday(DateTime date, CalendarProvider calendar) {
     final now = DateTime.now();
-    if (_calendarType == 'jalali') {
+    if (calendar.isJalali) {
       final todayJalali = Jalali.fromDateTime(now);
       final dateJalali = Jalali.fromDateTime(date);
       return todayJalali.year == dateJalali.year &&
@@ -1023,8 +984,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   // ==================== اسلاید ۲: جزئیات عادت‌ها ====================
-
-  Future<Map<String, List<bool>>> _getAllHabitsWeeklyStatus() async {
+  Future<Map<String, List<bool>>> _getAllHabitsWeeklyStatus(
+    CalendarProvider calendar,
+  ) async {
     if (_cachedWeeklyStatus != null &&
         _cacheTime != null &&
         DateTime.now().difference(_cacheTime!) < _cacheDuration) {
@@ -1033,7 +995,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
     final Map<String, List<bool>> result = {};
     final now = DateTime.now();
-    final weekStart = _getWeekStart(now);
+    final weekStart = _getWeekStart(now, calendar);
 
     if (_habits.isEmpty) return result;
 
@@ -1088,7 +1050,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     _cacheTime = null;
   }
 
-  Widget _buildHabitsDetailSlide(Color primaryColor, ThemeProvider theme) {
+  Widget _buildHabitsDetailSlide(
+    Color primaryColor,
+    ThemeProvider theme,
+    CalendarProvider calendar,
+  ) {
     if (_habits.isEmpty) {
       return _buildEmptySlide(
         icon: Icons.fitness_center_outlined,
@@ -1115,7 +1081,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
       child: FutureBuilder<Map<String, List<bool>>>(
         key: ValueKey(_habits.length),
-        future: _getAllHabitsWeeklyStatus(),
+        future: _getAllHabitsWeeklyStatus(calendar),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
@@ -1137,10 +1103,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                     size: 48,
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    'خطا در بارگذاری داده‌ها',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
+                  Text('خطا در بارگذاری داده‌ها',
+                      style: TextStyle(color: theme.textSecondaryColor)),
                   const SizedBox(height: 8),
                   ElevatedButton(
                     onPressed: () {
@@ -1159,7 +1123,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           }
 
           final statusMap = snapshot.data ?? {};
-          final weekDayLetters = _getWeekDayLetters();
+          final weekDayLetters = _getWeekDayLetters(calendar);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(8),
@@ -1201,7 +1165,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 ..._habits.map((habit) {
                   final weekStatus =
                       statusMap[habit.id] ?? List.filled(7, false);
-                  return _buildHabitDetailRow(habit, weekStatus);
+                  return _buildHabitDetailRow(
+                    habit,
+                    weekStatus,
+                    calendar,
+                  );
                 }).toList(),
               ],
             ),
@@ -1211,11 +1179,15 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
-  Widget _buildHabitDetailRow(Habit habit, List<bool> weekStatus) {
+  Widget _buildHabitDetailRow(
+    Habit habit,
+    List<bool> weekStatus,
+    CalendarProvider calendar,
+  ) {
     final now = DateTime.now();
-    final weekStart = _getWeekStart(now);
-    final currentWeekdayIndex = _getCurrentWeekdayIndex();
-    final weekDayLetters = _getWeekDayLetters();
+    final weekStart = _getWeekStart(now, calendar);
+    final currentWeekdayIndex = _getCurrentWeekdayIndex(calendar);
+    final weekDayLetters = _getWeekDayLetters(calendar);
     final theme = Provider.of<ThemeProvider>(context);
 
     return Container(
@@ -1332,7 +1304,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.grey.shade300),
+            Icon(icon, size: 64, color: theme.textSecondaryColor),
             const SizedBox(height: 16),
             Text(
               title,
@@ -1355,7 +1327,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   // ==================== اسلاید ۳: رکوردهای شما ====================
-
   List<({Habit habit, int streak})> _getHabitsWithBestStreak() {
     List<({Habit habit, int streak})> result = [];
 
@@ -1385,17 +1356,15 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     return result;
   }
 
-  Widget _buildRecordsSlide(Color primaryColor, ThemeProvider theme) {
-    final bestDays = _getBestWeekDays();
+  Widget _buildRecordsSlide(
+    Color primaryColor,
+    ThemeProvider theme,
+    CalendarProvider calendar,
+  ) {
+    final bestDays = _getBestWeekDays(calendar);
     final topDay = bestDays.isNotEmpty ? bestDays.first : null;
 
     final bestHabits = _getHabitsWithBestStreak();
-    final hasBestHabits = bestHabits.isNotEmpty && bestHabits.first.streak > 0;
-
-    print('📊 Best habits count: ${bestHabits.length}');
-    for (var item in bestHabits) {
-      print('📊 Habit: ${item.habit.title}, streak: ${item.streak}');
-    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -1414,9 +1383,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // ─── کارت ۱: مشکی پر ───
             _buildRecordCard(
-              color: const Color(0xFF090909), // ✅ مشکی
+              color: const Color(0xFF090909),
               title: '🔥 طولانی‌ترین استریک',
               value: '$_bestStreak',
               unit: ' روز',
@@ -1426,19 +1394,15 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               icon: Icons.local_fire_department,
             ),
             const SizedBox(height: 12),
-
-            // ─── کارت ۲: سفید با استروک مشکی ───
             _buildBestHabitsCard(
-              color: Colors.white, // ✅ پس‌زمینه سفید
-              borderColor: const Color(0xFF090909), // ✅ استروک مشکی
+              color: Colors.white,
+              borderColor: const Color(0xFF090909),
               title: '🏆 عادت‌های با بیشترین استریک',
               habits: bestHabits,
               maxStreak: bestHabits.isNotEmpty ? bestHabits.first.streak : 0,
               icon: Icons.emoji_events,
             ),
             const SizedBox(height: 12),
-
-            // ─── کارت ۳: سبز (بدون تغییر) ───
             _buildRecordCard(
               color: primaryColor,
               title: '🌟 بهترین روزهای شما',
@@ -1535,9 +1499,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     required List<({Habit habit, int streak})> habits,
     required int maxStreak,
     required IconData icon,
-    Color? borderColor, // ✅ پارامتر جدید
+    Color? borderColor,
   }) {
-    // ✅ تشخیص پس‌زمینه تیره یا روشن
     final bool isDarkBg = color.computeLuminance() < 0.5;
     final Color textColor = isDarkBg ? Colors.white : const Color(0xFF090909);
     final Color subtleTextColor = isDarkBg
@@ -1555,7 +1518,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(16),
-        // ✅ استروک مشکی (اگه borderColor پاس داده بشه)
         border: borderColor != null
             ? Border.all(color: borderColor, width: 2)
             : null,
@@ -1613,11 +1575,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           if (habits.isEmpty || maxStreak == 0) ...[
             Row(
               children: [
-                Icon(
-                  icon,
-                  color: subtleTextColor,
-                  size: 24,
-                ),
+                Icon(icon, color: subtleTextColor, size: 24),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1711,16 +1669,13 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   ],
                 ),
               );
-            }).toList(),
+            }),
             if (habits.length > 5)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   'و ${habits.length - 5} عادت دیگر...',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: subtleTextColor,
-                  ),
+                  style: TextStyle(fontSize: 12, color: subtleTextColor),
                 ),
               ),
           ],
@@ -1728,18 +1683,10 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
       ),
     );
   }
-  // ==================== اسلاید ۴: نمودار شکست ====================
 
+  // ==================== اسلاید ۴: نمودار شکست ====================
   Widget _buildFailureChartSlide(Color primaryColor, ThemeProvider theme) {
-    const weekDays = [
-      'شنبه',
-      'یک‌شنبه',
-      'دوشنبه',
-      'سه‌شنبه',
-      'چهارشنبه',
-      'پنج‌شنبه',
-      'جمعه',
-    ];
+    final weekDays = _getWeekDayNamesForChart();
 
     final maxValue = _successData.reduce((a, b) => a > b ? a : b);
 
@@ -1784,14 +1731,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '📊 عملکرد روزهای هفته',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textColor,
-                  ),
-                ),
+                Text('عملکرد روزهای هفته',
+                    style: TextStyle(
+                        fontSize: 11, color: theme.textSecondaryColor)),
                 if (hasData)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -1932,7 +1874,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 bestDayValue: bestDayValue,
                 worstDayIndex: worstDayIndex,
                 worstDayValue: worstDayValue,
-              ),
+                theme: theme, // ✅ اضافه کن
+              )
             ] else ...[
               const SizedBox(height: 40),
               Center(
@@ -1962,6 +1905,31 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     );
   }
 
+  List<String> _getWeekDayNamesForChart() {
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
+    if (calendar.isJalali) {
+      return [
+        'شنبه',
+        'یک‌شنبه',
+        'دوشنبه',
+        'سه‌شنبه',
+        'چهارشنبه',
+        'پنج‌شنبه',
+        'جمعه'
+      ];
+    } else {
+      return [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday',
+      ];
+    }
+  }
+
   Widget _buildSuccessAnalysisCard({
     required Color primaryColor,
     required List<String> weekDays,
@@ -1969,6 +1937,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     required double bestDayValue,
     required int worstDayIndex,
     required double worstDayValue,
+    required ThemeProvider theme, // ✅ جدید
   }) {
     final bestPercent = (bestDayValue * 100).toInt();
     final worstPercent = (worstDayValue * 100).toInt();
@@ -2078,7 +2047,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   // ==================== حالت لودینگ ====================
-
   Widget _buildLoadingState(Color primaryColor) {
     return Center(
       child: Column(
@@ -2096,7 +2064,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   // ==================== متدهای کمکی ====================
-
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'fitness_center':

@@ -6,6 +6,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import '../models/today_habits_list.dart';
 import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class TodayHabitsListWidget extends StatelessWidget {
   final TodayHabitsList data;
@@ -33,8 +34,8 @@ class TodayHabitsListWidget extends StatelessWidget {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
-    final jalaliDate = Jalali.fromDateTime(data.date);
-    final dateString = '${jalaliDate.day} ${_getMonthName(jalaliDate.month)}';
+    final calendar = Provider.of<CalendarProvider>(context); // ✅
+    final dateString = calendar.formatWithMonthName(data.date);
     final rate = (data.completionRate * 100).toInt();
 
     return Container(
@@ -606,23 +607,5 @@ class TodayHabitsListWidget extends StatelessWidget {
       default:
         return Icons.fitness_center;
     }
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'فروردین',
-      'اردیبهشت',
-      'خرداد',
-      'تیر',
-      'مرداد',
-      'شهریور',
-      'مهر',
-      'آبان',
-      'آذر',
-      'دی',
-      'بهمن',
-      'اسفند',
-    ];
-    return months[month - 1];
   }
 }

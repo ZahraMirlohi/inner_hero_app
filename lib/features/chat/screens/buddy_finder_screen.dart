@@ -9,8 +9,8 @@ import '/providers/theme_provider.dart';
 import '/features/profile/models/user_personality.dart';
 import '/features/profile/screens/personality_screen.dart';
 import '/features/chat/models/conversation_model.dart';
-import 'chat_screen.dart';
 import 'buddy_chat_screen.dart';
+import 'user_profile_screen.dart';
 
 class BuddyFinderScreen extends StatefulWidget {
   const BuddyFinderScreen({super.key});
@@ -21,14 +21,23 @@ class BuddyFinderScreen extends StatefulWidget {
 
 class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final BuddyMatcherService _matcherService = BuddyMatcherService();
   final ChatService _chatService = ChatService();
   final SupabaseClient _supabaseClient = Supabase.instance.client;
 
   // ==================== داده‌ها ====================
-  List<Map<String, dynamic>> _matches = [];
+  List<Map<String, dynamic>> _allMatches = [];
+  List<Map<String, dynamic>> _searchResults = [];
+  List<Map<String, dynamic>> _pendingRequests = [];
+  List<Map<String, dynamic>> _myBuddies = [];
+
   bool _isLoading = true;
   String? _userId;
+  bool _isInitialized = false;
+
+  // ✅ فلگ برای تشخیص تغییرات (ارسال/لغو/قبول/رد درخواست)
+  bool _hasChanges = false;
 
   // ==================== فیلترها ====================
   Gender? _filterGender;
@@ -38,51 +47,114 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _loadData();
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   // ==================== بارگذاری داده‌ها ====================
   Future<void> _loadData() async {
     final user = await _matcherService.getCurrentUser();
-    if (user != null) {
-      if (!mounted) return;
-
-      setState(() {
-        _userId = user.id;
-        _isLoading = true;
-      });
-
-      try {
-        final matches = await _matcherService.findMatchingBuddies(
-          user.id,
-          minMatchScore: _minMatchScore,
-        );
-
-        if (!mounted) return;
-
-        setState(() {
-          _matches = matches;
-          _isLoading = false;
-        });
-      } catch (e) {
-        print('❌ Error loading data: $e');
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-        });
+    if (user == null) {
+      if (mounted) {
+        // ✅ چک mounted
+        setState(() => _isLoading = false);
       }
-    } else {
-      if (!mounted) return;
+      return;
+    }
+
+    if (!mounted) return; // ✅ اینجا هم چک کن
+
+    setState(() {
+      _userId = user.id;
+      _isLoading = true;
+    });
+
+    try {
+      final matches = await _matcherService.findMatchingBuddies(
+        user.id,
+        minMatchScore: 0,
+        filterGender: null,
+      );
+
+      if (!mounted) return; // ✅ بعد از await دوباره چک کن
+
+      _categorizeMatches(matches);
+
       setState(() {
         _isLoading = false;
+        _isInitialized = true;
       });
+
+      _applyFilters();
+    } catch (e) {
+      print('❌ Error loading data: $e');
+      if (!mounted) return; // ✅ بعد از catch هم چک کن
+      setState(() => _isLoading = false);
     }
+  }
+
+  // ✅ دسته‌بندی کاربران به سه گروه
+  void _categorizeMatches(List<Map<String, dynamic>> matches) {
+    final pending = <Map<String, dynamic>>[];
+    final buddies = <Map<String, dynamic>>[];
+    final searchable = <Map<String, dynamic>>[];
+
+    for (var match in matches) {
+      final isBuddy = match['is_buddy'] == true;
+      final hasPending = match['has_pending_request'] == true;
+
+      if (isBuddy) {
+        buddies.add(match);
+      } else if (hasPending) {
+        pending.add(match);
+      } else {
+        searchable.add(match);
+      }
+    }
+
+    _allMatches = matches;
+    _searchResults = searchable;
+    _pendingRequests = pending;
+    _myBuddies = buddies;
+  }
+
+  // ✅ اعمال فیلترها روی نتایج جستجو
+  void _applyFilters() {
+    if (!_isInitialized) return;
+    if (!mounted) return;
+
+    var filtered = _allMatches.where((match) {
+      final isBuddy = match['is_buddy'] == true;
+      final hasPending = match['has_pending_request'] == true;
+      if (isBuddy || hasPending) return false;
+
+      if (_filterGender != null) {
+        final genderStr = match['gender'] as String?;
+        if (genderStr != _filterGender!.toString().split('.').last) {
+          return false;
+        }
+      }
+
+      final score = match['match_score'] as double? ?? 0;
+      if (score < _minMatchScore) return false;
+
+      return true;
+    }).toList();
+
+    filtered.sort(
+      (a, b) =>
+          (b['match_score'] as double).compareTo(a['match_score'] as double),
+    );
+    if (!mounted) return; // ✅ قبل از setState چک کن
+    setState(() {
+      _searchResults = filtered;
+    });
   }
 
   // ==================== ارسال درخواست ====================
@@ -98,7 +170,30 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             'خوشحال می‌شوم با هم هم‌مسیر باشیم! 🤝',
       );
 
-      await _loadData();
+      if (!mounted) return;
+
+      // ✅ فقط state لوکال را آپدیت کن (بدون reload کل داده)
+      setState(() {
+        _hasChanges = true; // ✅ علامت‌گذاری تغییر
+
+        final index = _searchResults.indexWhere(
+          (m) => m['user_id'] == toUserId,
+        );
+        if (index != -1) {
+          final updated = Map<String, dynamic>.from(_searchResults[index]);
+          updated['has_pending_request'] = true;
+          updated['is_sent_by_me'] = true;
+          _searchResults.removeAt(index);
+          _pendingRequests.insert(0, updated);
+
+          final allIndex = _allMatches.indexWhere(
+            (m) => m['user_id'] == toUserId,
+          );
+          if (allIndex != -1) {
+            _allMatches[allIndex] = updated;
+          }
+        }
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -147,59 +242,55 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       ),
     );
 
-    if (confirm == true) {
-      try {
-        await _matcherService.cancelBuddyRequest(_userId!, toUserId);
-        await _loadData();
+    if (confirm != true) return;
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('درخواست هم‌مسیر لغو شد 🗑️'),
-              backgroundColor: primaryColor,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  // ==================== پاسخ به درخواست ====================
-  Future<void> _respondToRequest(
-    String requestId,
-    bool accept,
-    Color primaryColor,
-  ) async {
     try {
-      await _matcherService.respondToBuddyRequest(requestId, accept);
+      await _matcherService.cancelBuddyRequest(_userId!, toUserId);
 
-      if (accept) {
-        await Future.delayed(const Duration(seconds: 1));
-      }
+      if (!mounted) return;
 
-      await _loadData();
+      setState(() {
+        _hasChanges = true; // ✅ علامت‌گذاری تغییر
+
+        final index = _pendingRequests.indexWhere(
+          (m) => m['user_id'] == toUserId,
+        );
+        if (index != -1) {
+          final updated = Map<String, dynamic>.from(_pendingRequests[index]);
+          updated['has_pending_request'] = false;
+          updated['is_sent_by_me'] = false;
+          updated['request_id'] = null;
+          _pendingRequests.removeAt(index);
+
+          final score = updated['match_score'] as double? ?? 0;
+          final genderStr = updated['gender'] as String?;
+          final matchesFilters = score >= _minMatchScore &&
+              (_filterGender == null ||
+                  genderStr == _filterGender!.toString().split('.').last);
+
+          if (matchesFilters) {
+            _searchResults.insert(0, updated);
+          }
+
+          final allIndex = _allMatches.indexWhere(
+            (m) => m['user_id'] == toUserId,
+          );
+          if (allIndex != -1) {
+            _allMatches[allIndex] = updated;
+          }
+        }
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? 'درخواست پذیرفته شد 🎉' : 'درخواست رد شد'),
-            backgroundColor: accept ? primaryColor : Colors.grey,
+            content: const Text('درخواست هم‌مسیر لغو شد 🗑️'),
+            backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      print('❌ Error responding to request: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -211,17 +302,199 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     }
   }
 
+  // ==================== پاسخ به درخواست ====================
+// lib/features/chat/screens/buddy_finder_screen.dart
+
+// ==================== پاسخ به درخواست ====================
+  Future<void> _respondToRequest(
+    String requestId,
+    bool accept,
+    Color primaryColor,
+  ) async {
+    if (_userId == null) return;
+
+    final pendingItem = _pendingRequests.firstWhere(
+      (m) => m['request_id'] == requestId,
+      orElse: () => <String, dynamic>{},
+    );
+    final otherUserId = pendingItem['user_id'] as String?;
+
+    try {
+      await _matcherService.respondToBuddyRequest(requestId, accept);
+
+      if (!mounted) return;
+
+      if (accept && otherUserId != null) {
+        // ✅ برای accept، فقط state لوکال را آپدیت کن (بدون reload از دیتابیس)
+        setState(() {
+          _hasChanges = true;
+
+          // حذف از pending
+          _pendingRequests.removeWhere((m) => m['request_id'] == requestId);
+
+          // اضافه به buddies (با conversation_id که بعداً در _loadData می‌آید)
+          final updated = Map<String, dynamic>.from(pendingItem);
+          updated['is_buddy'] = true;
+          updated['has_pending_request'] = false;
+          updated['is_received_by_me'] = false;
+          updated['request_id'] = null;
+          _myBuddies.insert(0, updated);
+
+          // آپدیت در allMatches
+          final allIndex = _allMatches.indexWhere(
+            (m) => m['user_id'] == otherUserId,
+          );
+          if (allIndex != -1) {
+            _allMatches[allIndex] = updated;
+          }
+        });
+
+        // ✅ conversation_id را به صورت جداگانه دریافت کن (بدون setState)
+        _fetchConversationIdInBackground(otherUserId);
+      } else if (otherUserId != null) {
+        // ✅ برای reject، فقط state لوکال
+        setState(() {
+          _hasChanges = true;
+
+          final index = _pendingRequests.indexWhere(
+            (m) => m['request_id'] == requestId,
+          );
+          if (index != -1) {
+            final updated = Map<String, dynamic>.from(_pendingRequests[index]);
+            updated['has_pending_request'] = false;
+            updated['is_received_by_me'] = false;
+            updated['request_id'] = null;
+            _pendingRequests.removeAt(index);
+
+            final score = updated['match_score'] as double? ?? 0;
+            final genderStr = updated['gender'] as String?;
+            final matchesFilters = score >= _minMatchScore &&
+                (_filterGender == null ||
+                    genderStr == _filterGender!.toString().split('.').last);
+
+            if (matchesFilters) {
+              _searchResults.insert(0, updated);
+            }
+
+            final allIndex = _allMatches.indexWhere(
+              (m) => m['user_id'] == otherUserId,
+            );
+            if (allIndex != -1) {
+              _allMatches[allIndex] = updated;
+            }
+          }
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(accept ? 'درخواست پذیرفته شد 🎉' : 'درخواست رد شد'),
+            backgroundColor: accept ? primaryColor : Colors.grey,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+// ✅ دریافت conversation_id در پس‌زمینه (بدون setState)
+  Future<void> _fetchConversationIdInBackground(String otherUserId) async {
+    // تأخیر برای اطمینان از ثبت conversation در دیتابیس
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    try {
+      final matches = await _matcherService.findMatchingBuddies(_userId!);
+      final updated = matches.firstWhere(
+        (m) => m['user_id'] == otherUserId,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (!mounted || updated.isEmpty) return;
+
+      setState(() {
+        final index = _myBuddies.indexWhere((m) => m['user_id'] == otherUserId);
+        if (index != -1) {
+          _myBuddies[index] = updated;
+        }
+
+        final allIndex = _allMatches.indexWhere(
+          (m) => m['user_id'] == otherUserId,
+        );
+        if (allIndex != -1) {
+          _allMatches[allIndex] = updated;
+        }
+      });
+    } catch (e) {
+      print('❌ Error fetching conversation ID: $e');
+    }
+  }
+
+// ✅ متد قدیمی _reloadOnlyUser را حذف کن
+  // ✅ فقط یک کاربر را reload کن (برای accept)
+  Future<void> _reloadOnlyUser(String otherUserId) async {
+    if (_userId == null) return;
+
+    try {
+      final matches = await _matcherService.findMatchingBuddies(_userId!);
+      final updated = matches.firstWhere(
+        (m) => m['user_id'] == otherUserId,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (!mounted || updated.isEmpty) return;
+
+      setState(() {
+        _pendingRequests.removeWhere((m) => m['user_id'] == otherUserId);
+        _myBuddies.removeWhere((m) => m['user_id'] == otherUserId);
+        _searchResults.removeWhere((m) => m['user_id'] == otherUserId);
+
+        final allIndex = _allMatches.indexWhere(
+          (m) => m['user_id'] == otherUserId,
+        );
+        if (allIndex != -1) {
+          _allMatches[allIndex] = updated;
+        } else {
+          _allMatches.add(updated);
+        }
+
+        if (updated['is_buddy'] == true) {
+          _myBuddies.insert(0, updated);
+        } else if (updated['has_pending_request'] == true) {
+          _pendingRequests.insert(0, updated);
+        } else {
+          _searchResults.insert(0, updated);
+        }
+      });
+    } catch (e) {
+      print('❌ Error reloading user: $e');
+    }
+  }
+
   // ==================== Build ====================
+// ==================== Build ====================
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
+    // ✅ PopScope حذف شد - مشکل AnimationController رفع می‌شود
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'پیدا کردن هم‌مسیر',
+          'هم‌مسیرها',
           style: TextStyle(color: theme.textColor),
         ),
         backgroundColor: theme.surfaceColor,
@@ -229,60 +502,215 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         foregroundColor: theme.textColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // ✅ چک کن می‌تونه pop کنه
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context, _hasChanges);
+            } else {
+              // اگه نمی‌تونه، به صفحه اصلی برگرده
+              Navigator.of(context).maybePop();
+            }
+          },
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: primaryColor),
             onPressed: () {
-              setState(() {
-                _isLoading = true;
-              });
+              setState(() => _isLoading = true);
               _loadData();
-            },
-            tooltip: 'بروزرسانی',
-          ),
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-              color: _showFilters ? primaryColor : theme.textColor,
-            ),
-            onPressed: () {
-              setState(() {
-                _showFilters = !_showFilters;
-              });
             },
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelPadding: EdgeInsets.zero,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color:
+                    theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              dividerColor: Colors.transparent,
+              labelColor: theme.isDarkMode ? Colors.white : primaryColor,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
+              labelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              tabs: [
+                Tab(height: 44, text: 'جستجو (${_searchResults.length})'),
+                Tab(
+                  height: 44,
+                  text: 'در انتظار (${_pendingRequests.length})',
+                ),
+                Tab(height: 44, text: 'هم‌مسیرها (${_myBuddies.length})'),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: primaryColor),
-            )
-          : Column(
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : TabBarView(
+              controller: _tabController,
               children: [
-                if (_showFilters) _buildFilters(theme, primaryColor),
-                Expanded(
-                  child: _matches.isEmpty
-                      ? _buildEmptyState(theme, primaryColor)
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: _matches.length,
-                          itemBuilder: (context, index) {
-                            return _buildMatchCard(
-                              _matches[index],
-                              theme,
-                              primaryColor,
-                            );
-                          },
-                        ),
-                ),
+                _buildSearchTab(theme, primaryColor),
+                _buildPendingTab(theme, primaryColor),
+                _buildBuddiesTab(theme, primaryColor),
               ],
             ),
     );
   }
 
-  // ==================== فیلترها ====================
+  // ==================== تب جستجو ====================
+  Widget _buildSearchTab(ThemeProvider theme, Color primaryColor) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${_searchResults.length} کاربر پیدا شد',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textSecondaryColor,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() => _showFilters = !_showFilters);
+                },
+                icon: Icon(
+                  _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+                  size: 18,
+                ),
+                label: const Text('فیلتر'),
+                style: TextButton.styleFrom(
+                  foregroundColor: primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_showFilters) _buildFilters(theme, primaryColor),
+        Expanded(
+          child: _searchResults.isEmpty
+              ? _buildEmptyState(
+                  icon: Icons.search_off,
+                  title: 'نتیجه‌ای یافت نشد',
+                  subtitle: 'فیلترها را تغییر دهید یا بعداً دوباره امتحان کنید',
+                  theme: theme,
+                  primaryColor: primaryColor,
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadData,
+                  color: primaryColor,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      return _buildMatchCard(
+                        _searchResults[index],
+                        theme,
+                        primaryColor,
+                      );
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== تب در انتظار ====================
+  Widget _buildPendingTab(ThemeProvider theme, Color primaryColor) {
+    if (_pendingRequests.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.hourglass_empty,
+        title: 'درخواستی در انتظار نیست',
+        subtitle: 'درخواست‌های ارسالی و دریافتی شما اینجا نمایش داده می‌شوند',
+        theme: theme,
+        primaryColor: primaryColor,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: primaryColor,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _pendingRequests.length,
+        itemBuilder: (context, index) {
+          return _buildMatchCard(
+            _pendingRequests[index],
+            theme,
+            primaryColor,
+          );
+        },
+      ),
+    );
+  }
+
+  // ==================== تب هم‌مسیرها ====================
+  Widget _buildBuddiesTab(ThemeProvider theme, Color primaryColor) {
+    if (_myBuddies.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.people_outline,
+        title: 'هنوز هم‌مسیری ندارید',
+        subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
+        theme: theme,
+        primaryColor: primaryColor,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      color: primaryColor,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _myBuddies.length,
+        itemBuilder: (context, index) {
+          return _buildMatchCard(
+            _myBuddies[index],
+            theme,
+            primaryColor,
+          );
+        },
+      ),
+    );
+  }
+
+  // ==================== پنل فیلتر ====================
   Widget _buildFilters(ThemeProvider theme, Color primaryColor) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -318,7 +746,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                     _filterGender = null;
                     _minMatchScore = 0;
                   });
-                  _loadData();
+                  _applyFilters();
                 },
                 child: Text(
                   'پاک کردن',
@@ -327,7 +755,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Text(
@@ -339,9 +767,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 'همه',
                 _filterGender == null,
                 () {
-                  setState(() {
-                    _filterGender = null;
-                  });
+                  setState(() => _filterGender = null);
+                  _applyFilters();
                 },
                 primaryColor,
               ),
@@ -349,9 +776,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 'مرد',
                 _filterGender == Gender.male,
                 () {
-                  setState(() {
-                    _filterGender = Gender.male;
-                  });
+                  setState(() => _filterGender = Gender.male);
+                  _applyFilters();
                 },
                 primaryColor,
               ),
@@ -359,9 +785,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 'زن',
                 _filterGender == Gender.female,
                 () {
-                  setState(() {
-                    _filterGender = Gender.female;
-                  });
+                  setState(() => _filterGender = Gender.female);
+                  _applyFilters();
                 },
                 primaryColor,
               ),
@@ -374,7 +799,6 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 'امتیاز:',
                 style: TextStyle(fontSize: 13, color: theme.textColor),
               ),
-              const SizedBox(width: 8),
               Expanded(
                 child: Slider(
                   value: _minMatchScore,
@@ -383,10 +807,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   divisions: 8,
                   activeColor: primaryColor,
                   onChanged: (value) {
-                    setState(() {
-                      _minMatchScore = value;
-                    });
+                    setState(() => _minMatchScore = value);
                   },
+                  onChangeEnd: (_) => _applyFilters(),
                 ),
               ),
               Text(
@@ -395,32 +818,6 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: theme.textColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                'اعمال:',
-                style: TextStyle(fontSize: 13, color: theme.textColor),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _loadData,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: const Text(
-                    'اعمال فیلترها',
-                    style: TextStyle(color: Colors.white),
-                  ),
                 ),
               ),
             ],
@@ -436,20 +833,26 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     VoidCallback onTap,
     Color primaryColor,
   ) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         margin: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor : Colors.grey.shade200,
+          color: isSelected
+              ? primaryColor
+              : (theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade200),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : theme.textSecondaryColor,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -470,11 +873,10 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     final hasPendingRequest = match['has_pending_request'] ?? false;
     final isSentByMe = match['is_sent_by_me'] ?? false;
     final isReceivedByMe = match['is_received_by_me'] ?? false;
-    final conversationId = match['conversation_id'] as String?;
     final requestId = match['request_id'] as String?;
+    final userId = match['user_id'];
 
-    // ✅ رنگ بوردر بر اساس وضعیت
-    Color borderColor = Colors.grey.shade200;
+    Color borderColor = theme.borderColor;
     if (isBuddy) {
       borderColor = primaryColor;
     } else if (hasPendingRequest) {
@@ -501,7 +903,6 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         children: [
           Row(
             children: [
-              // آواتار
               Container(
                 width: 48,
                 height: 48,
@@ -538,24 +939,14 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        // برچسب وضعیت
+                        const SizedBox(width: 6),
                         if (isBuddy)
-                          _buildStatusBadge(
-                            'هم‌مسیر ✅',
-                            primaryColor,
-                          )
+                          _buildStatusBadge('هم‌مسیر ✅', primaryColor)
                         else if (isReceivedByMe)
-                          _buildStatusBadge(
-                            'درخواست جدید',
-                            Colors.orange,
-                          )
+                          _buildStatusBadge('درخواست جدید', Colors.orange)
                         else if (isSentByMe)
-                          _buildStatusBadge(
-                            'در انتظار پاسخ',
-                            Colors.blue,
-                          ),
-                        const SizedBox(width: 8),
+                          _buildStatusBadge('در انتظار پاسخ', Colors.blue),
+                        const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -613,41 +1004,22 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               ),
             ],
           ),
-
-          // اشتراکات
           if (commonHabits.isNotEmpty || commonInterests.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                ...commonHabits.take(3).map((habit) {
-                  return _buildTagChip(
-                    '🏃 $habit',
-                    primaryColor,
-                  );
-                }),
-                ...commonInterests.take(2).map((interest) {
-                  return _buildTagChip(
-                    '❤️ $interest',
-                    primaryColor,
-                  );
-                }),
-                if (commonHabits.length > 3 || commonInterests.length > 2)
-                  Text(
-                    'و ${(commonHabits.length > 3 ? commonHabits.length - 3 : 0) + (commonInterests.length > 2 ? commonInterests.length - 2 : 0)} مورد دیگر',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: theme.textSecondaryColor,
+                ...commonHabits.take(3).map(
+                      (habit) => _buildTagChip('🏃 $habit', primaryColor),
                     ),
-                  ),
+                ...commonInterests.take(2).map(
+                      (interest) => _buildTagChip('❤️ $interest', primaryColor),
+                    ),
               ],
             ),
           ],
-
           const SizedBox(height: 12),
-
-          // دکمه‌های اقدام
           Row(
             children: [
               Expanded(
@@ -655,13 +1027,17 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   match,
                   theme,
                   primaryColor,
+                  isSentByMe: isSentByMe,
+                  isReceivedByMe: isReceivedByMe,
+                  isBuddy: isBuddy,
+                  requestId: requestId,
+                  userId: userId,
+                  score: score,
                 ),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
-                onPressed: () {
-                  _showUserProfile(match['user_id'], theme, primaryColor);
-                },
+                onPressed: () => _showUserProfile(userId, theme, primaryColor),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -670,7 +1046,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  side: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+                  side: BorderSide(
+                    color: primaryColor.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Icon(
                   Icons.person_outline,
@@ -725,29 +1103,32 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   Widget _buildActionButton(
     Map<String, dynamic> match,
     ThemeProvider theme,
-    Color primaryColor,
-  ) {
-    final isBuddy = match['is_buddy'] ?? false;
-    final isSentByMe = match['is_sent_by_me'] ?? false;
-    final isReceivedByMe = match['is_received_by_me'] ?? false;
+    Color primaryColor, {
+    required bool isSentByMe,
+    required bool isReceivedByMe,
+    required bool isBuddy,
+    required String? requestId,
+    required String userId,
+    required double score,
+  }) {
     final conversationId = match['conversation_id'] as String?;
-    final requestId = match['request_id'] as String?;
-    final score = match['match_score'] as double? ?? 0;
-    final userId = match['user_id'];
 
-    // ✅ هم‌مسیر شده → دکمه "گپ و گفتگو"
     if (isBuddy) {
       return ElevatedButton.icon(
         onPressed: () {
-          if (conversationId != null) {
+          if (conversationId != null && _userId != null) {
+            // ✅ memberIds باید شامل هر دو کاربر باشه
             final conv = Conversation(
               id: conversationId,
               type: ConversationType.buddy,
               name: match['name'],
-              memberIds: [userId],
+              memberIds: [_userId!, userId], // ✅ هم خودم هم کاربر مقابل
               lastMessageAt: DateTime.now(),
               createdAt: DateTime.now(),
             );
+
+            print('🚀 Opening chat with members: ${conv.memberIds}');
+
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -755,9 +1136,15 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               ),
             );
           } else {
+            print(
+                '❌ Cannot open chat - conversationId: $conversationId, _userId: $_userId');
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('خطا در باز کردن چت'),
+              SnackBar(
+                content: Text(
+                  conversationId == null
+                      ? 'گفتگو یافت نشد. لطفاً صفحه را رفرش کنید.'
+                      : 'خطا در باز کردن چت',
+                ),
                 backgroundColor: Colors.red,
               ),
             );
@@ -778,12 +1165,10 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          foregroundColor: Colors.white,
         ),
       );
     }
 
-    // ✅ درخواست ارسال شده → "در انتظار پاسخ" + لغو
     if (isSentByMe) {
       return Row(
         children: [
@@ -797,14 +1182,18 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                foregroundColor: Colors.grey.shade700,
+                disabledBackgroundColor: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade200,
               ),
               child: Text(
                 'در انتظار پاسخ',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+                  color: theme.isDarkMode
+                      ? Colors.grey.shade400
+                      : Colors.grey.shade700,
                 ),
               ),
             ),
@@ -826,7 +1215,6 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       );
     }
 
-    // ✅ درخواست دریافت شده → قبول/رد
     if (isReceivedByMe && requestId != null) {
       return Row(
         children: [
@@ -839,12 +1227,11 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                foregroundColor: Colors.white,
               ),
               child: const Text(
                 'قبول درخواست',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -862,12 +1249,11 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                foregroundColor: Colors.white,
               ),
               child: const Text(
                 'رد درخواست',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -878,16 +1264,14 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       );
     }
 
-    // ✅ هیچ ارتباطی → ارسال درخواست
     return ElevatedButton(
       onPressed: () => _sendRequest(userId, primaryColor),
       style: ElevatedButton.styleFrom(
-        backgroundColor: score >= 70 ? primaryColor : primaryColor,
+        backgroundColor: primaryColor,
         padding: const EdgeInsets.symmetric(vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
-        foregroundColor: Colors.white,
       ),
       child: Text(
         score >= 70 ? 'ارسال درخواست 🤝' : 'ارسال درخواست',
@@ -906,288 +1290,22 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     ThemeProvider theme,
     Color primaryColor,
   ) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      backgroundColor: theme.surfaceColor,
-      builder: (context) {
-        return FutureBuilder<Map<String, dynamic>>(
-          future: _getUserProfile(userId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: CircularProgressIndicator(color: primaryColor),
-                ),
-              );
-            }
-
-            if (snapshot.hasError || !snapshot.hasData) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Text('خطا در بارگذاری اطلاعات'),
-                ),
-              );
-            }
-
-            final data = snapshot.data!;
-            return _buildUserProfileSheet(data, theme, primaryColor);
-          },
-        );
-      },
-    );
-  }
-
-  Future<Map<String, dynamic>> _getUserProfile(String userId) async {
-    try {
-      final profile = await _supabaseClient
-          .from('profiles')
-          .select('name, avatar_url, total_xp, current_streak, created_at')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      final personality = await _supabaseClient
-          .from('user_personalities')
-          .select('gender, mbti_type, interests, goals, bio')
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      return {'profile': profile ?? {}, 'personality': personality ?? {}};
-    } catch (e) {
-      print('❌ Error getting user profile: $e');
-      return {'profile': {}, 'personality': {}};
-    }
-  }
-
-  Widget _buildUserProfileSheet(
-    Map<String, dynamic> data,
-    ThemeProvider theme,
-    Color primaryColor,
-  ) {
-    final profile = data['profile'] as Map<String, dynamic>? ?? {};
-    final personality = data['personality'] as Map<String, dynamic>? ?? {};
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                (profile['name'] ?? 'کاربر').substring(0, 1).toUpperCase(),
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            profile['name'] ?? 'کاربر',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: theme.textColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (personality['gender'] != null)
-                Text(
-                  _getGenderText(personality['gender']),
-                  style: TextStyle(color: theme.textSecondaryColor),
-                ),
-              if (personality['mbti_type'] != null) ...[
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    personality['mbti_type'] ?? '',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: primaryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem(
-                icon: Icons.stars,
-                label: 'XP',
-                value: '${profile['total_xp'] ?? 0}',
-                primaryColor: primaryColor,
-                theme: theme,
-              ),
-              _buildStatItem(
-                icon: Icons.local_fire_department,
-                label: 'استریک',
-                value: '${profile['current_streak'] ?? 0} روز',
-                primaryColor: primaryColor,
-                theme: theme,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (personality['interests'] != null &&
-              (personality['interests'] as List).isNotEmpty) ...[
-            Text(
-              'علاقه‌مندی‌ها:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: (personality['interests'] as List).map((interest) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    interest,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: primaryColor,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-          if (personality['bio'] != null &&
-              personality['bio'].toString().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(
-              'درباره من:',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              personality['bio'] ?? '',
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.textSecondaryColor,
-              ),
-            ),
-          ],
-          const SizedBox(height: 20),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProfileScreen(userId: userId),
       ),
     );
   }
 
-  String _getGenderText(String? gender) {
-    switch (gender) {
-      case 'male':
-        return 'مرد';
-      case 'female':
-        return 'زن';
-      case 'other':
-        return 'سایر';
-      default:
-        return 'نامشخص';
-    }
-  }
-
-  Widget _buildStatItem({
+  // ==================== Empty State ====================
+  Widget _buildEmptyState({
     required IconData icon,
-    required String label,
-    required String value,
-    required Color primaryColor,
+    required String title,
+    required String subtitle,
     required ThemeProvider theme,
+    required Color primaryColor,
   }) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: primaryColor.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: primaryColor, size: 22),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: theme.textColor,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: theme.textSecondaryColor,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Color _getScoreColor(double score) {
-    if (score >= 70) return const Color(0xFF2ECC71);
-    if (score >= 50) return const Color(0xFFFFA500);
-    return Colors.grey;
-  }
-
-  Widget _buildEmptyState(ThemeProvider theme, Color primaryColor) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -1201,14 +1319,14 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.people_outline,
+                icon,
                 size: 56,
                 color: primaryColor.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'هم‌مسیری پیدا نشد',
+              title,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1217,7 +1335,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'با تکمیل پروفایل شخصیت، شانس پیدا کردن هم‌مسیر را افزایش دهید',
+              subtitle,
               style: TextStyle(
                 fontSize: 13,
                 color: theme.textSecondaryColor,
@@ -1254,5 +1372,11 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         ),
       ),
     );
+  }
+
+  Color _getScoreColor(double score) {
+    if (score >= 70) return const Color(0xFF2ECC71);
+    if (score >= 50) return const Color(0xFFFFA500);
+    return Colors.grey;
   }
 }

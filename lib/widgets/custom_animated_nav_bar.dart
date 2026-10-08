@@ -1,7 +1,9 @@
 // lib/widgets/custom_animated_nav_bar.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.dart';
+import '/providers/theme_provider.dart';
 
 class CustomAnimatedNavBar extends StatelessWidget {
   final int currentIndex;
@@ -21,6 +23,24 @@ class CustomAnimatedNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
+    // ✅ رنگ پس‌زمینه:
+    // - در تم شب: سفید
+    // - در تم روز: مشکی
+    final Color navBarColor =
+        theme.isDarkMode ? Colors.white : const Color(0xFF090909);
+
+    // ✅ رنگ آیکون غیرفعال:
+    // - در تم شب: خاکستری (خوانا روی سفید)
+    // - در تم روز: خاکستری تیره (خوانا روی مشکی)
+    final Color inactiveColor =
+        theme.isDarkMode ? Colors.grey.shade400 : const Color(0xFF6A6A6A);
+
+    // ✅ رنگ آیکون فعال (همیشه primaryColor)
+    final Color activeColor = primaryColor;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: AnimatedBottomNavigationBar.builder(
@@ -30,12 +50,15 @@ class CustomAnimatedNavBar extends StatelessWidget {
         notchSmoothness: NotchSmoothness.verySmoothEdge,
         leftCornerRadius: 30,
         rightCornerRadius: 30,
-        backgroundColor: const Color(0xFF090909),
+        // ✅ تم‌محور
+        backgroundColor: navBarColor,
         elevation: 0,
-        shadow: const BoxShadow(
-          color: Colors.black26,
+        shadow: BoxShadow(
+          color: Colors.black.withValues(
+            alpha: theme.isDarkMode ? 0.25 : 0.26,
+          ),
           blurRadius: 20,
-          offset: Offset(0, 10),
+          offset: const Offset(0, 10),
         ),
         splashRadius: 0,
         onTap: onTap,
@@ -48,9 +71,8 @@ class CustomAnimatedNavBar extends StatelessWidget {
                 Icon(
                   icons[index],
                   size: 24,
-                  color: isActive
-                      ? const Color(0xFFB0CC5D)
-                      : const Color(0xFF6A6A6A),
+                  // ✅ تم‌محور
+                  color: isActive ? activeColor : inactiveColor,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -58,9 +80,8 @@ class CustomAnimatedNavBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive
-                        ? const Color(0xFFB0CC5D)
-                        : const Color(0xFF6A6A6A),
+                    // ✅ تم‌محور
+                    color: isActive ? activeColor : inactiveColor,
                   ),
                 ),
               ],

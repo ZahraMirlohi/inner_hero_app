@@ -1,3 +1,5 @@
+// lib/features/arena/screens/edit_habit_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -60,17 +62,6 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     {'name': 'emoji_events', 'icon': Icons.emoji_events},
   ];
 
-  final List<Color> _cardColors = [
-    const Color(0xFFFFF8E7),
-    const Color(0xFFFFE0B2),
-    const Color(0xFFFFCC80),
-    const Color(0xFFFFAB91),
-    const Color(0xFFB0CC5D),
-    const Color(0xFF81D4FA),
-    const Color(0xFFCE93D8),
-    const Color(0xFFA5D6A7),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -109,16 +100,16 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: const Text('ویرایش عادت'),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -131,23 +122,23 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTitleField(primaryColor),
+              _buildTitleField(primaryColor, theme),
               const SizedBox(height: 16),
-              _buildDescriptionField(primaryColor),
+              _buildDescriptionField(primaryColor, theme),
               const SizedBox(height: 16),
-              _buildLevelSettingsSection(primaryColor),
+              _buildLevelSettingsSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildSubHabitsSection(primaryColor),
+              _buildSubHabitsSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildIconAndColorSection(primaryColor),
+              _buildIconAndColorSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildFrequencySection(primaryColor),
+              _buildFrequencySection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildTimeSection(primaryColor),
+              _buildTimeSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildRemindersSection(primaryColor),
+              _buildRemindersSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildXPSection(primaryColor),
+              _buildXPSection(primaryColor, theme),
               const SizedBox(height: 32),
               _buildSubmitButton(primaryColor),
             ],
@@ -157,8 +148,60 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildLevelSettingsSection(Color primaryColor) {
+  Widget _buildTitleField(Color primaryColor, ThemeProvider theme) {
+    return TextFormField(
+      controller: _titleController,
+      style: TextStyle(color: theme.textColor),
+      decoration: InputDecoration(
+        labelText: 'عنوان عادت',
+        hintText: 'مثال: ورزش روزانه',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
+        prefixIcon: Icon(Icons.title, color: primaryColor),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+      ),
+      validator: (value) =>
+          (value == null || value.isEmpty) ? 'لطفاً عنوان را وارد کنید' : null,
+    );
+  }
+
+  Widget _buildDescriptionField(Color primaryColor, ThemeProvider theme) {
+    return TextFormField(
+      controller: _descriptionController,
+      style: TextStyle(color: theme.textColor),
+      decoration: InputDecoration(
+        labelText: 'توضیحات (اختیاری)',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        prefixIcon: Icon(Icons.description, color: primaryColor),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        filled: true,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+      ),
+      maxLines: 2,
+    );
+  }
+
+  Widget _buildLevelSettingsSection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -174,75 +217,82 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'این تنظیمات به کاربر کمک می‌کند بداند هر سطح به چه معناست',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _targetValue,
-              decoration: InputDecoration(
-                labelText: 'مقدار هدف (اختیاری)',
-                hintText: 'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-              onChanged: (value) => _targetValue = value,
-            ),
+            _buildLevelField(
+                'مقدار هدف (اختیاری)',
+                'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
+                _targetValue,
+                primaryColor,
+                theme,
+                (value) => _targetValue = value),
             const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _fullDescription,
-              decoration: InputDecoration(
-                labelText: '🌟 توضیح سطح کامل',
-                hintText: 'انجام کامل عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-              onChanged: (value) => _fullDescription = value,
-            ),
+            _buildLevelField(
+                '🌟 توضیح سطح کامل',
+                'انجام کامل عادت',
+                _fullDescription,
+                primaryColor,
+                theme,
+                (value) => _fullDescription = value),
             const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _halfDescription,
-              decoration: InputDecoration(
-                labelText: '⭐ توضیح سطح نیمه',
-                hintText: 'انجام نیمی از عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-              onChanged: (value) => _halfDescription = value,
-            ),
+            _buildLevelField(
+                '⭐ توضیح سطح نیمه',
+                'انجام نیمی از عادت',
+                _halfDescription,
+                primaryColor,
+                theme,
+                (value) => _halfDescription = value),
             const SizedBox(height: 12),
-            TextFormField(
-              initialValue: _basicDescription,
-              decoration: InputDecoration(
-                labelText: '✨ توضیح سطح پایه',
-                hintText: 'انجام حداقل عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
-              onChanged: (value) => _basicDescription = value,
-            ),
+            _buildLevelField(
+                '✨ توضیح سطح پایه',
+                'انجام حداقل عادت',
+                _basicDescription,
+                primaryColor,
+                theme,
+                (value) => _basicDescription = value),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSubHabitsSection(Color primaryColor) {
+  Widget _buildLevelField(String label, String hint, String? initialValue,
+      Color primaryColor, ThemeProvider theme, Function(String) onChanged) {
+    return TextFormField(
+      initialValue: initialValue,
+      style: TextStyle(color: theme.textColor),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
+        border: const OutlineInputBorder(),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildSubHabitsSection(Color primaryColor, ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'زیرعادت‌ها (ریز عادت)',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -250,17 +300,24 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             Expanded(
               child: TextField(
                 controller: _subHabitController,
+                style: TextStyle(color: theme.textColor),
                 decoration: InputDecoration(
                   hintText: 'مثلاً: ۱۰ دقیقه پیاده روی',
+                  hintStyle: TextStyle(color: theme.textSecondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: theme.borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: primaryColor, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor:
+                      theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
                 ),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -301,14 +358,16 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             children: List.generate(_subHabits.length, (index) {
               final sh = _subHabits[index];
               return Chip(
-                label: Text(sh),
+                label: Text(sh, style: TextStyle(color: theme.textColor)),
+                backgroundColor:
+                    theme.isDarkMode ? const Color(0xFF2A2A2A) : null,
                 onDeleted: () {
                   setState(() {
                     _subHabits.removeAt(index);
                     _completedSubHabits.remove(sh);
                   });
                 },
-                deleteIcon: const Icon(Icons.close, size: 16),
+                deleteIcon: Icon(Icons.close, size: 16, color: theme.textColor),
               );
             }),
           ),
@@ -317,7 +376,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildIconAndColorSection(Color primaryColor) {
+  Widget _buildIconAndColorSection(Color primaryColor, ThemeProvider theme) {
     final List<Color> _bgColors = [
       const Color(0xFFFFF8E7),
       const Color(0xFFFFE0B2),
@@ -330,6 +389,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     ];
 
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -345,7 +405,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('انتخاب آیکن:', style: TextStyle(fontSize: 14)),
+            Text('انتخاب آیکن:',
+                style: TextStyle(fontSize: 14, color: theme.textColor)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -362,8 +423,10 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? primaryColor.withAlpha(25)
-                          : Colors.grey.shade100,
+                          ? primaryColor.withAlpha(30)
+                          : (theme.isDarkMode
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.grey.shade100),
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected
                           ? Border.all(
@@ -374,7 +437,11 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                     ),
                     child: Icon(
                       icon['icon'],
-                      color: isSelected ? const Color(0xFF090909) : Colors.grey,
+                      color: isSelected
+                          ? (theme.isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF090909))
+                          : theme.textSecondaryColor,
                       size: 28,
                     ),
                   ),
@@ -382,7 +449,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            const Text('رنگ باکس عادت:', style: TextStyle(fontSize: 14)),
+            Text('رنگ باکس عادت:',
+                style: TextStyle(fontSize: 14, color: theme.textColor)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -402,7 +470,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                       color: color,
                       shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(color: Colors.black, width: 2)
+                          ? Border.all(color: theme.textColor, width: 2)
                           : null,
                     ),
                     child: isSelected
@@ -418,14 +486,17 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildFrequencySection(Color primaryColor) {
+  Widget _buildFrequencySection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade100,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -433,22 +504,23 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             ),
             child: Row(
               children: [
-                _buildFrequencyTab('روزانه', 'daily', primaryColor),
-                _buildFrequencyTab('هفتگی', 'weekly', primaryColor),
-                _buildFrequencyTab('ماهانه', 'monthly', primaryColor),
+                _buildFrequencyTab('روزانه', 'daily', primaryColor, theme),
+                _buildFrequencyTab('هفتگی', 'weekly', primaryColor, theme),
+                _buildFrequencyTab('ماهانه', 'monthly', primaryColor, theme),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildFrequencyContent(primaryColor),
+            child: _buildFrequencyContent(primaryColor, theme),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFrequencyTab(String title, String type, Color primaryColor) {
+  Widget _buildFrequencyTab(
+      String title, String type, Color primaryColor, ThemeProvider theme) {
     final isSelected = _frequencyType == type;
     return Expanded(
       child: GestureDetector(
@@ -460,7 +532,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? theme.cardColor : Colors.transparent,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
@@ -471,7 +543,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? primaryColor : Colors.grey.shade600,
+              color: isSelected ? primaryColor : theme.textSecondaryColor,
             ),
           ),
         ),
@@ -479,23 +551,25 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildFrequencyContent(Color primaryColor) {
+  Widget _buildFrequencyContent(Color primaryColor, ThemeProvider theme) {
     if (_frequencyType == 'daily') {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('هر '),
+          Text('هر ', style: TextStyle(color: theme.textColor)),
           Container(
             width: 70,
             height: 48,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: theme.borderColor),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: DropdownButton<int>(
                 value: _dailyIntervalDays,
                 underline: const SizedBox(),
+                dropdownColor: theme.cardColor,
+                style: TextStyle(color: theme.textColor),
                 items: List.generate(30, (i) => i + 1).map((value) {
                   return DropdownMenuItem(
                     value: value,
@@ -511,7 +585,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             ),
           ),
           const SizedBox(width: 4),
-          const Text(' روز'),
+          Text(' روز', style: TextStyle(color: theme.textColor)),
         ],
       );
     } else if (_frequencyType == 'weekly') {
@@ -537,14 +611,20 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isSelected ? primaryColor : Colors.grey.shade200,
+                    color: isSelected
+                        ? primaryColor
+                        : (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade200),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: Text(
                       _weekdayLetters[index],
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                        color: isSelected
+                            ? Colors.white
+                            : theme.textSecondaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -558,18 +638,20 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('هر '),
+              Text('هر ', style: TextStyle(color: theme.textColor)),
               Container(
                 width: 70,
                 height: 48,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: theme.borderColor),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: DropdownButton<int>(
                     value: _weeklyIntervalWeeks,
                     underline: const SizedBox(),
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.textColor),
                     items: List.generate(12, (i) => i + 1).map((value) {
                       return DropdownMenuItem(
                         value: value,
@@ -585,7 +667,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              const Text(' هفته'),
+              Text(' هفته', style: TextStyle(color: theme.textColor)),
             ],
           ),
         ],
@@ -614,14 +696,20 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: isSelected ? primaryColor : Colors.grey.shade200,
+                    color: isSelected
+                        ? primaryColor
+                        : (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Text(
                       day.toString(),
                       style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                        color: isSelected
+                            ? Colors.white
+                            : theme.textSecondaryColor,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -634,18 +722,20 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('هر '),
+              Text('هر ', style: TextStyle(color: theme.textColor)),
               Container(
                 width: 70,
                 height: 48,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: theme.borderColor),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: DropdownButton<int>(
                     value: _monthlyIntervalMonths,
                     underline: const SizedBox(),
+                    dropdownColor: theme.cardColor,
+                    style: TextStyle(color: theme.textColor),
                     items: List.generate(12, (i) => i + 1).map((value) {
                       return DropdownMenuItem(
                         value: value,
@@ -661,7 +751,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              const Text(' ماه'),
+              Text(' ماه', style: TextStyle(color: theme.textColor)),
             ],
           ),
         ],
@@ -669,8 +759,9 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     }
   }
 
-  Widget _buildTimeSection(Color primaryColor) {
+  Widget _buildTimeSection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -689,15 +780,16 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             Row(
               children: [
                 _buildTimeButton(
-                    'صبح', 'morning', Icons.wb_sunny, primaryColor),
-                const SizedBox(width: 12),
-                _buildTimeButton('ظهر', 'noon', Icons.sunny, primaryColor),
+                    'صبح', 'morning', Icons.wb_sunny, primaryColor, theme),
                 const SizedBox(width: 12),
                 _buildTimeButton(
-                    'بعدازظهر', 'afternoon', Icons.sunny_snowing, primaryColor),
+                    'ظهر', 'noon', Icons.sunny, primaryColor, theme),
+                const SizedBox(width: 12),
+                _buildTimeButton('بعدازظهر', 'afternoon', Icons.sunny_snowing,
+                    primaryColor, theme),
                 const SizedBox(width: 12),
                 _buildTimeButton(
-                    'شب', 'night', Icons.nightlight_round, primaryColor),
+                    'شب', 'night', Icons.nightlight_round, primaryColor, theme),
               ],
             ),
           ],
@@ -706,8 +798,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildTimeButton(
-      String label, String value, IconData icon, Color primaryColor) {
+  Widget _buildTimeButton(String label, String value, IconData icon,
+      Color primaryColor, ThemeProvider theme) {
     final isSelected = _timeOfDay == value;
     return Expanded(
       child: GestureDetector(
@@ -719,21 +811,25 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : Colors.grey.shade100,
+            color: isSelected
+                ? primaryColor
+                : (theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade100),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey,
+                color: isSelected ? Colors.white : theme.textSecondaryColor,
                 size: 20,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade600,
+                  color: isSelected ? Colors.white : theme.textSecondaryColor,
                   fontSize: 12,
                 ),
               ),
@@ -744,8 +840,9 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     );
   }
 
-  Widget _buildRemindersSection(Color primaryColor) {
+  Widget _buildRemindersSection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -776,30 +873,32 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             ),
             const SizedBox(height: 12),
             if (_reminders.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Center(
                   child: Text(
                     'هیچ یادآوری تنظیم نشده است',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: theme.textSecondaryColor),
                   ),
                 ),
               )
             else
-              ..._reminders.map(
-                  (reminder) => _buildReminderItem(reminder, primaryColor)),
+              ..._reminders.map((reminder) =>
+                  _buildReminderItem(reminder, primaryColor, theme)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReminderItem(Reminder reminder, Color primaryColor) {
+  Widget _buildReminderItem(
+      Reminder reminder, Color primaryColor, ThemeProvider theme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color:
+            theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -808,7 +907,11 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
           const SizedBox(width: 12),
           Text(
             reminder.getTimeString(),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: theme.textColor,
+            ),
           ),
           const Spacer(),
           Switch(
@@ -852,48 +955,10 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     }
   }
 
-  Widget _buildTitleField(Color primaryColor) {
-    return TextFormField(
-      controller: _titleController,
-      decoration: InputDecoration(
-        labelText: 'عنوان عادت',
-        hintText: 'مثال: ورزش روزانه',
-        prefixIcon: Icon(Icons.title, color: primaryColor),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor, width: 2),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      validator: (value) =>
-          (value == null || value.isEmpty) ? 'لطفاً عنوان را وارد کنید' : null,
-    );
-  }
-
-  Widget _buildDescriptionField(Color primaryColor) {
-    return TextFormField(
-      controller: _descriptionController,
-      decoration: InputDecoration(
-        labelText: 'توضیحات (اختیاری)',
-        prefixIcon: Icon(Icons.description, color: primaryColor),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: primaryColor, width: 2),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      maxLines: 2,
-    );
-  }
-
-  Widget _buildXPSection(Color primaryColor) {
+  Widget _buildXPSection(Color primaryColor, ThemeProvider theme) {
     return Row(
       children: [
-        const Text('امتیاز XP هر بار:'),
+        Text('امتیاز XP هر بار:', style: TextStyle(color: theme.textColor)),
         const SizedBox(width: 16),
         Expanded(
           child: Slider(
@@ -902,7 +967,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
             max: 200,
             divisions: 9,
             activeColor: primaryColor,
-            inactiveColor: Colors.grey.shade300,
+            inactiveColor: theme.borderColor,
             onChanged: (value) => setState(() => _xpReward = value.toInt()),
           ),
         ),
@@ -970,7 +1035,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         completedSubHabits: validCompletedSubHabits,
         iconName: _selectedIcon,
         iconColor: _selectedIconColor,
-        backgroundColor: _selectedBgColor, // ✅ این باید ذخیره بشه
+        backgroundColor: _selectedBgColor,
         frequencyType: _frequencyType,
         dailyIntervalDays:
             _frequencyType == 'daily' ? [_dailyIntervalDays] : null,
@@ -1000,17 +1065,14 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         basicDescription: _basicDescription,
       );
 
-      // ✅ 1. آپدیت در Supabase
       await _supabase.updateHabit(updatedHabit);
       print('✅ Habit updated in Supabase');
 
-      // ✅ 2. آپدیت در LocalStorage از طریق SyncProvider
       if (mounted) {
         try {
           final syncProvider =
               Provider.of<SyncProvider>(context, listen: false);
 
-          // ✅ حذف عادت قدیمی و اضافه کردن عادت جدید
           final currentHabits = syncProvider.habits;
           final updatedHabits = currentHabits.map((h) {
             if (h.id == updatedHabit.id) {

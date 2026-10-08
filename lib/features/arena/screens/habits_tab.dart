@@ -23,11 +23,8 @@ class HabitsTab extends StatefulWidget {
 
 class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   final SupabaseService _supabase = SupabaseService();
-  List<Habit> _habits = [];
   bool _isLoading = true;
   String? _currentUserId;
-  String? _expandedItemId;
-  String? _expandedSubItemId;
 
   final Map<String, AnimationController> _animationControllers = {};
   final Map<String, Animation<double>> _animations = {};
@@ -64,14 +61,25 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
 
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      final allHabits = syncProvider.habits.isNotEmpty
-          ? syncProvider.habits
-          : await _supabase.getHabits(_currentUserId!);
-
-      _habits = allHabits.where((h) => h.isActive && h.isNotExpired()).toList();
+      // ✅ اگه LocalStorage خالیه، از سرور بخون
+      if (syncProvider.habits.isEmpty && syncProvider.isOnline) {
+        await syncProvider.forceRefresh();
+      }
     }
     if (mounted) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  /// ✅ لیست عادت‌های فعال (از SyncProvider مستقیم خونده می‌شه)
+  List<Habit> get _habits {
+    try {
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+      return syncProvider.habits
+          .where((h) => h.isActive && h.isNotExpired())
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 
@@ -101,21 +109,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
 
     if (result == true && mounted) {
       print('🔄 Habit edited, reloading data...');
-
-      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-
-      if (syncProvider.isOnline) {
-        await _loadHabits();
-      } else {
-        final updatedHabits = syncProvider.habits;
-        setState(() {
-          _habits = updatedHabits
-              .where((h) => h.isActive && h.isNotExpired())
-              .toList();
-        });
-      }
-
-      print('✅ Habits reloaded, count: ${_habits.length}');
+      // ✅ SyncProvider خودش notifyListeners می‌کنه و Consumer آپدیت میشه
     }
   }
 
@@ -159,18 +153,46 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      setState(() {
-        _habits.removeWhere((h) => h.id == habit.id);
-      });
+      // ✅ 1. حذف فوری از LocalStorage
+      syncProvider.removeHabit(habit.id);
 
-      if (syncProvider.isOnline) {
-        await _supabase.deleteHabit(habit.id);
-      } else {
-        await syncProvider.addOfflineOperation(
-          type: OperationType.deleteHabit,
-          data: {'id': habit.id},
-        );
-        print('📝 Habit deletion saved offline: ${habit.title}');
+      try {
+        // ✅ 2. حذف از Supabase
+        if (syncProvider.isOnline) {
+          await _supabase.deleteHabit(habit.id);
+
+          // ✅ 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
+          await syncProvider.refreshHabitsAndTasks();
+
+          print('✅ Habit deleted and refreshed');
+        } else {
+          // ✅ حالت آفلاین
+          await syncProvider.addOfflineOperation(
+            type: OperationType.deleteHabit,
+            data: {'id': habit.id},
+          );
+          print('📝 Habit deletion saved offline: ${habit.title}');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('عادت با موفقیت حذف شد 🗑️'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        print('❌ Error deleting habit: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطا در حذف عادت: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -186,86 +208,97 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: RefreshIndicator(
-        onRefresh: _loadHabits,
-        color: primaryColor,
-        child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(color: primaryColor),
-              )
-            : _habits.isEmpty
+    // ✅ Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
+    return Consumer<SyncProvider>(
+      builder: (context, syncProvider, child) {
+        final habits = syncProvider.habits
+            .where((h) => h.isActive && h.isNotExpired())
+            .toList();
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: RefreshIndicator(
+            onRefresh: _loadHabits,
+            color: primaryColor,
+            child: _isLoading && habits.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.fitness_center_outlined,
-                          size: 64, // ✅ از 80 به 64
-                          color: Colors.grey.shade300,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'هیچ عادتی ندارید',
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'روی دکمه + در پایین صفحه کلیک کنید',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: CircularProgressIndicator(color: primaryColor),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12, // ✅ از 16 به 12
-                      vertical: 6, // ✅ از 8 به 6
-                    ),
-                    itemCount: _habits.length,
-                    itemBuilder: (context, index) {
-                      final habit = _habits[index];
-                      final bool isQuest = habit.questId != null;
-                      final bool isChallenge = habit.challengeId != null;
-                      final bool isEditable = !isQuest && !isChallenge;
+                : habits.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.fitness_center_outlined,
+                              size: 64,
+                              color: theme.textSecondaryColor,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'هیچ عادتی ندارید',
+                              style: TextStyle(color: theme.textSecondaryColor),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'روی دکمه + در پایین صفحه کلیک کنید',
+                              style: TextStyle(
+                                color: theme.textSecondaryColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        itemCount: habits.length,
+                        itemBuilder: (context, index) {
+                          final habit = habits[index];
+                          final bool isQuest = habit.questId != null;
+                          final bool isChallenge = habit.challengeId != null;
+                          final bool isEditable = !isQuest && !isChallenge;
 
-                      return HabitCard(
-                        habit: habit,
-                        isCompleted: false,
-                        onToggle: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('برای انجام عادت به تب "امروز" بروید'),
-                              duration: Duration(seconds: 1),
-                            ),
+                          return HabitCard(
+                            habit: habit,
+                            isCompleted: false,
+                            onToggle: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'برای انجام عادت به تب "امروز" بروید'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            onEdit:
+                                isEditable ? () => _editHabit(habit) : () {},
+                            onDelete:
+                                isEditable ? () => _deleteHabit(habit) : () {},
+                            onTimer: isEditable
+                                ? () => _showTimerDialog(habit)
+                                : null,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      HabitDetailScreen(habit: habit),
+                                ),
+                              );
+                            },
                           );
                         },
-                        onEdit: isEditable ? () => _editHabit(habit) : () {},
-                        onDelete:
-                            isEditable ? () => _deleteHabit(habit) : () {},
-                        onTimer:
-                            isEditable ? () => _showTimerDialog(habit) : null,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  HabitDetailScreen(habit: habit),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-      ),
+                      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -29,7 +29,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  // ==================== داده‌ها ====================
   List<ChatMessage> _messages = [];
   List<Map<String, dynamic>> _members = [];
   Map<String, dynamic>? _squadInfo;
@@ -39,11 +38,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   ChatMessage? _replyToMessage;
   ChatMessage? _selectedMessage;
 
-  // ==================== وضعیت‌ها ====================
   bool _showStickerPicker = false;
   bool _isAdmin = false;
 
-  // ==================== استیکرها ====================
   final List<String> _popularStickers = [
     '😊',
     '😂',
@@ -89,7 +86,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     super.dispose();
   }
 
-  // ==================== بارگذاری داده ====================
   Future<void> _loadData() async {
     final user = await _chatService.getCurrentUser();
     if (user != null) {
@@ -146,35 +142,35 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         'name': 'علی',
         'role': 'admin',
         'is_online': true,
-        'avatar': null,
+        'avatar': null
       },
       {
         'user_id': 'user2',
         'name': 'سارا',
         'role': 'member',
         'is_online': true,
-        'avatar': null,
+        'avatar': null
       },
       {
         'user_id': 'user3',
         'name': 'رضا',
         'role': 'member',
         'is_online': false,
-        'avatar': null,
+        'avatar': null
       },
       {
         'user_id': 'user4',
         'name': 'مریم',
         'role': 'member',
         'is_online': true,
-        'avatar': null,
+        'avatar': null
       },
       {
         'user_id': 'user5',
         'name': 'حسین',
         'role': 'member',
         'is_online': false,
-        'avatar': null,
+        'avatar': null
       },
     ];
   }
@@ -202,7 +198,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     });
   }
 
-  // ==================== ارسال پیام ====================
   Future<void> _sendMessage({
     String? text,
     MessageType type = MessageType.text,
@@ -246,7 +241,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     }
   }
 
-  // ==================== اقدامات روی پیام ====================
   void _showMessageActions(
     ChatMessage message,
     ThemeProvider theme,
@@ -308,18 +302,29 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _editMessage(ChatMessage message, Color primaryColor) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     final controller = TextEditingController(text: message.content);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('ویرایش پیام'),
+        title: Text('ویرایش پیام', style: TextStyle(color: theme.textColor)),
         content: TextField(
           controller: controller,
+          style: TextStyle(color: theme.textColor),
           maxLines: 3,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: theme.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: primaryColor, width: 2),
             ),
           ),
         ),
@@ -374,12 +379,17 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _deleteMessageForMe(ChatMessage message) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف پیام'),
-        content: const Text('آیا از حذف این پیام برای خودتان مطمئن هستید؟'),
+        title: Text('حذف پیام', style: TextStyle(color: theme.textColor)),
+        content: Text(
+          'آیا از حذف این پیام برای خودتان مطمئن هستید؟',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -403,6 +413,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _deleteMessageForEveryone(ChatMessage message) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     if (!_isAdmin && !message.isFromMe) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -416,9 +427,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف برای همه'),
-        content: const Text('آیا از حذف این پیام برای همه مطمئن هستید؟'),
+        title: Text('حذف برای همه', style: TextStyle(color: theme.textColor)),
+        content: Text(
+          'آیا از حذف این پیام برای همه مطمئن هستید؟',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -490,7 +505,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
-  // ==================== ویجت‌ها ====================
   Widget _buildReplyPreview(ThemeProvider theme, Color primaryColor) {
     if (_replyToMessage == null) return const SizedBox.shrink();
 
@@ -499,7 +513,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       decoration: BoxDecoration(
         color: theme.surfaceColor,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: theme.borderColor), // ✅
         ),
       ),
       child: Row(
@@ -567,12 +581,17 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          // ✅ با تم هماهنگ
+          color:
+              theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.textSecondaryColor,
+          ),
         ),
       );
     }
@@ -584,14 +603,17 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           margin: const EdgeInsets.symmetric(vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            // ✅ با تم هماهنگ
+            color: theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
             'این پیام حذف شده است',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade500,
+              color: theme.textSecondaryColor,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -633,7 +655,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                   ),
                 ),
-
               if (message.replyTo != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 3),
@@ -670,8 +691,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ],
                   ),
                 ),
-
-              // ✅ حباب کوچک‌تر
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 11,
@@ -715,7 +734,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ],
                 ),
               ),
-
               if (message.reactions != null && message.reactions!.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(top: 2),
@@ -724,11 +742,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: theme.surfaceColor,
+                    color: theme.cardColor, // ✅
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.black.withValues(
+                          alpha: theme.isDarkMode ? 0.3 : 0.05,
+                        ),
                         blurRadius: 3,
                       ),
                     ],
@@ -746,8 +766,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     }).toList(),
                   ),
                 ),
-
-              // ✅ ساعت + وضعیت (خارج از حباب)
               Padding(
                 padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
                 child: Row(
@@ -765,7 +783,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       Icon(
                         Icons.check,
                         size: 12,
-                        color: Colors.grey.shade500,
+                        color: theme.textSecondaryColor,
                       ),
                     ],
                   ],
@@ -843,7 +861,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      // ✅ با تم هماهنگ
+                      color: theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
@@ -919,12 +940,16 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: primaryColor.withValues(alpha: 0.05),
+                          // ✅ ورودی متن با تم هماهنگ
+                          color: theme.isDarkMode
+                              ? const Color(0xFF2A2A2A)
+                              : primaryColor.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: TextField(
                           controller: _messageController,
                           focusNode: _focusNode,
+                          style: TextStyle(color: theme.textColor),
                           decoration: InputDecoration(
                             hintText: 'پیام خود را بنویسید...',
                             hintStyle: TextStyle(
@@ -950,7 +975,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       height: 44,
                       decoration: BoxDecoration(
                         color: _isSending || _messageController.text.isEmpty
-                            ? Colors.grey.shade300
+                            ? (theme.isDarkMode
+                                ? const Color(0xFF2A2A2A)
+                                : Colors.grey.shade300)
                             : primaryColor,
                         shape: BoxShape.circle,
                       ),
@@ -986,7 +1013,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
-  // ==================== تب‌ها ====================
   Widget _buildChatTab(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
@@ -1194,12 +1220,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: isMe ? primaryColor.withValues(alpha: 0.06) : theme.surfaceColor,
+        color:
+            isMe ? primaryColor.withValues(alpha: 0.06) : theme.cardColor, // ✅
         borderRadius: BorderRadius.circular(18),
         border: isMe
             ? Border.all(color: primaryColor, width: 1.5)
             : Border.all(
-                color: primaryColor.withValues(alpha: 0.1),
+                color: theme.borderColor, // ✅
                 width: 1,
               ),
       ),
@@ -1230,7 +1257,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     decoration: BoxDecoration(
                       color: primaryColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: theme.cardColor, width: 2),
                     ),
                   ),
                 ),
@@ -1381,7 +1408,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
-  // ==================== ابزارهای گروه ====================
   void _showSquadTools(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
@@ -1401,7 +1427,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1547,8 +1573,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor, // ✅
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('دعوت به گروه'),
+        title: Text(
+          'دعوت به گروه',
+          style: TextStyle(color: theme.textColor),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1620,12 +1650,20 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _promoteToAdmin(String userId) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('تبدیل به ادمین'),
-        content: const Text('آیا از تبدیل این کاربر به ادمین مطمئن هستید؟'),
+        title: Text(
+          'تبدیل به ادمین',
+          style: TextStyle(color: theme.textColor),
+        ),
+        content: Text(
+          'آیا از تبدیل این کاربر به ادمین مطمئن هستید؟',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1651,12 +1689,20 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _removeMember(String userId) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف از گروه'),
-        content: const Text('آیا از حذف این کاربر از گروه مطمئن هستید؟'),
+        title: Text(
+          'حذف از گروه',
+          style: TextStyle(color: theme.textColor),
+        ),
+        content: Text(
+          'آیا از حذف این کاربر از گروه مطمئن هستید؟',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1677,14 +1723,20 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _deleteSquad(Color primaryColor) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف گروه'),
-        content: const Text(
+        title: Text(
+          'حذف گروه',
+          style: TextStyle(color: theme.textColor),
+        ),
+        content: Text(
           'آیا از حذف کامل این گروه مطمئن هستید؟\n\n'
           'با حذف گروه، تمام پیام‌ها و اعضا حذف خواهند شد.',
+          style: TextStyle(color: theme.textSecondaryColor),
         ),
         actions: [
           TextButton(
@@ -1722,7 +1774,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
-  // ==================== Main Build ====================
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
@@ -1734,12 +1785,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       appBar: _buildAppBar(theme, primaryColor),
       body: Column(
         children: [
-          // تب‌های دور گرد مشکی
+          // ✅ تب‌های دور گرد - با تم هماهنگ
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909),
+              color: theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFF090909),
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(

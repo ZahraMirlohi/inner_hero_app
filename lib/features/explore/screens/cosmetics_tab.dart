@@ -9,45 +9,51 @@ class CosmeticsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.06),
-              shape: BoxShape.circle,
+    return Container(
+      color: theme.backgroundColor,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.06),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.shopping_bag,
+                size: 64,
+                color: primaryColor.withOpacity(0.3),
+              ),
             ),
-            child: Icon(
-              Icons.shopping_bag,
-              size: 64,
-              color: primaryColor.withOpacity(0.3),
+            const SizedBox(height: 16),
+            Text(
+              'بازارچه آیتم‌ها',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.textColor,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'بازارچه آیتم‌ها',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1A1A2E),
+            const SizedBox(height: 8),
+            Text(
+              'به زودی...',
+              style: TextStyle(color: theme.textSecondaryColor),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'به زودی...',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'با XPهای خود آیتم‌های جذاب بخرید!',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'با XPهای خود آیتم‌های جذاب بخرید!',
+              style: TextStyle(
+                color: theme.textSecondaryColor,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

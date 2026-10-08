@@ -53,6 +53,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   List<Task> _todayTasks = [];
   List<Habit> _completedHabits = [];
   List<Task> _completedTasks = [];
+  final List<Habit> pendingHabits = [];
 
   int _totalTodayItems = 0;
   int _completedItems = 0;
@@ -66,13 +67,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   // ==================== وضعیت‌های تکمیل ====================
   final Map<String, bool> _habitCompletionStatus = {};
   final Map<String, bool> _taskCompletedStatus = {};
+  final Map<String, int> _habitRecordedTimes = {};
 
-  // ==================== وضعیت‌های گسترش (Expansion) ====================
+  // ==================== وضعیت‌های گسترش ====================
   String? _expandedItemId;
   String? _expandedType;
   String? _expandedSubItemId;
 
-  // ==================== کش برای داده‌ها (بهبود سرعت) ====================
+  // ==================== کش ====================
   List<Habit>? _cachedHabits;
   List<Task>? _cachedTasks;
   DateTime? _cacheTime;
@@ -88,7 +90,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   int _initialTodayItemsCount = 0;
   bool _initialCountSet = false;
 
-  // ✅ کلیدهای GlobalKey برای ویجت‌های Dismissible (با استفاده از List)
   final List<GlobalKey> _habitKeys = [];
   final List<GlobalKey> _taskKeys = [];
 
@@ -305,6 +306,16 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
 
         if (!shouldShow) continue;
+
+        // ✅ گرفتن زمان رکورد شده برای این عادت
+        final timeSeconds = await _supabase.getHabitTimeOnDate(
+          habitId: habit.id,
+          userId: _currentUserId!,
+          date: widget.selectedDate,
+        );
+        if (timeSeconds != null && timeSeconds > 0) {
+          _habitRecordedTimes[habit.id] = timeSeconds;
+        }
 
         final isCompleted = await _supabase.isHabitCompletedOnDate(
           habit.id,
@@ -1006,6 +1017,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   }
 
   void _showTaskDetailsDialog(Task task) async {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
     String dueDateStr = '';
     if (task.dueDate != null) {
       dueDateStr = await DateService.formatDate(task.dueDate!);
@@ -1015,6 +1027,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: theme.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1030,7 +1043,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: theme.borderColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1044,14 +1057,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: task.isCompleted
                           ? Colors.green
-                          : Colors.grey.shade200,
+                          : theme.cardSecondaryColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       task.isCompleted ? Icons.check_circle : Icons.assignment,
                       color: task.isCompleted
                           ? Colors.white
-                          : Colors.grey.shade500,
+                          : theme.textSecondaryColor,
                       size: 28,
                     ),
                   ),
@@ -1062,33 +1075,35 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                       children: [
                         Text(
                           task.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
+                            color: theme.textColor,
                           ),
                         ),
                         Text(
                           task.description.isEmpty
                               ? 'بدون توضیحات'
                               : task.description,
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(color: theme.textSecondaryColor),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const Divider(height: 32),
+              Divider(height: 32, color: theme.borderColor),
               if (task.dueDate != null) ...[
                 _buildDetailRow(
                   Icons.calendar_today,
                   'تاریخ سررسید',
                   dueDateStr,
+                  theme,
                 ),
                 const SizedBox(height: 12),
               ],
-              _buildDetailRow(Icons.stars, 'امتیاز', '${task.xpReward} XP'),
+              _buildDetailRow(
+                  Icons.stars, 'امتیاز', '${task.xpReward} XP', theme),
               const SizedBox(height: 20),
             ],
           ),
@@ -1097,24 +1112,30 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(
+      IconData icon, String label, String value, ThemeProvider theme) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF4A90E2).withValues(alpha: 0.2),
+            color: theme.primaryColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: const Color(0xFF4A90E2), size: 18),
+          child: Icon(icon, color: theme.primaryColor, size: 18),
         ),
         const SizedBox(width: 12),
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: theme.textColor,
+          ),
         ),
         const Spacer(),
-        Text(value, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        Text(value,
+            style: TextStyle(fontSize: 14, color: theme.textSecondaryColor)),
       ],
     );
   }
@@ -1299,11 +1320,44 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         ],
       ),
     );
+
     if (confirm == true && mounted) {
-      await _supabase.deleteHabit(habit.id);
-      _loadData();
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      // ✅ 1. حذف از state محلی
+      setState(() {
+        _todayHabits.removeWhere((h) => h.id == habit.id);
+        _completedHabits.removeWhere((h) => h.id == habit.id);
+      });
+
+      // ✅ 2. حذف از LocalStorage
+      syncProvider.removeHabit(habit.id);
+
+      try {
+        // ✅ 3. حذف از Supabase
+        if (syncProvider.isOnline) {
+          await _supabase.deleteHabit(habit.id);
+
+          // ✅ 4. رفرش
+          await syncProvider.refreshHabitsAndTasks();
+        }
+
+        // ✅ 5. رفرش دیتای صفحه
+        await _loadData();
+      } catch (e) {
+        print('❌ Error deleting habit: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطا در حذف عادت: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+
+      _toggleExpanded(habit.id, 'habit');
     }
-    _toggleExpanded(habit.id, 'habit');
   }
 
   void _editTask(Task task) async {
@@ -1337,11 +1391,44 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         ],
       ),
     );
+
     if (confirm == true && mounted) {
-      await _supabase.deleteTask(task.id);
-      _loadData();
+      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+
+      // ✅ 1. حذف از state محلی
+      setState(() {
+        _todayTasks.removeWhere((t) => t.id == task.id);
+        _completedTasks.removeWhere((t) => t.id == task.id);
+      });
+
+      // ✅ 2. حذف از LocalStorage
+      await syncProvider.deleteTaskFromLocal(task.id);
+
+      try {
+        // ✅ 3. حذف از Supabase
+        if (syncProvider.isOnline) {
+          await _supabase.deleteTask(task.id);
+
+          // ✅ 4. رفرش
+          await syncProvider.refreshHabitsAndTasks();
+        }
+
+        // ✅ 5. رفرش دیتای صفحه
+        await _loadData();
+      } catch (e) {
+        print('❌ Error deleting task: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطا در حذف تسک: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+
+      _toggleExpanded(task.id, 'task');
     }
-    _toggleExpanded(task.id, 'task');
   }
 
   Widget _buildActionButton({
@@ -1361,9 +1448,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  // ==================== ویجت‌های Swipe (Dismissible) ====================
-
-  // ==================== ویجت‌های Swipe (Dismissible) ====================
+  // ==================== ویجت‌های Swipe ====================
 
   Widget _buildSwipeableHabitItem(Habit habit, Color primaryColor) {
     final bool isQuest = habit.questId != null;
@@ -1371,7 +1456,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     final bool isEditable = !isQuest && !isChallenge;
 
     return Dismissible(
-      key: ValueKey('dismissible_habit_${habit.id}'), // ✅ ValueKey ثابت
+      key: ValueKey('dismissible_habit_${habit.id}'),
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1394,14 +1479,15 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: HabitCard(
-        key: ValueKey('habit_card_${habit.id}'), // ✅ کلید ثابت بر اساس ID
+        key: ValueKey('habit_card_${habit.id}'),
         habit: habit,
         isCompleted: false,
+        recordedTimeSeconds: _habitRecordedTimes[habit.id], // ✅ پاس دادن زمان
         onToggle: () => _markHabitCompleted(habit),
         onEdit: isEditable ? () => _editHabit(habit) : () {},
         onDelete: isEditable ? () => _deleteHabit(habit) : () {},
         onTimer: isEditable ? () => _showTimerDialog(habit) : null,
-        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit), // ✅
+        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit),
         onTap: () {
           Navigator.push(
             context,
@@ -1420,8 +1506,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     final bool isEditable = !isQuest && !isChallenge;
 
     return Dismissible(
-      key: ValueKey(
-          'dismissible_completed_habit_${habit.id}'), // ✅ ValueKey ثابت
+      key: ValueKey('dismissible_completed_habit_${habit.id}'),
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1444,15 +1529,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: HabitCard(
-        key: ValueKey(
-            'completed_habit_card_${habit.id}'), // ✅ کلید ثابت بر اساس ID
+        key: ValueKey('completed_habit_card_${habit.id}'),
         habit: habit,
         isCompleted: true,
         onToggle: () => _unmarkHabit(habit),
         onEdit: isEditable ? () => _editHabit(habit) : () {},
         onDelete: isEditable ? () => _deleteHabit(habit) : () {},
         onTimer: isEditable ? () => _showTimerDialog(habit) : null,
-        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit), // ✅
+        onToggleSubHabit: (subHabit) => _toggleSubHabit(habit, subHabit),
         onTap: () {
           Navigator.push(
             context,
@@ -1467,7 +1551,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   Widget _buildSwipeableTaskItem(Task task, Color primaryColor) {
     return Dismissible(
-      key: ValueKey('dismissible_task_${task.id}'), // ✅
+      key: ValueKey('dismissible_task_${task.id}'),
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1490,20 +1574,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: TaskCard(
-        key: ValueKey('task_card_${task.id}'), // ✅
+        key: ValueKey('task_card_${task.id}'),
         task: task,
         isCompleted: false,
         onToggle: () => _markTaskCompleted(task),
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
-        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask), // ✅
+        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask),
       ),
     );
   }
 
   Widget _buildSwipeableCompletedTaskItem(Task task, Color primaryColor) {
     return Dismissible(
-      key: ValueKey('dismissible_completed_task_${task.id}'), // ✅
+      key: ValueKey('dismissible_completed_task_${task.id}'),
       direction: DismissDirection.horizontal,
       dismissThresholds: const {
         DismissDirection.startToEnd: 0.3,
@@ -1526,13 +1610,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         return false;
       },
       child: TaskCard(
-        key: ValueKey('completed_task_card_${task.id}'), // ✅
+        key: ValueKey('completed_task_card_${task.id}'),
         task: task,
         isCompleted: true,
         onToggle: () => _unmarkTask(task),
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
-        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask), // ✅
+        onToggleSubTask: (subTask) => _toggleSubTask(task, subTask),
       ),
     );
   }
@@ -1544,7 +1628,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     required IconData icon,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 3), // ✅ کاهش فاصله
+      margin: const EdgeInsets.symmetric(vertical: 3),
       decoration: BoxDecoration(
         color: primaryColor,
         borderRadius: BorderRadius.circular(14),
@@ -1609,14 +1693,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
+// lib/features/arena/screens/today_tab.dart
+
   void _showTimerDialog(Habit habit) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: theme.cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
+      builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setState) {
             return Container(
@@ -1633,17 +1722,34 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                           habit.id, minutes, seconds, isCountdown);
                     },
                     onComplete: () {
-                      if (mounted) {
-                        setState(() {});
-                        _loadData();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ زمان با موفقیت ثبت شد!'),
-                            backgroundColor: Colors.green,
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      }
+                      // ✅ 1. اول BottomSheet رو ببند
+                      Navigator.of(bottomSheetContext).pop();
+
+                      // ✅ 2. بعد از بسته شدن، زمان رو از سرور بخون
+                      Future.microtask(() async {
+                        if (!mounted) return;
+                        await _reloadHabitTime(habit.id);
+                        // ✅ 3. refresh سبک از سرور برای همگام‌سازی
+                        try {
+                          final syncProvider =
+                              Provider.of<SyncProvider>(context, listen: false);
+                          if (syncProvider.isOnline) {
+                            await syncProvider.refreshHabitsAndTasks();
+                          }
+                        } catch (e) {
+                          print('⚠️ Error refreshing after timer: $e');
+                        }
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('✅ زمان با موفقیت ثبت شد!'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      });
                     },
                   ),
                 ],
@@ -1653,6 +1759,31 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  /// ✅ خوندن مجدد زمان رکورد شده یک عادت
+  Future<void> _reloadHabitTime(String habitId) async {
+    if (_currentUserId == null) return;
+
+    try {
+      final timeSeconds = await _supabase.getHabitTimeOnDate(
+        habitId: habitId,
+        userId: _currentUserId!,
+        date: widget.selectedDate,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (timeSeconds != null && timeSeconds > 0) {
+            _habitRecordedTimes[habitId] = timeSeconds;
+          } else {
+            _habitRecordedTimes.remove(habitId);
+          }
+        });
+      }
+    } catch (e) {
+      print('⚠️ Error reloading habit time: $e');
+    }
   }
 
   void _saveTimerSetting(
@@ -1795,8 +1926,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Consumer<SyncProvider>(
       builder: (context, syncProvider, child) {
@@ -1807,9 +1938,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
               children: [
                 CircularProgressIndicator(color: primaryColor),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'در حال بارگذاری اطلاعات...',
-                  style: TextStyle(color: Color(0xFF6B7280)),
+                  style: TextStyle(color: theme.textSecondaryColor),
                 ),
               ],
             ),
@@ -1826,8 +1957,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   )
                 : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(12), // ✅ از 16 به 12
-                    child: _buildTodayContent(primaryColor),
+                    padding: const EdgeInsets.all(12),
+                    child: _buildTodayContent(primaryColor, theme),
                   ),
           );
         }
@@ -1837,13 +1968,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off, size: 64, color: Colors.grey.shade400),
+                Icon(Icons.wifi_off, size: 64, color: theme.textSecondaryColor),
                 const SizedBox(height: 16),
                 Text(
                   'اتصال اینترنت برقرار نیست',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.grey.shade600,
+                    color: theme.textSecondaryColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1851,7 +1982,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   'برای مشاهده اطلاعات به اتصال اینترنت نیاز دارید',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade400,
+                    color: theme.textSecondaryColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1880,15 +2011,15 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 )
               : SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(12), // ✅ از 16 به 12
-                  child: _buildTodayContent(primaryColor),
+                  padding: const EdgeInsets.all(12),
+                  child: _buildTodayContent(primaryColor, theme),
                 ),
         );
       },
     );
   }
 
-  Widget _buildTodayContent(Color primaryColor) {
+  Widget _buildTodayContent(Color primaryColor, ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1901,23 +2032,22 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           const SizedBox(height: 16),
         ],
         if (_completedHabits.isNotEmpty || _completedTasks.isNotEmpty) ...[
-          // ✅ متن "انجام شده" وسط چین
-          const Center(
+          Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.check_circle,
-                  color: Color(0xFF090909),
+                  color: theme.textColor,
                   size: 18,
                 ),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Text(
                   'انجام شده',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF090909),
+                    color: theme.textColor,
                   ),
                 ),
               ],
@@ -1942,17 +2072,23 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 Icon(
                   Icons.check_circle_outline,
                   size: 64,
-                  color: Colors.grey.shade300,
+                  color: theme.textSecondaryColor,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'هیچ کاری برای این روز ندارید!',
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: theme.textSecondaryColor,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'روی دکمه + کلیک کنید',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textSecondaryColor,
+                  ),
                 ),
               ],
             ),
@@ -1961,6 +2097,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 }
+
+// در today_tab.dart، انتهای فایل
 
 class _TimerDialogContent extends StatefulWidget {
   final Habit habit;
@@ -1997,8 +2135,8 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -2013,7 +2151,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
           const SizedBox(height: 8),
           Text(
             widget.habit.title,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
           ),
           const SizedBox(height: 16),
           TimerPickerWidget(
@@ -2052,7 +2190,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
             habitId: widget.habit.id,
             habitTitle: widget.habit.title,
             onTimeSaved: () {
-              Navigator.pop(context);
+              // ✅ فقط callback رو صدا بزن، Navigator رو خود والد مدیریت می‌کنه
               widget.onComplete();
             },
           ),

@@ -108,6 +108,9 @@ class _AnimatedCheckOverlayState extends State<AnimatedCheckOverlay>
                       ),
                       child: Icon(
                         Icons.check,
+                        // ✅ رنگ تیک به صورت هوشمند انتخاب می‌شه:
+                        // - اگه checkColor سفید باشه، تیک سبز (روی دکمه تیره)
+                        // - اگه checkColor مشکی/رنگی باشه، تیک سفید (روی دکمه روشن)
                         color: widget.checkColor == Colors.white
                             ? Colors.green
                             : Colors.white,

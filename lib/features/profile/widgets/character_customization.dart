@@ -1,8 +1,10 @@
 // lib/features/profile/widgets/character_customization.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/character_model.dart';
 import '../models/hero_class_model.dart';
+import '/providers/theme_provider.dart';
 
 class CharacterCustomization extends StatefulWidget {
   final Character character;
@@ -29,61 +31,83 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
     _heroClass = HeroClass.getClass(_tempCharacter.heroClass);
   }
 
+  // ✅ کپی کردن کاراکتر با تغییرات
+  Character _copyCharacter({
+    String? heroClass,
+    String? outfit,
+    String? accessory,
+    String? catchphrase,
+  }) {
+    return Character(
+      id: _tempCharacter.id,
+      userId: _tempCharacter.userId,
+      name: _tempCharacter.name,
+      heroClass: heroClass ?? _tempCharacter.heroClass,
+      outfit: outfit ?? _tempCharacter.outfit,
+      accessory: accessory ?? _tempCharacter.accessory,
+      background: _tempCharacter.background,
+      catchphrase: catchphrase ?? _tempCharacter.catchphrase,
+      bgMusic: _tempCharacter.bgMusic,
+      currentAnimation: _tempCharacter.currentAnimation,
+      level: _tempCharacter.level,
+      xp: _tempCharacter.xp,
+      totalXp: _tempCharacter.totalXp,
+      streak: _tempCharacter.streak,
+      bestStreak: _tempCharacter.bestStreak,
+      badges: _tempCharacter.badges,
+      createdAt: _tempCharacter.createdAt,
+      lastActive: _tempCharacter.lastActive,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'شخصی‌سازی قهرمان',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: theme.textColor,
             ),
           ),
           const SizedBox(height: 16),
-
-          // انتخاب کلاس
-          _buildClassSelector(),
-
+          _buildClassSelector(theme),
           const SizedBox(height: 16),
-
-          // انتخاب لباس
-          _buildOutfitSelector(),
-
+          _buildOutfitSelector(theme),
           const SizedBox(height: 16),
-
-          // انتخاب اکسسوری
-          _buildAccessorySelector(),
-
+          _buildAccessorySelector(theme),
           const SizedBox(height: 16),
-
-          // تکه‌کلام
-          _buildCatchphraseInput(),
-
+          _buildCatchphraseInput(theme),
           const SizedBox(height: 16),
-
-          // دکمه ذخیره
-          _buildSaveButton(),
+          _buildSaveButton(primaryColor),
         ],
       ),
     );
   }
 
-  Widget _buildClassSelector() {
+  Widget _buildClassSelector(ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'کلاس قهرمان',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -129,7 +153,11 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? color : Colors.grey.shade100,
+                    color: isSelected
+                        ? color
+                        : (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade100),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected ? color : Colors.transparent,
@@ -148,10 +176,9 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
                         style: TextStyle(
                           color: isSelected
                               ? Colors.white
-                              : Colors.grey.shade700,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                              : theme.textSecondaryColor,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -165,13 +192,17 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
     );
   }
 
-  Widget _buildOutfitSelector() {
+  Widget _buildOutfitSelector(ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'لباس',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -182,26 +213,7 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  _tempCharacter = Character(
-                    id: _tempCharacter.id,
-                    userId: _tempCharacter.userId,
-                    name: _tempCharacter.name,
-                    heroClass: _tempCharacter.heroClass,
-                    outfit: outfit,
-                    accessory: _tempCharacter.accessory,
-                    background: _tempCharacter.background,
-                    catchphrase: _tempCharacter.catchphrase,
-                    bgMusic: _tempCharacter.bgMusic,
-                    currentAnimation: _tempCharacter.currentAnimation,
-                    level: _tempCharacter.level,
-                    xp: _tempCharacter.xp,
-                    totalXp: _tempCharacter.totalXp,
-                    streak: _tempCharacter.streak,
-                    bestStreak: _tempCharacter.bestStreak,
-                    badges: _tempCharacter.badges,
-                    createdAt: _tempCharacter.createdAt,
-                    lastActive: _tempCharacter.lastActive,
-                  );
+                  _tempCharacter = _copyCharacter(outfit: outfit);
                 });
               },
               child: Container(
@@ -212,7 +224,9 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? _parseColor(_heroClass.primaryColor)
-                      : Colors.grey.shade200,
+                      : (theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade200),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected
@@ -224,11 +238,10 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
                 child: Text(
                   _getOutfitDisplayName(outfit),
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey.shade700,
+                    color: isSelected ? Colors.white : theme.textSecondaryColor,
                     fontSize: 12,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               ),
@@ -239,94 +252,83 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
     );
   }
 
-  Widget _buildAccessorySelector() {
+  Widget _buildAccessorySelector(ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'اکسسوری',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              [
-                'none',
-                _heroClass.defaultAccessory,
-                'glasses',
-                'medal_gold',
-                'crown',
-              ].map((accessory) {
-                final isSelected = _tempCharacter.accessory == accessory;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _tempCharacter = Character(
-                        id: _tempCharacter.id,
-                        userId: _tempCharacter.userId,
-                        name: _tempCharacter.name,
-                        heroClass: _tempCharacter.heroClass,
-                        outfit: _tempCharacter.outfit,
-                        accessory: accessory,
-                        background: _tempCharacter.background,
-                        catchphrase: _tempCharacter.catchphrase,
-                        bgMusic: _tempCharacter.bgMusic,
-                        currentAnimation: _tempCharacter.currentAnimation,
-                        level: _tempCharacter.level,
-                        xp: _tempCharacter.xp,
-                        totalXp: _tempCharacter.totalXp,
-                        streak: _tempCharacter.streak,
-                        bestStreak: _tempCharacter.bestStreak,
-                        badges: _tempCharacter.badges,
-                        createdAt: _tempCharacter.createdAt,
-                        lastActive: _tempCharacter.lastActive,
-                      );
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? _parseColor(_heroClass.primaryColor)
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? _parseColor(_heroClass.primaryColor)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Text(
-                      _getAccessoryDisplayName(accessory),
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.grey.shade700,
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
+          children: [
+            'none',
+            _heroClass.defaultAccessory,
+            'glasses',
+            'medal_gold',
+            'crown',
+          ].map((accessory) {
+            final isSelected = _tempCharacter.accessory == accessory;
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _tempCharacter = _copyCharacter(accessory: accessory);
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _parseColor(_heroClass.primaryColor)
+                      : (theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? _parseColor(_heroClass.primaryColor)
+                        : Colors.transparent,
+                    width: 2,
                   ),
-                );
-              }).toList(),
+                ),
+                child: Text(
+                  _getAccessoryDisplayName(accessory),
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : theme.textSecondaryColor,
+                    fontSize: 12,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildCatchphraseInput() {
+  Widget _buildCatchphraseInput(ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'تکه‌کلام',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -334,38 +336,23 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
             ..selection = TextSelection.fromPosition(
               TextPosition(offset: _tempCharacter.catchphrase.length),
             ),
+          style: TextStyle(color: theme.textColor),
           onChanged: (value) {
             setState(() {
-              _tempCharacter = Character(
-                id: _tempCharacter.id,
-                userId: _tempCharacter.userId,
-                name: _tempCharacter.name,
-                heroClass: _tempCharacter.heroClass,
-                outfit: _tempCharacter.outfit,
-                accessory: _tempCharacter.accessory,
-                background: _tempCharacter.background,
-                catchphrase: value,
-                bgMusic: _tempCharacter.bgMusic,
-                currentAnimation: _tempCharacter.currentAnimation,
-                level: _tempCharacter.level,
-                xp: _tempCharacter.xp,
-                totalXp: _tempCharacter.totalXp,
-                streak: _tempCharacter.streak,
-                bestStreak: _tempCharacter.bestStreak,
-                badges: _tempCharacter.badges,
-                createdAt: _tempCharacter.createdAt,
-                lastActive: _tempCharacter.lastActive,
-              );
+              _tempCharacter = _copyCharacter(catchphrase: value);
             });
           },
           decoration: InputDecoration(
             hintText: 'تکه‌کلام قهرمان خود را وارد کنید...',
+            hintStyle: TextStyle(color: theme.textSecondaryColor),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : Colors.grey.shade100,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 12,
@@ -377,7 +364,7 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(Color primaryColor) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -386,7 +373,7 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
           Navigator.pop(context);
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: primaryColor,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

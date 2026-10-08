@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '/providers/theme_provider.dart';
 import 'animated_check_overlay.dart';
+import '/providers/calendar_provider.dart';
 
 class TaskCard extends StatefulWidget {
   final Task task;
@@ -66,16 +67,27 @@ class _TaskCardState extends State<TaskCard>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    final Color cardColor =
-        widget.isCompleted ? const Color(0xFFF5F5F5) : primaryColor;
+    // ✅ در تم شب، تسک‌ها کارت تیره می‌گیرند
+    final Color cardColor = widget.isCompleted
+        ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5))
+        : primaryColor;
 
-    final Color iconColor =
-        widget.isCompleted ? Colors.grey.shade500 : cardColor;
+    // ✅ رنگ متن روی کارت
+    final Color textColor =
+        theme.isDarkMode ? Colors.white : const Color(0xFF090909);
 
-    const Color textColor = Color(0xFF090909);
+    // ✅ رنگ آیکون دکمه انجام
+    final Color checkButtonBg = widget.isCompleted
+        ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0))
+        : theme.checkButtonBackground;
+
+    final Color checkIconColor = widget.isCompleted
+        ? (theme.isDarkMode ? Colors.grey.shade400 : Colors.white)
+        : theme.onCheckButton;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -105,7 +117,9 @@ class _TaskCardState extends State<TaskCard>
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
+                              color: Colors.black.withValues(
+                                alpha: theme.isDarkMode ? 0.3 : 0.06,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -146,15 +160,17 @@ class _TaskCardState extends State<TaskCard>
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: theme.isDarkMode
+                                          ? Colors.white.withOpacity(0.2)
+                                          : Colors.white.withOpacity(0.6),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Text(
-                                      '+10',
+                                    child: Text(
+                                      '+${widget.task.xpReward}',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w700,
-                                        color: Color(0xFF090909),
+                                        color: textColor,
                                       ),
                                     ),
                                   ),
@@ -166,25 +182,28 @@ class _TaskCardState extends State<TaskCard>
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: theme.isDarkMode
+                                          ? Colors.white.withOpacity(0.2)
+                                          : Colors.white.withOpacity(0.6),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          _formatDate(widget.task.dueDate!),
-                                          style: const TextStyle(
+                                          _formatDate(
+                                              widget.task.dueDate!, calendar),
+                                          style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w500,
-                                            color: Color(0xFF090909),
+                                            color: textColor,
                                           ),
                                         ),
                                         const SizedBox(width: 2),
-                                        const Icon(
+                                        Icon(
                                           Icons.calendar_today,
                                           size: 10,
-                                          color: Color(0xFF090909),
+                                          color: textColor,
                                         ),
                                       ],
                                     ),
@@ -198,16 +217,12 @@ class _TaskCardState extends State<TaskCard>
                     const SizedBox(width: 10),
                     AnimatedCheckOverlay(
                       onTap: widget.onToggle,
-                      checkColor: widget.isCompleted
-                          ? Colors.white
-                          : const Color(0xFF090909),
+                      checkColor: checkIconColor,
                       child: Container(
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: widget.isCompleted
-                              ? const Color(0xFFE0E0E0)
-                              : const Color(0xFF090909),
+                          color: checkButtonBg,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -222,8 +237,7 @@ class _TaskCardState extends State<TaskCard>
                             widget.isCompleted
                                 ? Icons.check
                                 : Icons.assignment_outlined,
-                            color:
-                                widget.isCompleted ? Colors.white : iconColor,
+                            color: checkIconColor,
                             size: 18,
                           ),
                         ),
@@ -246,14 +260,18 @@ class _TaskCardState extends State<TaskCard>
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: widget.isCompleted ? Colors.grey.shade50 : Colors.white,
+                color: widget.isCompleted
+                    ? (theme.isDarkMode
+                        ? const Color(0xFF1A1A1A)
+                        : Colors.grey.shade50)
+                    : theme.cardColor,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: Colors.grey.shade200,
+                    color: theme.borderColor,
                     width: 1,
                   ),
                 ),
@@ -293,10 +311,10 @@ class _TaskCardState extends State<TaskCard>
                     ],
                   ),
 
-                  // ✅ لیست زیرتسک‌ها (بدون عنوان)
+                  // ✅ لیست زیرتسک‌ها
                   if (widget.task.subTasks.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Divider(height: 1),
+                    Divider(height: 1, color: theme.borderColor),
                     const SizedBox(height: 8),
                     ...widget.task.subTasks.map((subTask) {
                       final isChecked =
@@ -322,12 +340,16 @@ class _TaskCardState extends State<TaskCard>
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isChecked
-                                        ? const Color(0xFF090909)
+                                        ? (theme.isDarkMode
+                                            ? theme.primaryColor
+                                            : const Color(0xFF090909))
                                         : Colors.transparent,
                                     border: Border.all(
                                       color: isChecked
-                                          ? const Color(0xFF090909)
-                                          : Colors.grey.shade400,
+                                          ? (theme.isDarkMode
+                                              ? theme.primaryColor
+                                              : const Color(0xFF090909))
+                                          : theme.textSecondaryColor,
                                       width: 1.8,
                                     ),
                                   ),
@@ -346,8 +368,8 @@ class _TaskCardState extends State<TaskCard>
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isChecked
-                                          ? Colors.grey.shade500
-                                          : const Color(0xFF090909),
+                                          ? theme.textSecondaryColor
+                                          : theme.textColor,
                                       decoration: isChecked
                                           ? TextDecoration.lineThrough
                                           : null,
@@ -414,7 +436,7 @@ class _TaskCardState extends State<TaskCard>
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+  String _formatDate(DateTime date, CalendarProvider calendar) {
+    return calendar.formatShort(date);
   }
 }

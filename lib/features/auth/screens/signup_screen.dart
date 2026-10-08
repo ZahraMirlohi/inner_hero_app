@@ -3,6 +3,8 @@ import '/services/supabase_service.dart'; // ← تغییر
 import '/features/home/screens/main_screen.dart';
 import '/../../utils/unique_id_generator.dart';
 import 'login_screen.dart';
+import '/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -101,8 +103,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

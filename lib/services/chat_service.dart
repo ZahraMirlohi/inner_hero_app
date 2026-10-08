@@ -16,105 +16,113 @@ class ChatService {
   SupabaseClient get client => _client;
 
   // ==================== گفتگوها ====================
-  // lib/services/chat_service.dart
+// lib/services/chat_service.dart
 
   Future<List<Conversation>> getUserConversations(String userId) async {
     try {
-      // ✅ دریافت همه گفتگوهای کاربر
-      final response = await _client
-          .from('conversations')
-          .select('''
-          *,
-          conversation_members!inner(
-            user_id,
-            role,
-            joined_at
-          )
-        ''')
-          .eq('conversation_members.user_id', userId)
-          .eq('is_active', true)
-          .order('last_message_at', ascending: false);
+      // ✅ مرحله 1: گرفتن همه گفتگوهای فعال کاربر
+      final conversationsResponse = await _client
+          .from('conversation_members')
+          .select('conversation_id')
+          .eq('user_id', userId);
 
-      if (response.isEmpty) {
-        print('📊 No conversations found for user: $userId');
+      if (conversationsResponse.isEmpty) {
+        print('📊 No conversation memberships found for user: $userId');
         return [];
       }
 
-      print('📊 Found ${response.length} conversations');
+      final conversationIds = conversationsResponse
+          .map((m) => m['conversation_id'] as String)
+          .toList();
 
+      print('📊 User is member of ${conversationIds.length} conversations');
+
+      // ✅ مرحله 2: گرفتن گفتگوهای فعال از بین این‌ها
+      final activeConversationsResponse = await _client
+          .from('conversations')
+          .select()
+          .inFilter('id', conversationIds)
+          .eq('is_active', true)
+          .order('last_message_at', ascending: false);
+
+      print('📊 Active conversations: ${activeConversationsResponse.length}');
+
+      if (activeConversationsResponse.isEmpty) {
+        return [];
+      }
+
+      final activeConversationIds =
+          activeConversationsResponse.map((c) => c['id'] as String).toList();
+
+      // ✅ مرحله 3: گرفتن همه اعضای این گفتگوها با یک کوئری
+      final allMembersResponse = await _client
+          .from('conversation_members')
+          .select('conversation_id, user_id')
+          .inFilter('conversation_id', activeConversationIds);
+
+      final Map<String, List<String>> membersByConv = {};
+      for (var m in allMembersResponse) {
+        final convId = m['conversation_id'] as String;
+        final uid = m['user_id'] as String;
+        membersByConv.putIfAbsent(convId, () => []).add(uid);
+      }
+
+      // ✅ مرحله 4: گرفتن همه پروفایل‌های اعضا با یک کوئری
+      final allMemberIds = allMembersResponse
+          .map((m) => m['user_id'] as String)
+          .toSet()
+          .toList();
+
+      final profilesResponse = await _client
+          .from('profiles')
+          .select('user_id, name, avatar_url, updated_at, last_seen_at')
+          .inFilter('user_id', allMemberIds);
+
+      final Map<String, Map<String, dynamic>> profilesMap = {
+        for (var p in profilesResponse) p['user_id'] as String: p,
+      };
+
+      // ✅ مرحله 5: گرفتن آخرین پیام هر گفتگو با یک کوئری
+      final lastMessagesResponse = await _client
+          .from('messages')
+          .select('conversation_id, content, created_at, sender_id')
+          .inFilter('conversation_id', activeConversationIds)
+          .eq('is_deleted', false)
+          .order('created_at', ascending: false);
+
+      final Map<String, Map<String, dynamic>> lastMessageByConv = {};
+      for (var msg in lastMessagesResponse) {
+        final convId = msg['conversation_id'] as String;
+        if (!lastMessageByConv.containsKey(convId)) {
+          lastMessageByConv[convId] = msg;
+        }
+      }
+
+      // ✅ مرحله 6: ساخت لیست نهایی
       final List<Conversation> conversations = [];
 
-      for (var data in response) {
-        final conversationId = data['id'] as String;
+      for (var convData in activeConversationsResponse) {
+        final conversationId = convData['id'] as String;
+        final memberIds = membersByConv[conversationId] ?? [];
 
-        // ✅ استخراج همه اعضا از پاسخ
-        final members = data['conversation_members'] as List? ?? [];
-        List<String> memberIds = members
-            .map((m) => m['user_id'] as String? ?? '')
-            .where((id) => id.isNotEmpty)
-            .toList();
-
-        print('📊 Conversation ${data['id']} members from query: $memberIds');
-
-        // ✅ اگر memberIds فقط یک عضو دارد (یا خالی است)، از دیتابیس دوباره دریافت کن
+        // ✅ اگر بعد از همه چک‌ها، عضو کمتر از 2 بود، این گفتگو را رد کن
         if (memberIds.length < 2) {
           print(
-            '⚠️ Only ${memberIds.length} members found, fetching all members directly...',
-          );
-          try {
-            final allMembers = await _client
-                .from('conversation_members')
-                .select('user_id')
-                .eq('conversation_id', conversationId);
-
-            final allMemberIds = allMembers
-                .map((m) => m['user_id'] as String)
-                .where((id) => id.isNotEmpty)
-                .toList();
-
-            print('📊 All members from direct query: $allMemberIds');
-
-            if (allMemberIds.length > memberIds.length) {
-              memberIds = allMemberIds;
-              print('📊 Updated members: $memberIds');
-            }
-          } catch (e) {
-            print('⚠️ Error fetching members directly: $e');
-          }
+              '⚠️ Skipping conversation $conversationId: only ${memberIds.length} members');
+          continue;
         }
 
-        // ✅ دریافت آخرین پیام با یک کوئری جداگانه
-        String? lastMessage = 'شروع گفتگو';
-        DateTime lastMessageAt = DateTime.now();
-
-        try {
-          final lastMsgResponse = await _client
-              .from('messages')
-              .select('content, created_at, sender_id')
-              .eq('conversation_id', conversationId)
-              .order('created_at', ascending: false)
-              .limit(1)
-              .maybeSingle();
-
-          if (lastMsgResponse != null) {
-            lastMessage = lastMsgResponse['content'] as String? ?? 'شروع گفتگو';
-            lastMessageAt = DateTime.parse(lastMsgResponse['created_at']);
-          }
-        } catch (e) {
-          print(
-            '⚠️ Error getting last message for conversation $conversationId: $e',
-          );
-        }
-
-        // ✅ نوع گفتگو
-        final typeStr = data['type'] as String? ?? 'buddy';
+        // نوع گفتگو
+        final typeStr = convData['type'] as String? ?? 'buddy';
         final type = ConversationType.values.firstWhere(
           (e) => e.toString().split('.').last == typeStr,
           orElse: () => ConversationType.buddy,
         );
 
-        // ✅ دریافت نام گفتگو
+        // نام گفتگو
         String conversationName = '';
+        String? buddyAvatar;
+        DateTime? buddyLastSeen;
 
         if (type == ConversationType.buddy && memberIds.length >= 2) {
           final otherUserId = memberIds.firstWhere(
@@ -123,73 +131,42 @@ class ChatService {
           );
 
           if (otherUserId.isNotEmpty) {
-            try {
-              final profile = await _client
-                  .from('profiles')
-                  .select('name')
-                  .eq('user_id', otherUserId)
-                  .maybeSingle();
+            final profile = profilesMap[otherUserId];
+            if (profile != null) {
+              conversationName = profile['name'] as String? ?? 'کاربر';
+              buddyAvatar = profile['avatar_url'] as String?;
 
-              if (profile != null && profile['name'] != null) {
-                conversationName = profile['name'] as String;
-                print(
-                  '📊 Buddy name: $conversationName for user: $otherUserId',
-                );
-              } else {
-                conversationName = 'کاربر ${otherUserId.substring(0, 6)}';
-                print('📊 Using fallback name: $conversationName');
+              final lastSeen = profile['last_seen_at'] ?? profile['updated_at'];
+              if (lastSeen != null) {
+                buddyLastSeen = DateTime.tryParse(lastSeen);
               }
-            } catch (e) {
-              print('⚠️ Error getting buddy name: $e');
+            } else {
               conversationName = 'کاربر ${otherUserId.substring(0, 6)}';
             }
           }
         }
 
         if (conversationName.isEmpty) {
-          conversationName = data['name'] as String? ?? '';
+          conversationName = convData['name'] as String? ?? '';
         }
 
-        // ✅ زمان ایجاد
+        // آخرین پیام
+        final lastMsg = lastMessageByConv[conversationId];
+        String lastMessage = 'شروع گفتگو';
+        DateTime lastMessageAt = DateTime.now();
+
+        if (lastMsg != null) {
+          lastMessage = lastMsg['content'] as String? ?? 'شروع گفتگو';
+          lastMessageAt = DateTime.tryParse(lastMsg['created_at'] as String) ??
+              DateTime.now();
+        }
+
+        // تاریخ ایجاد
         DateTime createdAt;
-        if (data['created_at'] != null) {
-          try {
-            createdAt = DateTime.parse(data['created_at']);
-          } catch (e) {
-            createdAt = DateTime.now();
-          }
-        } else {
+        try {
+          createdAt = DateTime.parse(convData['created_at'] as String);
+        } catch (e) {
           createdAt = DateTime.now();
-        }
-
-        // ✅ دریافت آخرین زمان آنلاین کاربر مقابل
-        DateTime? buddyLastSeen;
-        if (type == ConversationType.buddy && memberIds.length >= 2) {
-          final otherUserId = memberIds.firstWhere(
-            (id) => id != userId,
-            orElse: () => '',
-          );
-          if (otherUserId.isNotEmpty) {
-            try {
-              final profile = await _client
-                  .from('profiles')
-                  .select('updated_at, last_streak_date')
-                  .eq('user_id', otherUserId)
-                  .maybeSingle();
-
-              if (profile != null) {
-                if (profile['updated_at'] != null) {
-                  buddyLastSeen = DateTime.tryParse(profile['updated_at']);
-                } else if (profile['last_streak_date'] != null) {
-                  buddyLastSeen = DateTime.tryParse(
-                    profile['last_streak_date'],
-                  );
-                }
-              }
-            } catch (e) {
-              print('⚠️ Error getting buddy last seen: $e');
-            }
-          }
         }
 
         conversations.add(
@@ -197,26 +174,25 @@ class ChatService {
             id: conversationId,
             type: type,
             name: conversationName.isNotEmpty ? conversationName : null,
-            createdBy: data['created_by'] as String? ?? '',
-            squadId: data['squad_id'] as String?,
-            challengeId: data['challenge_id'] as String?,
-            isActive: data['is_active'] as bool? ?? true,
-            lastMessageAt: lastMessageAt, // ✅ زمان آخرین پیام
+            createdBy: convData['created_by'] as String? ?? '',
+            squadId: convData['squad_id'] as String?,
+            challengeId: convData['challenge_id'] as String?,
+            isActive: true,
+            lastMessageAt: lastMessageAt,
             createdAt: createdAt,
-            lastMessage: lastMessage, // ✅ آخرین پیام
+            lastMessage: lastMessage,
             unreadCount: 0,
             memberIds: memberIds,
+            avatarUrl: buddyAvatar,
             buddyLastSeen: buddyLastSeen,
           ),
         );
       }
 
-      // ✅ دیباگ: نمایش خلاصه گفتگوها
       print('📊 Total conversations loaded: ${conversations.length}');
       for (var conv in conversations) {
         print(
-          '   - ${conv.id}: ${conv.type} - ${conv.displayName} (${conv.memberIds.length} members) - Last: ${conv.lastMessage}',
-        );
+            '   - ${conv.id}: ${conv.type} - ${conv.displayName} (${conv.memberIds.length} members) - Last: ${conv.lastMessage}');
       }
 
       return conversations;
@@ -234,9 +210,8 @@ class ChatService {
           .select('user_id')
           .eq('conversation_id', conversationId);
 
-      final memberIds = membersResponse
-          .map((m) => m['user_id'] as String)
-          .toList();
+      final memberIds =
+          membersResponse.map((m) => m['user_id'] as String).toList();
       print('📊 Members in conversation: $memberIds');
 
       // 2. حذف پیام‌ها
@@ -277,8 +252,6 @@ class ChatService {
     }
   }
 
-  // lib/services/chat_service.dart
-
   Future<String> createConversation({
     required String type,
     required List<String> memberIds,
@@ -288,184 +261,122 @@ class ChatService {
     String? challengeId,
   }) async {
     try {
-      print('📊 Creating conversation:');
-      print('   - type: $type');
-      print('   - memberIds: $memberIds');
-      print('   - createdBy: $createdBy');
+      print('📊 ===== CREATE CONVERSATION START =====');
 
-      // ✅ بررسی وجود گفتگو
-      final currentUser = await getCurrentUser();
-      if (currentUser != null) {
-        final existingConversations = await getUserConversations(
-          currentUser.id,
-        );
+      // ✅ فقط چک کن کاربر وجود داره، بدون refresh اجباری
+      final user = _client.auth.currentUser;
+      if (user == null) {
+        throw Exception('لطفاً دوباره وارد حساب کاربری شوید');
+      }
+
+      final actualCreatedBy = user.id;
+      print('✅ Using actualCreatedBy: $actualCreatedBy');
+
+      // ✅ 2. بررسی گفتگوی موجود
+      try {
+        final existingConversations =
+            await getUserConversations(actualCreatedBy);
         for (var conv in existingConversations) {
           if (conv.type == ConversationType.buddy) {
-            final allMembersExist = memberIds.every(
-              (id) => conv.memberIds.contains(id),
-            );
+            final allMembersExist =
+                memberIds.every((id) => conv.memberIds.contains(id));
             if (allMembersExist) {
               print('ℹ️ Conversation already exists: ${conv.id}');
               return conv.id;
             }
           }
         }
+      } catch (e) {
+        print('⚠️ Error checking existing conversations: $e');
       }
 
-      // ۱. ایجاد گفتگو
+      // ✅ 3. ایجاد گفتگو
+      final now = DateTime.now().toIso8601String();
+
+      final conversationData = <String, dynamic>{
+        'type': type,
+        'name': name,
+        'created_by': actualCreatedBy,
+        'squad_id': squadId,
+        'challenge_id': challengeId,
+        'is_active': true,
+        'last_message_at': now,
+      };
+
+      print('📤 Inserting conversation: $conversationData');
+
       final conversationResponse = await _client
           .from('conversations')
-          .insert({
-            'type': type,
-            'name': name,
-            'created_by': createdBy,
-            'squad_id': squadId,
-            'challenge_id': challengeId,
-            'is_active': true,
-            'last_message_at': DateTime.now().toIso8601String(),
-          })
+          .insert(conversationData)
           .select()
           .single();
 
       final conversationId = conversationResponse['id'];
       print('✅ Conversation created: $conversationId');
 
-      // ✅ ۲. افزودن اعضا با دقت بیشتر
+      // ✅ 4. افزودن اعضا
       final List<Map<String, dynamic>> membersToInsert = [];
       for (var userId in memberIds) {
         if (userId.isNotEmpty) {
           membersToInsert.add({
             'conversation_id': conversationId,
             'user_id': userId,
-            'role': userId == createdBy ? 'admin' : 'member',
-            'joined_at': DateTime.now().toIso8601String(),
+            'role': userId == actualCreatedBy ? 'admin' : 'member',
+            'joined_at': now,
           });
         }
       }
 
       if (membersToInsert.isEmpty) {
-        throw Exception('No valid members to add to conversation');
+        await _client.from('conversations').delete().eq('id', conversationId);
+        throw Exception('No valid members');
       }
 
-      print('📊 Adding members: $membersToInsert');
+      print('📤 Inserting members: $membersToInsert');
 
-      // ✅ ۳. درج اعضا با بررسی خطا
       try {
         await _client.from('conversation_members').insert(membersToInsert);
-        print('✅ Members added: $memberIds');
+        print('✅ Members added successfully');
       } catch (e) {
         print('❌ Error adding members: $e');
-        // اگر خطا داد، تک تک اعضا را اضافه کن
-        for (var member in membersToInsert) {
-          try {
-            await _client.from('conversation_members').insert(member);
-            print('✅ Member added: ${member['user_id']}');
-          } catch (e2) {
-            print('❌ Error adding member ${member['user_id']}: $e2');
-          }
-        }
+        await _client.from('conversations').delete().eq('id', conversationId);
+        rethrow;
       }
 
-      // ✅ ۴. تأیید اضافه شدن اعضا
-      final verifyMembers = await _client
-          .from('conversation_members')
-          .select('user_id')
-          .eq('conversation_id', conversationId);
-
-      print(
-        '📊 Verified members: ${verifyMembers.map((m) => m['user_id']).toList()}',
-      );
-
-      // ✅ ۵. به‌روزرسانی وضعیت درخواست به accepted
-      if (type == 'buddy' && memberIds.length == 2) {
-        await _client
-            .from('buddy_requests')
-            .update({'status': 'accepted'})
-            .or('from_user_id.eq.${memberIds[0]},to_user_id.eq.${memberIds[0]}')
-            .or(
-              'from_user_id.eq.${memberIds[1]},to_user_id.eq.${memberIds[1]}',
-            );
-        print('✅ Buddy requests updated to accepted');
-      }
-
+      print('✅ ===== CREATE CONVERSATION SUCCESS =====');
       return conversationId;
     } catch (e) {
-      print('❌ Error creating conversation: $e');
+      print('❌ ===== CREATE CONVERSATION ERROR =====');
+      print('❌ Error: $e');
       rethrow;
     }
   }
 
-  // ✅ حذف گفتگو برای هر دو طرف
-  Future<void> deleteConversationForBoth(String conversationId) async {
-    try {
-      // 1. دریافت اعضای گفتگو
-      final membersResponse = await _client
-          .from('conversation_members')
-          .select('user_id')
-          .eq('conversation_id', conversationId);
+// ✅ متد کمکی برای refresh اجباری session
+  Future<void> _forceRefreshSession() async {
+    final session = _client.auth.currentSession;
 
-      final memberIds = membersResponse
-          .map((m) => m['user_id'] as String)
-          .toList();
+    if (session == null) {
+      throw Exception('جلسه کاربری یافت نشد. لطفاً دوباره وارد شوید.');
+    }
 
-      print('📊 Members in conversation: $memberIds');
+    if (session.isExpired) {
+      print('⚠️ Session expired, forcing refresh...');
+      try {
+        await _client.auth.refreshSession();
+        await Future.delayed(const Duration(milliseconds: 300));
 
-      // 2. حذف پیام‌ها
-      await _client
-          .from('messages')
-          .delete()
-          .eq('conversation_id', conversationId);
-
-      // 3. حذف اعضا
-      await _client
-          .from('conversation_members')
-          .delete()
-          .eq('conversation_id', conversationId);
-
-      // 4. حذف گفتگو
-      await _client.from('conversations').delete().eq('id', conversationId);
-
-      // 5. ✅ حذف درخواست‌های هم‌مسیر
-      if (memberIds.length >= 2) {
-        final user1 = memberIds[0];
-        final user2 = memberIds[1];
-
-        await _client
-            .from('buddy_requests')
-            .delete()
-            .or('from_user_id.eq.$user1,to_user_id.eq.$user1')
-            .or('from_user_id.eq.$user2,to_user_id.eq.$user2');
-
-        print('🗑️ Removed all buddy requests between $user1 and $user2');
+        final newSession = _client.auth.currentSession;
+        if (newSession == null || newSession.isExpired) {
+          throw Exception('نشست شما منقضی شده. لطفاً دوباره وارد شوید.');
+        }
+        print('✅ Session refreshed successfully');
+      } catch (e) {
+        print('❌ Session refresh failed: $e');
+        // خروج کاربر و هدایت به صفحه ورود
+        await _client.auth.signOut();
+        throw Exception('لطفاً دوباره وارد حساب کاربری شوید.');
       }
-
-      print('🗑️ Conversation deleted for both users: $conversationId');
-    } catch (e) {
-      print('❌ Error deleting conversation: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> blockUser(String blockerId, String blockedId) async {
-    try {
-      // 1. اضافه کردن به جدول blocked_users
-      await _client.from('blocked_users').insert({
-        'blocker_id': blockerId,
-        'blocked_id': blockedId,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // 2. حذف درخواست‌های هم‌مسیر بین این دو کاربر
-      await _client
-          .from('buddy_requests')
-          .delete()
-          .or('from_user_id.eq.$blockerId,to_user_id.eq.$blockerId')
-          .or('from_user_id.eq.$blockedId,to_user_id.eq.$blockedId');
-
-      print('🚫 User $blockerId blocked $blockedId');
-    } catch (e) {
-      print('❌ Error blocking user: $e');
-      rethrow;
     }
   }
 
@@ -502,8 +413,8 @@ class ChatService {
 
       await _client
           .from('conversations')
-          .update({'last_message_at': DateTime.now().toIso8601String()})
-          .eq('id', conversationId);
+          .update({'last_message_at': DateTime.now().toIso8601String()}).eq(
+              'id', conversationId);
     } catch (e) {
       print('🔴 [CHAT_SERVICE] Error inserting message: $e');
       rethrow;
@@ -524,14 +435,11 @@ class ChatService {
           .eq('is_pinned', true);
 
       // ✅ پین کردن پیام جدید
-      await _client
-          .from('messages')
-          .update({
-            'is_pinned': true,
-            'pinned_at': DateTime.now().toIso8601String(),
-            'pinned_by': userId,
-          })
-          .eq('id', messageId);
+      await _client.from('messages').update({
+        'is_pinned': true,
+        'pinned_at': DateTime.now().toIso8601String(),
+        'pinned_by': userId,
+      }).eq('id', messageId);
 
       print('📌 Message pinned: $messageId');
     } catch (e) {
@@ -543,10 +451,11 @@ class ChatService {
   // ✅ لغو پین پیام
   Future<void> unpinMessage({required String messageId}) async {
     try {
-      await _client
-          .from('messages')
-          .update({'is_pinned': false, 'pinned_at': null, 'pinned_by': null})
-          .eq('id', messageId);
+      await _client.from('messages').update({
+        'is_pinned': false,
+        'pinned_at': null,
+        'pinned_by': null
+      }).eq('id', messageId);
 
       print('📌 Message unpinned: $messageId');
     } catch (e) {
@@ -633,32 +542,28 @@ class ChatService {
     String? userId,
   }) {
     try {
-      return _client
-          .from('messages')
-          .stream(primaryKey: ['id'])
-          .map((data) {
-            print('📊 [STREAM] Received ${data.length} messages from Realtime');
+      return _client.from('messages').stream(primaryKey: ['id']).map((data) {
+        print('📊 [STREAM] Received ${data.length} messages from Realtime');
 
-            final List<ChatMessage> messages = [];
-            for (var item in data) {
-              final convId = item['conversation_id'] as String?;
-              if (convId == conversationId) {
-                final msg = ChatMessage.fromMap(item);
-                if (userId == null || !msg.hiddenFor.contains(userId)) {
-                  messages.add(msg);
-                  print(
-                    '📊 [STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
-                  );
-                }
-              }
+        final List<ChatMessage> messages = [];
+        for (var item in data) {
+          final convId = item['conversation_id'] as String?;
+          if (convId == conversationId) {
+            final msg = ChatMessage.fromMap(item);
+            if (userId == null || !msg.hiddenFor.contains(userId)) {
+              messages.add(msg);
+              print(
+                '📊 [STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
+              );
             }
-            messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            return _populateReplyTo(messages);
-          })
-          .handleError((error) {
-            print('⚠️ Realtime stream error: $error');
-            return <ChatMessage>[];
-          });
+          }
+        }
+        messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return _populateReplyTo(messages);
+      }).handleError((error) {
+        print('⚠️ Realtime stream error: $error');
+        return <ChatMessage>[];
+      });
     } catch (e) {
       print('❌ Error getting messages stream: $e');
       return Stream.value([]);
@@ -738,13 +643,10 @@ class ChatService {
           print('🗑️ Reaction removed: $emoji by user $userId');
         } else {
           // ✅ اگر ایموجی متفاوت بود → آپدیت کن (به‌جای حذف+ایجاد)
-          await _client
-              .from('message_reactions')
-              .update({
-                'emoji': emoji,
-                'created_at': DateTime.now().toIso8601String(),
-              })
-              .eq('id', existingReaction['id']);
+          await _client.from('message_reactions').update({
+            'emoji': emoji,
+            'created_at': DateTime.now().toIso8601String(),
+          }).eq('id', existingReaction['id']);
           print('🔄 Reaction updated: $existingEmoji → $emoji by user $userId');
         }
       } else {
@@ -771,8 +673,7 @@ class ChatService {
       final now = DateTime.now().toUtc().toIso8601String();
       await _client
           .from('profiles')
-          .update({'last_seen_at': now})
-          .eq('user_id', userId);
+          .update({'last_seen_at': now}).eq('user_id', userId);
     } catch (e) {
       // خطا را نادیده بگیر
     }
@@ -796,8 +697,7 @@ class ChatService {
 
       await _client
           .from('messages')
-          .update({'hidden_for': hiddenFor})
-          .eq('id', messageId);
+          .update({'hidden_for': hiddenFor}).eq('id', messageId);
 
       print('🗑️ Message hidden for user: $userId');
     } catch (e) {
@@ -836,10 +736,8 @@ class ChatService {
       if (response.isEmpty) return [];
 
       // 2. دریافت نام کاربران
-      final userIds = response
-          .map((r) => r['user_id'] as String)
-          .toSet()
-          .toList();
+      final userIds =
+          response.map((r) => r['user_id'] as String).toSet().toList();
       final Map<String, String> userNames = {};
 
       if (userIds.isNotEmpty) {
@@ -899,10 +797,8 @@ class ChatService {
 
       // 3. دریافت نام کاربران (به صورت جداگانه)
       final Map<String, String> userNames = {};
-      final userIds = response
-          .map((r) => r['user_id'] as String)
-          .toSet()
-          .toList();
+      final userIds =
+          response.map((r) => r['user_id'] as String).toSet().toList();
 
       if (userIds.isNotEmpty) {
         try {
@@ -1135,8 +1031,7 @@ class ChatService {
         for (var msg in unread) {
           await _client
               .from('messages')
-              .update({'status': 'seen', 'read_at': now2})
-              .eq('id', msg['id']);
+              .update({'status': 'seen', 'read_at': now2}).eq('id', msg['id']);
         }
         print('✅ ${unread.length} messages marked as read individually');
       } catch (e2) {
@@ -1150,30 +1045,28 @@ class ChatService {
     try {
       return _client
           .from('typing_status')
-          .stream(primaryKey: ['id'])
-          .map((data) {
-            final Map<String, bool> result = {};
-            final now = DateTime.now().toUtc();
+          .stream(primaryKey: ['id']).map((data) {
+        final Map<String, bool> result = {};
+        final now = DateTime.now().toUtc();
 
-            for (var item in data) {
-              if (item['conversation_id'] == conversationId) {
-                final userId = item['user_id'] as String;
-                final isTyping = item['is_typing'] as bool;
-                final updatedAt = DateTime.parse(item['updated_at']).toUtc();
+        for (var item in data) {
+          if (item['conversation_id'] == conversationId) {
+            final userId = item['user_id'] as String;
+            final isTyping = item['is_typing'] as bool;
+            final updatedAt = DateTime.parse(item['updated_at']).toUtc();
 
-                // اگر بیش از 5 ثانیه از آخرین به‌روزرسانی گذشته، تایپ نیست
-                if (now.difference(updatedAt).inSeconds < 5) {
-                  result[userId] = isTyping;
-                }
-              }
+            // اگر بیش از 5 ثانیه از آخرین به‌روزرسانی گذشته، تایپ نیست
+            if (now.difference(updatedAt).inSeconds < 5) {
+              result[userId] = isTyping;
             }
-            return result;
-          })
-          .handleError((error) {
-            // ✅ مدیریت خطا - فقط لاگ کن
-            print('⚠️ Typing status stream error: $error');
-            return <String, bool>{};
-          });
+          }
+        }
+        return result;
+      }).handleError((error) {
+        // ✅ مدیریت خطا - فقط لاگ کن
+        print('⚠️ Typing status stream error: $error');
+        return <String, bool>{};
+      });
     } catch (e) {
       print('❌ Error getting typing status: $e');
       return Stream.value({});
@@ -1275,8 +1168,7 @@ class ChatService {
       final status = accept ? 'accepted' : 'rejected';
       await _client
           .from('buddy_requests')
-          .update({'status': status})
-          .eq('id', requestId);
+          .update({'status': status}).eq('id', requestId);
 
       if (accept) {
         final request = await _client
@@ -1294,6 +1186,121 @@ class ChatService {
       }
     } catch (e) {
       print('❌ Error responding to buddy request: $e');
+      rethrow;
+    }
+  }
+
+  // lib/services/chat_service.dart
+
+  Future<void> deleteConversationForBoth(String conversationId) async {
+    try {
+      print('🗑️ Starting deletion for conversation: $conversationId');
+
+      // 1. دریافت اعضای گفتگو
+      final membersResponse = await _client
+          .from('conversation_members')
+          .select('user_id')
+          .eq('conversation_id', conversationId);
+
+      final memberIds =
+          membersResponse.map((m) => m['user_id'] as String).toList();
+
+      print('📊 Members in conversation: $memberIds');
+
+      // 2. حذف درخواست‌های هم‌مسیر
+      if (memberIds.length >= 2) {
+        try {
+          await _client.from('buddy_requests').delete().or(
+              'and(from_user_id.eq.${memberIds[0]},to_user_id.eq.${memberIds[1]}),'
+              'and(from_user_id.eq.${memberIds[1]},to_user_id.eq.${memberIds[0]})');
+          print('🗑️ Removed buddy requests between members');
+        } catch (e) {
+          print('⚠️ Error removing buddy requests: $e');
+        }
+      }
+
+      // 3. حذف typing_status
+      try {
+        await _client
+            .from('typing_status')
+            .delete()
+            .eq('conversation_id', conversationId);
+      } catch (e) {
+        print('⚠️ Error deleting typing status: $e');
+      }
+
+      // 4. حذف واکنش‌ها
+      try {
+        final messages = await _client
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId);
+
+        if (messages.isNotEmpty) {
+          final messageIds = messages.map((m) => m['id'] as String).toList();
+          await _client
+              .from('message_reactions')
+              .delete()
+              .inFilter('message_id', messageIds);
+        }
+      } catch (e) {
+        print('⚠️ Error deleting reactions: $e');
+      }
+
+      // 5. حذف پیام‌ها
+      try {
+        await _client
+            .from('messages')
+            .delete()
+            .eq('conversation_id', conversationId);
+        print('🗑️ Messages deleted');
+      } catch (e) {
+        print('⚠️ Error deleting messages: $e');
+      }
+
+      // 6. حذف خود گفتگو
+      bool conversationDeleted = false;
+      try {
+        final deleteResult = await _client
+            .from('conversations')
+            .delete()
+            .eq('id', conversationId)
+            .select();
+
+        if (deleteResult.isNotEmpty) {
+          conversationDeleted = true;
+          print('✅ Conversation deleted successfully');
+        } else {
+          print('⚠️ Conversation NOT deleted (RLS issue)');
+        }
+      } catch (e) {
+        print('❌ Error deleting conversation: $e');
+      }
+
+      // 7. اگر حذف نشد، غیرفعال کن
+      if (!conversationDeleted) {
+        try {
+          await _client
+              .from('conversations')
+              .update({'is_active': false}).eq('id', conversationId);
+          print('ℹ️ Conversation marked as inactive');
+        } catch (e) {
+          print('⚠️ Error marking inactive: $e');
+        }
+      }
+
+      // 8. حذف members
+      try {
+        await _client
+            .from('conversation_members')
+            .delete()
+            .eq('conversation_id', conversationId);
+        print('🗑️ Members deleted');
+      } catch (e) {
+        print('⚠️ Error deleting members: $e');
+      }
+    } catch (e) {
+      print('❌ Error deleting conversation: $e');
       rethrow;
     }
   }

@@ -84,6 +84,8 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
     });
   }
 
+// lib/features/arena/widgets/habit_timer_widget.dart
+
   Future<void> _saveTime() async {
     if (_elapsedSeconds < 5) {
       if (mounted) {
@@ -124,8 +126,13 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
         'last_updated': DateTime.now().toIso8601String(),
       });
 
+      // ✅ بعد از تاخیر کوچیک callback رو صدا بزن
       if (mounted) {
-        widget.onTimeSaved();
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            widget.onTimeSaved();
+          }
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -150,26 +157,28 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     final timeString = _formatTime(_elapsedSeconds);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FCEB),
+        color: theme.isDarkMode
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFF7FCEB),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8EDF2)),
+        border: Border.all(color: theme.borderColor),
       ),
       child: Column(
         children: [
           Text(
             widget.habitTitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF090909),
+              color: theme.textColor,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -189,7 +198,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF2ECC71).withOpacity(0.1),
+                color: const Color(0xFF2ECC71).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
@@ -204,7 +213,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFA500).withOpacity(0.1),
+                color: const Color(0xFFFFA500).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
@@ -219,7 +228,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -231,8 +240,10 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
               ),
             ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               if (!_isRunning && !_isPaused && !_isSaved)
                 _buildControlButton(
@@ -240,6 +251,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   label: 'شروع',
                   color: const Color(0xFF2ECC71),
                   onTap: _startTimer,
+                  theme: theme,
                 ),
               if (_isRunning)
                 _buildControlButton(
@@ -247,6 +259,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   label: 'مکث',
                   color: const Color(0xFFFFA500),
                   onTap: _pauseTimer,
+                  theme: theme,
                 ),
               if (_isPaused)
                 _buildControlButton(
@@ -254,22 +267,23 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                   label: 'ادامه',
                   color: const Color(0xFF2ECC71),
                   onTap: _resumeTimer,
+                  theme: theme,
                 ),
-              const SizedBox(width: 8),
               if (!_isSaved && (_isRunning || _isPaused || _elapsedSeconds > 0))
                 _buildControlButton(
                   icon: Icons.refresh,
                   label: 'بازنشانی',
-                  color: const Color(0xFF73786B),
+                  color: theme.textSecondaryColor,
                   onTap: _resetTimer,
+                  theme: theme,
                 ),
-              const SizedBox(width: 8),
               if (!_isSaved && _elapsedSeconds > 0 && !_isRunning)
                 _buildControlButton(
                   icon: Icons.save,
                   label: 'ذخیره زمان',
                   color: primaryColor,
                   onTap: _saveTime,
+                  theme: theme,
                 ),
             ],
           ),
@@ -283,13 +297,14 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
     required String label,
     required Color color,
     required VoidCallback onTap,
+    required ThemeProvider theme,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withOpacity(0.3)),
         ),

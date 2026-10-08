@@ -1,6 +1,8 @@
 // lib/features/explore/screens/challenge_completion_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '/providers/theme_provider.dart';
 
 class ChallengeCompletionScreen extends StatefulWidget {
   final Map<String, dynamic> challenge;
@@ -52,20 +54,20 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
 
   @override
   Widget build(BuildContext context) {
-    final fixedColor = const Color(0xFF4A90E2);
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return WillPopScope(
       onWillPop: () async {
-        // ✅ با back برگرد و صفحه را ریفرش کن
         Navigator.pop(context, true);
         return false;
       },
       child: Scaffold(
-        backgroundColor: fixedColor,
+        backgroundColor: primaryColor,
         body: SafeArea(
           child: Stack(
             children: [
-              _buildBackgroundDecorations(fixedColor),
+              _buildBackgroundDecorations(primaryColor),
               SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -82,7 +84,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: theme.cardColor,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -119,7 +121,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 18,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ],
@@ -129,6 +131,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                       FadeTransition(
                         opacity: _fadeAnimation,
                         child: Card(
+                          color: theme.cardColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
@@ -146,10 +149,10 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                 Text(
                                   widget.challenge['title'] ?? 'چالش',
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1A1A2E),
+                                    color: theme.textColor,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -158,7 +161,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey.shade600,
+                                    color: theme.textSecondaryColor,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -173,9 +176,8 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                         vertical: 8,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFFFFA500,
-                                        ).withAlpha(25),
+                                        color: const Color(0xFFFFA500)
+                                            .withAlpha(25),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
@@ -204,7 +206,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                         vertical: 8,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: fixedColor.withAlpha(25),
+                                        color: primaryColor.withAlpha(25),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
@@ -221,7 +223,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: fixedColor,
+                                              color: primaryColor,
                                             ),
                                           ),
                                         ],
@@ -239,12 +241,11 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                         opacity: _fadeAnimation,
                         child: ElevatedButton(
                           onPressed: () {
-                            // ✅ برگرد به صفحه قبل با مقدار true برای ریفرش
                             Navigator.pop(context, true);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: fixedColor,
+                            backgroundColor: theme.cardColor,
+                            foregroundColor: primaryColor,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 48,
                               vertical: 16,

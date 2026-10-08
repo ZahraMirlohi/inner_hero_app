@@ -271,6 +271,7 @@ class _NotchedChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
     final challengeDuration = challenge['challenge_duration'] as int? ?? 7;
     final xpReward = challenge['xp_reward'] as int? ?? 50;
     final title = challenge['title'] ?? 'بدون عنوان';
@@ -280,18 +281,22 @@ class _NotchedChallengeCard extends StatelessWidget {
     // 🎨 رنگ‌بندی بر اساس حالت کارت
     // ═══════════════════════════════════════════════════════
 
-    // 🟢 کارت فعال → رنگ تم، بدون بوردر
-    // ⚪ کارت موفق → پس‌زمینه سبز ملایم، بوردر سبز
-    // ⚪ کارت جدید → پس‌زمینه سفید، بوردر سفید
+    // 🟢 کارت فعال → رنگ تم
+    // 🟢 کارت موفق → سبز ملایم (در تم شب تیره‌تر)
+    // ⚪ کارت جدید → theme.cardColor
     final Color cardColor = isActive
-        ? primaryColor // ✅ رنگ تم
-        : (isCompleted ? Colors.green.shade50 : Colors.white);
+        ? primaryColor
+        : (isCompleted
+            ? (theme.isDarkMode
+                ? const Color(0xFF1B3D2A)
+                : Colors.green.shade50)
+            : theme.cardColor);
 
     final Color borderColor = isActive
-        ? Colors.transparent // ✅ بدون بوردر
-        : (isCompleted ? Colors.green : Colors.white);
+        ? Colors.transparent
+        : (isCompleted ? Colors.green : theme.cardColor);
 
-    final double borderWidth = isActive ? 0 : 2.5; // ✅ ضخامت صفر برای فعال
+    final double borderWidth = isActive ? 0 : 2.5;
 
     // ═══════════════════════════════════════════════════════
     // 🎛️ پارامترهای حفره
@@ -299,7 +304,6 @@ class _NotchedChallengeCard extends StatelessWidget {
     const double notchWidth = 80;
     const double notchDepth = 40;
     const double notchCorner = 20;
-    const double notchRightOffset = 45;
 
     final double contentTopPadding = showNotch ? (notchDepth + 10) : 16;
 
@@ -310,8 +314,9 @@ class _NotchedChallengeCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isActive
-                ? primaryColor.withValues(alpha: 0.30) // ✅ سایه رنگی برای فعال
-                : Colors.black.withValues(alpha: 0.10),
+                ? primaryColor.withValues(alpha: 0.30)
+                : Colors.black
+                    .withValues(alpha: theme.isDarkMode ? 0.30 : 0.10),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -321,15 +326,13 @@ class _NotchedChallengeCard extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           // ─── لایه ۱: تگ داخل حفره ───
-          // ─── لایه ۱: تگ داخل حفره ───
           if (showNotch)
             Positioned(
-              top: 0, // ✅ از 6 به 0
+              top: 0,
               left: 0,
               right: 0,
-              height: notchDepth, // ✅ ارتفاع دقیقاً برابر عمق حفره
+              height: notchDepth,
               child: Center(
-                // ✅ وسط‌چین دقیقاً در حفره
                 child: _buildNotchTag(
                   notchIcon,
                   notchLabel,
@@ -354,10 +357,11 @@ class _NotchedChallengeCard extends StatelessWidget {
                     challengeDuration: challengeDuration,
                     xpReward: xpReward,
                     isBoss: isBoss,
-                    cardColor: cardColor, // ✅ پاس دادن رنگ
-                    borderColor: borderColor, // ✅ پاس دادن رنگ بوردر
-                    borderWidth: borderWidth, // ✅ پاس دادن ضخامت بوردر
+                    cardColor: cardColor,
+                    borderColor: borderColor,
+                    borderWidth: borderWidth,
                     contentTopPadding: contentTopPadding,
+                    theme: theme, // ✅ پاس دادن theme
                   ),
                 )
               : Container(
@@ -379,6 +383,7 @@ class _NotchedChallengeCard extends StatelessWidget {
                       borderColor: borderColor,
                       borderWidth: borderWidth,
                       contentTopPadding: contentTopPadding,
+                      theme: theme, // ✅ پاس دادن theme
                     ),
                   ),
                 ),
@@ -398,9 +403,9 @@ class _NotchedChallengeCard extends StatelessWidget {
     );
   }
 
-// ═══════════════════════════════════════════════════════════
-// 🎨 محتوای داخلی کارت
-// ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════
+  // 🎨 محتوای داخلی کارت
+  // ═══════════════════════════════════════════════════════════
   Widget _buildCardContent({
     required String title,
     required int challengeDuration,
@@ -410,13 +415,16 @@ class _NotchedChallengeCard extends StatelessWidget {
     required Color borderColor,
     required double borderWidth,
     required double contentTopPadding,
+    required ThemeProvider theme, // ✅ پارامتر جدید
   }) {
     final bool isDarkBackground = isActive;
+    // ✅ روی کارت رنگی (فعال): متن مشکی
+    // ✅ روی کارت غیرفعال: theme.textColor
     final Color textColor =
-        isDarkBackground ? Colors.white : const Color(0xFF090909);
+        isDarkBackground ? const Color(0xFF090909) : theme.textColor;
     final Color subtleTextColor = isDarkBackground
-        ? Colors.white.withValues(alpha: 0.85)
-        : const Color(0xFF090909).withValues(alpha: 0.7);
+        ? const Color(0xFF090909).withValues(alpha: 0.7)
+        : theme.textSecondaryColor;
 
     return Container(
       width: double.infinity,
@@ -436,7 +444,6 @@ class _NotchedChallengeCard extends StatelessWidget {
             // ═══════════════════════════════════════════════
             // ─── ردیف اول: مدت زمان + بج‌ها ───
             // ═══════════════════════════════════════════════
-            // ✅ تگ روز فقط برای کارت‌های فعال یا موفق
             if (isActive || isCompleted || isBoss) ...[
               Row(
                 children: [
@@ -460,8 +467,8 @@ class _NotchedChallengeCard extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontSize: 14, // ✅ از 16 به 14
-                fontWeight: FontWeight.w600, // ✅ از bold به w600
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
                 color: textColor,
                 height: 1.3,
               ),
@@ -472,7 +479,11 @@ class _NotchedChallengeCard extends StatelessWidget {
             // ─── نوار پیشرفت ───
             if (isActive && progressValue != null) ...[
               const SizedBox(height: 10),
-              _buildProgressBar(progressValue!, progressText ?? ''),
+              _buildProgressBar(
+                progressValue!,
+                progressText ?? '',
+                theme, // ✅ پاس دادن theme
+              ),
             ],
 
             const SizedBox(height: 10),
@@ -485,6 +496,7 @@ class _NotchedChallengeCard extends StatelessWidget {
                   isDarkBackground ? Colors.white : accentColor,
                   isCompleted,
                   textColor: textColor,
+                  theme: theme, // ✅
                 ),
                 const Spacer(),
                 _buildTag(
@@ -507,7 +519,7 @@ class _NotchedChallengeCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🏷️ متدهای کمکی — همه داخل کلاس
+  // 🏷️ متدهای کمکی
   // ═══════════════════════════════════════════════════════════
 
   Widget _buildTag({
@@ -530,13 +542,13 @@ class _NotchedChallengeCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: finalSubtleColor), // ✅ از 12 به 11
+          Icon(icon, size: 11, color: finalSubtleColor),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: 9, // ✅ از 10 به 9
-              fontWeight: FontWeight.w500, // ✅ از w600 به w500
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
               color: finalTextColor,
             ),
           ),
@@ -549,7 +561,6 @@ class _NotchedChallengeCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        // ✅ رنگ پاستیلی ساده (بدون گرادیانت)
         color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
@@ -580,17 +591,20 @@ class _NotchedChallengeCard extends StatelessWidget {
     int xp,
     Color color,
     bool isCompleted, {
-    Color? textColor, // ✅ جدید
+    Color? textColor,
+    required ThemeProvider theme,
   }) {
     final Color finalTextColor = textColor ?? const Color(0xFF090909);
-    final bool isDarkBg = finalTextColor == Colors.white;
+    final bool isDarkBg = finalTextColor == const Color(0xFF090909) && isActive;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isDarkBg
-            ? Colors.white.withValues(alpha: 0.2) // روی پس‌زمینه رنگی
-            : (isCompleted ? Colors.grey.shade200 : Colors.grey.shade100),
+            ? Colors.white.withValues(alpha: 0.2)
+            : (theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : (isCompleted ? Colors.grey.shade200 : Colors.grey.shade100)),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -599,7 +613,11 @@ class _NotchedChallengeCard extends StatelessWidget {
           Icon(
             Icons.stars,
             size: 13,
-            color: isDarkBg ? Colors.white : const Color(0xFFFFA500),
+            color: isDarkBg
+                ? Colors.white
+                : (theme.isDarkMode
+                    ? const Color(0xFFFFA500)
+                    : const Color(0xFFFFA500)),
           ),
           const SizedBox(width: 4),
           Text(
@@ -615,12 +633,16 @@ class _NotchedChallengeCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar(double progress, String text) {
+  Widget _buildProgressBar(
+    double progress,
+    String text,
+    ThemeProvider theme, // ✅ پارامتر جدید
+  ) {
     final bool isDarkBg = isActive;
-    final Color textColor = isDarkBg ? Colors.white : const Color(0xFF73786B);
-    final Color percentColor = isDarkBg ? Colors.white : accentColor;
+    final Color textColor =
+        isDarkBg ? const Color(0xFF090909) : theme.textSecondaryColor;
+    final Color percentColor = isDarkBg ? const Color(0xFF090909) : accentColor;
 
-    // ✅ رنگ نوار پیشرفت — همیشه مشکی عمیق
     const Color progressBarColor = Color(0xFF090909);
 
     return Column(
@@ -630,9 +652,9 @@ class _NotchedChallengeCard extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
             backgroundColor: isDarkBg
-                ? Colors.white.withValues(alpha: 0.25) // روی پس‌زمینه رنگی
-                : Colors.grey.shade100,
-            color: progressBarColor, // ✅ مشکی
+                ? Colors.white.withValues(alpha: 0.25)
+                : theme.borderColor,
+            color: progressBarColor,
             minHeight: 8,
           ),
         ),
@@ -663,7 +685,6 @@ class _NotchedChallengeCard extends StatelessWidget {
   }
 
   Widget _buildLeaveButton(VoidCallback onLeave) {
-    // ✅ مشکی ثابت روی کارت فعال
     const Color btnColor = Color(0xFF090909);
 
     return GestureDetector(
@@ -671,15 +692,15 @@ class _NotchedChallengeCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 0, 0, 0), // ✅ پس‌زمینه سفید
+          color: const Color.fromARGB(255, 0, 0, 0),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: btnColor, // ✅ بوردر مشکی
+            color: btnColor,
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15), // ✅ سایه ملایم
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -693,7 +714,7 @@ class _NotchedChallengeCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color.fromARGB(255, 255, 255, 255), // ✅ متن مشکی
+                color: Color.fromARGB(255, 255, 255, 255),
               ),
             ),
           ],
@@ -882,11 +903,11 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     if (widget.challenges.isEmpty) {
-      return _buildEmptyState(primaryColor);
+      return _buildEmptyState(primaryColor, theme);
     }
 
     // ─── دسته‌بندی چالش‌ها ───
@@ -929,7 +950,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     }
 
     return Container(
-      color: const Color(0xFFF7FCEB),
+      color: theme.backgroundColor, // ✅ از Color(0xFFF7FCEB) به theme
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 100, 16, 120),
         child: Column(
@@ -944,7 +965,6 @@ class _ChallengesTabState extends State<ChallengesTab> {
                 centered: true,
               ),
               const SizedBox(height: 12),
-              // ✅ اسکرول افقی کارت‌های کوچک
               SizedBox(
                 height: 140,
                 child: ListView.builder(
@@ -970,21 +990,21 @@ class _ChallengesTabState extends State<ChallengesTab> {
               _buildSectionHeader(
                 icon: Icons.play_circle,
                 title: ' چالش‌های فعال من',
-                color: const Color(0xFF090909),
-                centered: true, // ✅
+                color: theme.textColor, // ✅ از 0xFF090909
+                centered: true,
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 200, // ✅ ارتفاع ثابت برای یکسان بودن کارت‌ها
+                height: 200,
                 child: ListView.builder(
-                  scrollDirection: Axis.horizontal, // ✅ اسکرول افقی
+                  scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   itemCount: activeChallenges.length,
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 12),
                       child: SizedBox(
-                        width: 280, // ✅ عرض ثابت برای هر کارت
+                        width: 280,
                         child: _buildActiveCard(
                           activeChallenges[index],
                           const Color.fromARGB(255, 108, 188, 224),
@@ -996,15 +1016,16 @@ class _ChallengesTabState extends State<ChallengesTab> {
               ),
               const SizedBox(height: 24),
             ],
+
             // ─── چالش‌های جدید (دو ستونه) ───
             if (otherChallenges.isNotEmpty) ...[
               _buildSectionHeader(
                 icon: Icons.explore,
                 title: ' چالش‌های جدید',
-                color: const Color.fromARGB(255, 0, 0, 0),
+                color: theme.textColor, // ✅
                 centered: true,
               ),
-              const SizedBox(height: 12), // ✅ از 12 به 8
+              const SizedBox(height: 12),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1061,7 +1082,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12), // ✅ از 16 به 12
+              const SizedBox(height: 12),
             ],
           ],
         ),
@@ -1665,7 +1686,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     required IconData icon,
     required String title,
     required Color color,
-    bool centered = false, // ✅ پارامتر جدید
+    bool centered = false,
   }) {
     if (centered) {
       return Center(
@@ -1827,9 +1848,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
     );
   }
 
-  Widget _buildEmptyState(Color primaryColor) {
+  Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Container(
-      color: const Color(0xFFF7FCEB),
+      color: theme.backgroundColor, // ✅
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1847,18 +1868,21 @@ class _ChallengesTabState extends State<ChallengesTab> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'هنوز چالشی وجود ندارد',
               style: TextStyle(
-                color: Color(0xFF73786B),
+                color: theme.textSecondaryColor, // ✅
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'برای اضافه شدن چالش‌های جدید منتظر بمانید',
-              style: TextStyle(color: Color(0xFF73786B), fontSize: 12),
+              style: TextStyle(
+                color: theme.textSecondaryColor, // ✅
+                fontSize: 12,
+              ),
             ),
           ],
         ),

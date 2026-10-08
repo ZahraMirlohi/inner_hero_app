@@ -17,6 +17,9 @@ class HabitCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Function(String)? onToggleSubHabit;
 
+  // ✅ پارامتر جدید
+  final int? recordedTimeSeconds;
+
   const HabitCard({
     super.key,
     required this.habit,
@@ -27,6 +30,7 @@ class HabitCard extends StatefulWidget {
     this.onTimer,
     this.onTap,
     this.onToggleSubHabit,
+    this.recordedTimeSeconds, // ✅
   });
 
   @override
@@ -71,14 +75,22 @@ class _HabitCardState extends State<HabitCard>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     final bool isChallenge = widget.habit.challengeId != null;
     final bool isQuest = widget.habit.questId != null;
 
+    // ✅ رنگ کارت عادت - دست‌نخورده باقی می‌مونه (همون رنگ ذخیره‌شده کاربر)
+    // فقط در صورت تکمیل شدن، خنثی (خاکستری) میشه
     Color getCardColor() {
-      if (widget.isCompleted) return const Color(0xFFF5F5F5);
+      if (widget.isCompleted) {
+        // ✅ کارت تکمیل‌شده: در تم شب تیره، در تم روز روشن
+        return theme.isDarkMode
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFF5F5F5);
+      }
+      // ✅ کارت عادت فعال: همیشه رنگ اصلی خودش (چه تم روز چه شب)
       if (isChallenge || isQuest) return primaryColor;
       final savedColor = widget.habit.backgroundColor;
       if (savedColor != 0) return Color(savedColor);
@@ -86,9 +98,28 @@ class _HabitCardState extends State<HabitCard>
     }
 
     final Color cardColor = getCardColor();
-    final Color iconColor =
-        widget.isCompleted ? Colors.grey.shade500 : cardColor;
-    const Color textColor = Color(0xFF090909);
+
+    // ✅ رنگ متن روی کارت
+    // - کارت رنگی (فعال): متن مشکی (چون پس‌زمینه رنگیه)
+    // - کارت تکمیل‌شده: در تم شب روشن، در تم روز مشکی
+    final Color textColor;
+    if (widget.isCompleted) {
+      textColor = theme.isDarkMode ? Colors.white : const Color(0xFF090909);
+    } else {
+      // ✅ روی کارت رنگی، متن همیشه مشکی
+      textColor = const Color(0xFF090909);
+    }
+
+    // ✅ رنگ دکمه انجام (دایره سمت چپ)
+    final Color checkButtonBg = widget.isCompleted
+        ? (theme.isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0))
+        : const Color(0xFF090909);
+
+    final Color checkIconColor = widget.isCompleted
+        ? (theme.isDarkMode ? Colors.grey.shade400 : Colors.white)
+        : (isChallenge || isQuest
+            ? const Color(0xFF090909) // روی کارت رنگی، آیکون مشکی
+            : cardColor); // روی کارت مشکی، آیکون هم‌رنگ کارت
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -118,7 +149,9 @@ class _HabitCardState extends State<HabitCard>
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
+                              color: Colors.black.withValues(
+                                alpha: theme.isDarkMode ? 0.3 : 0.06,
+                              ),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -169,6 +202,7 @@ class _HabitCardState extends State<HabitCard>
                             const SizedBox(height: 10),
                             Row(
                               children: [
+                                // ✅ تگ XP
                                 if (!widget.isCompleted)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -188,6 +222,47 @@ class _HabitCardState extends State<HabitCard>
                                       ),
                                     ),
                                   ),
+                                // ✅ تگ زمان رکورد شده (اگه وجود داشته باشه)
+                                if (widget.recordedTimeSeconds != null &&
+                                    widget.recordedTimeSeconds! > 0) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF8B5CF6)
+                                          .withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFF8B5CF6)
+                                            .withOpacity(0.3),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.timer_outlined,
+                                          size: 10,
+                                          color: Color(0xFF8B5CF6),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          _formatRecordedTime(
+                                              widget.recordedTimeSeconds!),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF8B5CF6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 const Spacer(),
                                 Wrap(
                                   alignment: WrapAlignment.end,
@@ -199,6 +274,7 @@ class _HabitCardState extends State<HabitCard>
                                       label: _getTimeOfDayText(
                                           widget.habit.timeOfDay),
                                       isCompleted: widget.isCompleted,
+                                      theme: theme,
                                     ),
                                     if (widget.habit.reminders.isNotEmpty)
                                       _buildInfoChip(
@@ -206,6 +282,7 @@ class _HabitCardState extends State<HabitCard>
                                         label:
                                             '${widget.habit.reminders.length}',
                                         isCompleted: widget.isCompleted,
+                                        theme: theme,
                                       ),
                                     if (widget.habit.currentStreak > 0)
                                       Container(
@@ -250,16 +327,12 @@ class _HabitCardState extends State<HabitCard>
                     const SizedBox(width: 10),
                     AnimatedCheckOverlay(
                       onTap: widget.onToggle,
-                      checkColor: widget.isCompleted
-                          ? Colors.white
-                          : const Color(0xFF090909),
+                      checkColor: checkIconColor,
                       child: Container(
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: widget.isCompleted
-                              ? const Color(0xFFE0E0E0)
-                              : const Color(0xFF090909),
+                          color: checkButtonBg,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -272,8 +345,7 @@ class _HabitCardState extends State<HabitCard>
                         child: Center(
                           child: Icon(
                             _getIconData(widget.habit.iconName),
-                            color:
-                                widget.isCompleted ? Colors.white : iconColor,
+                            color: checkIconColor,
                             size: 18,
                           ),
                         ),
@@ -296,14 +368,18 @@ class _HabitCardState extends State<HabitCard>
                 vertical: 12,
               ),
               decoration: BoxDecoration(
-                color: widget.isCompleted ? Colors.grey.shade50 : Colors.white,
+                color: widget.isCompleted
+                    ? (theme.isDarkMode
+                        ? const Color(0xFF1A1A1A)
+                        : Colors.grey.shade50)
+                    : theme.cardColor,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(16),
                   bottomRight: Radius.circular(16),
                 ),
                 border: Border(
                   top: BorderSide(
-                    color: Colors.grey.shade200,
+                    color: theme.borderColor,
                     width: 1,
                   ),
                 ),
@@ -367,10 +443,10 @@ class _HabitCardState extends State<HabitCard>
                     ],
                   ),
 
-                  // ✅ لیست زیرعادت‌ها (بدون عنوان)
+                  // ✅ لیست زیرعادت‌ها
                   if (widget.habit.subHabits.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    const Divider(height: 1),
+                    Divider(height: 1, color: theme.borderColor),
                     const SizedBox(height: 8),
                     ...widget.habit.subHabits.map((subHabit) {
                       final isChecked =
@@ -401,7 +477,7 @@ class _HabitCardState extends State<HabitCard>
                                     border: Border.all(
                                       color: isChecked
                                           ? primaryColor
-                                          : Colors.grey.shade400,
+                                          : theme.textSecondaryColor,
                                       width: 1.8,
                                     ),
                                   ),
@@ -420,8 +496,8 @@ class _HabitCardState extends State<HabitCard>
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: isChecked
-                                          ? Colors.grey.shade500
-                                          : const Color(0xFF090909),
+                                          ? theme.textSecondaryColor
+                                          : theme.textColor,
                                       decoration: isChecked
                                           ? TextDecoration.lineThrough
                                           : null,
@@ -444,15 +520,44 @@ class _HabitCardState extends State<HabitCard>
     );
   }
 
+  /// ✅ فرمت زمان به صورت خوانا
+  /// - کمتر از 1 دقیقه: "45s"
+  /// - بین 1 تا 60 دقیقه: "5m"
+  /// - بیشتر از 60 دقیقه: "1h 20m"
+  String _formatRecordedTime(int seconds) {
+    if (seconds < 60) {
+      return '${seconds}s';
+    }
+    final minutes = seconds ~/ 60;
+    if (minutes < 60) {
+      return '${minutes}m';
+    }
+    final hours = minutes ~/ 60;
+    final remainingMinutes = minutes % 60;
+    if (remainingMinutes == 0) {
+      return '${hours}h';
+    }
+    return '${hours}h ${remainingMinutes}m';
+  }
+
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
     bool isCompleted = false,
+    required ThemeProvider theme,
   }) {
+    // ✅ روی کارت رنگی (فعال)، چیپ همیشه روشن با متن مشکی
+    // روی کارت تکمیل‌شده، چیپ با تم هماهنگ میشه
+    final bool isOnColoredCard = !widget.isCompleted;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
+        color: isOnColoredCard
+            ? Colors.white.withOpacity(0.6)
+            : (theme.isDarkMode
+                ? Colors.white.withOpacity(0.15)
+                : Colors.white.withOpacity(0.6)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -460,17 +565,24 @@ class _HabitCardState extends State<HabitCard>
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF090909),
+              color: isOnColoredCard
+                  ? const Color(0xFF090909)
+                  : (theme.isDarkMode ? Colors.white : const Color(0xFF090909)),
             ),
           ),
           const SizedBox(width: 2),
           Icon(
             icon,
             size: 11,
-            color: const Color(0xFF090909).withOpacity(0.5),
+            color: (isOnColoredCard
+                    ? const Color(0xFF090909)
+                    : (theme.isDarkMode
+                        ? Colors.white
+                        : const Color(0xFF090909)))
+                .withOpacity(0.6),
           ),
         ],
       ),

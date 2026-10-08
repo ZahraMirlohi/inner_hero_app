@@ -230,10 +230,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               child: CircularProgressIndicator(color: primaryColor),
             )
           : SafeArea(
-              // ✅ SafeArea برای رعایت نوار پایین گوشی
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-                //                                    ↑ پدینگ اضافه پایین
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -263,7 +261,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
-  // ==================== ویجت‌ها ====================
+  // ==================== جنسیت ====================
 
   Widget _buildGenderSelector(ThemeProvider theme, Color primaryColor) {
     return Container(
@@ -273,7 +271,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -322,15 +322,19 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : Colors.grey.shade100,
+            color: isSelected
+                ? primaryColor
+                : (theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade100),
             borderRadius: BorderRadius.circular(12),
-            border: isSelected ? null : Border.all(color: Colors.grey.shade300),
+            border: isSelected ? null : Border.all(color: theme.borderColor),
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey.shade700,
+                color: isSelected ? Colors.white : theme.textSecondaryColor,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -350,7 +354,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -452,21 +458,26 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
+                  color: theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.grey.shade300,
+                    color: theme.borderColor,
                     style: BorderStyle.solid,
                   ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add, color: Colors.grey),
+                    Icon(Icons.add, color: theme.textSecondaryColor),
                     const SizedBox(width: 8),
                     Text(
                       'انتخاب تایپ شخصیتی',
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                      style: TextStyle(
+                        color: theme.textSecondaryColor,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -482,15 +493,19 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('🧠 تست شخصیت MBTI'),
+        title: Text(
+          '🧠 تست شخصیت MBTI',
+          style: TextStyle(color: theme.textColor),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'برای انجام تست شخصیت MBTI روی لینک زیر کلیک کنید:',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: theme.textColor),
             ),
             const SizedBox(height: 12),
             Container(
@@ -512,16 +527,22 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'پس از انجام تست، تایپ شخصیتی خود را در اپلیکیشن وارد کنید.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('بستن'),
+            child: Text(
+              'بستن',
+              style: TextStyle(color: theme.textSecondaryColor),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -546,6 +567,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: theme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -562,20 +584,27 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'انتخاب تایپ شخصیتی MBTI',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'تایپ شخصیتی خود را از لیست زیر انتخاب کنید',
-                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: theme.textSecondaryColor,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -603,12 +632,13 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                           decoration: BoxDecoration(
                             color: isSelected
                                 ? primaryColor.withValues(alpha: 0.1)
-                                : Colors.grey.shade50,
+                                : (theme.isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.grey.shade50),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected
-                                  ? primaryColor
-                                  : Colors.grey.shade200,
+                              color:
+                                  isSelected ? primaryColor : theme.borderColor,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -648,6 +678,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
+  // ==================== انتخاب‌کننده شخصیت ====================
+
   Widget _buildPersonalitySelector(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -656,7 +688,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -708,16 +742,21 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? primaryColor : Colors.grey.shade100,
+                    color: isSelected
+                        ? primaryColor
+                        : (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade100),
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected
                         ? null
-                        : Border.all(color: Colors.grey.shade300),
+                        : Border.all(color: theme.borderColor),
                   ),
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                      color:
+                          isSelected ? Colors.white : theme.textSecondaryColor,
                       fontSize: 13,
                     ),
                   ),
@@ -730,6 +769,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
+  // ==================== علاقه‌مندی‌ها ====================
+
   Widget _buildInterestsSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -738,7 +779,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -761,14 +804,18 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               Expanded(
                 child: TextField(
                   controller: _interestsController,
+                  style: TextStyle(color: theme.textColor),
                   decoration: InputDecoration(
                     hintText: 'مثال: ورزش، مطالعه، ...',
+                    hintStyle: TextStyle(color: theme.textSecondaryColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor: theme.isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.grey.shade100,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -798,9 +845,18 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               runSpacing: 8,
               children: _interests.map((interest) {
                 return Chip(
-                  label: Text(interest),
+                  label: Text(
+                    interest,
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  backgroundColor:
+                      theme.isDarkMode ? const Color(0xFF2A2A2A) : null,
                   onDeleted: () => _removeInterest(interest),
-                  deleteIcon: const Icon(Icons.close, size: 16),
+                  deleteIcon: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: theme.textColor,
+                  ),
                 );
               }).toList(),
             ),
@@ -810,6 +866,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
+  // ==================== اهداف ====================
+
   Widget _buildGoalsSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -818,7 +876,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -841,14 +901,18 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               Expanded(
                 child: TextField(
                   controller: _goalsController,
+                  style: TextStyle(color: theme.textColor),
                   decoration: InputDecoration(
                     hintText: 'مثال: کاهش وزن، مطالعه روزانه، ...',
+                    hintStyle: TextStyle(color: theme.textSecondaryColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor: theme.isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : Colors.grey.shade100,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
@@ -878,9 +942,18 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               runSpacing: 8,
               children: _goals.map((goal) {
                 return Chip(
-                  label: Text(goal),
+                  label: Text(
+                    goal,
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  backgroundColor:
+                      theme.isDarkMode ? const Color(0xFF2A2A2A) : null,
                   onDeleted: () => _removeGoal(goal),
-                  deleteIcon: const Icon(Icons.close, size: 16),
+                  deleteIcon: Icon(
+                    Icons.close,
+                    size: 16,
+                    color: theme.textColor,
+                  ),
                 );
               }).toList(),
             ),
@@ -890,6 +963,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
+  // ==================== بیوگرافی ====================
+
   Widget _buildBioSection(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -898,7 +973,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -918,15 +995,19 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _bioController,
+            style: TextStyle(color: theme.textColor),
             maxLines: 3,
             decoration: InputDecoration(
               hintText: 'کمی درباره خودتان بنویسید...',
+              hintStyle: TextStyle(color: theme.textSecondaryColor),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade100,
               contentPadding: const EdgeInsets.all(16),
             ),
           ),
@@ -934,6 +1015,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       ),
     );
   }
+
+  // ==================== زمان‌های ترجیحی ====================
 
   Widget _buildTimePreference(ThemeProvider theme, Color primaryColor) {
     return Container(
@@ -943,7 +1026,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -974,16 +1059,21 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? primaryColor : Colors.grey.shade100,
+                    color: isSelected
+                        ? primaryColor
+                        : (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade100),
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected
                         ? null
-                        : Border.all(color: Colors.grey.shade300),
+                        : Border.all(color: theme.borderColor),
                   ),
                   child: Text(
                     time,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade700,
+                      color:
+                          isSelected ? Colors.white : theme.textSecondaryColor,
                       fontSize: 13,
                     ),
                   ),
@@ -996,6 +1086,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     );
   }
 
+  // ==================== سطح تجربه ====================
+
   Widget _buildExperienceLevel(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1004,7 +1096,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1080,6 +1174,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     }
   }
 
+  // ==================== به دنبال هم‌مسیر ====================
+
   Widget _buildLookingForBuddy(ThemeProvider theme, Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1088,7 +1184,9 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1110,7 +1208,10 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               ),
               Text(
                 'در لیست پیشنهادات نمایش داده شوید',
-                style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.textSecondaryColor,
+                ),
               ),
             ],
           ),
@@ -1127,6 +1228,8 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       ),
     );
   }
+
+  // ==================== دکمه ذخیره ====================
 
   Widget _buildSaveButton(Color primaryColor) {
     return SizedBox(

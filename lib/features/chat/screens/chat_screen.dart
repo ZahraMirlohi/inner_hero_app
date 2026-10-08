@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
 import '/providers/theme_provider.dart';
 import '/features/chat/models/conversation_model.dart';
@@ -22,6 +23,8 @@ class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ChatService _chatService = ChatService();
+  final SupabaseClient _supabaseClient = Supabase.instance.client;
+
   List<Conversation> _conversations = [];
   bool _isLoading = true;
 
@@ -29,7 +32,12 @@ class _ChatScreenState extends State<ChatScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadData();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadData();
+      }
+    });
   }
 
   @override
@@ -39,27 +47,37 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Future<void> _loadData() async {
-    final user = await _chatService.getCurrentUser();
-    if (user != null) {
-      await _updateLastSeen(user.id);
+    if (!mounted) return;
 
-      try {
-        final conversations = await _chatService.getUserConversations(user.id);
-        setState(() {
-          _conversations = conversations;
-          _isLoading = false;
-        });
-      } catch (e) {
-        print('❌ Error loading conversations: $e');
+    final user = await _chatService.getCurrentUser();
+    if (user == null) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
+
+    await _updateLastSeen(user.id);
+
+    if (!mounted) return;
+
+    try {
+      final conversations = await _chatService.getUserConversations(user.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _conversations = conversations;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Error loading conversations: $e');
+      if (mounted) {
         setState(() {
           _conversations = [];
           _isLoading = false;
         });
       }
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -75,7 +93,6 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   // ==================== حذف هم‌مسیر ====================
-
   Future<void> _removeBuddy(Conversation conv) async {
     try {
       final currentUser = await _chatService.getCurrentUser();
@@ -128,9 +145,11 @@ class _ChatScreenState extends State<ChatScreen>
 
       await _chatService.deleteConversationForBoth(conv.id);
 
-      setState(() {
-        _conversations.removeWhere((c) => c.id == conv.id);
-      });
+      if (mounted) {
+        setState(() {
+          _conversations.removeWhere((c) => c.id == conv.id);
+        });
+      }
 
       await _loadData();
 
@@ -156,6 +175,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  // ==================== مسدود کردن کاربر ====================
   Future<void> _blockUser(Conversation conv) async {
     try {
       final currentUser = await _chatService.getCurrentUser();
@@ -196,12 +216,38 @@ class _ChatScreenState extends State<ChatScreen>
         return;
       }
 
-      await _chatService.blockUser(currentUser.id, otherUserId);
+      final existing = await _supabaseClient
+          .from('blocked_users')
+          .select('id')
+          .eq('blocker_id', currentUser.id)
+          .eq('blocked_id', otherUserId)
+          .maybeSingle();
+
+      if (existing == null) {
+        await _supabaseClient.from('blocked_users').insert({
+          'blocker_id': currentUser.id,
+          'blocked_id': otherUserId,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      try {
+        await _supabaseClient.from('buddy_requests').delete().or(
+            'and(from_user_id.eq.${currentUser.id},to_user_id.eq.$otherUserId),'
+            'and(from_user_id.eq.$otherUserId,to_user_id.eq.${currentUser.id})');
+      } catch (e) {
+        print('⚠️ Error removing buddy requests: $e');
+      }
+
       await _chatService.deleteConversationForBoth(conv.id);
 
-      setState(() {
-        _conversations.removeWhere((c) => c.id == conv.id);
-      });
+      if (mounted) {
+        setState(() {
+          _conversations.removeWhere((c) => c.id == conv.id);
+        });
+      }
+
+      await _loadData();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -286,11 +332,14 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _showBuddyOptions(Conversation conv, Color primaryColor) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      backgroundColor: theme.surfaceColor,
       builder: (context) {
         return SafeArea(
           child: Container(
@@ -303,15 +352,19 @@ class _ChatScreenState extends State<ChatScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'گزینه‌های هم‌مسیر',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 ListTile(
@@ -326,10 +379,16 @@ class _ChatScreenState extends State<ChatScreen>
                       color: Colors.orange,
                     ),
                   ),
-                  title: const Text('حذف از هم‌مسیرها'),
-                  subtitle: const Text(
+                  title: Text(
+                    'حذف از هم‌مسیرها',
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  subtitle: Text(
                     'دیگر با این کاربر هم‌مسیر نخواهید بود',
-                    style: TextStyle(fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textSecondaryColor,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -345,10 +404,16 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                     child: const Icon(Icons.block, color: Colors.red),
                   ),
-                  title: const Text('مسدود کردن کاربر'),
-                  subtitle: const Text(
+                  title: Text(
+                    'مسدود کردن کاربر',
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                  subtitle: Text(
                     'کاربر را مسدود کنید و از لیست هم‌مسیرها حذف کنید',
-                    style: TextStyle(fontSize: 12),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textSecondaryColor,
+                    ),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -363,8 +428,6 @@ class _ChatScreenState extends State<ChatScreen>
       },
     );
   }
-
-  // ==================== Build ====================
 
   @override
   Widget build(BuildContext context) {
@@ -387,11 +450,11 @@ class _ChatScreenState extends State<ChatScreen>
             margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909),
+              color: primaryColor,
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
+                  color: primaryColor.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),
@@ -402,19 +465,20 @@ class _ChatScreenState extends State<ChatScreen>
               labelPadding: EdgeInsets.zero,
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    primaryColor,
-                    Color.lerp(primaryColor, Colors.black, 0.15)!,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                color:
+                    theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
                 borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               dividerColor: Colors.transparent,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+              labelColor: theme.isDarkMode ? Colors.white : primaryColor,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
               labelStyle: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -434,7 +498,6 @@ class _ChatScreenState extends State<ChatScreen>
       ),
       body: Column(
         children: [
-          // ✅ کارت AI
           _buildAIChatCard(theme, primaryColor),
           const SizedBox(height: 6),
           Expanded(
@@ -451,8 +514,7 @@ class _ChatScreenState extends State<ChatScreen>
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
-        padding:
-            const EdgeInsets.only(bottom: 90), // ✅ فاصله از منوی ناوبری اصلی
+        padding: const EdgeInsets.only(bottom: 90),
         child: FloatingActionButton(
           onPressed: () => _showNewConversationDialog(theme, primaryColor),
           backgroundColor: primaryColor,
@@ -467,8 +529,6 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
-
-  // ==================== کارت چت با AI ====================
 
   Widget _buildAIChatCard(ThemeProvider theme, Color primaryColor) {
     return GestureDetector(
@@ -568,8 +628,6 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
-
-  // ==================== تب‌ها ====================
 
   Widget _buildBuddyTab(ThemeProvider theme, Color primaryColor) {
     if (_isLoading) {
@@ -681,8 +739,6 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  // ==================== ویجت گفتگو ====================
-
   Widget _buildConversationItem(
     Conversation conv, {
     bool isSquad = false,
@@ -753,28 +809,47 @@ class _ChatScreenState extends State<ChatScreen>
         _removeBuddy(conv);
       },
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
+          if (!mounted) return;
+
           if (conv.type == ConversationType.buddy) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => BuddyChatScreen(conversation: conv),
               ),
             );
+
+            if (!mounted) return;
+
+            if (result == true) {
+              setState(() {
+                _conversations.removeWhere((c) => c.id == conv.id);
+              });
+            }
           } else if (conv.type == ConversationType.squad) {
-            Navigator.push(
+            if (!mounted) return;
+
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => SquadChatScreen(conversation: conv),
               ),
             );
+
+            if (!mounted) return;
+            await _loadData();
           } else if (conv.type == ConversationType.ai) {
-            Navigator.push(
+            if (!mounted) return;
+
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AIChatScreen()),
             );
           } else {
-            Navigator.push(
+            if (!mounted) return;
+
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => ArenaChatScreen(conversation: conv),
@@ -786,11 +861,13 @@ class _ChatScreenState extends State<ChatScreen>
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: theme.surfaceColor,
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: Colors.black.withValues(
+                  alpha: theme.isDarkMode ? 0.3 : 0.04,
+                ),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -798,7 +875,6 @@ class _ChatScreenState extends State<ChatScreen>
           ),
           child: Row(
             children: [
-              // ✅ آواتار
               Container(
                 width: 44,
                 height: 44,
@@ -814,8 +890,6 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
               ),
               const SizedBox(width: 12),
-
-              // ✅ اطلاعات
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -860,8 +934,6 @@ class _ChatScreenState extends State<ChatScreen>
                   ],
                 ),
               ),
-
-              // ✅ منوی سه نقطه
               if (isBuddy)
                 IconButton(
                   onPressed: () => _showBuddyOptions(conv, primaryColor),
@@ -876,8 +948,6 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
-
-  // ==================== حالت خالی ====================
 
   Widget _buildEmptyState({
     required IconData icon,
@@ -953,14 +1023,13 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  // ==================== دیالوگ‌ها ====================
-
   void _showNewConversationDialog(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      backgroundColor: theme.surfaceColor,
       builder: (context) {
         return SafeArea(
           child: Container(
@@ -973,15 +1042,19 @@ class _ChatScreenState extends State<ChatScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'شروع گفتگوی جدید',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildOptionTile(
@@ -991,6 +1064,7 @@ class _ChatScreenState extends State<ChatScreen>
                   color: primaryColor,
                   onTap: _showBuddyFinder,
                   primaryColor: primaryColor,
+                  theme: theme,
                 ),
                 const SizedBox(height: 8),
                 _buildOptionTile(
@@ -1003,6 +1077,7 @@ class _ChatScreenState extends State<ChatScreen>
                     _showCreateSquadDialog(theme, primaryColor);
                   },
                   primaryColor: primaryColor,
+                  theme: theme,
                 ),
                 const SizedBox(height: 8),
                 _buildOptionTile(
@@ -1015,6 +1090,7 @@ class _ChatScreenState extends State<ChatScreen>
                     _showJoinSquadDialog(primaryColor);
                   },
                   primaryColor: primaryColor,
+                  theme: theme,
                 ),
                 const SizedBox(height: 12),
               ],
@@ -1032,6 +1108,7 @@ class _ChatScreenState extends State<ChatScreen>
     required Color color,
     required VoidCallback onTap,
     required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -1046,20 +1123,54 @@ class _ChatScreenState extends State<ChatScreen>
       ),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: theme.textColor,
+        ),
       ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          fontSize: 12,
+          color: theme.textSecondaryColor,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: theme.textSecondaryColor,
+        size: 20,
+      ),
       onTap: onTap,
     );
   }
 
-  void _showBuddyFinder() {
+  void _showBuddyFinder() async {
+    // ✅ اول bottom sheet رو ببند
     Navigator.pop(context);
-    Navigator.push(
+
+    // ✅ کمی صبر کن تا bottom sheet کاملاً بسته بشه
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    if (!mounted) return;
+
+    // ✅ بعد به صفحه هم‌مسیرها برو
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const BuddyFinderScreen()),
     );
+
+    if (!mounted) return;
+
+    // ✅ اگه تغییری اعمال شد، داده‌ها رو reload کن
+    if (result == true) {
+      // ✅ صبر کن تا صفحه قبلی کامل بشه
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (mounted) {
+        _loadData();
+      }
+    }
   }
 
   void _showCreateSquadDialog(ThemeProvider theme, Color primaryColor) {
@@ -1081,8 +1192,6 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
-
-  // ==================== کمکی ====================
 
   String _formatTime(DateTime time) {
     final now = DateTime.now();

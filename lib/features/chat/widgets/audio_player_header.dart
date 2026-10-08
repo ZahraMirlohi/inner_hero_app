@@ -91,9 +91,9 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: isActive ? 64 : 0,
+      height: isActive ? 68 : 0, // ✅ از 64 به 68
       child: Container(
-        height: 64,
+        height: 68, // ✅ از 64 به 68
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
@@ -155,6 +155,7 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(

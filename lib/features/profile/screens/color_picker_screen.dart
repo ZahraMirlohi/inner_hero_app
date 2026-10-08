@@ -40,32 +40,35 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   @override
   void initState() {
     super.initState();
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    setState(() {
-      _selectedColor = themeProvider.primaryColor;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      setState(() {
+        _selectedColor = themeProvider.primaryColor;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final theme = Provider.of<ThemeProvider>(context);
+    final primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: const Text(
           'انتخاب رنگ اپلیکیشن',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _saveColor,
-            child: const Text(
+            child: Text(
               'ذخیره',
-              style: TextStyle(color: Color(0xFF2563EB)),
+              style: TextStyle(color: primaryColor),
             ),
           ),
         ],
@@ -75,14 +78,14 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildColorPreview(themeProvider),
+            _buildColorPreview(theme),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'رنگ‌های پیشنهادی',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -104,8 +107,11 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                       color: color,
                       shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(color: Colors.black, width: 3)
-                          : Border.all(color: Colors.grey.shade300, width: 1),
+                          ? Border.all(color: theme.textColor, width: 3)
+                          : Border.all(
+                              color: theme.borderColor,
+                              width: 1,
+                            ),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
@@ -130,19 +136,20 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'رنگ سفارشی',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('رنگ:', style: TextStyle(fontSize: 14)),
+                Text('رنگ:',
+                    style: TextStyle(fontSize: 14, color: theme.textColor)),
                 Slider(
                   value: _customHue,
                   onChanged: (value) {
@@ -167,7 +174,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('اشباع:', style: TextStyle(fontSize: 14)),
+                          Text('اشباع:',
+                              style: TextStyle(
+                                  fontSize: 14, color: theme.textColor)),
                           Slider(
                             value: _customSaturation,
                             onChanged: (value) {
@@ -192,8 +201,9 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('روشنایی:',
-                              style: TextStyle(fontSize: 14)),
+                          Text('روشنایی:',
+                              style: TextStyle(
+                                  fontSize: 14, color: theme.textColor)),
                           Slider(
                             value: _customLightness,
                             onChanged: (value) {
@@ -243,15 +253,17 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
     );
   }
 
-  Widget _buildColorPreview(ThemeProvider themeProvider) {
+  Widget _buildColorPreview(ThemeProvider theme) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -295,10 +307,10 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                   children: [
                     Text(
                       'رنگ انتخابی',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: theme.textColor,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -306,7 +318,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                       _selectedColor.value.toRadixString(16).toUpperCase(),
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade600,
+                        color: theme.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -347,14 +359,14 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1A1A2E),
+                          color: theme.textColor,
                         ),
                       ),
                       Text(
                         'با رنگ جدید',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade600,
+                          color: theme.textSecondaryColor,
                         ),
                       ),
                     ],
@@ -414,12 +426,21 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
   }
 
   Future<void> _resetToDefault() async {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('بازگشت به رنگ پیش‌فرض'),
-        content: const Text('آیا از بازگشت به رنگ سبز پیش‌فرض مطمئن هستید؟'),
+        title: Text(
+          'بازگشت به رنگ پیش‌فرض',
+          style: TextStyle(color: theme.textColor),
+        ),
+        content: Text(
+          'آیا از بازگشت به رنگ سبز پیش‌فرض مطمئن هستید؟',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),

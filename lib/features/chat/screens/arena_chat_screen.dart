@@ -487,12 +487,13 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          color:
+              theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+          style: TextStyle(fontSize: 11, color: theme.textSecondaryColor),
         ),
       );
     }
@@ -504,14 +505,16 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
           margin: const EdgeInsets.symmetric(vertical: 2),
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200,
+            color: theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
             'این پیام حذف شده است',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade500,
+              color: theme.textSecondaryColor,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -519,7 +522,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
       );
     }
 
-    // ✅ رنگ‌های حباب
     final Color myBubbleColor =
         theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
     final Color otherBubbleColor =
@@ -551,8 +553,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   ),
                 ),
               ),
-
-            // ✅ حباب کوچک‌تر
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 11,
@@ -578,8 +578,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 ),
               ),
             ),
-
-            // ✅ ساعت + وضعیت (خارج از حباب)
             Padding(
               padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
               child: Row(
@@ -597,7 +595,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                     Icon(
                       Icons.check,
                       size: 12,
-                      color: Colors.grey.shade500,
+                      color: theme.textSecondaryColor,
                     ),
                   ],
                 ],
@@ -623,17 +621,18 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isPinned
-            ? primaryColor.withValues(alpha: 0.06)
-            : theme.surfaceColor,
+        color:
+            isPinned ? primaryColor.withValues(alpha: 0.06) : theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isPinned ? primaryColor : primaryColor.withValues(alpha: 0.1),
+          color: isPinned ? primaryColor : theme.borderColor,
           width: isPinned ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.04,
+            ),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -642,7 +641,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // هدر پست
           Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -740,8 +738,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               ],
             ),
           ),
-
-          // محتوای پست
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Text(
@@ -753,8 +749,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               ),
             ),
           ),
-
-          // متادیتا
           if (post.metadata != null && post.metadata!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(14),
@@ -791,8 +785,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 ),
               ),
             ),
-
-          // دکمه‌های تعامل
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
@@ -865,11 +857,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               ],
             ),
           ),
-
-          // کامنت‌ها
           if (_selectedPostIdForComment == post.id)
             _buildCommentsSection(post.id, theme, primaryColor),
-
           if (post.commentsCount > 0 && _selectedPostIdForComment != post.id)
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -987,15 +976,15 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               ),
             );
           }),
-
-          // ورودی کامنت
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: theme.surfaceColor,
+                    color: theme.isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : theme.cardColor,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: primaryColor.withValues(alpha: 0.2),
@@ -1003,6 +992,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   ),
                   child: TextField(
                     controller: _commentController,
+                    style: TextStyle(color: theme.textColor),
                     decoration: InputDecoration(
                       hintText: 'نظر خود را بنویسید...',
                       hintStyle: TextStyle(
@@ -1039,7 +1029,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               ),
             ],
           ),
-
           Center(
             child: TextButton(
               onPressed: () {
@@ -1126,7 +1115,10 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   child: Container(
                     margin: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      // ✅ باکس استیکر با تم هماهنگ
+                      color: theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
@@ -1224,11 +1216,15 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: primaryColor.withValues(alpha: 0.05),
+                    // ✅ ورودی متن با تم هماهنگ
+                    color: theme.isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : primaryColor.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: TextField(
                     controller: _postController,
+                    style: TextStyle(color: theme.textColor),
                     maxLines: 3,
                     minLines: 1,
                     decoration: InputDecoration(
@@ -1294,7 +1290,6 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     );
   }
 
-  // ==================== تب‌ها ====================
   Widget _buildChatTab(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
@@ -1350,7 +1345,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.surfaceColor,
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: primaryColor.withValues(alpha: 0.15),
@@ -1455,12 +1450,16 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.05),
+                      // ✅ ورودی متن با تم هماهنگ
+                      color: theme.isDarkMode
+                          ? const Color(0xFF2A2A2A)
+                          : primaryColor.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: TextField(
                       controller: _messageController,
                       focusNode: _focusNode,
+                      style: TextStyle(color: theme.textColor),
                       decoration: InputDecoration(
                         hintText: 'پیام خود را بنویسید...',
                         hintStyle: TextStyle(
@@ -1486,7 +1485,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   height: 44,
                   decoration: BoxDecoration(
                     color: _isSending || _messageController.text.isEmpty
-                        ? Colors.grey.shade300
+                        ? (theme.isDarkMode
+                            ? const Color(0xFF2A2A2A)
+                            : Colors.grey.shade300)
                         : primaryColor,
                     shape: BoxShape.circle,
                   ),
@@ -1695,12 +1696,14 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         children: [
           _buildChallengeInfoCard(theme, primaryColor),
 
-          // تب‌های دور گرد مشکی
+          // ✅ تب‌های دور گرد - با تم هماهنگ
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909),
+              color: theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : const Color(0xFF090909),
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
@@ -1820,7 +1823,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: theme.borderColor, // ✅
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1867,7 +1870,11 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
-                            color: isTop3 ? primaryColor : Colors.grey.shade300,
+                            color: isTop3
+                                ? primaryColor
+                                : (theme.isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : Colors.grey.shade300),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -1878,7 +1885,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                                 fontWeight: FontWeight.bold,
                                 color: isTop3
                                     ? Colors.white
-                                    : Colors.grey.shade600,
+                                    : theme.textSecondaryColor,
                               ),
                             ),
                           ),

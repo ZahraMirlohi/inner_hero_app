@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import '/../utils/unique_id_generator.dart';
 import 'personality_screen.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -100,12 +101,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _isLoadingInProgress = false;
 
     _loadProfile().then((_) {
-      // ✅ ریفرش آنالytics
       _analyticsKey.currentState?.refreshData();
       _isRefreshing = false;
-      print('✅ Profile refresh completed');
+      debugPrint('✅ Profile refresh completed');
     }).catchError((e) {
-      print('❌ Profile refresh error: $e');
+      debugPrint('❌ Profile refresh error: $e');
       _isRefreshing = false;
     });
   }
@@ -137,7 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final success = await _loadFromSupabase(syncProvider);
         if (success) {
           _isLoadingInProgress = false;
-          await _recalculateWeeklyStreak();
+          final calendar =
+              Provider.of<CalendarProvider>(context, listen: false);
+          await _recalculateWeeklyStreak(calendar); // ✅ با calendar
           if (mounted) {
             setState(() {});
           }
@@ -175,13 +177,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
   // ==================== به‌روزرسانی استریک هفتگی ====================
 
-  Future<void> _recalculateWeeklyStreak() async {
+  Future<void> _recalculateWeeklyStreak(CalendarProvider calendar) async {
     try {
       if (_profile == null) return;
 
       final now = DateTime.now();
-      final jalaliToday = Jalali.fromDateTime(now);
-      final daysToSubtract = jalaliToday.weekDay - 1;
+
+      // ✅ محاسبه شروع هفته بر اساس تقویم انتخابی
+      int daysToSubtract;
+      if (calendar.isJalali) {
+        final jalaliToday = Jalali.fromDateTime(now);
+        daysToSubtract = jalaliToday.weekDay - 1;
+      } else {
+        daysToSubtract = now.weekday % 7;
+      }
       final weekStart = now.subtract(Duration(days: daysToSubtract));
 
       int newWeeklyStreak = 0;
@@ -206,10 +215,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
-      print('📊 Recalculated weekStatus: $weekStatus');
-      print('📊 New weeklyStreak: $newWeeklyStreak');
-
-      // ✅ ذخیره در کش
       _cachedWeekDays = weekStatus;
 
       if (_profile!.weeklyStreak != newWeeklyStreak) {
@@ -246,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('⚠️ Error recalculating weekly streak: $e');
+      debugPrint('⚠️ Error recalculating weekly streak: $e');
     }
   }
   // ==================== بارگذاری از LocalStorage ====================
@@ -368,8 +373,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _profile!.totalXp = totalXP;
         print('📊 Profile XP set to: ${_profile!.totalXp}');
 
-        _cachedWeekDays = await _calculateWeekDaysFromDatabase(currentUser.id);
-
+        final calendar = Provider.of<CalendarProvider>(context, listen: false);
+        _cachedWeekDays = await _calculateWeekDaysFromDatabase(
+          currentUser.id,
+          calendar,
+        );
         // ✅ ذخیره در LocalStorage با مقدار صحیح
         final profileMap = _profile!.toMap();
         profileMap['user_id'] = currentUser.id;
@@ -405,13 +413,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<bool>? _cachedWeekDays;
 
   // ✅ متد محاسبه weekDays از دیتابیس (با await)
-  Future<List<bool>> _calculateWeekDaysFromDatabase(String userId) async {
+  Future<List<bool>> _calculateWeekDaysFromDatabase(
+    String userId,
+    CalendarProvider calendar,
+  ) async {
     List<bool> weekDays = List.filled(7, false);
 
     try {
       final now = DateTime.now();
-      final jalaliNow = Jalali.fromDateTime(now);
-      final daysToSubtract = jalaliNow.weekDay - 1;
+
+      // ✅ محاسبه شروع هفته بر اساس تقویم
+      int daysToSubtract;
+      if (calendar.isJalali) {
+        final jalaliNow = Jalali.fromDateTime(now);
+        daysToSubtract = jalaliNow.weekDay - 1;
+      } else {
+        daysToSubtract = now.weekday % 7;
+      }
       final weekStart = now.subtract(Duration(days: daysToSubtract));
 
       // دریافت فعالیت‌های هفته
@@ -431,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       return weekDays;
     } catch (e) {
-      print('⚠️ Error calculating weekDays: $e');
+      debugPrint('⚠️ Error calculating weekDays: $e');
       return weekDays;
     }
   }
@@ -795,17 +813,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== محتوای اصلی پروفایل ====================
 
   Widget _buildProfileContent() {
-    // ✅ استفاده از cached weekDays (اگر null باشد، همه false)
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     final weekDays = _cachedWeekDays ?? List.filled(7, false);
 
-    print('📊 Profile weekDays: $weekDays');
-    print('📊 Profile weeklyStreak: $_weeklyStreak');
-    print('📊 _currentStreak: $_currentStreak');
-    print('📊 _bestStreak: $_bestStreak');
+    debugPrint('📊 Profile weekDays: $weekDays');
+    debugPrint('📊 Profile weeklyStreak: $_weeklyStreak');
+    debugPrint('📊 _currentStreak: $_currentStreak');
+    debugPrint('📊 _bestStreak: $_bestStreak');
 
-    final jalaliToday = Jalali.fromDateTime(DateTime.now());
-    final todayIndex = jalaliToday.weekDay - 1;
-    print('📅 Today index: $todayIndex (${jalaliToday.weekDay})');
+    final int todayIndex = calendar.isJalali
+        ? Jalali.fromDateTime(DateTime.now()).weekDay - 1
+        : DateTime.now().weekday % 7;
+    debugPrint('📅 Today index: $todayIndex');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
@@ -991,6 +1010,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 // 🎯 ویجت اطلاعات کاربر (کشویی)
 // ═══════════════════════════════════════════════════════════
   Widget _buildUserInfoSection() {
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     return Container(
       decoration: BoxDecoration(
         color: _theme.surfaceColor,
@@ -1110,7 +1130,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 14),
                             _buildMinimalInfoItem(
                               label: 'تاریخ تولد',
-                              value: _formatDateShort(_profile?.birthDate),
+                              value: _formatDateShort(
+                                  _profile?.birthDate, calendar), // ✅
                               icon: Icons.cake_outlined,
                             ),
                           ],
@@ -1134,7 +1155,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             const SizedBox(height: 14),
                             _buildMinimalInfoItem(
                               label: 'عضو از',
-                              value: _formatDateShort(_profile?.registeredAt),
+                              value: _formatDateShort(
+                                  _profile?.registeredAt, calendar), // ✅
                               icon: Icons.history_outlined,
                             ),
                             const SizedBox(height: 14),
@@ -1402,9 +1424,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== متدهای کمکی ====================
 
-  String _formatDateShort(DateTime? date) {
+  String _formatDateShort(DateTime? date, CalendarProvider calendar) {
     if (date == null) return '---';
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+    return calendar.formatShort(date);
   }
 
   String _getGenderText(String? gender) {
@@ -1497,6 +1519,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== دیالوگ ویرایش پروفایل ====================
 
   void _showEditProfileDialog() {
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     final formKey = GlobalKey<FormState>();
 
     final nameController = TextEditingController(text: _profile!.name);
@@ -1608,9 +1631,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               vertical: 14,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
+                              color: _theme.isDarkMode
+                                  ? const Color(0xFF2A2A2A)
+                                  : Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: _theme.borderColor),
                             ),
                             child: Row(
                               children: [
@@ -1623,18 +1648,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Expanded(
                                   child: Text(
                                     selectedDate != null
-                                        ? _formatDate(selectedDate!)
+                                        ? _formatDate(selectedDate!, calendar)
                                         : 'تاریخ تولد را انتخاب کنید',
                                     style: TextStyle(
                                       color: selectedDate != null
                                           ? _theme.textColor
-                                          : Colors.grey.shade500,
+                                          : _theme.textSecondaryColor, // ✅
                                     ),
                                   ),
                                 ),
-                                const Icon(
+                                Icon(
                                   Icons.arrow_drop_down,
-                                  color: Colors.grey,
+                                  color: _theme.textSecondaryColor, // ✅
                                 ),
                               ],
                             ),
@@ -1643,8 +1668,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           value: _getGenderValue(genderController.text),
+                          style: TextStyle(color: _theme.textColor), // ✅
+                          dropdownColor: _theme.surfaceColor, // ✅
                           decoration: InputDecoration(
                             labelText: 'جنسیت',
+                            labelStyle: TextStyle(
+                                color: _theme.textSecondaryColor), // ✅
                             prefixIcon: Icon(
                               Icons.people_outline,
                               color: _theme.primaryColor,
@@ -1654,18 +1683,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            // ✅ تم‌محور
+                            fillColor: _theme.isDarkMode
+                                ? const Color(0xFF2A2A2A)
+                                : Colors.grey.shade50,
                           ),
                           items: const [
                             DropdownMenuItem(value: 'male', child: Text('مرد')),
                             DropdownMenuItem(
-                              value: 'female',
-                              child: Text('زن'),
-                            ),
+                                value: 'female', child: Text('زن')),
                             DropdownMenuItem(
-                              value: 'other',
-                              child: Text('سایر'),
-                            ),
+                                value: 'other', child: Text('سایر')),
                           ],
                           onChanged: (value) {
                             setState(() {
@@ -1736,8 +1764,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       enabled: enabled,
       keyboardType: keyboardType,
       validator: validator,
+      style: TextStyle(color: _theme.textColor), // ✅
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: TextStyle(color: _theme.textSecondaryColor), // ✅
         prefixIcon: Icon(icon, color: _theme.primaryColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1748,7 +1778,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderSide: BorderSide.none,
         ),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        // ✅ تم‌محور
+        fillColor:
+            _theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -1756,7 +1788,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
   // ==================== به‌روزرسانی پروفایل ====================
 
   Future<void> _updateProfile({
@@ -1932,8 +1963,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  String _formatDate(DateTime? date) {
+  String _formatDate(DateTime? date, CalendarProvider calendar) {
     if (date == null) return 'وارد نشده';
-    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+    return calendar.formatShort(date);
   }
 }

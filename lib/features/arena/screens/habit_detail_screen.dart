@@ -147,22 +147,22 @@ class HabitDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FCEB),
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
           habit.title,
-          style: const TextStyle(color: Color(0xFF090909)),
+          style: TextStyle(color: theme.textColor),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF090909),
+        foregroundColor: theme.textColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF73786B)),
+            icon: Icon(Icons.refresh, color: theme.textSecondaryColor),
             onPressed: () {
               (context as Element).reassemble();
             },
@@ -174,17 +174,19 @@ class HabitDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildMainCard(primaryColor),
+            _buildMainCard(primaryColor, theme),
             const SizedBox(height: 20),
-            if (habit.subHabits.isNotEmpty) _buildSubHabitsCard(primaryColor),
+            if (habit.subHabits.isNotEmpty)
+              _buildSubHabitsCard(primaryColor, theme),
             if (habit.subHabits.isNotEmpty) const SizedBox(height: 20),
-            if (_hasLevelSettings()) _buildLevelSettingsCard(primaryColor),
+            if (_hasLevelSettings())
+              _buildLevelSettingsCard(primaryColor, theme),
             if (_hasLevelSettings()) const SizedBox(height: 20),
-            _buildChartSection(primaryColor),
-            _buildLevelHistorySection(),
+            _buildChartSection(primaryColor, theme),
+            _buildLevelHistorySection(theme),
             if (habit.reminders.isNotEmpty) ...[
               const SizedBox(height: 20),
-              _buildRemindersCard(primaryColor),
+              _buildRemindersCard(primaryColor, theme),
             ],
           ],
         ),
@@ -192,10 +194,10 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMainCard(Color primaryColor) {
+  Widget _buildMainCard(Color primaryColor, ThemeProvider theme) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -222,10 +224,10 @@ class HabitDetailScreen extends StatelessWidget {
                     children: [
                       Text(
                         habit.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF090909),
+                          color: theme.textColor,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -233,22 +235,23 @@ class HabitDetailScreen extends StatelessWidget {
                         habit.description.isEmpty
                             ? 'توضیحاتی وارد نشده'
                             : habit.description,
-                        style: const TextStyle(color: Color(0xFF73786B)),
+                        style: TextStyle(color: theme.textSecondaryColor),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            const Divider(height: 32, color: Color(0xFFE8EDF2)),
+            Divider(height: 32, color: theme.borderColor),
             _buildDetailRow(Icons.repeat, 'زمانبندی', _getFrequencyText(habit),
-                primaryColor),
+                primaryColor, theme),
             const SizedBox(height: 12),
             _buildDetailRow(
               Icons.access_time,
               'زمان',
               _getTimeOfDayText(habit.timeOfDay),
               primaryColor,
+              theme,
             ),
             const SizedBox(height: 12),
             _buildDetailRow(
@@ -256,11 +259,12 @@ class HabitDetailScreen extends StatelessWidget {
               'امتیاز',
               '${habit.xpReward} XP به ازای هر بار',
               primaryColor,
+              theme,
             ),
             if (habit.targetValue != null && habit.targetValue!.isNotEmpty) ...[
               const SizedBox(height: 12),
-              _buildDetailRow(
-                  Icons.flag, 'مقدار هدف', habit.targetValue!, primaryColor),
+              _buildDetailRow(Icons.flag, 'مقدار هدف', habit.targetValue!,
+                  primaryColor, theme),
             ],
             if (habit.reminders.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -269,6 +273,7 @@ class HabitDetailScreen extends StatelessWidget {
                 'یادآورها',
                 '${habit.reminders.length} یادآور',
                 primaryColor,
+                theme,
               ),
             ],
           ],
@@ -277,8 +282,8 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(
-      IconData icon, String label, String value, Color primaryColor) {
+  Widget _buildDetailRow(IconData icon, String label, String value,
+      Color primaryColor, ThemeProvider theme) {
     return Row(
       children: [
         Container(
@@ -292,10 +297,10 @@ class HabitDetailScreen extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF090909),
+            color: theme.textColor,
           ),
         ),
         const SizedBox(width: 8),
@@ -303,28 +308,28 @@ class HabitDetailScreen extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF73786B)),
+            style: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSubHabitsCard(Color primaryColor) {
+  Widget _buildSubHabitsCard(Color primaryColor, ThemeProvider theme) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'زیرعادت‌ها',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF090909),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -340,8 +345,10 @@ class HabitDetailScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(sh,
-                          style: const TextStyle(color: Color(0xFF090909))),
+                      child: Text(
+                        sh,
+                        style: TextStyle(color: theme.textColor),
+                      ),
                     ),
                   ],
                 ),
@@ -353,10 +360,10 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLevelSettingsCard(Color primaryColor) {
+  Widget _buildLevelSettingsCard(Color primaryColor, ThemeProvider theme) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -364,12 +371,12 @@ class HabitDetailScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Text(
+                Text(
                   '🎯 سطوح انجام عادت',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF090909),
+                    color: theme.textColor,
                   ),
                 ),
                 const Spacer(),
@@ -411,7 +418,7 @@ class HabitDetailScreen extends StatelessWidget {
               _hasLevelSettings()
                   ? 'سطوح زیر برای این عادت تعریف شده است:'
                   : 'تنظیمات سطح خاصی تعریف نشده است. از سطوح پیش‌فرض استفاده می‌شود.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF73786B)),
+              style: TextStyle(fontSize: 13, color: theme.textSecondaryColor),
             ),
             const SizedBox(height: 16),
             _buildLevelRow(
@@ -425,6 +432,7 @@ class HabitDetailScreen extends StatelessWidget {
               isCustom: habit.fullDescription != null &&
                   habit.fullDescription != 'انجام کامل عادت',
               primaryColor: primaryColor,
+              theme: theme,
             ),
             const SizedBox(height: 12),
             _buildLevelRow(
@@ -438,6 +446,7 @@ class HabitDetailScreen extends StatelessWidget {
               isCustom: habit.halfDescription != null &&
                   habit.halfDescription != 'انجام نیمی از عادت',
               primaryColor: primaryColor,
+              theme: theme,
             ),
             const SizedBox(height: 12),
             _buildLevelRow(
@@ -451,6 +460,7 @@ class HabitDetailScreen extends StatelessWidget {
               isCustom: habit.basicDescription != null &&
                   habit.basicDescription != 'انجام حداقل عادت',
               primaryColor: primaryColor,
+              theme: theme,
             ),
           ],
         ),
@@ -468,6 +478,7 @@ class HabitDetailScreen extends StatelessWidget {
     int xpReward = 10,
     bool isCustom = false,
     required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     final xpEarned = (xpReward * multiplier / 100).round();
     String? levelValue;
@@ -479,13 +490,14 @@ class HabitDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isCustom
-            ? level.color.withValues(alpha: 0.08)
-            : Colors.grey.shade50,
+            ? level.color.withValues(alpha: theme.isDarkMode ? 0.15 : 0.08)
+            : (theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : Colors.grey.shade50),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isCustom
-              ? level.color.withValues(alpha: 0.2)
-              : Color(0xFFE8EDF2), // ✅ const حذف شد
+          color:
+              isCustom ? level.color.withValues(alpha: 0.3) : theme.borderColor,
           width: isCustom ? 1.5 : 1,
         ),
       ),
@@ -525,7 +537,7 @@ class HabitDetailScreen extends StatelessWidget {
             description,
             style: TextStyle(
               fontSize: 13,
-              color: isCustom ? Colors.grey.shade800 : Color(0xFF73786B),
+              color: theme.textSecondaryColor,
             ),
           ),
           if (levelValue != null) ...[
@@ -533,9 +545,9 @@ class HabitDetailScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: level.color.withValues(alpha: 0.08),
+                color: level.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: level.color.withValues(alpha: 0.1)),
+                border: Border.all(color: level.color.withValues(alpha: 0.2)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -559,7 +571,7 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildChartSection(Color primaryColor) {
+  Widget _buildChartSection(Color primaryColor, ThemeProvider theme) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _supabase.getHabitChartData(
         habitId: habit.id,
@@ -571,7 +583,7 @@ class HabitDetailScreen extends StatelessWidget {
             height: 250,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Center(
@@ -583,8 +595,8 @@ class HabitDetailScreen extends StatelessWidget {
                     color: primaryColor,
                   ),
                   const SizedBox(height: 12),
-                  const Text('در حال بارگذاری نمودار...',
-                      style: TextStyle(color: Color(0xFF73786B))),
+                  Text('در حال بارگذاری نمودار...',
+                      style: TextStyle(color: theme.textSecondaryColor)),
                 ],
               ),
             ),
@@ -595,29 +607,32 @@ class HabitDetailScreen extends StatelessWidget {
             height: 200,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.cardColor,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black
+                      .withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: const Center(
+            child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.show_chart, size: 48, color: Colors.grey),
-                  SizedBox(height: 12),
+                  Icon(Icons.show_chart,
+                      size: 48, color: theme.textSecondaryColor),
+                  const SizedBox(height: 12),
                   Text(
                     'هنوز داده‌ای برای نمایش وجود ندارد',
-                    style: TextStyle(color: Color(0xFF73786B)),
+                    style: TextStyle(color: theme.textSecondaryColor),
                   ),
                   Text(
                     'با انجام عادت و انتخاب سطح، نمودار ساخته می‌شود',
-                    style: TextStyle(color: Color(0xFF73786B), fontSize: 12),
+                    style: TextStyle(
+                        color: theme.textSecondaryColor, fontSize: 12),
                   ),
                 ],
               ),
@@ -633,7 +648,7 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLevelHistorySection() {
+  Widget _buildLevelHistorySection(ThemeProvider theme) {
     return FutureBuilder<List<HabitCompletion>>(
       future: _supabase.getHabitCompletionsWithLevel(
         habitId: habit.id,
@@ -655,18 +670,18 @@ class HabitDetailScreen extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              color: Colors.white,
+              color: theme.cardColor,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       '📊 تاریخچه ۳۰ روز اخیر',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF090909),
+                        color: theme.textColor,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -691,7 +706,7 @@ class HabitDetailScreen extends StatelessWidget {
                       }).toList(),
                     ),
                     const SizedBox(height: 8),
-                    _buildLegend(),
+                    _buildLegend(theme),
                   ],
                 ),
               ),
@@ -702,20 +717,20 @@ class HabitDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(ThemeProvider theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLegendItem(CompletionLevel.full),
+        _buildLegendItem(CompletionLevel.full, theme),
         const SizedBox(width: 12),
-        _buildLegendItem(CompletionLevel.half),
+        _buildLegendItem(CompletionLevel.half, theme),
         const SizedBox(width: 12),
-        _buildLegendItem(CompletionLevel.basic),
+        _buildLegendItem(CompletionLevel.basic, theme),
       ],
     );
   }
 
-  Widget _buildLegendItem(CompletionLevel level) {
+  Widget _buildLegendItem(CompletionLevel level, ThemeProvider theme) {
     return Row(
       children: [
         Container(
@@ -729,27 +744,27 @@ class HabitDetailScreen extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           '${level.emoji} ${level.displayName}',
-          style: const TextStyle(fontSize: 11, color: Color(0xFF73786B)),
+          style: TextStyle(fontSize: 11, color: theme.textSecondaryColor),
         ),
       ],
     );
   }
 
-  Widget _buildRemindersCard(Color primaryColor) {
+  Widget _buildRemindersCard(Color primaryColor, ThemeProvider theme) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.white,
+      color: theme.cardColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'یادآورها',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF090909),
+                color: theme.textColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -766,15 +781,16 @@ class HabitDetailScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       reminder.getTimeString(),
-                      style: const TextStyle(color: Color(0xFF090909)),
+                      style: TextStyle(color: theme.textColor),
                     ),
                     const Spacer(),
                     Icon(
                       reminder.isEnabled
                           ? Icons.notifications_active
                           : Icons.notifications_off,
-                      color:
-                          reminder.isEnabled ? primaryColor : Color(0xFF73786B),
+                      color: reminder.isEnabled
+                          ? primaryColor
+                          : theme.textSecondaryColor,
                       size: 20,
                     ),
                   ],

@@ -33,23 +33,11 @@ class _QuestsTabState extends State<QuestsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     if (widget.quests.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.flag_outlined, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              'هنوز ماموریتی وجود ندارد',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState(theme);
     }
 
     return FutureBuilder<List<UserQuest>>(
@@ -62,27 +50,7 @@ class _QuestsTabState extends State<QuestsTab> {
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, color: Colors.red.shade300, size: 48),
-                const SizedBox(height: 12),
-                Text(
-                  'خطا در بارگذاری ماموریت‌ها',
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: widget.onRefresh,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                  ),
-                  child: const Text('تلاش مجدد'),
-                ),
-              ],
-            ),
-          );
+          return _buildErrorState(primaryColor, theme);
         }
 
         final userQuests = snapshot.data ?? [];
@@ -116,27 +84,11 @@ class _QuestsTabState extends State<QuestsTab> {
         if (newQuests.isEmpty &&
             activeQuests.isEmpty &&
             completedQuests.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.flag_outlined,
-                  size: 80,
-                  color: Colors.grey.shade300,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'هنوز ماموریتی وجود ندارد',
-                  style: TextStyle(color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          );
+          return _buildEmptyState(theme);
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // ✅ padding-top
+          padding: const EdgeInsets.fromLTRB(16, 100, 16, 120),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -147,10 +99,11 @@ class _QuestsTabState extends State<QuestsTab> {
                 _buildSectionHeader(
                   icon: Icons.play_circle,
                   title: 'ماموریت‌های در حال انجام',
+                  theme: theme,
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 240, // ✅ ارتفاع ثابت برای کارت‌های افقی
+                  height: 240,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -171,11 +124,12 @@ class _QuestsTabState extends State<QuestsTab> {
                       return Padding(
                         padding: const EdgeInsets.only(left: 12),
                         child: SizedBox(
-                          width: 260, // ✅ عرض ثابت
+                          width: 260,
                           child: _buildActiveQuestCard(
                             quest,
                             userQuest.progress,
                             primaryColor,
+                            theme,
                           ),
                         ),
                       );
@@ -192,10 +146,11 @@ class _QuestsTabState extends State<QuestsTab> {
                 _buildSectionHeader(
                   icon: Icons.emoji_events,
                   title: 'ماموریت‌های تکمیل شده',
+                  theme: theme,
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 145, // ✅ ارتفاع برای کارت مدال
+                  height: 145,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -206,6 +161,7 @@ class _QuestsTabState extends State<QuestsTab> {
                         child: _buildMedalCard(
                           completedQuests[index],
                           primaryColor,
+                          theme,
                         ),
                       );
                     },
@@ -221,6 +177,7 @@ class _QuestsTabState extends State<QuestsTab> {
                 _buildSectionHeader(
                   icon: Icons.flag,
                   title: 'ماموریت‌های جدید',
+                  theme: theme,
                 ),
                 const SizedBox(height: 12),
                 ...newQuests.map(
@@ -239,6 +196,50 @@ class _QuestsTabState extends State<QuestsTab> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(ThemeProvider theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.flag_outlined,
+            size: 80,
+            color: theme.textSecondaryColor,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'هنوز ماموریتی وجود ندارد',
+            style: TextStyle(color: theme.textSecondaryColor),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Color primaryColor, ThemeProvider theme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: Colors.red.shade300, size: 48),
+          const SizedBox(height: 12),
+          Text(
+            'خطا در بارگذاری ماموریت‌ها',
+            style: TextStyle(color: theme.textSecondaryColor),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: widget.onRefresh,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+            ),
+            child: const Text('تلاش مجدد'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -283,19 +284,13 @@ class _QuestsTabState extends State<QuestsTab> {
       case 'calendar_today':
         return Icons.calendar_today;
       default:
-        return Icons.flag; // ✅ پیش‌فرض
+        return Icons.flag;
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-// 🚀 شروع ماموریت
-// ═══════════════════════════════════════════════════════════
   Future<void> _startQuest(Quest quest) async {
     try {
-      // ✅ شروع ماموریت در دیتابیس
       await _supabase.startQuest(widget.currentUserId, quest);
-
-      // ✅ ریفرش داده‌های صفحه
       widget.onRefresh();
 
       if (mounted) {
@@ -322,13 +317,17 @@ class _QuestsTabState extends State<QuestsTab> {
     }
   }
 
-  Widget _buildActiveQuestCard(Quest quest, int progress, Color primaryColor) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final Color primaryLight = themeProvider.primaryLight;
-
-    // ✅ رنگ کرمی
-    const Color creamColor = Color(0xFFFFF8E1); // کرمی روشن
-    const Color creamTextColor = Color(0xFF5D4037); // قهوه‌ای تیره برای متن
+  // ═══════════════════════════════════════════════════════════
+  // کارت ماموریت فعال (رنگ کرمی/نارنجی)
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildActiveQuestCard(
+    Quest quest,
+    int progress,
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
+    const Color creamColor = Color(0xFFFFB981);
+    const Color creamTextColor = Color(0xFF5D4037);
 
     final double progressValue = quest.targetCount > 0
         ? (progress / quest.targetCount).clamp(0.0, 1.0)
@@ -336,9 +335,8 @@ class _QuestsTabState extends State<QuestsTab> {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFB981), // ✅ کرمی
+        color: creamColor,
         borderRadius: BorderRadius.circular(20),
-        // ✅ بدون بوردر
         boxShadow: [
           BoxShadow(
             color: const Color.fromARGB(255, 204, 148, 103)
@@ -354,17 +352,14 @@ class _QuestsTabState extends State<QuestsTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ─── ردیف بالا: آیکون + عنوان + بج فعال ───
             Row(
               children: [
-                // ✅ آیکون با پس‌زمینه سفید + بدون استروک + آیکون مشکی
                 Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: Colors.white, // ✅ سفید
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    // ✅ بدون border
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.08),
@@ -376,7 +371,7 @@ class _QuestsTabState extends State<QuestsTab> {
                   child: Center(
                     child: Icon(
                       _getIconData(quest.icon),
-                      color: const Color(0xFF090909), // ✅ مشکی
+                      color: const Color(0xFF090909),
                       size: 22,
                     ),
                   ),
@@ -395,7 +390,6 @@ class _QuestsTabState extends State<QuestsTab> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // ✅ بج «فعال»
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -427,10 +421,7 @@ class _QuestsTabState extends State<QuestsTab> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // ─── توضیحات ───
             Text(
               quest.description,
               style: TextStyle(
@@ -441,10 +432,7 @@ class _QuestsTabState extends State<QuestsTab> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 10),
-
-            // ─── نوار پیشرفت ───
             Column(
               children: [
                 ClipRRect(
@@ -480,13 +468,9 @@ class _QuestsTabState extends State<QuestsTab> {
                 ),
               ],
             ),
-
             const Spacer(),
-
-            // ─── ردیف پایین: XP + دکمه‌ها ───
             Row(
               children: [
-                // XP
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -518,8 +502,6 @@ class _QuestsTabState extends State<QuestsTab> {
                   ),
                 ),
                 const Spacer(),
-
-                // ✅ دکمه مشاهده (مشکی)
                 GestureDetector(
                   onTap: () => widget.showQuestDetail(quest),
                   child: Container(
@@ -552,19 +534,16 @@ class _QuestsTabState extends State<QuestsTab> {
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 6),
-
-                // ✅ دکمه غیرفعال (primaryLight)
                 GestureDetector(
-                  onTap: () => _showCancelQuestDialog(quest),
+                  onTap: () => _showCancelQuestDialog(quest, theme),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 255, 255),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: const Color(0xFF090909).withValues(alpha: 0.10),
@@ -600,30 +579,35 @@ class _QuestsTabState extends State<QuestsTab> {
     );
   }
 
-  Widget _buildMedalCard(Quest quest, Color primaryColor) {
+  // ═══════════════════════════════════════════════════════════
+  // مدال ماموریت تکمیل شده (طلایی)
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildMedalCard(Quest quest, Color primaryColor, ThemeProvider theme) {
     return GestureDetector(
       onTap: () => widget.showQuestDetail(quest),
       child: Container(
         width: 130,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          // ✅ گرادیانت پس‌زمینه کرمی-طلایی ملایم
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFFDF5), // کرم خیلی روشن
-              Color(0xFFFFF3D6), // کرم طلایی
-            ],
+            colors: theme.isDarkMode
+                ? [
+                    const Color(0xFF3D3520), // کرم تیره برای تم شب
+                    const Color(0xFF2A2515),
+                  ]
+                : const [
+                    Color(0xFFFFFDF5),
+                    Color(0xFFFFF3D6),
+                  ],
           ),
           boxShadow: [
-            // ✅ سایه بیرونی تیره
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
-            // ✅ درخشش طلایی
             BoxShadow(
               color: const Color(0xFFFFD700).withValues(alpha: 0.20),
               blurRadius: 20,
@@ -637,54 +621,19 @@ class _QuestsTabState extends State<QuestsTab> {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ═══════════════════════════════════════════
-              // 🏅 روبان‌های آویزان از بالای مدال
-              // ═══════════════════════════════════════════
+              // روبان‌ها
               SizedBox(
                 height: 18,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // روبان چپ
                     Transform.rotate(
                       angle: -0.35,
                       child: Container(
                         width: 14,
                         height: 22,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Color(0xFFE53935), // قرمز
-                              Color(0xFFB71C1C),
-                            ],
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(2),
-                            bottomRight: Radius.circular(8),
-                            topLeft: Radius.circular(2),
-                            topRight: Radius.circular(2),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withValues(alpha: 0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    // روبان راست
-                    Transform.rotate(
-                      angle: 0.35,
-                      child: Container(
-                        width: 14,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
@@ -692,19 +641,36 @@ class _QuestsTabState extends State<QuestsTab> {
                               Color(0xFFB71C1C),
                             ],
                           ),
-                          borderRadius: const BorderRadius.only(
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(2),
+                            bottomRight: Radius.circular(8),
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Transform.rotate(
+                      angle: 0.35,
+                      child: Container(
+                        width: 14,
+                        height: 22,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFE53935),
+                              Color(0xFFB71C1C),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.only(
                             bottomLeft: Radius.circular(8),
                             bottomRight: Radius.circular(2),
                             topLeft: Radius.circular(2),
                             topRight: Radius.circular(2),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withValues(alpha: 0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -712,36 +678,31 @@ class _QuestsTabState extends State<QuestsTab> {
                 ),
               ),
 
-              // ═══════════════════════════════════════════
-              // 🏅 مدال دایره‌ای طلایی
-              // ═══════════════════════════════════════════
+              // مدال طلایی
               Transform.translate(
-                offset: const Offset(0, -4), // ✅ کمی روی روبان‌ها سوار شود
+                offset: const Offset(0, -4),
                 child: Container(
                   width: 62,
                   height: 62,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    // ✅ گرادیانت طلایی براق
                     gradient: const RadialGradient(
-                      center: Alignment(-0.4, -0.4), // درخشش بالا-چپ
+                      center: Alignment(-0.4, -0.4),
                       radius: 0.9,
                       colors: [
-                        Color(0xFFFFF8B0), // درخشان
-                        Color(0xFFFFD700), // طلایی
-                        Color(0xFFE5A100), // طلایی تیره
-                        Color(0xFFB8860B), // طلایی قهوه‌ای
+                        Color(0xFFFFF8B0),
+                        Color(0xFFFFD700),
+                        Color(0xFFE5A100),
+                        Color(0xFFB8860B),
                       ],
                       stops: [0.0, 0.4, 0.75, 1.0],
                     ),
                     boxShadow: [
-                      // ✅ درخشش بیرونی
                       BoxShadow(
                         color: const Color(0xFFFFD700).withValues(alpha: 0.5),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
-                      // ✅ سایه عمیق
                       BoxShadow(
                         color: const Color(0xFFB8860B).withValues(alpha: 0.4),
                         blurRadius: 6,
@@ -751,7 +712,6 @@ class _QuestsTabState extends State<QuestsTab> {
                   ),
                   child: Stack(
                     children: [
-                      // حلقه داخلی
                       Positioned.fill(
                         child: Container(
                           margin: const EdgeInsets.all(5),
@@ -765,38 +725,11 @@ class _QuestsTabState extends State<QuestsTab> {
                           ),
                         ),
                       ),
-                      // آیکون مرکزی
                       Center(
                         child: Icon(
                           _getIconData(quest.icon),
                           size: 26,
-                          color: const Color(0xFF5D4037), // قهوه‌ای تیره
-                        ),
-                      ),
-                      // ✨ درخشش گوشه بالا-راست
-                      Positioned(
-                        top: 8,
-                        right: 10,
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      // ✨ درخشش کوچک‌تر
-                      Positioned(
-                        top: 14,
-                        right: 16,
-                        child: Container(
-                          width: 2,
-                          height: 2,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            shape: BoxShape.circle,
-                          ),
+                          color: const Color(0xFF5D4037),
                         ),
                       ),
                     ],
@@ -806,16 +739,13 @@ class _QuestsTabState extends State<QuestsTab> {
 
               const SizedBox(height: 4),
 
-              // ═══════════════════════════════════════════
-              // 📛 پلاک نام مدال
-              // ═══════════════════════════════════════════
+              // پلاک نام
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  // ✅ پس‌زمینه پلاک قهوه‌ای تیره
                   color: const Color(0xFF5D4037),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -832,7 +762,7 @@ class _QuestsTabState extends State<QuestsTab> {
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFFFFF8B0), // متن کرمی-طلایی
+                    color: Color(0xFFFFF8B0),
                     height: 1.2,
                   ),
                   maxLines: 2,
@@ -842,9 +772,6 @@ class _QuestsTabState extends State<QuestsTab> {
 
               const SizedBox(height: 4),
 
-              // ═══════════════════════════════════════════
-              // ⭐ تعداد XP کوچک
-              // ═══════════════════════════════════════════
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -871,13 +798,11 @@ class _QuestsTabState extends State<QuestsTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-// ⚠️ دیالوگ انصراف از ماموریت
-// ═══════════════════════════════════════════════════════════
-  void _showCancelQuestDialog(Quest quest) {
+  void _showCancelQuestDialog(Quest quest, ThemeProvider theme) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
@@ -896,12 +821,12 @@ class _QuestsTabState extends State<QuestsTab> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'انصراف از ماموریت',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF090909),
+                color: theme.textColor,
               ),
             ),
           ],
@@ -912,7 +837,11 @@ class _QuestsTabState extends State<QuestsTab> {
           children: [
             Text(
               'آیا از انصراف از ماموریت "${quest.title}" مطمئن هستید؟',
-              style: const TextStyle(fontSize: 14, height: 1.5),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: theme.textColor,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -933,10 +862,14 @@ class _QuestsTabState extends State<QuestsTab> {
                     size: 16,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'با انصراف، تمام پیشرفت شما از دست خواهد رفت و باید از اول شروع کنید.',
-                      style: TextStyle(fontSize: 12, height: 1.5),
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: theme.textColor,
+                      ),
                     ),
                   ),
                 ],
@@ -947,9 +880,9 @@ class _QuestsTabState extends State<QuestsTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'انصراف',
-              style: TextStyle(color: Color(0xFF73786B)),
+              style: TextStyle(color: theme.textSecondaryColor),
             ),
           ),
           ElevatedButton(
@@ -971,13 +904,9 @@ class _QuestsTabState extends State<QuestsTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-// 🗑️ لغو ماموریت
-// ═══════════════════════════════════════════════════════════
   Future<void> _cancelQuest(Quest quest) async {
     try {
       await _supabase.cancelQuest(widget.currentUserId, quest.id);
-
       widget.onRefresh();
 
       if (mounted) {
@@ -1002,20 +931,10 @@ class _QuestsTabState extends State<QuestsTab> {
     }
   }
 
-  int _getQuestProgress(String questId, List<UserQuest> userQuests) {
-    try {
-      final userQuest = userQuests.firstWhere(
-        (uq) => uq.questId == questId,
-      );
-      return userQuest.progress;
-    } catch (e) {
-      return 0;
-    }
-  }
-
   Widget _buildSectionHeader({
     required IconData icon,
     required String title,
+    required ThemeProvider theme,
   }) {
     return Center(
       child: Row(
@@ -1024,22 +943,22 @@ class _QuestsTabState extends State<QuestsTab> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909).withValues(alpha: 0.08),
+              color: theme.textColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: const Color(0xFF090909),
+              color: theme.textColor,
               size: 16,
             ),
           ),
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF090909),
+              color: theme.textColor,
             ),
           ),
         ],

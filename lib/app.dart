@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ اضافه شد
+
 import '/features/auth/screens/login_screen.dart';
 import '/features/home/screens/main_screen.dart';
 import '/providers/sync_provider.dart';
+import '/providers/theme_provider.dart';
 
 class HeroApp extends StatefulWidget {
   const HeroApp({super.key});
@@ -18,7 +21,6 @@ class HeroApp extends StatefulWidget {
 class _HeroAppState extends State<HeroApp> {
   bool _isLoggedIn = false;
   bool _isLoading = true;
-  String _debugInfo = '';
 
   @override
   void initState() {
@@ -28,32 +30,55 @@ class _HeroAppState extends State<HeroApp> {
 
   Future<void> _checkLoginStatus() async {
     try {
+      // ✅ چک کردن session معتبر Supabase
+      final session = Supabase.instance.client.auth.currentSession;
+
+      if (session == null || session.isExpired) {
+        // Session منقضی شده، کاربر باید دوباره لاگین کنه
+        print('⚠️ Session invalid or expired, clearing local state...');
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('user_id');
+
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = false;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
 
-      setState(() {
-        _isLoggedIn = userId != null && userId.isNotEmpty;
-        _isLoading = false;
-        _debugInfo = 'userId: $userId, isLoggedIn: $_isLoggedIn';
-      });
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = userId != null && userId.isNotEmpty;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _debugInfo = 'Error: $e';
-      });
+      print('❌ Error checking login status: $e');
+      if (mounted) {
+        setState(() {
+          _isLoggedIn = false;
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const MaterialApp(
+      return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
+          backgroundColor: Colors.white,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+              children: const [
                 CircularProgressIndicator(color: Color(0xFF4A90E2)),
                 SizedBox(height: 16),
                 Text(
@@ -67,79 +92,110 @@ class _HeroAppState extends State<HeroApp> {
       );
     }
 
-    return MaterialApp(
-      title: 'قهرمان درون',
-      debugShowCheckedModeBanner: false,
-
-      // ✅ تنظیمات locale فارسی
-      locale: const Locale('fa', 'IR'),
-      supportedLocales: const [
-        Locale('fa', 'IR'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-
-      // ✅ اجبار کل اپلیکیشن به RTL
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child!,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'قهرمان درون',
+          debugShowCheckedModeBanner: false,
+          locale: const Locale('fa', 'IR'),
+          supportedLocales: const [
+            Locale('fa', 'IR'),
+          ],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          builder: (context, child) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: child!,
+            );
+          },
+          theme: ThemeData(
+            fontFamily: 'Vazir',
+            scaffoldBackgroundColor: themeProvider.backgroundColor,
+            useMaterial3: true,
+            colorScheme: ColorScheme.light(
+              primary: themeProvider.primaryColor,
+              secondary: themeProvider.primaryColor,
+              surface: themeProvider.surfaceColor,
+              background: themeProvider.backgroundColor,
+              onPrimary: themeProvider.textColor,
+              onSurface: themeProvider.textColor,
+              onBackground: themeProvider.textColor,
+            ),
+            appBarTheme: AppBarTheme(
+              backgroundColor: themeProvider.surfaceColor,
+              elevation: 0,
+              centerTitle: true,
+              titleTextStyle: TextStyle(
+                color: themeProvider.textColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Vazir',
+              ),
+              iconTheme: IconThemeData(color: themeProvider.textColor),
+            ),
+            textTheme: TextTheme(
+              bodyLarge: TextStyle(
+                  fontFamily: 'Vazir', color: themeProvider.textColor),
+              bodyMedium: TextStyle(
+                  fontFamily: 'Vazir', color: themeProvider.textColor),
+              titleLarge: TextStyle(
+                  fontFamily: 'Vazir', color: themeProvider.textColor),
+            ),
+            dividerColor: themeProvider.textColor.withValues(alpha: 0.1),
+            cardColor: themeProvider.surfaceColor,
+            dialogBackgroundColor: themeProvider.surfaceColor,
+            listTileTheme: ListTileThemeData(
+              textColor: themeProvider.textColor,
+              iconColor: themeProvider.textColor,
+            ),
+            switchTheme: SwitchThemeData(
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return themeProvider.primaryColor;
+                }
+                return null;
+              }),
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return themeProvider.primaryColor.withValues(alpha: 0.5);
+                }
+                return null;
+              }),
+            ),
+          ),
+          home: _isLoggedIn
+              ? Consumer<SyncProvider>(
+                  builder: (context, syncProvider, child) {
+                    if (!syncProvider.isInitialized) {
+                      return Scaffold(
+                        backgroundColor: themeProvider.backgroundColor,
+                        body: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              CircularProgressIndicator(
+                                color: Color(0xFF4A90E2),
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'در حال بارگذاری اطلاعات...',
+                                style: TextStyle(color: Color(0xFF6B7280)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return const MainScreen();
+                  },
+                )
+              : const LoginScreen(),
         );
       },
-
-      theme: ThemeData(
-        fontFamily: 'Vazir',
-        scaffoldBackgroundColor: Colors.grey.shade50,
-        useMaterial3: true,
-        colorScheme: const ColorScheme.light(
-          primary: Color(0xFF4A90E2),
-          secondary: Color(0xFFFFA500),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            color: Color(0xFF1A1A2E),
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Vazir',
-          ),
-          iconTheme: IconThemeData(color: Color(0xFF1A1A2E)),
-        ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(fontFamily: 'Vazir'),
-          bodyMedium: TextStyle(fontFamily: 'Vazir'),
-          titleLarge: TextStyle(fontFamily: 'Vazir'),
-        ),
-      ),
-      home: _isLoggedIn
-          ? Consumer<SyncProvider>(
-              builder: (context, syncProvider, child) {
-                if (!syncProvider.isInitialized) {
-                  return const Scaffold(
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: Color(0xFF4A90E2)),
-                          SizedBox(height: 16),
-                          Text(
-                            'در حال بارگذاری اطلاعات...',
-                            style: TextStyle(color: Color(0xFF6B7280)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return const MainScreen();
-              },
-            )
-          : const LoginScreen(),
     );
   }
 }

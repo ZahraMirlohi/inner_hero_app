@@ -22,7 +22,9 @@ class HeroStats extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -48,6 +50,7 @@ class HeroStats extends StatelessWidget {
                   label: 'سن قهرمان',
                   value: '${character.characterAge} روز',
                   color: primaryColor,
+                  theme: theme, // ✅
                 ),
               ),
               Expanded(
@@ -56,6 +59,7 @@ class HeroStats extends StatelessWidget {
                   label: 'لول',
                   value: '${character.level}',
                   color: primaryColor,
+                  theme: theme, // ✅
                 ),
               ),
             ],
@@ -69,6 +73,7 @@ class HeroStats extends StatelessWidget {
                   label: 'استریک جاری',
                   value: '${character.streak} روز',
                   color: primaryColor,
+                  theme: theme, // ✅
                 ),
               ),
               Expanded(
@@ -77,12 +82,13 @@ class HeroStats extends StatelessWidget {
                   label: 'مدال‌ها',
                   value: '${character.badges}',
                   color: primaryColor,
+                  theme: theme, // ✅
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildXpBar(primaryColor),
+          _buildXpBar(primaryColor, theme), // ✅
         ],
       ),
     );
@@ -93,11 +99,12 @@ class HeroStats extends StatelessWidget {
     required String label,
     required String value,
     required Color color,
+    required ThemeProvider theme, // ✅
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -114,14 +121,17 @@ class HeroStats extends StatelessWidget {
           ),
           Text(
             label,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.textSecondaryColor, // ✅
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildXpBar(Color primaryColor) {
+  Widget _buildXpBar(Color primaryColor, ThemeProvider theme) {
     final progress = character.levelProgress;
     final xpNeeded = character.level * 100;
 
@@ -131,13 +141,20 @@ class HeroStats extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'پیشرفت به لول بعدی',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor, // ✅
+              ),
             ),
             Text(
               '${character.xp} / $xpNeeded XP',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: theme.textColor, // ✅
+              ),
             ),
           ],
         ),
@@ -146,7 +163,9 @@ class HeroStats extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.grey.shade200,
+            backgroundColor: theme.isDarkMode
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.grey.shade200, // ✅
             color: primaryColor,
             minHeight: 8,
           ),

@@ -1,11 +1,14 @@
+// lib/features/arena/screens/add_habit_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:inner_hero_app/providers/sync_provider.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
-import '/services/date_service.dart';
 import '/features/arena/models/habit_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'category_selection_screen.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class AddHabitScreen extends StatefulWidget {
   final String? preSelectedTitle;
@@ -47,7 +50,6 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   DateTime? _startDate;
   int _xpReward = 10;
   bool _isLoading = false;
-  String _calendarType = 'jalali';
 
   String? _targetValue;
   String? _fullDescription;
@@ -85,7 +87,6 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCalendarType();
     if (widget.preSelectedTitle != null) {
       _titleController.text = widget.preSelectedTitle!;
     }
@@ -103,18 +104,11 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     _basicDescription = 'انجام حداقل عادت';
   }
 
-  Future<void> _loadCalendarType() async {
-    final calendarType = await DateService.getCalendarType();
-    if (mounted) {
-      setState(() {
-        _calendarType = calendarType;
-      });
-    }
-  }
-
   Future<void> _selectStartDate() async {
-    if (_calendarType == 'jalali') {
-      _showJalaliDatePickerForHabit();
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
+
+    if (calendar.isJalali) {
+      _showJalaliDatePickerForHabit(calendar);
     } else {
       _showGregorianDatePickerForHabit();
     }
@@ -134,7 +128,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     }
   }
 
-  void _showJalaliDatePickerForHabit() {
+  void _showJalaliDatePickerForHabit(CalendarProvider calendar) {
     final now =
         _startDate != null ? Jalali.fromDateTime(_startDate!) : Jalali.now();
     int selectedYear = now.year;
@@ -146,7 +140,10 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            int daysInMonth = _getDaysInMonth(selectedYear, selectedMonth);
+            int daysInMonth = calendar.daysInMonth(
+              selectedYear,
+              selectedMonth,
+            );
             if (selectedDay > daysInMonth) {
               selectedDay = daysInMonth;
             }
@@ -176,9 +173,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                             }).toList(),
                             onChanged: (value) {
                               if (value != null) {
-                                setStateDialog(() {
-                                  selectedYear = value;
-                                });
+                                setStateDialog(() => selectedYear = value);
                               }
                             },
                           ),
@@ -195,14 +190,20 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                               final month = i + 1;
                               return DropdownMenuItem(
                                 value: month,
-                                child: Text(_getMonthName(month)),
+                                child: Text(
+                                  calendar
+                                      .formatWithMonthName(
+                                        Jalali(selectedYear, month, 1)
+                                            .toDateTime(),
+                                      )
+                                      .split(' ')
+                                      .first,
+                                ),
                               );
                             }).toList(),
                             onChanged: (value) {
                               if (value != null) {
-                                setStateDialog(() {
-                                  selectedMonth = value;
-                                });
+                                setStateDialog(() => selectedMonth = value);
                               }
                             },
                           ),
@@ -226,9 +227,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                       }).toList(),
                       onChanged: (value) {
                         if (value != null) {
-                          setStateDialog(() {
-                            selectedDay = value;
-                          });
+                          setStateDialog(() => selectedDay = value);
                         }
                       },
                     ),
@@ -248,9 +247,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                         selectedMonth,
                         selectedDay,
                       );
-                      final miladiDate = jalaliDate.toDateTime();
                       setState(() {
-                        _startDate = miladiDate;
+                        _startDate = jalaliDate.toDateTime();
                       });
                       Navigator.pop(context);
                     } catch (e) {
@@ -272,54 +270,24 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  int _getDaysInMonth(int year, int month) {
-    if (month <= 6) return 31;
-    if (month <= 11) return 30;
-    final date = Jalali(year, month, 1);
-    return (date.isLeapYear == true) ? 30 : 29;
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'فروردین',
-      'اردیبهشت',
-      'خرداد',
-      'تیر',
-      'مرداد',
-      'شهریور',
-      'مهر',
-      'آبان',
-      'آذر',
-      'دی',
-      'بهمن',
-      'اسفند',
-    ];
-    return months[month - 1];
-  }
-
-  String _getDisplayStartDate() {
+  String _getDisplayStartDate(CalendarProvider calendar) {
     if (_startDate == null) return 'انتخاب کنید (اختیاری)';
-
-    if (_calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(_startDate!);
-      return '${jalali.year}/${jalali.month.toString().padLeft(2, '0')}/${jalali.day.toString().padLeft(2, '0')}';
-    } else {
-      return '${_startDate!.year}/${_startDate!.month.toString().padLeft(2, '0')}/${_startDate!.day.toString().padLeft(2, '0')}';
-    }
+    return calendar.formatShort(_startDate!);
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: const Text('عادت جدید'),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -332,25 +300,25 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTitleField(primaryColor),
+              _buildTitleField(primaryColor, theme),
               const SizedBox(height: 16),
-              _buildDescriptionField(primaryColor),
+              _buildDescriptionField(primaryColor, theme),
               const SizedBox(height: 16),
-              _buildLevelSettingsSection(primaryColor),
+              _buildLevelSettingsSection(primaryColor, theme),
               const SizedBox(height: 32),
-              _buildSubHabitsSection(primaryColor),
+              _buildSubHabitsSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildIconAndColorSection(primaryColor),
+              _buildIconAndColorSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildFrequencySection(primaryColor),
+              _buildFrequencySection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildTimeSection(primaryColor),
+              _buildTimeSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildStartDateSection(primaryColor),
+              _buildStartDateSection(primaryColor, calendar, theme),
               const SizedBox(height: 24),
-              _buildRemindersSection(primaryColor),
+              _buildRemindersSection(primaryColor, theme),
               const SizedBox(height: 24),
-              _buildXPSection(primaryColor),
+              _buildXPSection(primaryColor, theme),
               const SizedBox(height: 24),
               _buildSubmitButton(primaryColor),
             ],
@@ -360,70 +328,9 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildColorSection(Color primaryColor) {
+  Widget _buildLevelSettingsSection(Color primaryColor, ThemeProvider theme) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '🎨 رنگ کارت عادت',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'رنگ پس‌زمینه کارت عادت را انتخاب کنید',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _cardColors.map((color) {
-                final isSelected = _selectedBgColor == color.value;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedBgColor = color.value;
-                    });
-                  },
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.black, width: 3)
-                          : Border.all(color: Colors.grey.shade300, width: 1),
-                    ),
-                    child: isSelected
-                        ? Icon(
-                            Icons.check,
-                            color: color.computeLuminance() > 0.5
-                                ? Colors.black
-                                : Colors.white,
-                            size: 20,
-                          )
-                        : null,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLevelSettingsSection(Color primaryColor) {
-    return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -439,60 +346,44 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'این تنظیمات به کاربر کمک می‌کند بداند هر سطح به چه معناست',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            _buildTextField(
               initialValue: _targetValue,
-              decoration: InputDecoration(
-                labelText: 'مقدار هدف (اختیاری)',
-                hintText: 'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
+              labelText: 'مقدار هدف (اختیاری)',
+              hintText: 'مثال: ۳۰ دقیقه، ۲۰ صفحه، ۸ لیوان',
+              primaryColor: primaryColor,
+              theme: theme,
               onChanged: (value) => _targetValue = value,
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            _buildTextField(
               initialValue: _fullDescription,
-              decoration: InputDecoration(
-                labelText: '🌟 توضیح سطح کامل',
-                hintText: 'انجام کامل عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
+              labelText: '🌟 توضیح سطح کامل',
+              hintText: 'انجام کامل عادت',
+              primaryColor: primaryColor,
+              theme: theme,
               onChanged: (value) => _fullDescription = value,
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            _buildTextField(
               initialValue: _halfDescription,
-              decoration: InputDecoration(
-                labelText: '⭐ توضیح سطح نیمه',
-                hintText: 'انجام نیمی از عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
+              labelText: '⭐ توضیح سطح نیمه',
+              hintText: 'انجام نیمی از عادت',
+              primaryColor: primaryColor,
+              theme: theme,
               onChanged: (value) => _halfDescription = value,
             ),
             const SizedBox(height: 12),
-            TextFormField(
+            _buildTextField(
               initialValue: _basicDescription,
-              decoration: InputDecoration(
-                labelText: '✨ توضیح سطح پایه',
-                hintText: 'انجام حداقل عادت',
-                border: const OutlineInputBorder(),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: primaryColor, width: 2),
-                ),
-              ),
+              labelText: '✨ توضیح سطح پایه',
+              hintText: 'انجام حداقل عادت',
+              primaryColor: primaryColor,
+              theme: theme,
               onChanged: (value) => _basicDescription = value,
             ),
           ],
@@ -501,8 +392,43 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildStartDateSection(Color primaryColor) {
+  Widget _buildTextField({
+    required String? initialValue,
+    required String labelText,
+    required String hintText,
+    required Color primaryColor,
+    required ThemeProvider theme,
+    required Function(String) onChanged,
+  }) {
+    return TextFormField(
+      initialValue: initialValue,
+      style: TextStyle(color: theme.textColor),
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
+        border: const OutlineInputBorder(),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildStartDateSection(
+    Color primaryColor,
+    CalendarProvider calendar,
+    ThemeProvider theme,
+  ) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -512,17 +438,17 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             color: primaryColor.withAlpha(20),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            Icons.calendar_today,
-            color: primaryColor,
-            size: 20,
-          ),
+          child: Icon(Icons.calendar_today, color: primaryColor, size: 20),
         ),
-        title: const Text('تاریخ شروع (اختیاری)'),
+        title: Text(
+          'تاریخ شروع (اختیاری)',
+          style: TextStyle(color: theme.textColor),
+        ),
         subtitle: Text(
-          _getDisplayStartDate(),
+          _getDisplayStartDate(calendar),
           style: TextStyle(
-            color: _startDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
+            color:
+                _startDate != null ? theme.textColor : theme.textSecondaryColor,
           ),
         ),
         onTap: _selectStartDate,
@@ -530,7 +456,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildIconAndColorSection(Color primaryColor) {
+  Widget _buildIconAndColorSection(Color primaryColor, ThemeProvider theme) {
     final List<Color> _bgColors = [
       const Color(0xFFFFF8E7),
       const Color(0xFFFFE0B2),
@@ -543,6 +469,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     ];
 
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -558,7 +485,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('انتخاب آیکن:', style: TextStyle(fontSize: 14)),
+            Text('انتخاب آیکن:',
+                style: TextStyle(fontSize: 14, color: theme.textColor)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -566,28 +494,27 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               children: _icons.map((icon) {
                 final isSelected = _selectedIcon == icon['name'];
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedIcon = icon['name'];
-                    });
-                  },
+                  onTap: () => setState(() => _selectedIcon = icon['name']),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? primaryColor.withAlpha(25)
-                          : Colors.grey.shade100,
+                          ? primaryColor.withAlpha(30)
+                          : (theme.isDarkMode
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.grey.shade100),
                       borderRadius: BorderRadius.circular(12),
                       border: isSelected
-                          ? Border.all(
-                              color: primaryColor,
-                              width: 2,
-                            )
+                          ? Border.all(color: primaryColor, width: 2)
                           : null,
                     ),
                     child: Icon(
                       icon['icon'],
-                      color: isSelected ? const Color(0xFF090909) : Colors.grey,
+                      color: isSelected
+                          ? (theme.isDarkMode
+                              ? Colors.white
+                              : const Color(0xFF090909))
+                          : theme.textSecondaryColor,
                       size: 28,
                     ),
                   ),
@@ -595,7 +522,8 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               }).toList(),
             ),
             const SizedBox(height: 16),
-            const Text('رنگ باکس عادت:', style: TextStyle(fontSize: 14)),
+            Text('رنگ باکس عادت:',
+                style: TextStyle(fontSize: 14, color: theme.textColor)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 12,
@@ -603,11 +531,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               children: _bgColors.map((color) {
                 final isSelected = _selectedBgColor == color.value;
                 return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedBgColor = color.value;
-                    });
-                  },
+                  onTap: () => setState(() => _selectedBgColor = color.value),
                   child: Container(
                     width: 40,
                     height: 40,
@@ -615,7 +539,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                       color: color,
                       shape: BoxShape.circle,
                       border: isSelected
-                          ? Border.all(color: Colors.black, width: 2)
+                          ? Border.all(color: theme.textColor, width: 2)
                           : null,
                     ),
                     child: isSelected
@@ -631,14 +555,17 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildFrequencySection(Color primaryColor) {
+  Widget _buildFrequencySection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(
         children: [
           Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade100,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(20),
                 topRight: Radius.circular(20),
@@ -646,34 +573,31 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             ),
             child: Row(
               children: [
-                _buildFrequencyTab('روزانه', 'daily', primaryColor),
-                _buildFrequencyTab('هفتگی', 'weekly', primaryColor),
-                _buildFrequencyTab('ماهانه', 'monthly', primaryColor),
+                _buildFrequencyTab('روزانه', 'daily', primaryColor, theme),
+                _buildFrequencyTab('هفتگی', 'weekly', primaryColor, theme),
+                _buildFrequencyTab('ماهانه', 'monthly', primaryColor, theme),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _buildFrequencyContent(primaryColor),
+            child: _buildFrequencyContent(primaryColor, theme),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFrequencyTab(String title, String type, Color primaryColor) {
+  Widget _buildFrequencyTab(
+      String title, String type, Color primaryColor, ThemeProvider theme) {
     final isSelected = _frequencyType == type;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _frequencyType = type;
-          });
-        },
+        onTap: () => setState(() => _frequencyType = type),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? theme.cardColor : Colors.transparent,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
@@ -684,7 +608,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? primaryColor : Colors.grey.shade600,
+              color: isSelected ? primaryColor : theme.textSecondaryColor,
             ),
           ),
         ),
@@ -692,24 +616,26 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildFrequencyContent(Color primaryColor) {
+  Widget _buildFrequencyContent(Color primaryColor, ThemeProvider theme) {
     switch (_frequencyType) {
       case 'daily':
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('هر '),
+            Text('هر ', style: TextStyle(color: theme.textColor)),
             Container(
               width: 70,
               height: 48,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: theme.borderColor),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: DropdownButton<int>(
                   value: _dailyIntervalDays,
                   underline: const SizedBox(),
+                  dropdownColor: theme.cardColor,
+                  style: TextStyle(color: theme.textColor),
                   items: List.generate(30, (i) => i + 1).map((value) {
                     return DropdownMenuItem(
                       value: value,
@@ -725,7 +651,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
               ),
             ),
             const SizedBox(width: 4),
-            const Text(' روز'),
+            Text(' روز', style: TextStyle(color: theme.textColor)),
           ],
         );
 
@@ -752,15 +678,20 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: isSelected ? primaryColor : Colors.grey.shade200,
+                      color: isSelected
+                          ? primaryColor
+                          : (theme.isDarkMode
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.grey.shade200),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: Text(
                         _weekdayLetters[index],
                         style: TextStyle(
-                          color:
-                              isSelected ? Colors.white : Colors.grey.shade600,
+                          color: isSelected
+                              ? Colors.white
+                              : theme.textSecondaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -774,18 +705,20 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('هر '),
+                Text('هر ', style: TextStyle(color: theme.textColor)),
                 Container(
                   width: 70,
                   height: 48,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: theme.borderColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: DropdownButton<int>(
                       value: _weeklyIntervalWeeks,
                       underline: const SizedBox(),
+                      dropdownColor: theme.cardColor,
+                      style: TextStyle(color: theme.textColor),
                       items: List.generate(12, (i) => i + 1).map((value) {
                         return DropdownMenuItem(
                           value: value,
@@ -801,7 +734,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text(' هفته'),
+                Text(' هفته', style: TextStyle(color: theme.textColor)),
               ],
             ),
           ],
@@ -831,15 +764,20 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: isSelected ? primaryColor : Colors.grey.shade200,
+                      color: isSelected
+                          ? primaryColor
+                          : (theme.isDarkMode
+                              ? const Color(0xFF2A2A2A)
+                              : Colors.grey.shade200),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Text(
                         day.toString(),
                         style: TextStyle(
-                          color:
-                              isSelected ? Colors.white : Colors.grey.shade600,
+                          color: isSelected
+                              ? Colors.white
+                              : theme.textSecondaryColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -852,18 +790,20 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('هر '),
+                Text('هر ', style: TextStyle(color: theme.textColor)),
                 Container(
                   width: 70,
                   height: 48,
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: theme.borderColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: DropdownButton<int>(
                       value: _monthlyIntervalMonths,
                       underline: const SizedBox(),
+                      dropdownColor: theme.cardColor,
+                      style: TextStyle(color: theme.textColor),
                       items: List.generate(12, (i) => i + 1).map((value) {
                         return DropdownMenuItem(
                           value: value,
@@ -879,7 +819,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Text(' ماه'),
+                Text(' ماه', style: TextStyle(color: theme.textColor)),
               ],
             ),
           ],
@@ -890,8 +830,9 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     }
   }
 
-  Widget _buildTimeSection(Color primaryColor) {
+  Widget _buildTimeSection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -910,15 +851,16 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             Row(
               children: [
                 _buildTimeButton(
-                    'صبح', 'morning', Icons.wb_sunny, primaryColor),
-                const SizedBox(width: 12),
-                _buildTimeButton('ظهر', 'noon', Icons.sunny, primaryColor),
+                    'صبح', 'morning', Icons.wb_sunny, primaryColor, theme),
                 const SizedBox(width: 12),
                 _buildTimeButton(
-                    'بعدازظهر', 'afternoon', Icons.sunny_snowing, primaryColor),
+                    'ظهر', 'noon', Icons.sunny, primaryColor, theme),
+                const SizedBox(width: 12),
+                _buildTimeButton('بعدازظهر', 'afternoon', Icons.sunny_snowing,
+                    primaryColor, theme),
                 const SizedBox(width: 12),
                 _buildTimeButton(
-                    'شب', 'night', Icons.nightlight_round, primaryColor),
+                    'شب', 'night', Icons.nightlight_round, primaryColor, theme),
               ],
             ),
           ],
@@ -927,34 +869,34 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildTimeButton(
-      String label, String value, IconData icon, Color primaryColor) {
+  Widget _buildTimeButton(String label, String value, IconData icon,
+      Color primaryColor, ThemeProvider theme) {
     final isSelected = _timeOfDay == value;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _timeOfDay = value;
-          });
-        },
+        onTap: () => setState(() => _timeOfDay = value),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : Colors.grey.shade100,
+            color: isSelected
+                ? primaryColor
+                : (theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade100),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : Colors.grey,
+                color: isSelected ? Colors.white : theme.textSecondaryColor,
                 size: 20,
               ),
               const SizedBox(height: 4),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey.shade600,
+                  color: isSelected ? Colors.white : theme.textSecondaryColor,
                   fontSize: 12,
                 ),
               ),
@@ -965,8 +907,9 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildRemindersSection(Color primaryColor) {
+  Widget _buildRemindersSection(Color primaryColor, ThemeProvider theme) {
     return Card(
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -997,30 +940,32 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             ),
             const SizedBox(height: 12),
             if (_reminders.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Center(
                   child: Text(
                     'هیچ یادآوری تنظیم نشده است',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: theme.textSecondaryColor),
                   ),
                 ),
               )
             else
-              ..._reminders.map(
-                  (reminder) => _buildReminderItem(reminder, primaryColor)),
+              ..._reminders.map((reminder) =>
+                  _buildReminderItem(reminder, primaryColor, theme)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReminderItem(Reminder reminder, Color primaryColor) {
+  Widget _buildReminderItem(
+      Reminder reminder, Color primaryColor, ThemeProvider theme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color:
+            theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -1029,25 +974,21 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           const SizedBox(width: 12),
           Text(
             reminder.getTimeString(),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: theme.textColor,
+            ),
           ),
           const Spacer(),
           Switch(
             value: reminder.isEnabled,
-            onChanged: (value) {
-              setState(() {
-                reminder.isEnabled = value;
-              });
-            },
+            onChanged: (value) => setState(() => reminder.isEnabled = value),
             activeColor: primaryColor,
           ),
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-            onPressed: () {
-              setState(() {
-                _reminders.remove(reminder);
-              });
-            },
+            onPressed: () => setState(() => _reminders.remove(reminder)),
           ),
         ],
       ),
@@ -1074,51 +1015,67 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     }
   }
 
-  Widget _buildTitleField(Color primaryColor) {
+  Widget _buildTitleField(Color primaryColor, ThemeProvider theme) {
     return TextFormField(
       controller: _titleController,
+      style: TextStyle(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'عنوان عادت',
         hintText: 'مثال: ورزش روزانه',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
         prefixIcon: Icon(Icons.title, color: primaryColor),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
           borderRadius: BorderRadius.circular(16),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
       ),
       validator: (value) =>
           (value == null || value.isEmpty) ? 'لطفاً عنوان را وارد کنید' : null,
     );
   }
 
-  Widget _buildDescriptionField(Color primaryColor) {
+  Widget _buildDescriptionField(Color primaryColor, ThemeProvider theme) {
     return TextFormField(
       controller: _descriptionController,
+      style: TextStyle(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'توضیحات (اختیاری)',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
         prefixIcon: Icon(Icons.description, color: primaryColor),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
+        ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
           borderRadius: BorderRadius.circular(16),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
       ),
       maxLines: 2,
     );
   }
 
-  Widget _buildSubHabitsSection(Color primaryColor) {
+  Widget _buildSubHabitsSection(Color primaryColor, ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'زیرعادت‌ها (ریز عادت)',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: theme.textColor,
+          ),
         ),
         const SizedBox(height: 8),
         Row(
@@ -1126,17 +1083,24 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             Expanded(
               child: TextField(
                 controller: _subHabitController,
+                style: TextStyle(color: theme.textColor),
                 decoration: InputDecoration(
                   hintText: 'مثلاً: ۱۰ دقیقه پیاده روی',
+                  hintStyle: TextStyle(color: theme.textSecondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: theme.borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: primaryColor, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor:
+                      theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
                 ),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -1177,9 +1141,12 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
             children: _subHabits
                 .map(
                   (sh) => Chip(
-                    label: Text(sh),
+                    label: Text(sh, style: TextStyle(color: theme.textColor)),
+                    backgroundColor:
+                        theme.isDarkMode ? const Color(0xFF2A2A2A) : null,
                     onDeleted: () => setState(() => _subHabits.remove(sh)),
-                    deleteIcon: const Icon(Icons.close, size: 16),
+                    deleteIcon:
+                        Icon(Icons.close, size: 16, color: theme.textColor),
                   ),
                 )
                 .toList(),
@@ -1189,10 +1156,10 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
     );
   }
 
-  Widget _buildXPSection(Color primaryColor) {
+  Widget _buildXPSection(Color primaryColor, ThemeProvider theme) {
     return Row(
       children: [
-        const Text('امتیاز XP هر بار:'),
+        Text('امتیاز XP هر بار:', style: TextStyle(color: theme.textColor)),
         const SizedBox(width: 16),
         Expanded(
           child: Slider(
@@ -1303,6 +1270,24 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
 
         await _supabase.createHabit(habit);
 
+        // ✅ اضافه کردن به LocalStorage فوری
+        if (mounted) {
+          try {
+            final syncProvider =
+                Provider.of<SyncProvider>(context, listen: false);
+
+            // ✅ ذخیره عادت جدید در LocalStorage
+            await syncProvider.saveHabitToLocal(habit);
+
+            // ✅ در صورت آنلاین بودن، force refresh از سرور
+            if (syncProvider.isOnline) {
+              await syncProvider.refreshHabitsAndTasks(); // ← سبک‌تر
+            }
+          } catch (e) {
+            print('⚠️ Error refreshing local storage: $e');
+          }
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1324,9 +1309,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

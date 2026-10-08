@@ -173,25 +173,23 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Container(
-      color: const Color(0xFFF7FCEB),
+      color: theme.backgroundColor,
       child: Column(
         children: [
-          // ✅ پدینگ بالای صفحه (ارتفاع تب‌بار)
           const SizedBox(height: 100),
-
-          _buildHeader(primaryColor),
+          _buildHeader(primaryColor, theme),
           Expanded(
             child: _isLoading
-                ? _buildLoadingState(primaryColor)
+                ? _buildLoadingState(primaryColor, theme)
                 : _errorMessage.isNotEmpty
-                    ? _buildErrorState(primaryColor)
+                    ? _buildErrorState(primaryColor, theme)
                     : _leaders.isEmpty
-                        ? _buildEmptyState(primaryColor)
-                        : _buildLeaderboardList(primaryColor),
+                        ? _buildEmptyState(primaryColor, theme)
+                        : _buildLeaderboardList(primaryColor, theme),
           ),
         ],
       ),
@@ -199,21 +197,40 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎯 هدر
+  // هدر (طلایی نارنجی)
   // ═══════════════════════════════════════════════════════════
-  Widget _buildHeader(Color primaryColor) {
+// ═══════════════════════════════════════════════════════════
+// هدر (طلایی نارنجی) - تم‌محور
+// ═══════════════════════════════════════════════════════════
+  Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
+    // ✅ در تم شب از گرادیانت تیره استفاده کن
+    final List<Color> headerGradient = theme.isDarkMode
+        ? [
+            const Color(0xFF8B5A0F), // طلایی-نارنجی تیره
+            const Color(0xFF6B4410), // نارنجی قهوه‌ای
+          ]
+        : [
+            const Color(0xFFFFD966), // روشن
+            const Color(0xFFFFBF35), // طلایی اصلی
+          ];
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 255, 191, 53),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: headerGradient,
+        ),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
         ),
         boxShadow: [
           BoxShadow(
-            color:
-                const Color.fromARGB(255, 255, 191, 53).withValues(alpha: 0.3),
+            color: theme.isDarkMode
+                ? Colors.black.withValues(alpha: 0.4)
+                : const Color(0xFFFFBF35).withValues(alpha: 0.3),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -296,10 +313,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📋 لیست کامل
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildLeaderboardList(Color primaryColor) {
+  Widget _buildLeaderboardList(Color primaryColor, ThemeProvider theme) {
     final top3 = _leaders.take(3).toList();
     final rest = _leaders.skip(3).toList();
 
@@ -311,17 +325,16 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
         padding: const EdgeInsets.only(top: 100, bottom: 120),
         child: Column(
           children: [
-            // ✅ پاس دادن primaryColor به _buildPodium
-            if (top3.isNotEmpty) _buildPodium(top3, primaryColor),
-
+            if (top3.isNotEmpty) _buildPodium(top3, primaryColor, theme),
             if (rest.isNotEmpty) ...[
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildRestHeader(rest.length),
+                child: _buildRestHeader(rest.length, theme),
               ),
               const SizedBox(height: 12),
-              ...rest.map((user) => _buildLeaderCard(user, primaryColor)),
+              ...rest
+                  .map((user) => _buildLeaderCard(user, primaryColor, theme)),
             ],
           ],
         ),
@@ -329,10 +342,14 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-// ═══════════════════════════════════════════════════════════
-// 🏆 سکوی سه‌نفره (با رنگ تم + گوشه‌های گرد)
-// ═══════════════════════════════════════════════════════════
-  Widget _buildPodium(List<Map<String, dynamic>> top3, Color primaryColor) {
+  // ═══════════════════════════════════════════════════════════
+  // سکوی سه‌نفره
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildPodium(
+    List<Map<String, dynamic>> top3,
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     final first = top3.isNotEmpty ? top3[0] : null;
     final second = top3.length > 1 ? top3[1] : null;
     final third = top3.length > 2 ? top3[2] : null;
@@ -341,11 +358,13 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withValues(
+              alpha: theme.isDarkMode ? 0.3 : 0.06,
+            ),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -362,7 +381,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 rank: 2,
                 primaryColor: primaryColor,
                 emoji: '🥈',
-                height: 115, // ✅ افزایش
+                height: 115,
                 isCurrentUser: second['user_id'] == _currentUserId,
               ),
             ),
@@ -374,7 +393,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 rank: 1,
                 primaryColor: primaryColor,
                 emoji: '🥇',
-                height: 145, // ✅ افزایش
+                height: 145,
                 isCurrentUser: first['user_id'] == _currentUserId,
               ),
             ),
@@ -386,7 +405,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 rank: 3,
                 primaryColor: primaryColor,
                 emoji: '🥉',
-                height: 100, // ✅ افزایش
+                height: 100,
                 isCurrentUser: third['user_id'] == _currentUserId,
               ),
             ),
@@ -419,7 +438,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ─── آواتار ───
         Stack(
           clipBehavior: Clip.none,
           children: [
@@ -479,10 +497,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
             ),
           ],
         ),
-
         const SizedBox(height: 8),
-
-        // ─── سکو ───
         Container(
           width: double.infinity,
           height: height,
@@ -499,16 +514,15 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
             ],
             border: isCurrentUser
                 ? Border.all(
-                    color: const Color(0xFF090909),
+                    color: Color(0xFF090909),
                     width: 2.5,
                   )
                 : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min, // ✅ اضافه شد
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // ─── شماره رتبه ───
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -526,8 +540,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 ),
               ),
               const SizedBox(height: 6),
-
-              // ─── نام ───
               Text(
                 name,
                 textAlign: TextAlign.center,
@@ -540,8 +552,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-
-              // ─── XP ───
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
@@ -565,46 +575,43 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📌 هدر لیست بقیه
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildRestHeader(int count) {
+  Widget _buildRestHeader(int count, ThemeProvider theme) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: const Color(0xFF090909).withValues(alpha: 0.08),
+            color: theme.textColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.format_list_numbered,
-            color: Color(0xFF090909),
+            color: theme.textColor,
             size: 16,
           ),
         ),
         const SizedBox(width: 8),
-        const Text(
+        Text(
           'سایر قهرمانان',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF090909),
+            color: theme.textColor,
           ),
         ),
         const Spacer(),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFF090909).withValues(alpha: 0.08),
+            color: theme.textColor.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             '$count',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF090909),
+              color: theme.textColor,
             ),
           ),
         ),
@@ -612,10 +619,11 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🎯 کارت هر نفر (از رتبه 4 به بعد)
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildLeaderCard(Map<String, dynamic> user, Color primaryColor) {
+  Widget _buildLeaderCard(
+    Map<String, dynamic> user,
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     final rank = user['rank'] ?? 0;
     final isCurrentUser = user['user_id'] == _currentUserId;
     final xp = (user['total_xp'] ?? 0) as int;
@@ -625,18 +633,19 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       decoration: BoxDecoration(
-        // ✅ کارت کاربر فعلی رنگی
-        color: isCurrentUser ? primaryColor : Colors.white,
+        color: isCurrentUser ? primaryColor : theme.cardColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isCurrentUser ? Colors.transparent : Colors.white,
+          color: isCurrentUser ? Colors.transparent : theme.cardColor,
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
             color: isCurrentUser
                 ? primaryColor.withValues(alpha: 0.30)
-                : Colors.black.withValues(alpha: 0.06),
+                : Colors.black.withValues(
+                    alpha: theme.isDarkMode ? 0.3 : 0.06,
+                  ),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -646,14 +655,13 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // ─── شماره رتبه ───
             Container(
               width: 36,
               height: 36,
               decoration: BoxDecoration(
                 color: isCurrentUser
                     ? Colors.white.withValues(alpha: 0.25)
-                    : const Color(0xFF090909).withValues(alpha: 0.08),
+                    : theme.textColor.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
@@ -662,15 +670,12 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
-                    color:
-                        isCurrentUser ? Colors.white : const Color(0xFF090909),
+                    color: isCurrentUser ? Colors.white : theme.textColor,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 10),
-
-            // ─── آواتار ───
             Container(
               width: 44,
               height: 44,
@@ -699,8 +704,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                     ),
             ),
             const SizedBox(width: 12),
-
-            // ─── نام + بج ───
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -715,9 +718,8 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                             fontWeight: isCurrentUser
                                 ? FontWeight.w800
                                 : FontWeight.w600,
-                            color: isCurrentUser
-                                ? Colors.white
-                                : const Color(0xFF090909),
+                            color:
+                                isCurrentUser ? Colors.white : theme.textColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -748,8 +750,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                 ],
               ),
             ),
-
-            // ─── XP ───
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 10,
@@ -790,26 +790,26 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📦 حالت‌های بارگذاری/خطا/خالی
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildLoadingState(Color primaryColor) {
+  Widget _buildLoadingState(Color primaryColor, ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(color: primaryColor),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'در حال بارگذاری تالار افتخارات...',
-            style: TextStyle(color: Color(0xFF73786B), fontSize: 13),
+            style: TextStyle(
+              color: theme.textSecondaryColor,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildErrorState(Color primaryColor) {
+  Widget _buildErrorState(Color primaryColor, ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -821,7 +821,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
             child: Text(
               _errorMessage,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF73786B)),
+              style: TextStyle(color: theme.textSecondaryColor),
             ),
           ),
           const SizedBox(height: 16),
@@ -842,7 +842,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     );
   }
 
-  Widget _buildEmptyState(Color primaryColor) {
+  Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -850,17 +850,23 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
           Icon(
             Icons.emoji_events_outlined,
             size: 80,
-            color: Colors.grey.shade300,
+            color: theme.textSecondaryColor,
           ),
           const SizedBox(height: 16),
           Text(
             'تالار افتخارات خالی است',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+            style: TextStyle(
+              color: theme.textSecondaryColor,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'با انجام عادت‌ها و تسک‌ها XP جمع کنید',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+            style: TextStyle(
+              color: theme.textSecondaryColor,
+              fontSize: 13,
+            ),
           ),
         ],
       ),

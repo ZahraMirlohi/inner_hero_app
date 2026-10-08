@@ -153,8 +153,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
   }
 
+// lib/features/chat/screens/location_picker_screen.dart
+
   void _sendLocation() {
     if (_selectedPosition == null) return;
+
+    // ✅ فقط اگه این خط نبود اضافه کن
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
 
     final locationText = '''
 📍 موقعیت مکانی
@@ -212,6 +217,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
+// lib/features/chat/screens/user_profile_screen.dart
+
   Widget _buildLoadingState(Color primaryColor) {
     return Center(
       child: Column(
@@ -220,7 +227,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
           const SizedBox(height: 16),
           const Text(
-            'در حال دریافت موقعیت...',
+            'در حال بارگذاری اطلاعات...',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
         ],

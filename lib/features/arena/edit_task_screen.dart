@@ -1,12 +1,12 @@
-// lib/features/arena/edit_task_screen.dart
+// lib/features/arena/screens/edit_task_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
-import '/services/date_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 import '/providers/sync_provider.dart';
 
 class EditTaskScreen extends StatefulWidget {
@@ -27,14 +27,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   DateTime? _dueDate;
   late int _xpReward;
   bool _isLoading = false;
-  String _calendarType = 'jalali';
 
   final _supabase = SupabaseService();
 
   @override
   void initState() {
     super.initState();
-    _loadCalendarType();
     _titleController = TextEditingController(text: widget.task.title);
     _descriptionController = TextEditingController(
       text: widget.task.description,
@@ -52,18 +50,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     super.dispose();
   }
 
-  Future<void> _loadCalendarType() async {
-    final calendarType = await DateService.getCalendarType();
-    if (mounted) {
-      setState(() {
-        _calendarType = calendarType;
-      });
-    }
-  }
-
   Future<void> _selectDate() async {
-    if (_calendarType == 'jalali') {
-      _showJalaliDatePicker();
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
+
+    if (calendar.isJalali) {
+      _showJalaliDatePicker(calendar);
     } else {
       _showGregorianDatePicker();
     }
@@ -77,13 +68,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (date != null && mounted) {
-      setState(() {
-        _dueDate = date;
-      });
+      setState(() => _dueDate = date);
     }
   }
 
-  void _showJalaliDatePicker() {
+  void _showJalaliDatePicker(CalendarProvider calendar) {
     final now =
         _dueDate != null ? Jalali.fromDateTime(_dueDate!) : Jalali.now();
     int selectedYear = now.year;
@@ -95,7 +84,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            int daysInMonth = _getDaysInMonth(selectedYear, selectedMonth);
+            int daysInMonth = calendar.daysInMonth(
+              selectedYear,
+              selectedMonth,
+            );
             if (selectedDay > daysInMonth) {
               selectedDay = daysInMonth;
             }
@@ -109,9 +101,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                   children: [
                     Row(
                       children: [
-                        // ✅ سال با isExpanded و isDense
                         Expanded(
-                          flex: 3,
                           child: DropdownButtonFormField<int>(
                             value: selectedYear,
                             isExpanded: true,
@@ -137,17 +127,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                             }).toList(),
                             onChanged: (value) {
                               if (value != null) {
-                                setStateDialog(() {
-                                  selectedYear = value;
-                                });
+                                setStateDialog(() => selectedYear = value);
                               }
                             },
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // ✅ ماه با isExpanded و isDense
                         Expanded(
-                          flex: 3,
                           child: DropdownButtonFormField<int>(
                             value: selectedMonth,
                             isExpanded: true,
@@ -165,7 +151,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                               return DropdownMenuItem(
                                 value: month,
                                 child: Text(
-                                  _getMonthName(month),
+                                  calendar
+                                      .formatWithMonthName(
+                                        Jalali(selectedYear, month, 1)
+                                            .toDateTime(),
+                                      )
+                                      .split(' ')
+                                      .first,
                                   style: const TextStyle(fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -173,9 +165,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                             }).toList(),
                             onChanged: (value) {
                               if (value != null) {
-                                setStateDialog(() {
-                                  selectedMonth = value;
-                                });
+                                setStateDialog(() => selectedMonth = value);
                               }
                             },
                           ),
@@ -201,9 +191,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                       }).toList(),
                       onChanged: (value) {
                         if (value != null) {
-                          setStateDialog(() {
-                            selectedDay = value;
-                          });
+                          setStateDialog(() => selectedDay = value);
                         }
                       },
                     ),
@@ -223,11 +211,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                         selectedMonth,
                         selectedDay,
                       );
-                      final miladiDate = jalaliDate.toDateTime();
                       setState(() {
-                        _dueDate = miladiDate;
+                        _dueDate = jalaliDate.toDateTime();
                       });
-                      print('📅 Selected date: $miladiDate');
                       Navigator.pop(context);
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -248,54 +234,24 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
-  int _getDaysInMonth(int year, int month) {
-    if (month <= 6) return 31;
-    if (month <= 11) return 30;
-    final date = Jalali(year, month, 1);
-    return (date.isLeapYear == true) ? 30 : 29;
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'فروردین',
-      'اردیبهشت',
-      'خرداد',
-      'تیر',
-      'مرداد',
-      'شهریور',
-      'مهر',
-      'آبان',
-      'آذر',
-      'دی',
-      'بهمن',
-      'اسفند',
-    ];
-    return months[month - 1];
-  }
-
-  String _getDisplayDate() {
+  String _getDisplayDate(CalendarProvider calendar) {
     if (_dueDate == null) return 'انتخاب کنید';
-
-    if (_calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(_dueDate!);
-      return '${jalali.year}/${jalali.month.toString().padLeft(2, '0')}/${jalali.day.toString().padLeft(2, '0')}';
-    } else {
-      return '${_dueDate!.year}/${_dueDate!.month.toString().padLeft(2, '0')}/${_dueDate!.day.toString().padLeft(2, '0')}';
-    }
+    return calendar.formatShort(_dueDate!);
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: const Text('ویرایش وظیفه'),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -306,15 +262,15 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            _buildTitleField(primaryColor),
+            _buildTitleField(primaryColor, theme),
             const SizedBox(height: 16),
-            _buildDescriptionField(primaryColor),
+            _buildDescriptionField(primaryColor, theme),
             const SizedBox(height: 16),
-            _buildSubTasksSection(primaryColor),
+            _buildSubTasksSection(primaryColor, theme),
             const SizedBox(height: 16),
-            _buildDateSection(primaryColor),
+            _buildDateSection(primaryColor, calendar, theme),
             const SizedBox(height: 16),
-            _buildXPSection(primaryColor),
+            _buildXPSection(primaryColor, theme),
             const SizedBox(height: 32),
             _buildSubmitButton(primaryColor),
           ],
@@ -323,70 +279,92 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
-  Widget _buildTitleField(Color primaryColor) {
+  Widget _buildTitleField(Color primaryColor, ThemeProvider theme) {
     return TextFormField(
       controller: _titleController,
+      style: TextStyle(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'عنوان تسک',
         hintText: 'مثال: تماس با مشتری',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
+        hintStyle: TextStyle(color: theme.textSecondaryColor),
         prefixIcon: Icon(Icons.title, color: primaryColor),
-        border: OutlineInputBorder(
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
           borderRadius: BorderRadius.circular(16),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
       ),
       validator: (value) =>
           value?.isEmpty ?? true ? 'لطفاً عنوان را وارد کنید' : null,
     );
   }
 
-  Widget _buildDescriptionField(Color primaryColor) {
+  Widget _buildDescriptionField(Color primaryColor, ThemeProvider theme) {
     return TextFormField(
       controller: _descriptionController,
+      style: TextStyle(color: theme.textColor),
       decoration: InputDecoration(
         labelText: 'توضیحات (اختیاری)',
+        labelStyle: TextStyle(color: theme.textSecondaryColor),
         prefixIcon: Icon(Icons.description, color: primaryColor),
-        border: OutlineInputBorder(
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: theme.borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: primaryColor, width: 2),
           borderRadius: BorderRadius.circular(16),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
       ),
       maxLines: 2,
     );
   }
 
-  Widget _buildSubTasksSection(Color primaryColor) {
+  Widget _buildSubTasksSection(Color primaryColor, ThemeProvider theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('زیرتسک‌ها', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(
+          'زیرتسک‌ها',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: theme.textColor,
+          ),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _subTaskController,
+                style: TextStyle(color: theme.textColor),
                 decoration: InputDecoration(
                   hintText: 'مثلاً: تهیه لیست موارد',
+                  hintStyle: TextStyle(color: theme.textSecondaryColor),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: theme.borderColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: primaryColor, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor:
+                      theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
                 ),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -427,13 +405,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             children: List.generate(_subTasks.length, (index) {
               final subTask = _subTasks[index];
               return Chip(
-                label: Text(subTask),
-                onDeleted: () {
-                  setState(() {
-                    _subTasks.removeAt(index);
-                  });
-                },
-                deleteIcon: const Icon(Icons.close, size: 16),
+                label: Text(subTask, style: TextStyle(color: theme.textColor)),
+                backgroundColor:
+                    theme.isDarkMode ? const Color(0xFF2A2A2A) : null,
+                onDeleted: () => setState(() => _subTasks.removeAt(index)),
+                deleteIcon: Icon(Icons.close, size: 16, color: theme.textColor),
               );
             }),
           ),
@@ -442,7 +418,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
-  Widget _buildDateSection(Color primaryColor) {
+  Widget _buildDateSection(
+      Color primaryColor, CalendarProvider calendar, ThemeProvider theme) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Container(
@@ -451,27 +428,26 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           color: primaryColor.withAlpha(20),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          Icons.calendar_today,
-          color: primaryColor,
-          size: 20,
-        ),
+        child: Icon(Icons.calendar_today, color: primaryColor, size: 20),
       ),
-      title: const Text('تاریخ سررسید'),
+      title: Text(
+        'تاریخ سررسید',
+        style: TextStyle(color: theme.textColor),
+      ),
       subtitle: Text(
-        _getDisplayDate(),
+        _getDisplayDate(calendar),
         style: TextStyle(
-          color: _dueDate != null ? const Color(0xFF1A1A2E) : Colors.grey,
+          color: _dueDate != null ? theme.textColor : theme.textSecondaryColor,
         ),
       ),
       onTap: _selectDate,
     );
   }
 
-  Widget _buildXPSection(Color primaryColor) {
+  Widget _buildXPSection(Color primaryColor, ThemeProvider theme) {
     return Row(
       children: [
-        const Text('امتیاز XP:'),
+        Text('امتیاز XP:', style: TextStyle(color: theme.textColor)),
         const SizedBox(width: 16),
         Expanded(
           child: Slider(
@@ -480,15 +456,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             max: 200,
             divisions: 9,
             activeColor: primaryColor,
-            inactiveColor: Colors.grey.shade300,
+            inactiveColor: theme.borderColor,
             onChanged: (value) => setState(() => _xpReward = value.toInt()),
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 6,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: primaryColor.withAlpha(25),
             borderRadius: BorderRadius.circular(20),
@@ -512,9 +485,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         minimumSize: const Size(double.infinity, 50),
       ),
       child: _isLoading
@@ -528,21 +499,16 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             )
           : const Text(
               'ذخیره تغییرات',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
     );
   }
 
   Future<void> _updateTask() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
-      // ✅ پاکسازی dueDate (حذف ساعت)
       DateTime? cleanDueDate;
       if (_dueDate != null) {
         cleanDueDate = DateTime(
@@ -566,17 +532,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         updatedAt: DateTime.now(),
       );
 
-      print('📤 Updating task: ${updatedTask.toMap()}');
-
       await _supabase.updateTask(updatedTask);
 
-      // ✅ به‌روزرسانی LocalStorage
       try {
         final syncProvider = Provider.of<SyncProvider>(context, listen: false);
         await syncProvider.saveTaskToLocal(updatedTask);
-        print('✅ Task saved to local storage');
       } catch (e) {
-        print('⚠️ Error saving task to local: $e');
+        debugPrint('⚠️ Error saving task to local: $e');
       }
 
       if (mounted) {
@@ -590,7 +552,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print('❌ Error updating task: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -600,9 +561,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

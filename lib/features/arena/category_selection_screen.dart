@@ -101,16 +101,16 @@ class CategorySelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: const Text('انتخاب عادت جدید'),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.surfaceColor,
         elevation: 0,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: theme.textColor,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -143,8 +143,8 @@ class CategorySelectionScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Text(
@@ -152,7 +152,7 @@ class CategorySelectionScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    color: theme.textColor,
                   ),
                 ),
               ],
@@ -171,6 +171,7 @@ class CategorySelectionScreen extends StatelessWidget {
                   color: category['color'] as int,
                   habits: category['habits'] as List<Map<String, dynamic>>,
                   primaryColor: primaryColor,
+                  theme: theme,
                 );
               },
             ),
@@ -187,28 +188,32 @@ class CategorySelectionScreen extends StatelessWidget {
     required int color,
     required List<Map<String, dynamic>> habits,
     required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     final Color categoryColor = Color(color);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      color: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 2,
       child: ExpansionTile(
+        iconColor: theme.textColor,
+        collapsedIconColor: theme.textSecondaryColor,
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: categoryColor.withAlpha(20),
+            color: categoryColor.withAlpha(30),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: primaryColor, size: 24),
         ),
         title: Text(
           name,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A2E),
+            color: theme.textColor,
           ),
         ),
         children: [
@@ -224,6 +229,7 @@ class CategorySelectionScreen extends StatelessWidget {
                   iconName: habit['icon'] as String,
                   color: habit['color'] as int,
                   primaryColor: primaryColor,
+                  theme: theme,
                 );
               }).toList(),
             ),
@@ -239,6 +245,7 @@ class CategorySelectionScreen extends StatelessWidget {
     required String iconName,
     required int color,
     required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     return GestureDetector(
       onTap: () {
@@ -256,9 +263,9 @@ class CategorySelectionScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: primaryColor.withAlpha(15),
+          color: primaryColor.withAlpha(20),
           borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: primaryColor.withAlpha(50), width: 1),
+          border: Border.all(color: primaryColor.withAlpha(60), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

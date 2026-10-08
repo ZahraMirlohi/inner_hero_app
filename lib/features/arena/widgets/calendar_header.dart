@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '/services/date_service.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class CalendarHeader extends StatefulWidget {
   final Function(DateTime) onDateSelected;
@@ -25,11 +25,11 @@ class _CalendarHeaderState extends State<CalendarHeader>
   bool _isExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  String _calendarType = 'jalali';
   late List<DateTime> _monthDates;
   final ScrollController _scrollController = ScrollController();
 
   DateTime _currentMonth = DateTime.now();
+  CalendarType? _lastCalendarType;
 
   @override
   void initState() {
@@ -44,8 +44,21 @@ class _CalendarHeaderState extends State<CalendarHeader>
     );
     _monthDates = [];
     _currentMonth = widget.selectedDate;
-    _loadCalendarType();
     _generateMonthDates();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final calendar = Provider.of<CalendarProvider>(context);
+    if (_lastCalendarType != calendar.calendarType) {
+      _lastCalendarType = calendar.calendarType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _generateMonthDates();
+        }
+      });
+    }
   }
 
   @override
@@ -55,34 +68,35 @@ class _CalendarHeaderState extends State<CalendarHeader>
     super.dispose();
   }
 
-  Future<void> _loadCalendarType() async {
-    final calendarType = await DateService.getCalendarType();
-    setState(() {
-      _calendarType = calendarType;
-    });
-  }
-
   void _generateMonthDates() {
     _monthDates.clear();
-    final firstDayOfMonth = DateTime(
-      _currentMonth.year,
-      _currentMonth.month,
-      1,
-    );
-    final lastDayOfMonth = DateTime(
-      _currentMonth.year,
-      _currentMonth.month + 1,
-      0,
-    );
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
 
-    for (int i = 0; i < lastDayOfMonth.day; i++) {
-      _monthDates.add(firstDayOfMonth.add(Duration(days: i)));
+    if (calendar.isJalali) {
+      final jalali = Jalali.fromDateTime(_currentMonth);
+      final firstDayJalali = Jalali(jalali.year, jalali.month, 1);
+      final daysCount = calendar.daysInMonth(jalali.year, jalali.month);
+      final firstDayMiladi = firstDayJalali.toDateTime();
+
+      for (int i = 0; i < daysCount; i++) {
+        _monthDates.add(firstDayMiladi.add(Duration(days: i)));
+      }
+    } else {
+      final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
+      final daysCount = DateTime(
+        _currentMonth.year,
+        _currentMonth.month + 1,
+        0,
+      ).day;
+
+      for (int i = 0; i < daysCount; i++) {
+        _monthDates.add(firstDay.add(Duration(days: i)));
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
 
-      // ✅ اول دنبال روز جاری بگرد
       final now = DateTime.now();
       int targetIndex = _monthDates.indexWhere(
         (date) =>
@@ -91,7 +105,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
             date.day == now.day,
       );
 
-      // ✅ اگر روز جاری در این ماه نبود، از selectedDate استفاده کن
       if (targetIndex == -1) {
         targetIndex = _monthDates.indexWhere(
           (date) =>
@@ -102,8 +115,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
       }
 
       if (targetIndex != -1) {
-        // ✅ محاسبه موقعیت دقیق اسکرول
-        final double itemWidth = 56 + 8; // عرض هر آیتم + margin
+        final double itemWidth = 56 + 8;
         final double screenWidth = MediaQuery.of(context).size.width;
         final double targetOffset =
             (targetIndex * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
@@ -118,17 +130,17 @@ class _CalendarHeaderState extends State<CalendarHeader>
   }
 
   void _goToPreviousMonth() {
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     setState(() {
-      if (_calendarType == 'jalali') {
-        final currentJalali = Jalali.fromDateTime(_currentMonth);
-        int newYear = currentJalali.year;
-        int newMonth = currentJalali.month - 1;
+      if (calendar.isJalali) {
+        final j = Jalali.fromDateTime(_currentMonth);
+        int newYear = j.year;
+        int newMonth = j.month - 1;
         if (newMonth < 1) {
           newMonth = 12;
           newYear--;
         }
-        final newJalali = Jalali(newYear, newMonth, 1);
-        _currentMonth = newJalali.toDateTime();
+        _currentMonth = Jalali(newYear, newMonth, 1).toDateTime();
       } else {
         _currentMonth = DateTime(
           _currentMonth.year,
@@ -141,17 +153,17 @@ class _CalendarHeaderState extends State<CalendarHeader>
   }
 
   void _goToNextMonth() {
+    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     setState(() {
-      if (_calendarType == 'jalali') {
-        final currentJalali = Jalali.fromDateTime(_currentMonth);
-        int newYear = currentJalali.year;
-        int newMonth = currentJalali.month + 1;
+      if (calendar.isJalali) {
+        final j = Jalali.fromDateTime(_currentMonth);
+        int newYear = j.year;
+        int newMonth = j.month + 1;
         if (newMonth > 12) {
           newMonth = 1;
           newYear++;
         }
-        final newJalali = Jalali(newYear, newMonth, 1);
-        _currentMonth = newJalali.toDateTime();
+        _currentMonth = Jalali(newYear, newMonth, 1).toDateTime();
       } else {
         _currentMonth = DateTime(
           _currentMonth.year,
@@ -161,11 +173,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
       }
       _generateMonthDates();
     });
-  }
-
-  void _onDateSelected(DateTime date) {
-    final selectedDate = DateTime(date.year, date.month, date.day);
-    widget.onDateSelected(selectedDate);
   }
 
   void _toggleExpanded() {
@@ -180,145 +187,37 @@ class _CalendarHeaderState extends State<CalendarHeader>
     });
   }
 
-  String _getDayNumber(DateTime date) {
-    if (_calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(date);
-      return jalali.day.toString();
-    } else {
-      return date.day.toString();
-    }
-  }
-
-  int _getJalaliWeekday(DateTime date) {
-    final jalali = Jalali.fromDateTime(date);
-    return jalali.weekDay - 1;
-  }
-
-  String _getWeekdayName(DateTime date) {
-    if (_calendarType == 'jalali') {
-      final weekdayNumber = _getJalaliWeekday(date);
-      const weekdays = [
-        'شنبه',
-        'یک‌شنبه',
-        'دوشنبه',
-        'سه‌شنبه',
-        'چهارشنبه',
-        'پنج‌شنبه',
-        'جمعه',
-      ];
-      return weekdays[weekdayNumber];
-    } else {
-      const weekdays = [
-        'Monday',
-        'Tuesday',
-        'Wednesday',
-        'Thursday',
-        'Friday',
-        'Saturday',
-        'Sunday',
-      ];
-      return weekdays[date.weekday - 1];
-    }
-  }
-
-  String _getMonthName(DateTime date) {
-    if (_calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(date);
-      const months = [
-        'فروردین',
-        'اردیبهشت',
-        'خرداد',
-        'تیر',
-        'مرداد',
-        'شهریور',
-        'مهر',
-        'آبان',
-        'آذر',
-        'دی',
-        'بهمن',
-        'اسفند',
-      ];
-      return months[jalali.month - 1];
-    } else {
-      const months = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ];
-      return months[date.month - 1];
-    }
-  }
-
-  String _getYear(DateTime date) {
-    if (_calendarType == 'jalali') {
-      final jalali = Jalali.fromDateTime(date);
-      return jalali.year.toString();
-    } else {
-      return date.year.toString();
-    }
-  }
-
-  String _getCurrentMonthName() {
-    return _getMonthName(_currentMonth);
-  }
-
-  String _getCurrentYear() {
-    return _getYear(_currentMonth);
-  }
-
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    if (_calendarType == 'jalali') {
-      final todayJalali = Jalali.fromDateTime(now);
-      final dateJalali = Jalali.fromDateTime(date);
-      return todayJalali.year == dateJalali.year &&
-          todayJalali.month == dateJalali.month &&
-          todayJalali.day == dateJalali.day;
-    } else {
-      return date.year == now.year &&
-          date.month == now.month &&
-          date.day == now.day;
-    }
-  }
-
-  bool _isSelectedDate(DateTime date) {
-    if (_calendarType == 'jalali') {
-      final selectedJalali = Jalali.fromDateTime(widget.selectedDate);
-      final dateJalali = Jalali.fromDateTime(date);
-      return selectedJalali.year == dateJalali.year &&
-          selectedJalali.month == dateJalali.month &&
-          selectedJalali.day == dateJalali.day;
-    } else {
-      return widget.selectedDate.year == date.year &&
-          widget.selectedDate.month == date.month &&
-          widget.selectedDate.day == date.day;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
+    final Color primaryColor = theme.primaryColor;
+
+    if (_lastCalendarType != calendar.calendarType) {
+      _lastCalendarType = calendar.calendarType;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _generateMonthDates();
+          });
+        }
+      });
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         children: [
-          // ✅ هدر تقویم با padding مناسب
+          // ✅ هدر تقویم
           GestureDetector(
             onTap: _toggleExpanded,
             child: Padding(
-              padding:
-                  const EdgeInsets.only(top: 8, bottom: 4, left: 4, right: 4),
+              padding: const EdgeInsets.only(
+                top: 8,
+                bottom: 4,
+                left: 4,
+                right: 4,
+              ),
               child: Row(
                 children: [
                   Container(
@@ -330,11 +229,11 @@ class _CalendarHeaderState extends State<CalendarHeader>
                     ),
                     child: Center(
                       child: Text(
-                        _getDayNumber(widget.selectedDate),
-                        style: const TextStyle(
+                        _getDayNumber(widget.selectedDate, calendar),
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF090909),
+                          color: theme.textColor,
                         ),
                       ),
                     ),
@@ -345,18 +244,18 @@ class _CalendarHeaderState extends State<CalendarHeader>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _getWeekdayName(widget.selectedDate),
-                          style: const TextStyle(
+                          calendar.getWeekdayName(widget.selectedDate),
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF090909),
+                            color: theme.textColor,
                           ),
                         ),
                         Text(
-                          '${_getMonthName(widget.selectedDate)} ${_getYear(widget.selectedDate)}',
+                          calendar.formatWithMonthName(widget.selectedDate),
                           style: TextStyle(
                             fontSize: 13,
-                            color: const Color(0xFF73786B),
+                            color: theme.textSecondaryColor,
                           ),
                         ),
                       ],
@@ -367,7 +266,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
                     turns: _isExpanded ? 0.5 : 0.0,
                     child: Icon(
                       Icons.keyboard_arrow_down,
-                      color: const Color(0xFF73786B),
+                      color: theme.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -375,7 +274,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
             ),
           ),
 
-          // ✅ کشوی تقویم (بدون Scrollbar)
+          // ✅ کشوی تقویم
           if (_isExpanded)
             SizeTransition(
               sizeFactor: _scaleAnimation,
@@ -384,7 +283,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
                   children: [
-                    // ✅ ماه و سال
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -397,29 +295,26 @@ class _CalendarHeaderState extends State<CalendarHeader>
                             onPressed: _goToPreviousMonth,
                             icon: const Icon(Icons.chevron_left),
                             iconSize: 28,
-                            color: const Color(0xFF090909),
+                            color: theme.textColor,
                           ),
                           Text(
-                            '${_getCurrentMonthName()} ${_getCurrentYear()}',
-                            style: const TextStyle(
+                            calendar.getMonthYearLabel(_currentMonth),
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF090909),
+                              color: theme.textColor,
                             ),
                           ),
                           IconButton(
                             onPressed: _goToNextMonth,
                             icon: const Icon(Icons.chevron_right),
                             iconSize: 28,
-                            color: const Color(0xFF090909),
+                            color: theme.textColor,
                           ),
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 4),
-
-                    // ✅ لیست روزها (بدون Scrollbar)
                     SizedBox(
                       height: 80,
                       child: SingleChildScrollView(
@@ -430,8 +325,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                         ),
                         child: Row(
                           children: _monthDates.map((date) {
-                            final isToday = _isToday(date);
-                            final isSelected = _isSelectedDate(date);
+                            final isToday = _isToday(date, calendar);
+                            final isSelected = _isSelectedDate(date, calendar);
 
                             return GestureDetector(
                               onTap: () {
@@ -458,13 +353,15 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                         ? primaryColor
                                         : isToday
                                             ? primaryColor.withValues(
-                                                alpha: 0.10)
+                                                alpha: 0.10,
+                                              )
                                             : Colors.transparent,
                                     borderRadius: BorderRadius.circular(24),
                                     border: isToday && !isSelected
                                         ? Border.all(
                                             color: primaryColor.withValues(
-                                                alpha: 0.30),
+                                              alpha: 0.30,
+                                            ),
                                             width: 1,
                                           )
                                         : null,
@@ -473,18 +370,18 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        _getWeekdayName(date).substring(0, 1),
+                                        calendar.getWeekdayShort(date),
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w500,
                                           color: isSelected
                                               ? Colors.white
-                                              : const Color(0xFF73786B),
+                                              : theme.textSecondaryColor,
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        _getDayNumber(date),
+                                        _getDayNumber(date, calendar),
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -492,7 +389,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                               ? Colors.white
                                               : isToday
                                                   ? primaryColor
-                                                  : const Color(0xFF090909),
+                                                  : theme.textColor,
                                         ),
                                       ),
                                       if (isToday)
@@ -525,5 +422,39 @@ class _CalendarHeaderState extends State<CalendarHeader>
         ],
       ),
     );
+  }
+
+  String _getDayNumber(DateTime date, CalendarProvider calendar) {
+    if (calendar.isJalali) {
+      return Jalali.fromDateTime(date).day.toString();
+    }
+    return date.day.toString();
+  }
+
+  bool _isToday(DateTime date, CalendarProvider calendar) {
+    final now = DateTime.now();
+    if (calendar.isJalali) {
+      final todayJ = Jalali.fromDateTime(now);
+      final dateJ = Jalali.fromDateTime(date);
+      return todayJ.year == dateJ.year &&
+          todayJ.month == dateJ.month &&
+          todayJ.day == dateJ.day;
+    }
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  bool _isSelectedDate(DateTime date, CalendarProvider calendar) {
+    if (calendar.isJalali) {
+      final selectedJ = Jalali.fromDateTime(widget.selectedDate);
+      final dateJ = Jalali.fromDateTime(date);
+      return selectedJ.year == dateJ.year &&
+          selectedJ.month == dateJ.month &&
+          selectedJ.day == dateJ.day;
+    }
+    return widget.selectedDate.year == date.year &&
+        widget.selectedDate.month == date.month &&
+        widget.selectedDate.day == date.day;
   }
 }

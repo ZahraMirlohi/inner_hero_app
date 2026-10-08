@@ -34,7 +34,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _loadUserData();
   }
 
+  // lib/features/chat/screens/user_profile_screen.dart
+
   Future<void> _loadUserData() async {
+    if (!mounted) return; // ✅ اضافه شد
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -42,26 +46,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     try {
       final profile = await _chatService.client.from('profiles').select('''
-            name,
-            email,
-            phone,
-            bio,
-            avatar_url,
-            total_xp,
-            current_streak,
-            best_streak,
-            created_at
-          ''').eq('user_id', widget.userId).maybeSingle();
+          name, email, phone, bio, avatar_url,
+          total_xp, current_streak, best_streak, created_at
+        ''').eq('user_id', widget.userId).maybeSingle();
+
+      if (!mounted) return; // ✅ بعد از await چک شود
 
       if (profile != null) {
-        final personality =
-            await _chatService.client.from('user_personalities').select('''
-              gender,
-              mbti_type,
-              interests,
-              goals,
-              bio
-            ''').eq('user_id', widget.userId).maybeSingle();
+        final personality = await _chatService.client
+            .from('user_personalities')
+            .select('gender, mbti_type, interests, goals, bio')
+            .eq('user_id', widget.userId)
+            .maybeSingle();
+
+        if (!mounted) return; // ✅ بعد از await چک شود
 
         setState(() {
           _userData = {'profile': profile, 'personality': personality ?? {}};
@@ -74,6 +72,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         });
       }
     } catch (e) {
+      if (!mounted) return; // ✅
       setState(() {
         _errorMessage = 'خطا در بارگذاری اطلاعات: ${e.toString()}';
         _isLoading = false;
@@ -102,11 +101,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         foregroundColor: theme.textColor,
         centerTitle: true,
       ),
-      body: _isLoading
-          ? _buildLoadingState(primaryColor)
-          : _errorMessage != null
-              ? _buildErrorState(theme, primaryColor)
-              : _buildProfileContent(theme, primaryColor),
+      body: SafeArea(
+        // ✅ اضافه شد
+        child: _isLoading
+            ? _buildLoadingState(primaryColor)
+            : _errorMessage != null
+                ? _buildErrorState(theme, primaryColor)
+                : _buildProfileContent(theme, primaryColor),
+      ),
     );
   }
 
@@ -183,7 +185,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final goals = personality['goals'] as List? ?? [];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      physics: const AlwaysScrollableScrollPhysics(), // ✅ اضافه شد
+      padding:
+          const EdgeInsets.fromLTRB(16, 16, 16, 32), // ✅ padding پایین بیشتر
       child: Column(
         children: [
           // ✅ کارت اصلی پروفایل

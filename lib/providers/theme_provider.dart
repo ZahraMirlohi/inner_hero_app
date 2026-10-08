@@ -21,14 +21,26 @@ class ThemeProvider extends ChangeNotifier {
   Color _textSecondaryColor = const Color(0xFF73786B);
   Color _secondaryColor = const Color(0xFF090909);
 
+  // ✅ رنگ‌های کارت و باکس‌ها
+  Color _cardColor = Colors.white;
+  Color _cardSecondaryColor = const Color(0xFFF5F5F5);
+  Color _borderColor = const Color(0xFFE8EDF2);
+  Color _chipBackground = const Color(0xFFFFFFFF);
+  Color _iconButtonBackground = const Color(0xFFF5F5F5);
+  Color _overlayBackground = const Color(0xFFFFFFFF);
+
+  // ✅ رنگ دکمه انجام (تیک)
+  Color _checkButtonBackground = const Color(0xFF090909);
+  Color _onCheckButton = Colors.white;
+
   ThemeProvider() {
     _loadSavedValues();
   }
 
   // ==================== Getterها ====================
   Color get primaryColor => _primaryColor;
-  Color get primaryDark => _primaryDark; // ✅ جدید
-  Color get primaryLight => _primaryLight; // ✅ جدید
+  Color get primaryDark => _primaryDark;
+  Color get primaryLight => _primaryLight;
   Color get secondaryColor => _secondaryColor;
   Color get backgroundColor => _backgroundColor;
   Color get surfaceColor => _surfaceColor;
@@ -36,8 +48,44 @@ class ThemeProvider extends ChangeNotifier {
   Color get textSecondaryColor => _textSecondaryColor;
   bool get isDarkMode => _isDarkMode;
 
+  // ✅ Getterهای جدید برای کارت‌ها و باکس‌ها
+  Color get cardColor => _cardColor;
+  Color get cardSecondaryColor => _cardSecondaryColor;
+  Color get borderColor => _borderColor;
+  Color get chipBackground => _chipBackground;
+  Color get iconButtonBackground => _iconButtonBackground;
+  Color get overlayBackground => _overlayBackground;
+  Color get checkButtonBackground => _checkButtonBackground;
+  Color get onCheckButton => _onCheckButton;
+  Color get accentGold => const Color(0xFFFFA500);
+  Color get accentGoldLight => _isDarkMode
+      ? const Color(0xFFFFA500).withValues(alpha: 0.2)
+      : const Color(0xFFFFA500).withValues(alpha: 0.1);
+  Color get successColor => const Color.fromARGB(255, 61, 207, 159);
+  Color get successBg =>
+      _isDarkMode ? const Color(0xFF1B4332) : const Color(0xFFF0FDF4);
+  Color get errorColor => const Color.fromARGB(255, 239, 88, 68);
+  Color get errorBg =>
+      _isDarkMode ? const Color(0xFF4A1C1C) : const Color(0xFFFEF2F2);
+  Color get inputBackground =>
+      _isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50;
+
+  Color get systemBubble =>
+      _isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200;
+
+  Color get disabledButtonBackground =>
+      _isDarkMode ? const Color(0xFF3A3A3A) : Colors.grey.shade300;
+
+  Color get neutralChipBackground =>
+      _isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100;
+
+  // ✅ رنگ‌های نیمه‌شفاف
   Color primaryWithOpacity(double opacity) =>
       _primaryColor.withValues(alpha: opacity);
+  Color textWithOpacity(double opacity) =>
+      _textColor.withValues(alpha: opacity);
+  Color cardWithOpacity(double opacity) =>
+      _cardColor.withValues(alpha: opacity);
 
   // ==================== متدها ====================
   Future<void> setPrimaryColor(Color color) async {
@@ -58,7 +106,7 @@ class ThemeProvider extends ChangeNotifier {
     await setDarkMode(!_isDarkMode);
   }
 
-  /// ✅ محاسبه رنگ‌های مشتق‌شده از primaryColor
+  /// ✅ محاسبه رنگ‌های مشتق‌شده از primaryColor و حالت تم
   void _updateDerivedColors() {
     // ─── تولید توناژ تیره‌تر ───
     final hsl = HSLColor.fromColor(_primaryColor);
@@ -74,19 +122,44 @@ class ThemeProvider extends ChangeNotifier {
         .withSaturation((hsl.saturation - 0.1).clamp(0.0, 1.0))
         .toColor();
 
-    // ─── رنگ‌های پایه بر اساس Dark/Light Mode ───
     if (_isDarkMode) {
+      // ✅ تم شب
       _backgroundColor = const Color(0xFF121212);
       _surfaceColor = const Color(0xFF1E1E1E);
       _textColor = Colors.white;
       _textSecondaryColor = Colors.white70;
       _secondaryColor = Colors.white;
+
+      // ✅ کارت‌ها و باکس‌ها
+      _cardColor = const Color(0xFF1E1E1E);
+      _cardSecondaryColor = const Color(0xFF2A2A2A);
+      _borderColor = const Color(0xFF333333);
+      _chipBackground = const Color(0xFF2A2A2A);
+      _iconButtonBackground = const Color(0xFF2A2A2A);
+      _overlayBackground = const Color(0xFF1E1E1E);
+
+      // ✅ دکمه انجام
+      _checkButtonBackground = _primaryColor;
+      _onCheckButton = const Color(0xFF090909);
     } else {
+      // ✅ تم روز
       _backgroundColor = const Color(0xFFF7FCEB);
       _surfaceColor = Colors.white;
       _textColor = const Color(0xFF090909);
       _textSecondaryColor = const Color(0xFF73786B);
       _secondaryColor = const Color(0xFF090909);
+
+      // ✅ کارت‌ها و باکس‌ها
+      _cardColor = Colors.white;
+      _cardSecondaryColor = const Color(0xFFF5F5F5);
+      _borderColor = const Color(0xFFE8EDF2);
+      _chipBackground = Colors.white;
+      _iconButtonBackground = const Color(0xFFF5F5F5);
+      _overlayBackground = Colors.white;
+
+      // ✅ دکمه انجام
+      _checkButtonBackground = const Color(0xFF090909);
+      _onCheckButton = Colors.white;
     }
   }
 

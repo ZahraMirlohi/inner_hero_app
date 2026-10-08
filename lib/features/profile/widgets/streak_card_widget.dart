@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class StreakCardWidget extends StatelessWidget {
   final int currentStreak;
   final int bestStreak;
   final int weeklyStreak;
-  final List<bool>
-      weekDays; // ✅ این لیست باید هفت روز رو به ترتیب شنبه تا جمعه داشته باشه
+  final List<bool> weekDays;
 
   const StreakCardWidget({
     super.key,
@@ -24,36 +24,36 @@ class StreakCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⚠️ منطق زیر دقیقاً همون منطق قبلیه — هیچ محاسبه‌ای تغییر نکرده
+    final calendar = Provider.of<CalendarProvider>(context);
+    final theme = context.watch<ThemeProvider>();
+
     final bool isOnFire = currentStreak >= 7;
     final String streakEmoji = _getStreakEmoji(currentStreak);
 
-    // ✅ روزهای هفته شمسی (شنبه تا جمعه) - مرتبط با index 0 تا 6
-    final weekDaysLabels = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+    final weekDaysLabels = calendar.weekDayHeaders;
 
-    // ✅ محاسبه روز امروز در تقویم شمسی
-    final jalaliToday = Jalali.fromDateTime(DateTime.now());
-    final todayIndex = jalaliToday.weekDay - 1; // 0=شنبه, 1=یکشنبه, ..., 6=جمعه
+    final int todayIndex;
+    if (calendar.isJalali) {
+      final jalaliToday = Jalali.fromDateTime(DateTime.now());
+      todayIndex = jalaliToday.weekDay - 1;
+    } else {
+      todayIndex = DateTime.now().weekday % 7;
+    }
 
-    // ✅ لاگ برای دیباگ
-    print('📅 Today Index: $todayIndex (${weekDaysLabels[todayIndex]})');
-    print('📊 WeekDays status: $weekDays');
+    final Color kGreen = theme.primaryColor;
+    final Color kBlack =
+        theme.isDarkMode ? Colors.white : const Color(0xFF090909);
+    final Color kTextSecondary = theme.textSecondaryColor;
 
-    // 🎨 رنگ‌های تم اپلیکیشن
-    final theme = context.watch<ThemeProvider>();
-    const Color kBlack = Color(0xFF090909);
-    const Color kTextSecondary = Color(0xFF73786B);
-    final Color kGreen = theme.primaryColor; // قابل تغییر توسط کاربر
-
-    // ✅ باکس سفید پشت کل محتوا
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.surfaceColor, // ✅ از تم
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color:
+                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -61,7 +61,7 @@ class StreakCardWidget extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // ---------- هدر (وسط‌چین + بولد + مشکی) ----------
+          // هدر
           Center(
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -71,21 +71,20 @@ class StreakCardWidget extends StatelessWidget {
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(width: 6),
-                const Text(
+                Text(
                   'استریک روزانه',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: kBlack,
+                    color: theme.textColor, // ✅ از تم
                   ),
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 8),
 
-          // ✅ بج رکورد (زیر عنوان، وسط‌چین)
+          // بج رکورد
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(
@@ -99,18 +98,18 @@ class StreakCardWidget extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.emoji_events,
                     size: 14,
-                    color: kBlack,
+                    color: theme.textColor,
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '$bestStreak رکورد',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: kBlack,
+                      color: theme.textColor,
                     ),
                   ),
                 ],
@@ -120,25 +119,25 @@ class StreakCardWidget extends StatelessWidget {
 
           const SizedBox(height: 22),
 
-          // ---------- دایره‌ی بزرگ استریک + ۷ دایره‌ی کوچک ----------
+          // دایره‌ی استریک
           _buildStreakOrb(
-            kBlack: kBlack,
             kGreen: kGreen,
-            kTextSecondary: kTextSecondary,
             streakEmoji: streakEmoji,
             weekDaysLabels: weekDaysLabels,
             todayIndex: todayIndex,
+            textColor: theme.textColor,
+            theme: theme,
           ),
 
           const SizedBox(height: 16),
 
-          // ---------- پیام انگیزشی ----------
+          // پیام انگیزشی
           Text(
             _getMotivationalMessage(currentStreak),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: kBlack,
+              color: theme.textColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -148,37 +147,34 @@ class StreakCardWidget extends StatelessWidget {
   }
 
   Widget _buildStreakOrb({
-    required Color kBlack,
     required Color kGreen,
-    required Color kTextSecondary,
     required String streakEmoji,
     required List<String> weekDaysLabels,
     required int todayIndex,
+    required Color textColor,
+    required ThemeProvider theme,
   }) {
-    // اندازه‌های دایره‌ی بزرگ و دایره‌های کوچک
     const double bigDiameter = 176;
     const double smallDiameter = 30;
     const double bigRadius = bigDiameter / 2;
     const double smallRadius = smallDiameter / 2;
-
-    // شعاعی که مرکز دایره‌های کوچک روی آن قرار می‌گیرن — فاصله‌ی بیشتری
-    // از لبه‌ی دایره‌ی بزرگ گرفته شده (قبلاً ۱۶ بود، الان ۳۸)
     const double arcRadius = bigRadius + 38;
-
-    // بازه‌ی زاویه‌ای که دایره‌های کوچک روی آن چیده می‌شن (به‌صورت منحنی بالای دایره)
     const double startAngleDeg = 202;
     const double endAngleDeg = 338;
     const double angleStep = (endAngleDeg - startAngleDeg) / 6;
-
-    // اندازه‌ی کل ناحیه‌ای که این ترکیب (دایره‌ی بزرگ + قوس دایره‌های کوچک) نیاز داره
     const double stackWidth = 2 * arcRadius + smallDiameter;
-    const double labelHeight = 16; // فضای لازم برای متن زیر هر دایره‌ی کوچک
+    const double labelHeight = 16;
     const double stackHeight =
         bigDiameter + (arcRadius - bigRadius) + smallDiameter + labelHeight;
 
     final double centerX = stackWidth / 2;
-    // چون دایره‌ی بزرگ به پایین استک چسبیده (bottom: 0)، مرکز عمودیش:
     final double bigCircleCenterY = stackHeight - bigRadius;
+
+    // ✅ رنگ دایره بزرگ: در تم شب از primary استفاده می‌کنیم، در تم روز مشکی
+    final Color bigCircleColor =
+        theme.isDarkMode ? theme.primaryColor : const Color(0xFF090909);
+    final Color bigCircleTextColor =
+        theme.isDarkMode ? const Color(0xFF090909) : Colors.white;
 
     return SizedBox(
       width: stackWidth,
@@ -186,7 +182,7 @@ class StreakCardWidget extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // دایره‌ی بزرگ (رنگ ساده - رنگ تم اپلیکیشن)
+          // دایره بزرگ
           Positioned(
             bottom: 0,
             left: (stackWidth - bigDiameter) / 2,
@@ -195,7 +191,7 @@ class StreakCardWidget extends StatelessWidget {
               height: bigDiameter,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: kBlack,
+                color: bigCircleColor,
                 boxShadow: [
                   BoxShadow(
                     color: kGreen.withValues(alpha: 0.35),
@@ -216,10 +212,10 @@ class StreakCardWidget extends StatelessWidget {
                     children: [
                       Text(
                         currentStreak.toString(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 54,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: bigCircleTextColor,
                           height: 0.95,
                         ),
                       ),
@@ -231,7 +227,7 @@ class StreakCardWidget extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: bigCircleTextColor.withValues(alpha: 0.85),
                           ),
                         ),
                       ),
@@ -242,7 +238,7 @@ class StreakCardWidget extends StatelessWidget {
             ),
           ),
 
-          // ۷ دایره‌ی کوچک، چیده‌شده روی یک منحنی با فاصله از لبه‌ی دایره‌ی بزرگ
+          // دایره‌های کوچک
           ...List.generate(7, (index) {
             final bool isActive = weekDays.length > index && weekDays[index];
             final bool isToday = index == todayIndex;
@@ -252,6 +248,15 @@ class StreakCardWidget extends StatelessWidget {
 
             final double dotX = centerX + arcRadius * cos(angleRad);
             final double dotY = bigCircleCenterY + arcRadius * sin(angleRad);
+
+            // ✅ رنگ دایره‌های کوچک: تیک‌خورده = سبز، تیک‌نخورده = رنگ متن تم
+            final Color dotColor = isActive
+                ? kGreen
+                : (theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFF090909));
+            final Color checkColor =
+                theme.isDarkMode ? const Color(0xFF090909) : Colors.white;
 
             return Positioned(
               left: dotX - smallRadius,
@@ -265,8 +270,7 @@ class StreakCardWidget extends StatelessWidget {
                       height: smallDiameter,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        // ✅ تیک‌خورده = رنگ تم (سبز)، تیک‌نخورده = مشکی
-                        color: isActive ? kGreen : kBlack,
+                        color: dotColor,
                         border: isToday && !isActive
                             ? Border.all(color: kGreen, width: 1.4)
                             : null,
@@ -284,7 +288,7 @@ class StreakCardWidget extends StatelessWidget {
                         child: isActive
                             ? Icon(
                                 Icons.check,
-                                color: kBlack,
+                                color: checkColor,
                                 size: 13,
                               )
                             : isToday
@@ -303,7 +307,7 @@ class StreakCardWidget extends StatelessWidget {
                         fontSize: 10,
                         fontWeight:
                             isActive ? FontWeight.bold : FontWeight.normal,
-                        color: isActive ? kBlack : kTextSecondary,
+                        color: isActive ? textColor : theme.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -316,7 +320,6 @@ class StreakCardWidget extends StatelessWidget {
     );
   }
 
-  // ⚠️ این دو تابع دقیقاً همونی هستن که قبلاً بودن — بدون هیچ تغییری
   String _getStreakEmoji(int streak) {
     if (streak >= 100) return '👑';
     if (streak >= 50) return '🌟';

@@ -6,6 +6,7 @@ import 'package:shamsi_date/shamsi_date.dart';
 import '../models/weekly_habit_performance.dart';
 import '../utils/chat_colors.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class WeeklyPerformanceWidget extends StatelessWidget {
   final WeeklyHabitPerformance data;
@@ -20,7 +21,9 @@ class WeeklyPerformanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
 
+    // ✅ رنگ‌های استاندارد بر اساس تم روز/شب
     final Color bgColor =
         isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
     final Color textColor = isMe
@@ -30,8 +33,13 @@ class WeeklyPerformanceWidget extends StatelessWidget {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
-    final weekDayLetters = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+    // ✅ حروف روزهای هفته از CalendarProvider
+    final weekDayLetters = calendar.weekDayHeaders;
+
     final successPercent = (data.successRate * 100).toInt();
+
+    // ✅ ایندکس امروز بر اساس تقویم
+    final int todayIndex = _getTodayIndex(calendar);
 
     return Container(
       width: 280,
@@ -81,7 +89,11 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _formatWeekRange(data.weekStart, data.weekEnd),
+                      _formatWeekRange(
+                        data.weekStart,
+                        data.weekEnd,
+                        calendar,
+                      ),
                       style: TextStyle(
                         fontSize: 10,
                         color: textSecondary,
@@ -116,13 +128,25 @@ class WeeklyPerformanceWidget extends StatelessWidget {
           Row(
             children: [
               _buildMiniStat(
-                  'کل', '${data.totalHabits}', textColor, textSecondary),
-              const SizedBox(width: 6),
-              _buildMiniStat('انجام شده', '${data.completedHabits}', textColor,
-                  textSecondary),
+                'کل',
+                '${data.totalHabits}',
+                textColor,
+                textSecondary,
+              ),
               const SizedBox(width: 6),
               _buildMiniStat(
-                  'موفقیت', '$successPercent%', textColor, textSecondary),
+                'انجام شده',
+                '${data.completedHabits}',
+                textColor,
+                textSecondary,
+              ),
+              const SizedBox(width: 6),
+              _buildMiniStat(
+                'موفقیت',
+                '$successPercent%',
+                textColor,
+                textSecondary,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -140,11 +164,12 @@ class WeeklyPerformanceWidget extends StatelessWidget {
               ),
               child: Column(
                 children: [
+                  // هدر روزهای هفته
                   Row(
                     children: [
                       const SizedBox(width: 28),
                       ...List.generate(7, (index) {
-                        final isToday = index == Jalali.now().weekDay - 1;
+                        final isToday = index == todayIndex;
                         return Expanded(
                           child: Center(
                             child: Text(
@@ -163,6 +188,8 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
+
+                  // جدول عادت‌ها
                   ...data.habits.take(6).map((habit) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 6),
@@ -184,7 +211,7 @@ class WeeklyPerformanceWidget extends StatelessWidget {
                           const SizedBox(width: 4),
                           ...List.generate(7, (index) {
                             final isActive = habit.weekStatus[index];
-                            final isToday = index == Jalali.now().weekDay - 1;
+                            final isToday = index == todayIndex;
                             return Expanded(
                               child: Center(
                                 child: Container(
@@ -226,6 +253,27 @@ class WeeklyPerformanceWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// ✅ فرمت بازه هفته با CalendarProvider
+  String _formatWeekRange(
+    DateTime start,
+    DateTime end,
+    CalendarProvider calendar,
+  ) {
+    return '${calendar.formatShort(start)} - ${calendar.formatShort(end)}';
+  }
+
+  /// ✅ محاسبه ایندکس امروز در هفته
+  /// شمسی: 0=شنبه، میلادی: 0=Monday
+  int _getTodayIndex(CalendarProvider calendar) {
+    if (calendar.isJalali) {
+      final j = Jalali.now();
+      return j.weekDay - 1; // 0=شنبه
+    } else {
+      final d = DateTime.now();
+      return d.weekday - 1; // 0=Monday
+    }
   }
 
   Widget _buildMiniStat(
@@ -290,11 +338,5 @@ class WeeklyPerformanceWidget extends StatelessWidget {
       default:
         return Icons.fitness_center;
     }
-  }
-
-  String _formatWeekRange(DateTime start, DateTime end) {
-    final jalaliStart = Jalali.fromDateTime(start);
-    final jalaliEnd = Jalali.fromDateTime(end);
-    return '${jalaliStart.day}/${jalaliStart.month} - ${jalaliEnd.day}/${jalaliEnd.month}';
   }
 }

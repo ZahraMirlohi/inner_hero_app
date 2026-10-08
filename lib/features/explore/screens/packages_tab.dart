@@ -1,5 +1,3 @@
-// lib/features/explore/screens/packages_tab.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/package_model.dart';
@@ -210,19 +208,16 @@ class _PackagesTabState extends State<PackagesTab> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    // ═══════════════════════════════════════════════════════
-    // 🎨 پس‌زمینه ملایم
-    // ═══════════════════════════════════════════════════════
     return Container(
-      color: const Color(0xFFF7FCEB),
-      child: _buildBody(primaryColor),
+      color: theme.backgroundColor, // ✅ از Color(0xFFF7FCEB)
+      child: _buildBody(primaryColor, theme),
     );
   }
 
-  Widget _buildBody(Color primaryColor) {
+  Widget _buildBody(Color primaryColor, ThemeProvider theme) {
     if (_isLoadingActive) {
       return Center(
         child: Column(
@@ -230,9 +225,12 @@ class _PackagesTabState extends State<PackagesTab> {
           children: [
             CircularProgressIndicator(color: primaryColor),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'در حال بارگذاری بسته‌ها...',
-              style: TextStyle(color: Color(0xFF73786B), fontSize: 13),
+              style: TextStyle(
+                color: theme.textSecondaryColor,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -240,7 +238,7 @@ class _PackagesTabState extends State<PackagesTab> {
     }
 
     if (widget.packages.isEmpty) {
-      return _buildEmptyState(primaryColor);
+      return _buildEmptyState(primaryColor, theme);
     }
 
     final activePackages =
@@ -341,6 +339,8 @@ class _PackagesTabState extends State<PackagesTab> {
   // 📋 دیالوگ مشاهده جزئیات بسته (فقط خواندنی)
   // ═══════════════════════════════════════════════════════════
   void _showPackageDetailDialog(Package package, Color primaryColor) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -356,9 +356,11 @@ class _PackagesTabState extends State<PackagesTab> {
           expand: false,
           builder: (context, scrollController) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              decoration: BoxDecoration(
+                color: theme.cardColor, // ✅ از Colors.white
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
               child: Column(
                 children: [
@@ -369,7 +371,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       width: 60,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: theme.borderColor, // ✅
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -383,9 +385,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ═══════════════════════════════════════
-                          // ─── هدر: آیکون + عنوان + بج «فعال» ───
-                          // ═══════════════════════════════════════
+                          // هدر
                           Row(
                             children: [
                               Container(
@@ -418,10 +418,10 @@ class _PackagesTabState extends State<PackagesTab> {
                                   children: [
                                     Text(
                                       package.title,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF090909),
+                                        color: theme.textColor, // ✅
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -429,13 +429,13 @@ class _PackagesTabState extends State<PackagesTab> {
                                       children: [
                                         Text(
                                           _getCategoryText(package.category),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
-                                            color: Color(0xFF73786B),
+                                            color:
+                                                theme.textSecondaryColor, // ✅
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        // ✅ بج «فعال»
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 8,
@@ -477,30 +477,30 @@ class _PackagesTabState extends State<PackagesTab> {
 
                           const SizedBox(height: 20),
 
-                          // ═══════════════════════════════════════
-                          // ─── توضیحات ───
-                          // ═══════════════════════════════════════
+                          // توضیحات
                           Text(
                             package.description,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF090909),
+                              color: theme.textColor, // ✅
                               height: 1.6,
                             ),
                           ),
 
                           const SizedBox(height: 20),
 
-                          // ═══════════════════════════════════════
-                          // ─── اطلاعات بسته ───
-                          // ═══════════════════════════════════════
+                          // اطلاعات بسته
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.06),
+                              color: theme.isDarkMode
+                                  ? const Color(0xFF2A2A2A)
+                                  : primaryColor.withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: primaryColor.withValues(alpha: 0.15),
+                                color: theme.isDarkMode
+                                    ? theme.borderColor
+                                    : primaryColor.withValues(alpha: 0.15),
                                 width: 1,
                               ),
                             ),
@@ -511,6 +511,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   label: 'تعداد عادت‌ها',
                                   value: '${package.habits.length} عادت',
                                   primaryColor: primaryColor,
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -519,6 +520,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   value: '+${package.xpReward} XP',
                                   primaryColor: primaryColor,
                                   iconColor: const Color(0xFFFFA500),
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -527,6 +529,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   value: package.badge,
                                   primaryColor: primaryColor,
                                   iconColor: const Color(0xFF9B59B6),
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -534,6 +537,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   label: 'دسته‌بندی',
                                   value: _getCategoryText(package.category),
                                   primaryColor: primaryColor,
+                                  theme: theme,
                                 ),
                               ],
                             ),
@@ -541,9 +545,7 @@ class _PackagesTabState extends State<PackagesTab> {
 
                           const SizedBox(height: 24),
 
-                          // ═══════════════════════════════════════
-                          // ─── لیست عادت‌ها ───
-                          // ═══════════════════════════════════════
+                          // لیست عادت‌ها
                           Row(
                             children: [
                               Container(
@@ -559,12 +561,12 @@ class _PackagesTabState extends State<PackagesTab> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 'عادت‌های این بسته',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF090909),
+                                  color: theme.textColor, // ✅
                                 ),
                               ),
                               const Spacer(),
@@ -590,23 +592,22 @@ class _PackagesTabState extends State<PackagesTab> {
                           ),
                           const SizedBox(height: 12),
 
-                          // لیست همه عادت‌ها
                           ...package.habits.map((habit) {
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: theme.isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : theme.cardColor,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFF090909)
-                                      .withValues(alpha: 0.06),
+                                  color: theme.borderColor, // ✅
                                   width: 1,
                                 ),
                               ),
                               child: Row(
                                 children: [
-                                  // آیکون عادت
                                   Container(
                                     width: 36,
                                     height: 36,
@@ -624,7 +625,6 @@ class _PackagesTabState extends State<PackagesTab> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  // عنوان + توضیحات
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -632,10 +632,10 @@ class _PackagesTabState extends State<PackagesTab> {
                                       children: [
                                         Text(
                                           habit.title,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF090909),
+                                            color: theme.textColor, // ✅
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -644,9 +644,10 @@ class _PackagesTabState extends State<PackagesTab> {
                                           const SizedBox(height: 2),
                                           Text(
                                             habit.description,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 11,
-                                              color: Color(0xFF73786B),
+                                              color:
+                                                  theme.textSecondaryColor, // ✅
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -656,7 +657,6 @@ class _PackagesTabState extends State<PackagesTab> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // فرکانس
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
@@ -687,9 +687,7 @@ class _PackagesTabState extends State<PackagesTab> {
                     ),
                   ),
 
-                  // ═══════════════════════════════════════
-                  // ─── دکمه بستن (ثابت پایین) ───
-                  // ═══════════════════════════════════════
+                  // ─── دکمه بستن ───
                   Container(
                     padding: EdgeInsets.fromLTRB(
                       20,
@@ -698,11 +696,10 @@ class _PackagesTabState extends State<PackagesTab> {
                       MediaQuery.of(context).padding.bottom + 16,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: theme.cardColor,
                       border: Border(
                         top: BorderSide(
-                          color:
-                              const Color(0xFF090909).withValues(alpha: 0.06),
+                          color: theme.borderColor, // ✅
                           width: 1,
                         ),
                       ),
@@ -748,46 +745,46 @@ class _PackagesTabState extends State<PackagesTab> {
     required Color color,
     required int count,
   }) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     return Center(
-      // ✅ وسط‌چین
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909).withValues(alpha: 0.08), // ✅ مشکی
+              color: theme.textColor.withValues(alpha: 0.08), // ✅
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: const Color(0xFF090909), // ✅ مشکی
+              color: theme.textColor, // ✅
               size: 16,
             ),
           ),
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF090909), // ✅ مشکی
+              color: theme.textColor, // ✅
             ),
           ),
           const SizedBox(width: 8),
-          // ✅ شمارنده کنار عنوان
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: const Color(0xFF090909).withValues(alpha: 0.08),
+              color: theme.textColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               '$count',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF090909),
+                color: theme.textColor, // ✅
               ),
             ),
           ),
@@ -799,7 +796,7 @@ class _PackagesTabState extends State<PackagesTab> {
   // ═══════════════════════════════════════════════════════════
   // 📦 Empty State
   // ═══════════════════════════════════════════════════════════
-  Widget _buildEmptyState(Color primaryColor) {
+  Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -817,18 +814,21 @@ class _PackagesTabState extends State<PackagesTab> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'هنوز بسته‌ای وجود ندارد',
             style: TextStyle(
-              color: Color(0xFF73786B),
+              color: theme.textSecondaryColor, // ✅
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'به زودی بسته‌های جدید اضافه می‌شوند',
-            style: TextStyle(color: Color(0xFF73786B), fontSize: 12),
+            style: TextStyle(
+              color: theme.textSecondaryColor, // ✅
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -986,10 +986,9 @@ class _PackagesTabState extends State<PackagesTab> {
   // ═══════════════════════════════════════════════════════════
 // 📋 دیالوگ پیش‌نمایش و فعال‌سازی بسته
 // ═══════════════════════════════════════════════════════════
-  void _showActivatePreviewDialog(
-    Package package,
-    Color primaryColor,
-  ) {
+  void _showActivatePreviewDialog(Package package, Color primaryColor) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1005,9 +1004,11 @@ class _PackagesTabState extends State<PackagesTab> {
           expand: false,
           builder: (context, scrollController) {
             return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              decoration: BoxDecoration(
+                color: theme.cardColor, // ✅
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
               child: Column(
                 children: [
@@ -1018,13 +1019,12 @@ class _PackagesTabState extends State<PackagesTab> {
                       width: 60,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: theme.borderColor, // ✅
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
 
-                  // ─── محتوای اسکرول‌شونده ───
                   Expanded(
                     child: SingleChildScrollView(
                       controller: scrollController,
@@ -1032,9 +1032,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // ═══════════════════════════════════════
-                          // ─── هدر: آیکون + عنوان ───
-                          // ═══════════════════════════════════════
+                          // هدر
                           Row(
                             children: [
                               Container(
@@ -1067,18 +1065,18 @@ class _PackagesTabState extends State<PackagesTab> {
                                   children: [
                                     Text(
                                       package.title,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF090909),
+                                        color: theme.textColor, // ✅
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       _getCategoryText(package.category),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        color: Color(0xFF73786B),
+                                        color: theme.textSecondaryColor, // ✅
                                       ),
                                     ),
                                   ],
@@ -1089,27 +1087,25 @@ class _PackagesTabState extends State<PackagesTab> {
 
                           const SizedBox(height: 20),
 
-                          // ═══════════════════════════════════════
-                          // ─── توضیحات ───
-                          // ═══════════════════════════════════════
+                          // توضیحات
                           Text(
                             package.description,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF090909),
+                              color: theme.textColor, // ✅
                               height: 1.6,
                             ),
                           ),
 
                           const SizedBox(height: 20),
 
-                          // ═══════════════════════════════════════
-                          // ─── اطلاعات بسته ───
-                          // ═══════════════════════════════════════
+                          // اطلاعات بسته
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF7FCEB),
+                              color: theme.isDarkMode
+                                  ? const Color(0xFF2A2A2A)
+                                  : const Color(0xFFF7FCEB),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
                                 color: primaryColor.withValues(alpha: 0.15),
@@ -1123,6 +1119,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   label: 'تعداد عادت‌ها',
                                   value: '${package.habits.length} عادت',
                                   primaryColor: primaryColor,
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -1131,6 +1128,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   value: '+${package.xpReward} XP',
                                   primaryColor: primaryColor,
                                   iconColor: const Color(0xFFFFA500),
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -1139,6 +1137,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   value: package.badge,
                                   primaryColor: primaryColor,
                                   iconColor: const Color(0xFF9B59B6),
+                                  theme: theme,
                                 ),
                                 const SizedBox(height: 12),
                                 _buildPreviewInfoRow(
@@ -1146,6 +1145,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                   label: 'دسته‌بندی',
                                   value: _getCategoryText(package.category),
                                   primaryColor: primaryColor,
+                                  theme: theme,
                                 ),
                               ],
                             ),
@@ -1153,9 +1153,7 @@ class _PackagesTabState extends State<PackagesTab> {
 
                           const SizedBox(height: 24),
 
-                          // ═══════════════════════════════════════
-                          // ─── لیست عادت‌ها ───
-                          // ═══════════════════════════════════════
+                          // لیست عادت‌ها
                           Row(
                             children: [
                               Container(
@@ -1171,12 +1169,12 @@ class _PackagesTabState extends State<PackagesTab> {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 'عادت‌های این بسته',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF090909),
+                                  color: theme.textColor, // ✅
                                 ),
                               ),
                               const Spacer(),
@@ -1202,23 +1200,22 @@ class _PackagesTabState extends State<PackagesTab> {
                           ),
                           const SizedBox(height: 12),
 
-                          // لیست همه عادت‌ها
                           ...package.habits.map((habit) {
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: theme.isDarkMode
+                                    ? const Color(0xFF2A2A2A)
+                                    : theme.cardColor,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFF090909)
-                                      .withValues(alpha: 0.06),
+                                  color: theme.borderColor, // ✅
                                   width: 1,
                                 ),
                               ),
                               child: Row(
                                 children: [
-                                  // آیکون عادت
                                   Container(
                                     width: 36,
                                     height: 36,
@@ -1231,12 +1228,13 @@ class _PackagesTabState extends State<PackagesTab> {
                                       child: Icon(
                                         _getIconData(habit.iconName),
                                         size: 18,
-                                        color: const Color(0xFF090909),
+                                        color: theme.isDarkMode
+                                            ? Colors.white
+                                            : const Color(0xFF090909),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  // عنوان + فرکانس
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -1244,10 +1242,10 @@ class _PackagesTabState extends State<PackagesTab> {
                                       children: [
                                         Text(
                                           habit.title,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFF090909),
+                                            color: theme.textColor, // ✅
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1256,9 +1254,10 @@ class _PackagesTabState extends State<PackagesTab> {
                                           const SizedBox(height: 2),
                                           Text(
                                             habit.description,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 11,
-                                              color: Color(0xFF73786B),
+                                              color:
+                                                  theme.textSecondaryColor, // ✅
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -1268,7 +1267,6 @@ class _PackagesTabState extends State<PackagesTab> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // فرکانس
                                   Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
@@ -1295,9 +1293,7 @@ class _PackagesTabState extends State<PackagesTab> {
 
                           const SizedBox(height: 20),
 
-                          // ═══════════════════════════════════════
-                          // ─── هشدار ───
-                          // ═══════════════════════════════════════
+                          // هشدار
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
@@ -1322,9 +1318,9 @@ class _PackagesTabState extends State<PackagesTab> {
                                 Expanded(
                                   child: Text(
                                     'با فعال‌سازی این بسته، ${package.habits.length} عادت جدید به لیست عادت‌های شما اضافه می‌شود و می‌توانید پیشرفت خود را دنبال کنید.',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
-                                      color: Color(0xFF090909),
+                                      color: theme.textColor, // ✅
                                       height: 1.5,
                                     ),
                                   ),
@@ -1339,9 +1335,7 @@ class _PackagesTabState extends State<PackagesTab> {
                     ),
                   ),
 
-                  // ═══════════════════════════════════════
-                  // ─── دکمه‌های اقدام (ثابت پایین) ───
-                  // ═══════════════════════════════════════
+                  // دکمه‌های اقدام
                   Container(
                     padding: EdgeInsets.fromLTRB(
                       20,
@@ -1350,26 +1344,23 @@ class _PackagesTabState extends State<PackagesTab> {
                       MediaQuery.of(context).padding.bottom + 16,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: theme.cardColor,
                       border: Border(
                         top: BorderSide(
-                          color:
-                              const Color(0xFF090909).withValues(alpha: 0.06),
+                          color: theme.borderColor, // ✅
                           width: 1,
                         ),
                       ),
                     ),
                     child: Row(
                       children: [
-                        // دکمه انصراف
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF73786B),
+                              foregroundColor: theme.textSecondaryColor, // ✅
                               side: BorderSide(
-                                color: const Color(0xFF090909)
-                                    .withValues(alpha: 0.15),
+                                color: theme.borderColor, // ✅
                                 width: 1.5,
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1387,7 +1378,6 @@ class _PackagesTabState extends State<PackagesTab> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // دکمه فعال‌سازی
                         Expanded(
                           flex: 2,
                           child: ElevatedButton(
@@ -1441,6 +1431,7 @@ class _PackagesTabState extends State<PackagesTab> {
     required String label,
     required String value,
     required Color primaryColor,
+    required ThemeProvider theme, // ✅ پارامتر جدید
     Color? iconColor,
   }) {
     return Row(
@@ -1464,19 +1455,19 @@ class _PackagesTabState extends State<PackagesTab> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF73786B),
+              color: theme.textSecondaryColor, // ✅
             ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF090909),
+            color: theme.textColor, // ✅
           ),
         ),
       ],
@@ -1596,17 +1587,19 @@ class _PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ کارت فعال: رنگ اصلی | کارت غیرفعال: سفید
+    final theme = Provider.of<ThemeProvider>(context);
+
+    // ✅ کارت فعال: صورتی (رنگ ثابت دلخواه) | غیرفعال: theme.cardColor
     final Color cardColor =
-        isActive ? const Color.fromARGB(255, 216, 124, 159) : Colors.white;
+        isActive ? const Color.fromARGB(255, 216, 124, 159) : theme.cardColor;
 
-    // ✅ رنگ متن: روی رنگ اصلی → مشکی | روی سفید → مشکی
-    const Color textColor = Color(0xFF090909);
+    // ✅ متن روی کارت فعال مشکی، روی غیرفعال theme.textColor
+    final Color textColor =
+        isActive ? const Color(0xFF090909) : theme.textColor;
 
-    // ✅ رنگ متن‌های ثانویه: روی رنگ اصلی → نیمه‌شفاف مشکی | روی سفید → خاکستری
     final Color subtleTextColor = isActive
         ? const Color(0xFF090909).withValues(alpha: 0.7)
-        : const Color(0xFF73786B);
+        : theme.textSecondaryColor;
 
     return Container(
       margin: isActive ? EdgeInsets.zero : const EdgeInsets.only(bottom: 16),
@@ -1615,8 +1608,8 @@ class _PackageCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isActive
-                ? primaryColor.withValues(alpha: 0.35) // ✅ سایه رنگی
-                : Colors.black.withValues(alpha: 0.06),
+                ? primaryColor.withValues(alpha: 0.35)
+                : Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.06),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1624,11 +1617,8 @@ class _PackageCard extends StatelessWidget {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: cardColor, // ✅ رنگ اصلی برای فعال
+          color: cardColor,
           borderRadius: BorderRadius.circular(24),
-          border: isActive
-              ? null // ✅ بدون بوردر برای فعال
-              : null,
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -1636,9 +1626,6 @@ class _PackageCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ═══════════════════════════════════════════════
-              // ─── ردیف اول: عنوان + آیکون ───
-              // ═══════════════════════════════════════════════
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1676,30 +1663,21 @@ class _PackageCard extends StatelessWidget {
                   _buildFloatingIcon(),
                 ],
               ),
-
               const SizedBox(height: 10),
-
-              // ─── توضیحات ───
               Text(
                 package.description,
                 style: TextStyle(
                   fontSize: 12,
-                  color: subtleTextColor, // ✅
+                  color: subtleTextColor,
                   height: 1.5,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-
               const SizedBox(height: 12),
-
-              // ─── پیش‌نمایش عادت‌ها ───
-              _buildHabitPreview(),
-
+              _buildHabitPreview(theme),
               const SizedBox(height: 12),
-
-              // ─── ردیف پایین: اطلاعات + دکمه‌ها ───
-              _buildBottomRow(),
+              _buildBottomRow(theme),
             ],
           ),
         ),
@@ -1738,14 +1716,16 @@ class _PackageCard extends StatelessWidget {
   // ═══════════════════════════════════════════════════════════
   // 📋 پیش‌نمایش عادت‌ها
   // ═══════════════════════════════════════════════════════════
-  Widget _buildHabitPreview() {
+  Widget _buildHabitPreview(ThemeProvider theme) {
     final habits = package.habits.take(3).toList();
     final remaining = package.habits.length - habits.length;
 
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 233, 233, 233),
+        color: theme.isDarkMode
+            ? const Color(0xFF2A2A2A)
+            : const Color.fromARGB(255, 233, 233, 233),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: const Color(0xFFC57B97).withValues(alpha: 0.10),
@@ -1776,10 +1756,10 @@ class _PackageCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         habit.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF090909),
+                          color: theme.textColor, // ✅
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1793,10 +1773,10 @@ class _PackageCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 '... و $remaining عادت دیگر',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10,
                   fontStyle: FontStyle.italic,
-                  color: Color(0xFF73786B),
+                  color: theme.textSecondaryColor, // ✅
                 ),
               ),
             ),
@@ -1808,29 +1788,25 @@ class _PackageCard extends StatelessWidget {
   // ═══════════════════════════════════════════════════════════
   // 🎯 ردیف پایین: اطلاعات + دکمه‌ها
   // ═══════════════════════════════════════════════════════════
-  Widget _buildBottomRow() {
+  Widget _buildBottomRow(ThemeProvider theme) {
     return Row(
       children: [
-        // تعداد عادت‌ها
         _buildInfoChip(
           icon: Icons.checklist,
           label: '${package.habits.length}',
+          theme: theme,
         ),
         const SizedBox(width: 6),
-        // XP
         _buildInfoChip(
           icon: Icons.stars,
           label: '+${package.xpReward}',
           iconColor: const Color(0xFFFFA500),
+          theme: theme,
         ),
         const Spacer(),
-
-        // ✅ دکمه‌ها
         if (isActive && onDeactivate != null && onView != null) ...[
-          // دکمه مشاهده (مشکی روی سبز، خوانا)
           _buildViewButton(onView!),
           const SizedBox(width: 6),
-          // دکمه غیرفعال (primaryLight — روی سبز متفاوت است)
           _buildDeactivateButton(onDeactivate!),
         ] else if (!isActive && onActivate != null) ...[
           _buildActivateButton(onActivate!),
@@ -1839,21 +1815,20 @@ class _PackageCard extends StatelessWidget {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🏷️ Info Chip
-  // ═══════════════════════════════════════════════════════════
   Widget _buildInfoChip({
     required IconData icon,
     required String label,
     Color? iconColor,
+    required ThemeProvider theme,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        // ✅ روی فعال: سفید نیمه‌شفاف | روی غیرفعال: مشکی ملایم
         color: isActive
             ? Colors.white.withValues(alpha: 0.25)
-            : const Color(0xFF090909).withValues(alpha: 0.06),
+            : theme.isDarkMode
+                ? const Color(0xFF2A2A2A)
+                : theme.textColor.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -1862,9 +1837,7 @@ class _PackageCard extends StatelessWidget {
           Icon(
             icon,
             size: 11,
-            color: isActive
-                ? Colors.white
-                : (iconColor ?? const Color(0xFF090909)),
+            color: isActive ? Colors.white : (iconColor ?? theme.textColor),
           ),
           const SizedBox(width: 3),
           Text(
@@ -1872,7 +1845,7 @@ class _PackageCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : const Color(0xFF090909),
+              color: isActive ? Colors.white : theme.textColor,
             ),
           ),
         ],

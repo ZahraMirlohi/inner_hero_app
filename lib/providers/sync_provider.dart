@@ -558,19 +558,85 @@ class SyncProvider extends ChangeNotifier {
 
   Future<void> saveHabitToLocal(Habit habit) async {
     try {
-      await _localStorage.saveHabit(habit);
+      // ✅ گرفتن لیست فعلی
+      final currentHabits = _localStorage.getHabits();
+
+      // ✅ چک کن اگه عادت با همین ID وجود داره، جایگزین کن
+      final existingIndex = currentHabits.indexWhere((h) => h.id == habit.id);
+
+      if (existingIndex != -1) {
+        currentHabits[existingIndex] = habit;
+      } else {
+        currentHabits.add(habit);
+      }
+
+      // ✅ ذخیره کل لیست
+      await _localStorage.saveHabits(currentHabits);
       notifyListeners();
+      print('✅ Habit saved to local: ${habit.title}');
     } catch (e) {
-      // خطا رو نادیده بگیر
+      print('❌ Error saving habit to local: $e');
     }
   }
 
   Future<void> saveTaskToLocal(Task task) async {
     try {
-      await _localStorage.saveTask(task);
+      final currentTasks = _localStorage.getTasks();
+
+      final existingIndex = currentTasks.indexWhere((t) => t.id == task.id);
+
+      if (existingIndex != -1) {
+        currentTasks[existingIndex] = task;
+      } else {
+        currentTasks.add(task);
+      }
+
+      await _localStorage.saveTasks(currentTasks);
+      notifyListeners();
+      print('✅ Task saved to local: ${task.title}');
+    } catch (e) {
+      print('❌ Error saving task to local: $e');
+    }
+  }
+
+  Future<void> deleteTaskFromLocal(String taskId) async {
+    try {
+      final currentTasks = _localStorage.getTasks();
+      final updatedTasks = currentTasks.where((t) => t.id != taskId).toList();
+      await _localStorage.saveTasks(updatedTasks);
+      notifyListeners();
+      print('🗑️ Task removed from local: $taskId');
+    } catch (e) {
+      print('❌ Error deleting task from local: $e');
+    }
+  }
+
+  /// ✅ ریفرش سریع فقط برای عادت‌ها و تسک‌ها
+  Future<void> refreshHabitsAndTasks() async {
+    if (_currentUserId == null) {
+      notifyListeners();
+      return;
+    }
+
+    try {
+      print('🔄 Quick refreshing habits and tasks...');
+
+      if (_isOnline) {
+        final habits = await _supabase.getHabits(_currentUserId!);
+        await _localStorage.saveHabits(habits);
+
+        final tasks = await _supabase.getTasks(_currentUserId!);
+        await _localStorage.saveTasks(tasks);
+
+        print(
+            '✅ Quick refresh done - ${habits.length} habits, ${tasks.length} tasks');
+      }
+
       notifyListeners();
     } catch (e) {
-      // خطا رو نادیده بگیر
+      print('❌ Quick refresh error: $e');
+      // حتی اگه خطا داد، notifyListeners بزن تا UI با کش آپدیت شه
+      notifyListeners();
     }
   }
 

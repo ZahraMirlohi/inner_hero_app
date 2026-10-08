@@ -1,11 +1,13 @@
 // lib/features/profile/widgets/settings_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:inner_hero_app/providers/calendar_provider.dart';
 import 'package:provider/provider.dart';
 import '/services/date_service.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import 'color_picker_screen.dart';
+import '/providers/calendar_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,7 +18,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final SupabaseService _supabase = SupabaseService();
-  bool _isDarkMode = false;
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
@@ -67,16 +68,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'عمومی',
                 theme,
                 [
-                  _buildSwitchTile(
-                    icon: Icons.dark_mode,
-                    title: 'حالت تاریک',
-                    value: _isDarkMode,
-                    onChanged: (value) {
-                      setState(() {
-                        _isDarkMode = value;
-                      });
+                  // ✅ حالت تاریک با Consumer
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            themeProvider.isDarkMode
+                                ? Icons.dark_mode
+                                : Icons.light_mode,
+                            color: primaryColor,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          themeProvider.isDarkMode ? 'حالت روز' : 'حالت شب',
+                          style: TextStyle(color: theme.textColor),
+                        ),
+                        subtitle: Text(
+                          themeProvider.isDarkMode
+                              ? 'رفتن به تم روشن'
+                              : 'رفتن به تم تاریک',
+                          style: TextStyle(
+                            color: theme.textSecondaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                        trailing: Switch(
+                          value: themeProvider.isDarkMode,
+                          onChanged: (value) {
+                            themeProvider.setDarkMode(value);
+                          },
+                          activeColor: primaryColor,
+                        ),
+                        onTap: () {
+                          themeProvider.toggleDarkMode();
+                        },
+                      );
                     },
-                    primaryColor: primaryColor,
                   ),
                   _buildSwitchTile(
                     icon: Icons.notifications,
@@ -111,7 +145,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                     primaryColor: primaryColor,
                   ),
-                  // ✅ آیتم انتخاب رنگ
                   _buildColorTile(theme, primaryColor),
                 ],
               ),
@@ -122,21 +155,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'نمایش',
                 theme,
                 [
-                  _buildDropdownTile(
-                    icon: Icons.calendar_today,
-                    title: 'نوع تقویم',
-                    value: _calendarType,
-                    options: ['شمسی', 'میلادی'],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _calendarType = value;
-                          final type = value == 'شمسی' ? 'jalali' : 'gregorian';
-                          DateService.saveCalendarType(type);
-                        });
-                      }
+                  Consumer<CalendarProvider>(
+                    builder: (context, calendarProvider, _) {
+                      return _buildDropdownTile(
+                        icon: Icons.calendar_today,
+                        title: 'نوع تقویم',
+                        value: calendarProvider.isJalali ? 'شمسی' : 'میلادی',
+                        options: const ['شمسی', 'میلادی'],
+                        onChanged: (value) {
+                          if (value != null) {
+                            final type = value == 'شمسی'
+                                ? CalendarType.jalali
+                                : CalendarType.gregorian;
+                            calendarProvider.setCalendarType(type);
+                          }
+                        },
+                        primaryColor: primaryColor,
+                      );
                     },
-                    primaryColor: primaryColor,
                   ),
                   _buildDropdownTile(
                     icon: Icons.language,

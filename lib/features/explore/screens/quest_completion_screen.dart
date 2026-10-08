@@ -1,5 +1,9 @@
+// lib/features/explore/screens/quest_completion_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
+import '/providers/theme_provider.dart';
 
 class QuestCompletionScreen extends StatefulWidget {
   final Quest quest;
@@ -46,15 +50,13 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
     super.dispose();
   }
 
-  // در quest_completion_screen.dart
-
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
     final color = _parseColor(widget.quest.color);
 
     return WillPopScope(
       onWillPop: () async {
-        // ✅ با back برگرد، نه خروج از حساب
         Navigator.pop(context);
         return false;
       },
@@ -80,7 +82,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: theme.cardColor,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
@@ -103,7 +105,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                         opacity: _fadeAnimation,
                         child: Column(
                           children: [
-                            Text(
+                            const Text(
                               '🎉 تبریک! 🎉',
                               style: TextStyle(
                                 fontSize: 32,
@@ -127,6 +129,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                       FadeTransition(
                         opacity: _fadeAnimation,
                         child: Card(
+                          color: theme.cardColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
@@ -143,10 +146,10 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                                 Text(
                                   widget.quest.title,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1A1A2E),
+                                    color: theme.textColor,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -155,7 +158,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey.shade600,
+                                    color: theme.textSecondaryColor,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -228,11 +231,10 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                         opacity: _fadeAnimation,
                         child: ElevatedButton(
                           onPressed: () {
-                            // ✅ فقط برگرد به صفحه قبل
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
+                            backgroundColor: theme.cardColor,
                             foregroundColor: color,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 48,

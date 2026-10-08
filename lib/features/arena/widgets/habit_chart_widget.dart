@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '../models/habit_completion.dart';
-import '/services/date_service.dart';
 import '/providers/theme_provider.dart';
+import '/providers/calendar_provider.dart';
 
 class HabitChartWidget extends StatefulWidget {
   final List<Map<String, dynamic>> data;
@@ -24,32 +24,35 @@ class HabitChartWidget extends StatefulWidget {
 }
 
 class _HabitChartWidgetState extends State<HabitChartWidget> {
-  String _calendarType = 'jalali';
   final ScrollController _scrollController = ScrollController();
   bool _isInitialScrollDone = false;
+  CalendarType? _lastCalendarType;
 
   @override
   void initState() {
     super.initState();
-    _loadCalendarType();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToToday();
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final calendar = Provider.of<CalendarProvider>(context);
+    if (_lastCalendarType != calendar.calendarType) {
+      _lastCalendarType = calendar.calendarType;
+      _isInitialScrollDone = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToToday();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadCalendarType() async {
-    final calendarType = await DateService.getCalendarType();
-    if (mounted) {
-      setState(() {
-        _calendarType = calendarType;
-      });
-    }
   }
 
   void _scrollToToday() {
@@ -64,6 +67,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
       }
     }
     if (todayIndex == -1) todayIndex = widget.data.length - 1;
+
     final totalDays = widget.data.length;
     final minWidth = MediaQuery.of(context).size.width - 32;
     final chartWidth = (totalDays * 32.0).clamp(minWidth, totalDays * 32.0);
@@ -72,6 +76,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         (todayIndex * xStep) - (MediaQuery.of(context).size.width / 2) + 50;
     final maxScroll = chartWidth - (MediaQuery.of(context).size.width - 32);
     final clampedPosition = targetPosition.clamp(0.0, maxScroll);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients && !_isInitialScrollDone) {
         _scrollController.animateTo(
@@ -86,22 +91,23 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final calendar = Provider.of<CalendarProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    if (widget.data.isEmpty) return _buildEmptyState(primaryColor);
+    if (widget.data.isEmpty) return _buildEmptyState(primaryColor, theme);
     final validData =
         widget.data.where((d) => d['isCompleted'] == true).toList();
-    if (validData.isEmpty) return _buildNoDataState(primaryColor);
+    if (validData.isEmpty) return _buildNoDataState(primaryColor, theme);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -110,7 +116,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(primaryColor),
+          _buildHeader(primaryColor, theme),
           const SizedBox(height: 12),
           SizedBox(
             height: 200,
@@ -118,28 +124,28 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
               controller: _scrollController,
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
-              child: _buildChart(primaryColor),
+              child: _buildChart(primaryColor, calendar, theme),
             ),
           ),
           const SizedBox(height: 8),
-          _buildLegend(),
+          _buildLegend(theme),
           const SizedBox(height: 6),
-          _buildSummaryStats(),
+          _buildSummaryStats(theme),
         ],
       ),
     );
   }
 
-  Widget _buildEmptyState(Color primaryColor) {
+  Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Container(
       height: 180,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -149,15 +155,15 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.show_chart, size: 40, color: Colors.grey.shade300),
+            Icon(Icons.show_chart, size: 40, color: theme.textSecondaryColor),
             const SizedBox(height: 8),
             Text(
               'هنوز داده‌ای برای نمایش وجود ندارد',
-              style: TextStyle(color: const Color(0xFF73786B), fontSize: 13),
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 13),
             ),
             Text(
               'با انجام عادت، نمودار ساخته می‌شود',
-              style: TextStyle(color: const Color(0xFF73786B), fontSize: 11),
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 11),
             ),
           ],
         ),
@@ -165,16 +171,16 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildNoDataState(Color primaryColor) {
+  Widget _buildNoDataState(Color primaryColor, ThemeProvider theme) {
     return Container(
       height: 180,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(theme.isDarkMode ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -184,15 +190,15 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.event_busy, size: 40, color: Colors.grey.shade300),
+            Icon(Icons.event_busy, size: 40, color: theme.textSecondaryColor),
             const SizedBox(height: 8),
             Text(
               'هیچ روزی در این ماه تکمیل نشده',
-              style: TextStyle(color: const Color(0xFF73786B), fontSize: 13),
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 13),
             ),
             Text(
               'روزهای آینده را از دست نده! 💪',
-              style: TextStyle(color: const Color(0xFF73786B), fontSize: 11),
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 11),
             ),
           ],
         ),
@@ -200,15 +206,15 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildHeader(Color primaryColor) {
+  Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
     return Row(
       children: [
-        const Text(
+        Text(
           '📊 روند پیشرفت ماه جاری',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF090909),
+            color: theme.textColor,
           ),
         ),
         const Spacer(),
@@ -232,7 +238,8 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     );
   }
 
-  Widget _buildChart(Color primaryColor) {
+  Widget _buildChart(
+      Color primaryColor, CalendarProvider calendar, ThemeProvider theme) {
     final totalDays = widget.data.length;
     final minWidth = MediaQuery.of(context).size.width - 32;
     final chartWidth = (totalDays * 32.0).clamp(minWidth, totalDays * 32.0);
@@ -242,34 +249,38 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
       child: CustomPaint(
         painter: _HabitChartPainter(
           allData: widget.data,
-          calendarType: _calendarType,
+          calendar: calendar,
           primaryColor: primaryColor,
+          isDarkMode: theme.isDarkMode,
+          textColor: theme.textColor,
+          textSecondaryColor: theme.textSecondaryColor,
+          cardColor: theme.cardColor,
         ),
       ),
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(ThemeProvider theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLegendItem(CompletionLevel.full),
+        _buildLegendItem(CompletionLevel.full, theme),
         const SizedBox(width: 10),
-        _buildLegendItem(CompletionLevel.half),
+        _buildLegendItem(CompletionLevel.half, theme),
         const SizedBox(width: 10),
-        _buildLegendItem(CompletionLevel.basic),
+        _buildLegendItem(CompletionLevel.basic, theme),
         const SizedBox(width: 10),
-        _buildLegendItem(null),
+        _buildLegendItem(null, theme),
       ],
     );
   }
 
-  Widget _buildLegendItem(CompletionLevel? level) {
+  Widget _buildLegendItem(CompletionLevel? level, ThemeProvider theme) {
     Color color;
     String label;
     IconData icon;
     if (level == null) {
-      color = Colors.grey.shade300;
+      color = theme.isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300;
       label = 'انجام نشده';
       icon = Icons.circle_outlined;
     } else {
@@ -283,13 +294,13 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         const SizedBox(width: 3),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Color(0xFF73786B)),
+          style: TextStyle(fontSize: 10, color: theme.textSecondaryColor),
         ),
       ],
     );
   }
 
-  Widget _buildSummaryStats() {
+  Widget _buildSummaryStats(ThemeProvider theme) {
     final fullCount = widget.data
         .where((d) => d['isCompleted'] == true && d['level'] == 'full')
         .length;
@@ -304,22 +315,26 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FCEB),
+        color: theme.isDarkMode
+            ? const Color(0xFF2A2A2A)
+            : const Color(0xFFF7FCEB),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem('🌟 کامل', fullCount, const Color(0xFF2ECC71)),
-          _buildStatItem('⭐ نیمه', halfCount, const Color(0xFFFFA500)),
-          _buildStatItem('✨ پایه', basicCount, const Color(0xFF3498DB)),
-          _buildStatItem('📊 مجموع', totalCompleted, const Color(0xFFB0CC5D)),
+          _buildStatItem('🌟 کامل', fullCount, const Color(0xFF2ECC71), theme),
+          _buildStatItem('⭐ نیمه', halfCount, const Color(0xFFFFA500), theme),
+          _buildStatItem('✨ پایه', basicCount, const Color(0xFF3498DB), theme),
+          _buildStatItem(
+              '📊 مجموع', totalCompleted, const Color(0xFFB0CC5D), theme),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, int count, Color color) {
+  Widget _buildStatItem(
+      String label, int count, Color color, ThemeProvider theme) {
     return Column(
       children: [
         Text(
@@ -332,7 +347,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 9, color: Color(0xFF73786B)),
+          style: TextStyle(fontSize: 9, color: theme.textSecondaryColor),
         ),
       ],
     );
@@ -343,13 +358,21 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
 
 class _HabitChartPainter extends CustomPainter {
   final List<Map<String, dynamic>> allData;
-  final String calendarType;
+  final CalendarProvider calendar;
   final Color primaryColor;
+  final bool isDarkMode;
+  final Color textColor;
+  final Color textSecondaryColor;
+  final Color cardColor;
 
   _HabitChartPainter({
     required this.allData,
-    required this.calendarType,
+    required this.calendar,
     required this.primaryColor,
+    required this.isDarkMode,
+    required this.textColor,
+    required this.textSecondaryColor,
+    required this.cardColor,
   });
 
   @override
@@ -392,7 +415,7 @@ class _HabitChartPainter extends CustomPainter {
       if (!isCompleted) {
         final y = padding.top + chartHeight - (0.5 / 3 * chartHeight);
         final dotPaint = Paint()
-          ..color = Colors.grey.shade300
+          ..color = isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300
           ..style = PaintingStyle.fill;
         canvas.drawCircle(Offset(x, y), 4, dotPaint);
       }
@@ -430,7 +453,7 @@ class _HabitChartPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
       canvas.drawCircle(points[i], 6, dotPaint);
       final borderPaint = Paint()
-        ..color = Colors.white
+        ..color = cardColor
         ..strokeWidth = 1.5
         ..style = PaintingStyle.stroke;
       canvas.drawCircle(points[i], 6, borderPaint);
@@ -446,8 +469,10 @@ class _HabitChartPainter extends CustomPainter {
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(points[i].dx - textPainter.width / 2,
-            points[i].dy - textPainter.height / 2),
+        Offset(
+          points[i].dx - textPainter.width / 2,
+          points[i].dy - textPainter.height / 2,
+        ),
       );
     }
     _drawDayLabels(canvas, size, padding, xStep);
@@ -467,14 +492,14 @@ class _HabitChartPainter extends CustomPainter {
     final textStyle = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: Color(0xFF73786B),
+      color: textSecondaryColor,
     );
     for (var level in levels) {
       final y = padding.top +
           chartHeight -
           ((level['value'] as double) / 3 * chartHeight);
       final dashPaint = Paint()
-        ..color = (level['color'] as Color).withOpacity(0.25)
+        ..color = (level['color'] as Color).withOpacity(isDarkMode ? 0.4 : 0.25)
         ..strokeWidth = 0.8
         ..style = PaintingStyle.stroke;
       final dashWidth = 3.0;
@@ -491,19 +516,14 @@ class _HabitChartPainter extends CustomPainter {
       }
       final textSpan = TextSpan(
         text: level['label'] as String,
-        style: textStyle.copyWith(
-          color: level['color'] as Color,
-        ),
+        style: textStyle.copyWith(color: level['color'] as Color),
       );
       final textPainter = TextPainter(
         text: textSpan,
         textDirection: TextDirection.rtl,
       );
       textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(2, y - textPainter.height / 2),
-      );
+      textPainter.paint(canvas, Offset(2, y - textPainter.height / 2));
     }
   }
 
@@ -515,32 +535,32 @@ class _HabitChartPainter extends CustomPainter {
   ) {
     final textStyle = TextStyle(
       fontSize: 9,
-      color: Color(0xFF73786B),
+      color: textSecondaryColor,
       fontWeight: FontWeight.w600,
     );
     for (int i = 0; i < allData.length; i++) {
       final x = padding.left + (i * xStep);
       final dateStr = allData[i]['date'];
       final date = DateTime.parse(dateStr);
+
       String label;
-      if (calendarType == 'jalali') {
+      if (calendar.isJalali) {
         final jalali = Jalali.fromDateTime(date);
         label = jalali.day.toString();
       } else {
         label = date.day.toString();
       }
+
       final y = size.height - 6;
-      final textSpan = TextSpan(
-        text: label,
-        style: textStyle,
-      );
+      final textSpan = TextSpan(text: label, style: textStyle);
       final textPainter = TextPainter(
         text: textSpan,
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
+      // ✅ پس‌زمینه لیبل روز با رنگ کارت هماهنگ میشه
       final bgPaint = Paint()
-        ..color = Colors.white
+        ..color = cardColor
         ..style = PaintingStyle.fill;
       canvas.drawRect(
         Rect.fromLTWH(
@@ -572,7 +592,10 @@ class _HabitChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(covariant _HabitChartPainter oldDelegate) {
+    return oldDelegate.allData != allData ||
+        oldDelegate.calendar.calendarType != calendar.calendarType ||
+        oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.isDarkMode != isDarkMode;
   }
 }

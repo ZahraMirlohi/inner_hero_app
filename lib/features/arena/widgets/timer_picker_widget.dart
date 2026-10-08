@@ -35,8 +35,12 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
+
+    // ✅ رنگ پس‌زمینه باکس‌ها بر اساس تم
+    final Color wheelBg =
+        theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF7FCEB);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -44,18 +48,21 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
         // انتخاب دقیقه
         Column(
           children: [
-            const Text(
+            Text(
               'دقیقه',
-              style: TextStyle(fontSize: 12, color: Color(0xFF73786B)),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor,
+              ),
             ),
             const SizedBox(height: 4),
             Container(
               width: 80,
               height: 120,
               decoration: BoxDecoration(
-                color: const Color(0xFFF7FCEB),
+                color: wheelBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8EDF2)),
+                border: Border.all(color: theme.borderColor),
               ),
               child: ListWheelScrollView(
                 itemExtent: 40,
@@ -75,8 +82,9 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
                         fontSize: 20,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
-                        color:
-                            isSelected ? primaryColor : const Color(0xFF73786B),
+                        color: isSelected
+                            ? primaryColor
+                            : theme.textSecondaryColor,
                       ),
                     ),
                   );
@@ -86,30 +94,33 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
           ],
         ),
         const SizedBox(width: 16),
-        const Text(
+        Text(
           ':',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF090909),
+            color: theme.textColor,
           ),
         ),
         const SizedBox(width: 16),
         // انتخاب ثانیه
         Column(
           children: [
-            const Text(
+            Text(
               'ثانیه',
-              style: TextStyle(fontSize: 12, color: Color(0xFF73786B)),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textSecondaryColor,
+              ),
             ),
             const SizedBox(height: 4),
             Container(
               width: 80,
               height: 120,
               decoration: BoxDecoration(
-                color: const Color(0xFFF7FCEB),
+                color: wheelBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8EDF2)),
+                border: Border.all(color: theme.borderColor),
               ),
               child: ListWheelScrollView(
                 itemExtent: 40,
@@ -129,8 +140,9 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
                         fontSize: 20,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
-                        color:
-                            isSelected ? primaryColor : const Color(0xFF73786B),
+                        color: isSelected
+                            ? primaryColor
+                            : theme.textSecondaryColor,
                       ),
                     ),
                   );

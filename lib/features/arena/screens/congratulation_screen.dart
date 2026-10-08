@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '/providers/theme_provider.dart'; // ✅ اضافه شد
+import '/providers/theme_provider.dart';
 
 class CongratulationScreen extends StatefulWidget {
   final int todayXP;
@@ -41,7 +41,10 @@ class _CongratulationScreenState extends State<CongratulationScreen>
       'quote': 'موفقیت مجموع تلاش‌های کوچکی است که روز به روز تکرار می‌شوند.',
       'author': 'رابرت کالیر',
     },
-    // ... بقیه نقل قول‌ها
+    {
+      'quote': 'هر روز یک فرصت جدید برای بهتر شدن است.',
+      'author': 'ناشناس',
+    },
   ];
 
   @override
@@ -84,8 +87,8 @@ class _CongratulationScreenState extends State<CongratulationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     return WillPopScope(
       onWillPop: () async {
@@ -93,7 +96,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
         return false;
       },
       child: Scaffold(
-        backgroundColor: primaryColor, // ✅ رنگ پویا
+        backgroundColor: primaryColor,
         body: SafeArea(
           child: Stack(
             children: [
@@ -143,17 +146,17 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          color: Colors.white,
+                          color: theme.cardColor,
                           elevation: 4,
                           child: Padding(
                             padding: const EdgeInsets.all(24),
                             child: Column(
                               children: [
-                                const Text(
+                                Text(
                                   'دستاورد امروز شما',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Color(0xFF1A1A2E),
+                                    color: theme.textColor,
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -166,18 +169,21 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                                       value: widget.totalHabitsCompleted,
                                       label: 'عادت',
                                       color: primaryColor,
+                                      theme: theme,
                                     ),
                                     _buildStatItem(
                                       icon: Icons.assignment,
                                       value: widget.totalTasksCompleted,
                                       label: 'تسک',
                                       color: const Color(0xFFFFA500),
+                                      theme: theme,
                                     ),
                                     _buildStatItem(
                                       icon: Icons.stars,
                                       value: widget.todayXP,
                                       label: 'امتیاز XP',
                                       color: primaryColor,
+                                      theme: theme,
                                     ),
                                   ],
                                 ),
@@ -190,7 +196,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                       FadeTransition(
                         opacity: _fadeAnimation,
                         child: Card(
-                          color: Colors.white.withValues(alpha: 0.95),
+                          color: theme.cardColor.withValues(alpha: 0.95),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -208,12 +214,12 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                                       size: 24,
                                     ),
                                     const SizedBox(width: 8),
-                                    const Text(
+                                    Text(
                                       'پیام روزانه',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1A1A2E),
+                                        color: theme.textColor,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -230,10 +236,10 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                                   Text(
                                     '✨ $_dailyQuote ✨',
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 16,
                                       height: 1.5,
-                                      color: Color(0xFF1A1A2E),
+                                      color: theme.textColor,
                                     ),
                                   ),
                                   const SizedBox(height: 12),
@@ -242,7 +248,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.grey.shade600,
+                                      color: theme.textSecondaryColor,
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -260,7 +266,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                             Navigator.pop(context);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
+                            backgroundColor: theme.cardColor,
                             foregroundColor: primaryColor,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 48,
@@ -389,13 +395,14 @@ class _CongratulationScreenState extends State<CongratulationScreen>
     required int value,
     required String label,
     required Color color,
+    required ThemeProvider theme,
   }) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 28),
@@ -409,7 +416,10 @@ class _CongratulationScreenState extends State<CongratulationScreen>
             color: color,
           ),
         ),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
+        ),
       ],
     );
   }

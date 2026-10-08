@@ -21,11 +21,8 @@ class TasksTab extends StatefulWidget {
 
 class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
   final SupabaseService _supabase = SupabaseService();
-  List<Task> _tasks = [];
   bool _isLoading = true;
   String? _currentUserId;
-  String? _expandedItemId;
-  String? _expandedSubItemId;
 
   final Map<String, AnimationController> _animationControllers = {};
   final Map<String, Animation<double>> _animations = {};
@@ -60,9 +57,9 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
 
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      _tasks = syncProvider.tasks.isNotEmpty
-          ? syncProvider.tasks
-          : await _supabase.getTasks(_currentUserId!);
+      if (syncProvider.tasks.isEmpty && syncProvider.isOnline) {
+        await syncProvider.forceRefresh();
+      }
     }
     if (mounted) {
       setState(() => _isLoading = false);
@@ -76,16 +73,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     );
 
     if (result == true && mounted) {
-      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-
-      if (syncProvider.isOnline) {
-        _loadTasks();
-      } else {
-        final updatedTasks = syncProvider.tasks;
-        setState(() {
-          _tasks = updatedTasks;
-        });
-      }
+      print('🔄 Task edited, syncProvider notifies listeners');
     }
   }
 
@@ -111,86 +99,121 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      setState(() {
-        _tasks.removeWhere((t) => t.id == task.id);
-      });
+      // ✅ 1. حذف فوری از LocalStorage
+      await syncProvider.deleteTaskFromLocal(task.id);
 
-      if (syncProvider.isOnline) {
-        await _supabase.deleteTask(task.id);
-      } else {
-        await syncProvider.addOfflineOperation(
-          type: OperationType.deleteTask,
-          data: {'id': task.id},
-        );
-        print('📝 Task deletion saved offline: ${task.title}');
+      try {
+        // ✅ 2. حذف از Supabase
+        if (syncProvider.isOnline) {
+          await _supabase.deleteTask(task.id);
+
+          // ✅ 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
+          await syncProvider.refreshHabitsAndTasks();
+
+          print('✅ Task deleted and refreshed');
+        } else {
+          // ✅ حالت آفلاین
+          await syncProvider.addOfflineOperation(
+            type: OperationType.deleteTask,
+            data: {'id': task.id},
+          );
+          print('📝 Task deletion saved offline: ${task.title}');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تسک با موفقیت حذف شد 🗑️'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        print('❌ Error deleting task: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطا در حذف تسک: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: RefreshIndicator(
-        onRefresh: _loadTasks,
-        color: primaryColor,
-        child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(color: primaryColor),
-              )
-            : _tasks.isEmpty
+    // ✅ Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
+    return Consumer<SyncProvider>(
+      builder: (context, syncProvider, child) {
+        final tasks = syncProvider.tasks;
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: RefreshIndicator(
+            onRefresh: _loadTasks,
+            color: primaryColor,
+            child: _isLoading && tasks.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.assignment_outlined,
-                          size: 64, // ✅ از 80 به 64
-                          color: Colors.grey.shade300,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'هیچ وظیفه‌ای ندارید',
-                          style: TextStyle(color: Colors.grey.shade500),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'روی دکمه + در پایین صفحه کلیک کنید',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: CircularProgressIndicator(color: primaryColor),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(12), // ✅ از 16 به 12
-                    itemCount: _tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = _tasks[index];
-
-                      return TaskCard(
-                        task: task,
-                        isCompleted: false,
-                        onToggle: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content:
-                                  Text('برای انجام تسک به تب "امروز" بروید'),
-                              duration: Duration(seconds: 1),
+                : tasks.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.assignment_outlined,
+                              size: 64,
+                              color: theme.textSecondaryColor,
                             ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'هیچ وظیفه‌ای ندارید',
+                              style: TextStyle(color: theme.textSecondaryColor),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'روی دکمه + در پایین صفحه کلیک کنید',
+                              style: TextStyle(
+                                color: theme.textSecondaryColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: tasks.length,
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+
+                          return TaskCard(
+                            task: task,
+                            isCompleted: false,
+                            onToggle: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'برای انجام تسک به تب "امروز" بروید'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            onEdit: () => _editTask(task),
+                            onDelete: () => _deleteTask(task),
                           );
                         },
-                        onEdit: () => _editTask(task),
-                        onDelete: () => _deleteTask(task),
-                      );
-                    },
-                  ),
-      ),
+                      ),
+          ),
+        );
+      },
     );
   }
 }

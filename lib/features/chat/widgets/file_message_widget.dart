@@ -799,22 +799,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 ),
               ],
             ),
-            if (showLoading)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Center(
-                  child: Text(
-                    _isBuffering
-                        ? '⏳ در حال بافرینگ...'
-                        : '⏳ در حال بارگذاری...',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

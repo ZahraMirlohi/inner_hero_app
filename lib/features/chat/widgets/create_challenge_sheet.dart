@@ -69,6 +69,10 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
+    // ✅ رنگ‌های محاسبه شده
+    final Color inputFillColor =
+        theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50;
+
     return Container(
       padding: const EdgeInsets.all(20),
       constraints: BoxConstraints(
@@ -138,16 +142,23 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                     // عنوان
                     TextFormField(
                       controller: _titleController,
+                      style: TextStyle(color: theme.textColor),
                       decoration: InputDecoration(
                         labelText: 'عنوان چالش',
                         hintText: 'مثال: چالش ۷ روزه ورزش',
+                        labelStyle: TextStyle(color: theme.textSecondaryColor),
+                        hintStyle: TextStyle(color: theme.textSecondaryColor),
                         prefixIcon: Icon(Icons.title, color: primaryColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: primaryColor, width: 2),
+                        ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: inputFillColor,
                       ),
                       validator: (value) => value?.isEmpty ?? true
                           ? 'لطفاً عنوان را وارد کنید'
@@ -158,18 +169,25 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                     // توضیحات
                     TextFormField(
                       controller: _descriptionController,
+                      style: TextStyle(color: theme.textColor),
                       maxLines: 2,
                       decoration: InputDecoration(
                         labelText: 'توضیحات (اختیاری)',
                         hintText: 'توضیحاتی درباره چالش...',
+                        labelStyle: TextStyle(color: theme.textSecondaryColor),
+                        hintStyle: TextStyle(color: theme.textSecondaryColor),
                         prefixIcon:
                             Icon(Icons.description, color: primaryColor),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
                           borderSide: BorderSide.none,
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: primaryColor, width: 2),
+                        ),
                         filled: true,
-                        fillColor: Colors.grey.shade50,
+                        fillColor: inputFillColor,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -324,6 +342,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                           children: [
                             TextField(
                               controller: _habitTitleController,
+                              style: TextStyle(color: theme.textColor),
                               decoration: InputDecoration(
                                 hintText: 'عنوان عادت...',
                                 hintStyle: TextStyle(
@@ -334,6 +353,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                             ),
                             TextField(
                               controller: _habitDescController,
+                              style: TextStyle(color: theme.textColor),
                               decoration: InputDecoration(
                                 hintText: 'توضیحات (اختیاری)...',
                                 hintStyle: TextStyle(
@@ -382,7 +402,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                                         icon['icon'],
                                         color: isSelected
                                             ? primaryColor
-                                            : Colors.grey,
+                                            : theme.textSecondaryColor,
                                         size: 18,
                                       ),
                                     ),

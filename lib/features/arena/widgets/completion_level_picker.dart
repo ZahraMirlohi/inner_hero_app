@@ -41,8 +41,8 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final theme = Provider.of<ThemeProvider>(context);
+    final Color primaryColor = theme.primaryColor;
 
     final bool isQuest = widget.isQuest ?? false;
     final bool isChallenge = widget.isChallenge ?? false;
@@ -71,6 +71,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     }
 
     return Dialog(
+      backgroundColor: theme.cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -99,11 +100,12 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'چگونه انجام دادی؟',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: theme.textColor,
                         ),
                       ),
                       Row(
@@ -113,7 +115,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                               widget.habitTitle,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: theme.textSecondaryColor,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -167,6 +169,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               fullDesc,
               isCustom: isCustomFull,
               primaryColor: primaryColor,
+              theme: theme,
             ),
             const SizedBox(height: 10),
 
@@ -175,6 +178,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               halfDesc,
               isCustom: isCustomHalf,
               primaryColor: primaryColor,
+              theme: theme,
             ),
             const SizedBox(height: 10),
 
@@ -183,6 +187,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               basicDesc,
               isCustom: isCustomBasic,
               primaryColor: primaryColor,
+              theme: theme,
             ),
 
             const SizedBox(height: 16),
@@ -221,9 +226,9 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: const Text(
+              child: Text(
                 'انصراف',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: theme.textSecondaryColor),
               ),
             ),
           ],
@@ -237,6 +242,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     String description, {
     bool isCustom = false,
     required Color primaryColor,
+    required ThemeProvider theme,
   }) {
     final isSelected = _selectedLevel == level;
     final xpEarned = (widget.habitXpReward * level.xpMultiplier / 100).round();
@@ -255,11 +261,19 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color:
-              isSelected ? level.color.withOpacity(0.08) : Colors.grey.shade50,
+          // ✅ در تم شب از رنگ‌های تیره‌تر استفاده کن
+          color: isSelected
+              ? level.color.withOpacity(0.15)
+              : (theme.isDarkMode
+                  ? const Color(0xFF2A2A2A)
+                  : Colors.grey.shade50),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? level.color : Colors.grey.shade200,
+            color: isSelected
+                ? level.color
+                : (theme.isDarkMode
+                    ? const Color(0xFF333333)
+                    : Colors.grey.shade200),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -281,9 +295,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? level.color
-                              : const Color(0xFF1A1A2E),
+                          color: isSelected ? level.color : theme.textColor,
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -294,7 +306,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: level.color.withOpacity(0.1),
+                            color: level.color.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -313,9 +325,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                     description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSelected
-                          ? Colors.grey.shade700
-                          : Colors.grey.shade500,
+                      color: theme.textSecondaryColor,
                     ),
                   ),
                   if (levelValue != null) ...[
@@ -326,7 +336,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: level.color.withOpacity(0.06),
+                        color: level.color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -356,7 +366,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: level.color.withOpacity(0.08),
+                color: level.color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(

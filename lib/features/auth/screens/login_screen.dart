@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '/services/supabase_service.dart'; // ← تغییر
 import '/features/home/screens/main_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -92,8 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: theme.backgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

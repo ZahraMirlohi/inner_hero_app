@@ -155,6 +155,35 @@ class SupabaseService {
     }
   }
 
+  // lib/services/supabase_service.dart
+
+  /// ✅ گرفتن زمان رکورد شده یک عادت در یک تاریخ مشخص
+  Future<int?> getHabitTimeOnDate({
+    required String habitId,
+    required String userId,
+    required DateTime date,
+  }) async {
+    try {
+      final dateStr = date.toIso8601String().split('T').first;
+
+      final response = await client
+          .from('habit_time_tracking')
+          .select('total_seconds')
+          .eq('habit_id', habitId)
+          .eq('user_id', userId)
+          .eq('date', dateStr)
+          .maybeSingle();
+
+      if (response != null && response['total_seconds'] != null) {
+        return response['total_seconds'] as int;
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Error getting habit time: $e');
+      return null;
+    }
+  }
+
 // ✅ اصلاح متد markHabitCompletedWithLevel - حذف onConflict
   Future<void> markHabitCompletedWithLevel({
     required String habitId,
