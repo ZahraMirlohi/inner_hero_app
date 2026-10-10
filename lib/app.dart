@@ -10,6 +10,8 @@ import '/features/auth/screens/login_screen.dart';
 import '/features/home/screens/main_screen.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/features/profile/screens/username_setup_screen.dart';
+import '/services/supabase_service.dart';
 
 class HeroApp extends StatefulWidget {
   const HeroApp({super.key});
@@ -21,6 +23,11 @@ class HeroApp extends StatefulWidget {
 class _HeroAppState extends State<HeroApp> {
   bool _isLoggedIn = false;
   bool _isLoading = true;
+  bool _hasUsername = true; // ✅ جدید
+  String? _userId; // ✅ جدید
+  String? _userName; // ✅ جدید
+
+  final SupabaseService _supabase = SupabaseService();
 
   @override
   void initState() {
@@ -34,7 +41,6 @@ class _HeroAppState extends State<HeroApp> {
       final session = Supabase.instance.client.auth.currentSession;
 
       if (session == null || session.isExpired) {
-        // Session منقضی شده، کاربر باید دوباره لاگین کنه
         print('⚠️ Session invalid or expired, clearing local state...');
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('user_id');
@@ -51,9 +57,47 @@ class _HeroAppState extends State<HeroApp> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
 
+      if (userId == null || userId.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = false;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // ✅ چک کردن username
+      bool hasUsername = true;
+      String? userName;
+
+      try {
+        final profile = await _supabase.client
+            .from('profiles')
+            .select('username, name')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (profile != null) {
+          userName = profile['name'] as String?;
+          final username = profile['username'] as String?;
+          hasUsername = username != null && username.isNotEmpty;
+        } else {
+          // پروفایل وجود ندارد → باید username انتخاب شود
+          hasUsername = false;
+        }
+      } catch (e) {
+        print('⚠️ Error checking username: $e');
+        // در صورت خطا، فرض می‌کنیم username دارد تا اپ لود شود
+        hasUsername = true;
+      }
+
       if (mounted) {
         setState(() {
-          _isLoggedIn = userId != null && userId.isNotEmpty;
+          _isLoggedIn = true;
+          _hasUsername = hasUsername;
+          _userId = userId;
+          _userName = userName;
           _isLoading = false;
         });
       }
@@ -167,34 +211,58 @@ class _HeroAppState extends State<HeroApp> {
               }),
             ),
           ),
-          home: _isLoggedIn
-              ? Consumer<SyncProvider>(
-                  builder: (context, syncProvider, child) {
-                    if (!syncProvider.isInitialized) {
-                      return Scaffold(
-                        backgroundColor: themeProvider.backgroundColor,
-                        body: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              CircularProgressIndicator(
-                                color: Color(0xFF4A90E2),
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'در حال بارگذاری اطلاعات...',
-                                style: TextStyle(color: Color(0xFF6B7280)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return const MainScreen();
-                  },
-                )
-              : const LoginScreen(),
+          home: _buildHome(),
         );
+      },
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+// 🏠 تعیین صفحه اصلی بر اساس وضعیت کاربر
+// ═══════════════════════════════════════════════════════════
+  Widget _buildHome() {
+    // ۱. اگر لاگین نکرده → صفحه ورود
+    if (!_isLoggedIn) {
+      return const LoginScreen();
+    }
+
+    // ۲. اگر username ندارد → صفحه انتخاب username
+    if (!_hasUsername && _userId != null) {
+      return UsernameSetupScreen(
+        userId: _userId!,
+        currentUsername: null,
+        isFirstTime: true,
+        onCompleted: () {
+          // بعد از ذخیره username، state را آپدیت کن
+          setState(() {
+            _hasUsername = true;
+          });
+        },
+      );
+    }
+
+    // ۳. در غیر این صورت → صفحه اصلی
+    return Consumer<SyncProvider>(
+      builder: (context, syncProvider, child) {
+        if (!syncProvider.isInitialized) {
+          return Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  CircularProgressIndicator(color: Color(0xFF4A90E2)),
+                  SizedBox(height: 16),
+                  Text(
+                    'در حال بارگذاری اطلاعات...',
+                    style: TextStyle(color: Color(0xFF6B7280)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return const MainScreen();
       },
     );
   }

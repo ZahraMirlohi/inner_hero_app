@@ -1,9 +1,10 @@
-// lib/features/profile/models/profile_model.dart
-
 class UserProfile {
   final String userId;
   String name;
-  String? uniqueId; // ✅ اضافه کردن uniqueId
+  String? uniqueId;
+  String? username; // ✅ جدید: نام کاربری یکتا
+  String? avatarUrl; // ✅ جدید: لینک عکس پروفایل
+  DateTime? usernameUpdatedAt; // ✅ جدید: زمان آخرین تغییر
   String? phone;
   String? email;
   DateTime? birthDate;
@@ -30,10 +31,72 @@ class UserProfile {
   int currentStreak;
   int bestStreak;
 
+  UserProfile copyWith({
+    String? name,
+    String? uniqueId,
+    String? username,
+    String? avatarUrl,
+    DateTime? usernameUpdatedAt,
+    String? phone,
+    String? email,
+    DateTime? birthDate,
+    int? realAge,
+    String? gender,
+    DateTime? registeredAt,
+    String? avatarStyle,
+    String? skinColor,
+    String? hairStyle,
+    String? hairColor,
+    String? eyeStyle,
+    String? eyeColor,
+    String? mouthStyle,
+    String? accessoryType,
+    String? outfitStyle,
+    String? backgroundStyle,
+    int? totalXp,
+    int? weeklyStreak,
+    DateTime? lastStreakUpdate,
+    int? currentStreak,
+    int? bestStreak,
+  }) {
+    return UserProfile(
+      userId: userId,
+      name: name ?? this.name,
+      uniqueId: uniqueId ?? this.uniqueId,
+      username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      usernameUpdatedAt: usernameUpdatedAt ?? this.usernameUpdatedAt,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      birthDate: birthDate ?? this.birthDate,
+      realAge: realAge ?? this.realAge,
+      gender: gender ?? this.gender,
+      registeredAt: registeredAt ?? this.registeredAt,
+      avatarStyle: avatarStyle ?? this.avatarStyle,
+      skinColor: skinColor ?? this.skinColor,
+      hairStyle: hairStyle ?? this.hairStyle,
+      hairColor: hairColor ?? this.hairColor,
+      eyeStyle: eyeStyle ?? this.eyeStyle,
+      eyeColor: eyeColor ?? this.eyeColor,
+      mouthStyle: mouthStyle ?? this.mouthStyle,
+      accessoryType: accessoryType ?? this.accessoryType,
+      outfitStyle: outfitStyle ?? this.outfitStyle,
+      backgroundStyle: backgroundStyle ?? this.backgroundStyle,
+      totalXp: totalXp ?? this.totalXp,
+      weeklyStreak: weeklyStreak ?? this.weeklyStreak,
+      lastStreakUpdate: lastStreakUpdate ?? this.lastStreakUpdate,
+      currentStreak: currentStreak ?? this.currentStreak,
+      bestStreak: bestStreak ?? this.bestStreak,
+    );
+  }
+
   UserProfile({
     required this.userId,
     required this.name,
-    this.uniqueId, // ✅ اضافه شده
+    this.uniqueId,
+    this.username,
+    this.avatarUrl,
+    this.usernameUpdatedAt,
     this.phone,
     this.email,
     this.birthDate,
@@ -81,7 +144,11 @@ class UserProfile {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'unique_id': uniqueId, // ✅ اضافه شده
+      'unique_id': uniqueId,
+      'username': username, // ✅ جدید
+      'avatar_url': avatarUrl, // ✅ جدید
+      'username_updated_at': usernameUpdatedAt // ✅ جدید
+          ?.toIso8601String(),
       'phone': phone,
       'email': email,
       'birth_date': birthDate?.toIso8601String().split('T').first,
@@ -99,10 +166,8 @@ class UserProfile {
       'background_style': backgroundStyle,
       'total_xp': totalXp,
       'weekly_streak': weeklyStreak,
-      'last_streak_update': lastStreakUpdate
-          ?.toIso8601String()
-          .split('T')
-          .first,
+      'last_streak_update':
+          lastStreakUpdate?.toIso8601String().split('T').first,
       'current_streak': currentStreak,
       'best_streak': bestStreak,
     };
@@ -112,7 +177,12 @@ class UserProfile {
     return UserProfile(
       userId: userId,
       name: map['name'] ?? 'کاربر',
-      uniqueId: map['unique_id'], // ✅ اضافه شده
+      uniqueId: map['unique_id'],
+      username: map['username'], // ✅ جدید
+      avatarUrl: map['avatar_url'], // ✅ جدید
+      usernameUpdatedAt: map['username_updated_at'] != null // ✅ جدید
+          ? DateTime.tryParse(map['username_updated_at'])
+          : null,
       phone: map['phone'],
       email: map['email'],
       birthDate: map['birth_date'] != null
@@ -141,5 +211,31 @@ class UserProfile {
       currentStreak: map['current_streak'] ?? 0,
       bestStreak: map['best_streak'] ?? 0,
     );
+  }
+
+  /// آیا کاربر نام کاربری دارد؟
+  bool get hasUsername => username != null && username!.isNotEmpty;
+
+  /// آیا کاربر عکس پروفایل دارد؟
+  bool get hasAvatar => avatarUrl != null && avatarUrl!.isNotEmpty;
+
+  /// نام نمایشی (با @)
+  String get displayUsername => hasUsername ? '@$username' : '';
+
+  /// ✅ جدید: آیا می‌تواند username را عوض کند؟ (۱ دقیقه بین هر تغییر)
+  bool get canChangeUsername {
+    if (usernameUpdatedAt == null) return true;
+    final secondsSinceChange =
+        DateTime.now().difference(usernameUpdatedAt!).inSeconds;
+    return secondsSinceChange >= 60; // ۶۰ ثانیه
+  }
+
+  /// ✅ جدید: ثانیه‌های باقی‌مانده تا تغییر بعدی
+  int get secondsUntilUsernameChange {
+    if (usernameUpdatedAt == null) return 0;
+    final secondsSinceChange =
+        DateTime.now().difference(usernameUpdatedAt!).inSeconds;
+    if (secondsSinceChange >= 60) return 0;
+    return 60 - secondsSinceChange;
   }
 }

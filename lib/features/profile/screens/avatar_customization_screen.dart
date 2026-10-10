@@ -5,6 +5,12 @@ import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '../models/profile_model.dart';
 import '/providers/theme_provider.dart';
+// ... importهای قبلی
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import '/services/storage_service.dart';
+import 'user_avatar.dart';
+import 'dart:typed_data';
 
 class AvatarCustomizationScreen extends StatefulWidget {
   final String userId;
@@ -23,8 +29,13 @@ class AvatarCustomizationScreen extends StatefulWidget {
 
 class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
   final SupabaseService _supabase = SupabaseService();
+  final StorageService _storage = StorageService(); // ✅ جدید
+  final ImagePicker _picker = ImagePicker(); // ✅ جدید
+
   late UserProfile _profile;
   bool _isLoading = false;
+  bool _isUploadingAvatar = false; // ✅ جدید
+  double _uploadProgress = 0.0;
 
   // گزینه‌های شخصی‌سازی
   final List<Map<String, dynamic>> _skinColors = [
@@ -207,73 +218,455 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
 
   Widget _buildAvatarPreview(ThemeProvider theme) {
     final primaryColor = theme.primaryColor;
+    final hasAvatar =
+        _profile.avatarUrl != null && _profile.avatarUrl!.isNotEmpty;
 
-    return Center(
-      child: Container(
-        width: 150,
-        height: 150,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [primaryColor, primaryColor.withValues(alpha: 0.7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    return Column(
+      children: [
+        Center(
+          child: Stack(
+            children: [
+              // آواتار یا حرف اول
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryColor,
+                      primaryColor.withValues(alpha: 0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: theme.surfaceColor,
+                    ),
+                    child: ClipOval(
+                      child: hasAvatar
+                          ? Image.network(
+                              _profile.avatarUrl!,
+                              width: 138,
+                              height: 138,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildInitialAvatar(theme),
+                            )
+                          : _buildInitialAvatar(theme),
+                    ),
+                  ),
+                ),
+              ),
+              // دکمه دوربین
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _isUploadingAvatar ? null : _showAvatarSourcePicker,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.surfaceColor,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: _isUploadingAvatar
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withValues(alpha: 0.3),
-              blurRadius: 20,
-              spreadRadius: 5,
+        ),
+        const SizedBox(height: 12),
+        // نمایش وضعیت آپلود
+        if (_isUploadingAvatar)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: _uploadProgress,
+                    minHeight: 6,
+                    backgroundColor: theme.borderColor,
+                    color: primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'در حال آپلود... ${(_uploadProgress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.textSecondaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (hasAvatar && !_isUploadingAvatar)
+          TextButton.icon(
+            onPressed: _removeAvatar,
+            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+            label: const Text(
+              'حذف عکس پروفایل',
+              style: TextStyle(color: Colors.red, fontSize: 13),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+// 📸 انتخاب منبع عکس
+// ═══════════════════════════════════════════════════════════
+  void _showAvatarSourcePicker() {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'تغییر عکس پروفایل',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSourceOption(
+                        icon: Icons.camera_alt,
+                        label: 'دوربین',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickAndUploadAvatar(ImageSource.camera);
+                        },
+                        theme: theme,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildSourceOption(
+                        icon: Icons.photo_library,
+                        label: 'گالری',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickAndUploadAvatar(ImageSource.gallery);
+                        },
+                        theme: theme,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSourceOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required ThemeProvider theme,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: theme.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.primaryColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: theme.primaryColor, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: theme.textColor,
+              ),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.surfaceColor,
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Color(
-                        int.parse(
-                          'FF${_profile.skinColor.substring(1)}',
-                          radix: 16,
-                        ),
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _profile.name.substring(0, 1).toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _profile.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.textColor,
-                    ),
-                  ),
-                ],
-              ),
+      ),
+    );
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 📤 آپلود عکس
+// ═══════════════════════════════════════════════════════════
+  Future<void> _pickAndUploadAvatar(ImageSource source) async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 90,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      );
+
+      if (picked == null) return;
+
+      setState(() {
+        _isUploadingAvatar = true;
+        _uploadProgress = 0.1;
+      });
+
+      // ✅ خواندن bytes از XFile
+      final bytes = await picked.readAsBytes();
+
+      if (mounted) {
+        setState(() => _uploadProgress = 0.4);
+      }
+
+      // ۱. آپلود با فشرده‌سازی
+      final avatarUrl = await _storage.uploadAvatar(
+        userId: _profile.userId,
+        bytes: bytes,
+        originalFileName: picked.name,
+      );
+
+      if (mounted) {
+        setState(() => _uploadProgress = 0.8);
+      }
+
+      // ۲. ذخیره در دیتابیس
+      await _supabase.updateAvatarUrl(_profile.userId, avatarUrl);
+
+      // ۳. آپدیت state محلی
+      setState(() {
+        _profile = UserProfile(
+          userId: _profile.userId,
+          name: _profile.name,
+          uniqueId: _profile.uniqueId,
+          username: _profile.username,
+          avatarUrl: avatarUrl,
+          usernameUpdatedAt: _profile.usernameUpdatedAt,
+          phone: _profile.phone,
+          email: _profile.email,
+          birthDate: _profile.birthDate,
+          realAge: _profile.realAge,
+          gender: _profile.gender,
+          registeredAt: _profile.registeredAt,
+          avatarStyle: _profile.avatarStyle,
+          skinColor: _profile.skinColor,
+          hairStyle: _profile.hairStyle,
+          hairColor: _profile.hairColor,
+          eyeStyle: _profile.eyeStyle,
+          eyeColor: _profile.eyeColor,
+          mouthStyle: _profile.mouthStyle,
+          accessoryType: _profile.accessoryType,
+          outfitStyle: _profile.outfitStyle,
+          backgroundStyle: _profile.backgroundStyle,
+          totalXp: _profile.totalXp,
+          weeklyStreak: _profile.weeklyStreak,
+          lastStreakUpdate: _profile.lastStreakUpdate,
+          currentStreak: _profile.currentStreak,
+          bestStreak: _profile.bestStreak,
+        );
+        _uploadProgress = 1.0;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📸 عکس پروفایل با موفقیت آپلود شد'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAvatar = false;
+          _uploadProgress = 0.0;
+        });
+      }
+    }
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 🗑️ حذف عکس پروفایل
+// ═══════════════════════════════════════════════════════════
+  Future<void> _removeAvatar() async {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'حذف عکس پروفایل',
+          style: TextStyle(color: theme.textColor),
+        ),
+        content: Text(
+          'آیا مطمئن هستی؟ بعد از حذف، حرف اول نامت نمایش داده می‌شود.',
+          style: TextStyle(color: theme.textSecondaryColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('انصراف'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'حذف',
+              style: TextStyle(color: Colors.red),
             ),
           ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // ۱. حذف از دیتابیس
+      await _supabase.updateAvatarUrl(_profile.userId, null);
+
+      // ۲. آپدیت state
+      setState(() {
+        _profile = UserProfile(
+          userId: _profile.userId,
+          name: _profile.name,
+          uniqueId: _profile.uniqueId,
+          username: _profile.username,
+          avatarUrl: null, // ✅ حذف شد
+          usernameUpdatedAt: _profile.usernameUpdatedAt,
+          phone: _profile.phone,
+          email: _profile.email,
+          birthDate: _profile.birthDate,
+          realAge: _profile.realAge,
+          gender: _profile.gender,
+          registeredAt: _profile.registeredAt,
+          avatarStyle: _profile.avatarStyle,
+          skinColor: _profile.skinColor,
+          hairStyle: _profile.hairStyle,
+          hairColor: _profile.hairColor,
+          eyeStyle: _profile.eyeStyle,
+          eyeColor: _profile.eyeColor,
+          mouthStyle: _profile.mouthStyle,
+          accessoryType: _profile.accessoryType,
+          outfitStyle: _profile.outfitStyle,
+          backgroundStyle: _profile.backgroundStyle,
+          totalXp: _profile.totalXp,
+          weeklyStreak: _profile.weeklyStreak,
+          lastStreakUpdate: _profile.lastStreakUpdate,
+          currentStreak: _profile.currentStreak,
+          bestStreak: _profile.bestStreak,
+        );
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🗑️ عکس پروفایل حذف شد'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildInitialAvatar(ThemeProvider theme) {
+    return Center(
+      child: Text(
+        _profile.name.substring(0, 1).toUpperCase(),
+        style: TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.bold,
+          color: theme.primaryColor,
         ),
       ),
     );

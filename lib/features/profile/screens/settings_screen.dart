@@ -23,7 +23,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _vibrationEnabled = true;
   bool _privateProfile = false;
   String _calendarType = 'jalali';
-  String _language = 'fa';
 
   @override
   void initState() {
@@ -173,20 +172,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         primaryColor: primaryColor,
                       );
                     },
-                  ),
-                  _buildDropdownTile(
-                    icon: Icons.language,
-                    title: 'زبان',
-                    value: _language == 'fa' ? 'فارسی' : 'English',
-                    options: ['فارسی', 'English'],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _language = value == 'فارسی' ? 'fa' : 'en';
-                        });
-                      }
-                    },
-                    primaryColor: primaryColor,
                   ),
                 ],
               ),

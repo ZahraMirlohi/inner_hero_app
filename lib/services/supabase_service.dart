@@ -17,6 +17,7 @@ import 'dart:async';
 import '../features/arena/models/habit_completion.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '/features/profile/models/user_photo_model.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
@@ -27,6 +28,9 @@ class SupabaseService {
   SupabaseService._internal();
 
   SupabaseClient get client => Supabase.instance.client;
+
+  /// ✅ Alias برای استفاده در متدهای جدید (سازگاری)
+  SupabaseClient get _client => client;
 
   Future<bool> isOnline() async {
     try {
@@ -3221,5 +3225,310 @@ class SupabaseService {
       }
       return MapEntry(newKey, value);
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 👤 متدهای Username
+  // ═══════════════════════════════════════════════════════════
+
+  /// بررسی در دسترس بودن username
+  Future<bool> isUsernameAvailable(String username) async {
+    try {
+      final normalized = username.toLowerCase().trim();
+
+      // چک فرمت
+      final regex = RegExp(r'^[a-z][a-z0-9_.]{2,29}$');
+      if (!regex.hasMatch(normalized)) {
+        print('❌ Username format invalid: $normalized');
+        return false;
+      }
+
+      // چک یکتا بودن با تابع دیتابیس
+      final result = await _client.rpc(
+        'is_username_available',
+        params: {'p_username': normalized},
+      );
+
+      print('✅ is_username_available($normalized) = $result');
+      return result as bool;
+    } catch (e) {
+      print('❌ Error checking username: $e');
+      return false;
+    }
+  }
+
+  /// ذخیره username برای کاربر
+  Future<void> setUsername(String userId, String username) async {
+    try {
+      final normalized = username.toLowerCase().trim();
+
+      await _client.from('profiles').update({
+        'username': normalized,
+        'username_updated_at': DateTime.now().toIso8601String(),
+      }).eq('user_id', userId);
+
+      print('✅ Username set: $normalized');
+    } catch (e) {
+      print('❌ Error setting username: $e');
+      rethrow;
+    }
+  }
+
+  /// بررسی می‌کند آیا کاربر می‌تواند username را تغییر دهد (محدودیت ۱ دقیقه)
+  Future<bool> canChangeUsername(String userId) async {
+    try {
+      final response = await _client
+          .from('profiles')
+          .select('username_updated_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (response == null) return true;
+
+      final updatedAtStr = response['username_updated_at'];
+      if (updatedAtStr == null) return true;
+
+      final updatedAt = DateTime.parse(updatedAtStr);
+      final secondsSince = DateTime.now().difference(updatedAt).inSeconds;
+
+      return secondsSince >= 60;
+    } catch (e) {
+      print('❌ Error checking username change eligibility: $e');
+      return false;
+    }
+  }
+
+  /// ثانیه‌های باقی‌مانده تا تغییر بعدی username
+  Future<int> secondsUntilUsernameChange(String userId) async {
+    try {
+      final response = await _client
+          .from('profiles')
+          .select('username_updated_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (response == null) return 0;
+
+      final updatedAtStr = response['username_updated_at'];
+      if (updatedAtStr == null) return 0;
+
+      final updatedAt = DateTime.parse(updatedAtStr);
+      final secondsSince = DateTime.now().difference(updatedAt).inSeconds;
+
+      if (secondsSince >= 60) return 0;
+      return 60 - secondsSince;
+    } catch (e) {
+      print('❌ Error getting seconds until change: $e');
+      return 0;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🖼️ متدهای Avatar
+  // ═══════════════════════════════════════════════════════════
+
+  /// به‌روزرسانی avatar_url در profiles
+  Future<void> updateAvatarUrl(String userId, String? avatarUrl) async {
+    try {
+      await _client.from('profiles').update({
+        'avatar_url': avatarUrl,
+      }).eq('user_id', userId);
+
+      print('✅ Avatar URL updated: $avatarUrl');
+    } catch (e) {
+      print('❌ Error updating avatar: $e');
+      rethrow;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 📸 متدهای Gallery
+  // ═══════════════════════════════════════════════════════════
+
+  /// دریافت همه‌ی عکس‌های گالری یک کاربر
+  Future<List<UserPhoto>> getUserPhotos(
+    String userId, {
+    bool visibleOnly = false,
+  }) async {
+    try {
+      var query = _client.from('user_photos').select().eq('user_id', userId);
+
+      if (visibleOnly) {
+        query = query.eq('is_visible', true);
+      }
+
+      final response = await query.order('display_order', ascending: true);
+
+      return (response as List)
+          .map((map) => UserPhoto.fromMap(map, map['id']))
+          .toList();
+    } catch (e) {
+      print('❌ Error getting user photos: $e');
+      return [];
+    }
+  }
+
+  /// شمارش عکس‌های گالری کاربر
+  Future<int> getUserPhotosCount(String userId) async {
+    try {
+      final response =
+          await _client.from('user_photos').select('id').eq('user_id', userId);
+
+      return (response as List).length;
+    } catch (e) {
+      print('❌ Error counting photos: $e');
+      return 0;
+    }
+  }
+
+  /// افزودن عکس جدید به گالری
+  Future<UserPhoto> addUserPhoto({
+    required String userId,
+    required String photoUrl,
+    required String storagePath,
+    String? caption,
+    int? fileSize,
+    int? width,
+    int? height,
+    bool isPrimary = false,
+  }) async {
+    try {
+      // اگر primary باشد، همه primary های قبلی را غیرفعال کن
+      if (isPrimary) {
+        await _client
+            .from('user_photos')
+            .update({'is_primary': false}).eq('user_id', userId);
+      }
+
+      // ترتیب نمایش: بعد از آخرین عکس
+      final existing = await getUserPhotos(userId);
+      final nextOrder = existing.isEmpty ? 0 : (existing.last.displayOrder + 1);
+
+      final response = await _client
+          .from('user_photos')
+          .insert({
+            'user_id': userId,
+            'photo_url': photoUrl,
+            'storage_path': storagePath,
+            'caption': caption,
+            'file_size': fileSize,
+            'width': width,
+            'height': height,
+            'is_primary': isPrimary,
+            'display_order': nextOrder,
+          })
+          .select()
+          .single();
+
+      print('✅ Photo added: ${response['id']}');
+      return UserPhoto.fromMap(response, response['id']);
+    } catch (e) {
+      print('❌ Error adding photo: $e');
+      rethrow;
+    }
+  }
+
+  /// حذف عکس از گالری
+  Future<void> deleteUserPhoto({
+    required String photoId,
+    required String userId,
+  }) async {
+    try {
+      // ابتدا از دیتابیس حذف کن
+      await _client
+          .from('user_photos')
+          .delete()
+          .eq('id', photoId)
+          .eq('user_id', userId);
+
+      print('✅ Photo deleted from DB: $photoId');
+    } catch (e) {
+      print('❌ Error deleting photo from DB: $e');
+      rethrow;
+    }
+  }
+
+  /// به‌روزرسانی کپشن عکس
+  Future<void> updatePhotoCaption({
+    required String photoId,
+    required String userId,
+    required String caption,
+  }) async {
+    try {
+      await _client
+          .from('user_photos')
+          .update({
+            'caption': caption,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', photoId)
+          .eq('user_id', userId);
+
+      print('✅ Photo caption updated');
+    } catch (e) {
+      print('❌ Error updating caption: $e');
+      rethrow;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ❤️ متدهای Like
+  // ═══════════════════════════════════════════════════════════
+
+  /// چک می‌کند آیا کاربر این عکس را لایک کرده
+  Future<bool> hasLikedPhoto({
+    required String photoId,
+    required String userId,
+  }) async {
+    try {
+      final response = await _client
+          .from('photo_likes')
+          .select('id')
+          .eq('photo_id', photoId)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      print('❌ Error checking like: $e');
+      return false;
+    }
+  }
+
+  /// لایک یا آنلایک کردن عکس
+  Future<bool> togglePhotoLike({
+    required String photoId,
+    required String userId,
+  }) async {
+    try {
+      final hasLiked = await hasLikedPhoto(
+        photoId: photoId,
+        userId: userId,
+      );
+
+      if (hasLiked) {
+        // حذف لایک
+        await _client
+            .from('photo_likes')
+            .delete()
+            .eq('photo_id', photoId)
+            .eq('user_id', userId);
+
+        print('👎 Unliked photo');
+        return false;
+      } else {
+        // افزودن لایک
+        await _client.from('photo_likes').insert({
+          'photo_id': photoId,
+          'user_id': userId,
+        });
+
+        print('👍 Liked photo');
+        return true;
+      }
+    } catch (e) {
+      print('❌ Error toggling like: $e');
+      rethrow;
+    }
   }
 }

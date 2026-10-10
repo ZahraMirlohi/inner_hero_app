@@ -130,7 +130,6 @@ class ThemeProvider extends ChangeNotifier {
       _textSecondaryColor = Colors.white70;
       _secondaryColor = Colors.white;
 
-      // ✅ کارت‌ها و باکس‌ها
       _cardColor = const Color(0xFF1E1E1E);
       _cardSecondaryColor = const Color(0xFF2A2A2A);
       _borderColor = const Color(0xFF333333);
@@ -138,26 +137,45 @@ class ThemeProvider extends ChangeNotifier {
       _iconButtonBackground = const Color(0xFF2A2A2A);
       _overlayBackground = const Color(0xFF1E1E1E);
 
-      // ✅ دکمه انجام
       _checkButtonBackground = _primaryColor;
       _onCheckButton = const Color(0xFF090909);
     } else {
-      // ✅ تم روز
-      _backgroundColor = const Color(0xFFF7FCEB);
-      _surfaceColor = Colors.white;
+      // ✅ تم روز — رنگ‌ها بر اساس primaryColor محاسبه می‌شوند
+
+      // پس‌زمینه: یک توناژ خیلی روشن از رنگ اصلی
+      // (اشباع کم، روشنایی بالا)
+      final bgHsl = HSLColor.fromColor(_primaryColor);
+      _backgroundColor = bgHsl
+          .withSaturation((bgHsl.saturation * 0.35).clamp(0.0, 1.0))
+          .withLightness(0.97)
+          .toColor();
+
+      // سطح (کارت‌ها): یک توناژ روشن‌تر از پس‌زمینه
+      _surfaceColor = bgHsl
+          .withSaturation((bgHsl.saturation * 0.15).clamp(0.0, 1.0))
+          .withLightness(0.99)
+          .toColor();
+
+      // ─── رنگ متن ───
       _textColor = const Color(0xFF090909);
       _textSecondaryColor = const Color(0xFF73786B);
       _secondaryColor = const Color(0xFF090909);
 
-      // ✅ کارت‌ها و باکس‌ها
-      _cardColor = Colors.white;
-      _cardSecondaryColor = const Color(0xFFF5F5F5);
-      _borderColor = const Color(0xFFE8EDF2);
-      _chipBackground = Colors.white;
-      _iconButtonBackground = const Color(0xFFF5F5F5);
-      _overlayBackground = Colors.white;
+      // ─── کارت‌ها و باکس‌ها ───
+      _cardColor = _surfaceColor;
+      _cardSecondaryColor = bgHsl
+          .withSaturation((bgHsl.saturation * 0.2).clamp(0.0, 1.0))
+          .withLightness(0.96)
+          .toColor();
+      _borderColor = bgHsl
+          .withSaturation((bgHsl.saturation * 0.25).clamp(0.0, 1.0))
+          .withLightness(0.92)
+          .toColor();
+      _chipBackground = _surfaceColor;
+      _iconButtonBackground = _cardSecondaryColor;
+      _overlayBackground = _surfaceColor;
 
-      // ✅ دکمه انجام
+      // ─── دکمه انجام ───
       _checkButtonBackground = const Color(0xFF090909);
       _onCheckButton = Colors.white;
     }

@@ -1,6 +1,7 @@
 // lib/features/home/screens/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // ✅ اضافه کنید
 import '../../../services/supabase_service.dart';
 import '../../arena/screens/arena_screen.dart';
 import '../../profile/screens/profile_screen.dart';
@@ -8,6 +9,7 @@ import '../../chat/screens/chat_screen.dart';
 import '../../explore/screens/explore_screen.dart';
 import '../../../widgets/custom_bottom_nav_bar.dart';
 import '../../../config/nav_items.dart';
+import '../../../providers/theme_provider.dart'; // ✅ اضافه کنید
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -37,13 +39,16 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ دریافت تم از Provider
+    final theme = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      // ✅ استفاده از رنگ پس‌زمینه تم به جای رنگ هاردکد شده
+      backgroundColor: theme.backgroundColor,
       body: Stack(
         children: [
-          // ✅ 1. محتوای اصلی (صفحات) با SafeArea
           SafeArea(
-            bottom: false, // ⚠️ مهم: چون CustomBottomNavBar خودش SafeArea داره
+            bottom: false,
             child: IndexedStack(
               index: _currentIndex,
               children: [
@@ -58,8 +63,6 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
           ),
-
-          // ✅ 2. نوار ناوبری شناور روی محتوا
           Positioned(
             bottom: 0,
             left: 0,

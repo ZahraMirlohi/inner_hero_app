@@ -18,6 +18,14 @@ import '/../utils/unique_id_generator.dart';
 import 'personality_screen.dart';
 import '/providers/theme_provider.dart';
 import '/providers/calendar_provider.dart';
+import 'username_setup_screen.dart';
+import 'gallery_screen.dart';
+import 'user_avatar.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
+import '/services/storage_service.dart';
+import 'dart:io' show File;
+import '/services/image_crop_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   final ValueNotifier<int>? refreshNotifier;
@@ -41,6 +49,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _currentStreak = 0;
   int _bestStreak = 0;
   int _weeklyStreak = 0;
+  final ImagePicker _imagePicker = ImagePicker(); // ✅ جدید
+  final StorageService _storage = StorageService(); // ✅ جدید
+  bool _isUploadingAvatar = false; // ✅ جدید
 
   DateTime? _lastRefreshTime;
   static const Duration _minRefreshInterval = Duration(seconds: 1);
@@ -70,8 +81,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     widget.refreshNotifier?.removeListener(_onRefreshTriggered);
     super.dispose();
   }
-
-  // lib/features/profile/screens/profile_screen.dart
 
   void _onRefreshTriggered() {
     print(
@@ -110,8 +119,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
   // ==================== متد اصلی بارگذاری پروفایل ====================
-
-  // lib/features/profile/screens/profile_screen.dart
 
   Future<void> _loadProfile() async {
     if (_isLoadingInProgress) {
@@ -223,30 +230,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         setState(() {
           _weeklyStreak = newWeeklyStreak;
-          _profile = UserProfile(
-            userId: _profile!.userId,
-            name: _profile!.name,
-            phone: _profile!.phone,
-            email: _profile!.email,
-            birthDate: _profile!.birthDate,
-            realAge: _profile!.realAge,
-            gender: _profile!.gender,
-            registeredAt: _profile!.registeredAt,
-            avatarStyle: _profile!.avatarStyle,
-            skinColor: _profile!.skinColor,
-            hairStyle: _profile!.hairStyle,
-            hairColor: _profile!.hairColor,
-            eyeStyle: _profile!.eyeStyle,
-            eyeColor: _profile!.eyeColor,
-            mouthStyle: _profile!.mouthStyle,
-            accessoryType: _profile!.accessoryType,
-            outfitStyle: _profile!.outfitStyle,
-            backgroundStyle: _profile!.backgroundStyle,
-            totalXp: _profile!.totalXp,
+          _profile = _profile!.copyWith(
             weeklyStreak: newWeeklyStreak,
             lastStreakUpdate: DateTime.now(),
-            currentStreak: _profile!.currentStreak,
-            bestStreak: _profile!.bestStreak,
           );
         });
       }
@@ -639,32 +625,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
-      // ✅ به‌روزرسانی اگر تغییر کرده
       if (_profile!.weeklyStreak != streak) {
-        _profile = UserProfile(
-          userId: _profile!.userId,
-          name: _profile!.name,
-          phone: _profile!.phone,
-          email: _profile!.email,
-          birthDate: _profile!.birthDate,
-          realAge: _profile!.realAge,
-          gender: _profile!.gender,
-          registeredAt: _profile!.registeredAt,
-          avatarStyle: _profile!.avatarStyle,
-          skinColor: _profile!.skinColor,
-          hairStyle: _profile!.hairStyle,
-          hairColor: _profile!.hairColor,
-          eyeStyle: _profile!.eyeStyle,
-          eyeColor: _profile!.eyeColor,
-          mouthStyle: _profile!.mouthStyle,
-          accessoryType: _profile!.accessoryType,
-          outfitStyle: _profile!.outfitStyle,
-          backgroundStyle: _profile!.backgroundStyle,
-          totalXp: _profile!.totalXp,
+        _profile = _profile!.copyWith(
           weeklyStreak: streak,
           lastStreakUpdate: DateTime.now(),
-          currentStreak: _profile!.currentStreak,
-          bestStreak: _profile!.bestStreak,
         );
         await _saveProfile();
 
@@ -813,6 +777,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== محتوای اصلی پروفایل ====================
 
   Widget _buildProfileContent() {
+    print(
+        '🔍 Building profile: userId=${_profile?.userId}, name=${_profile?.name}');
     final calendar = Provider.of<CalendarProvider>(context, listen: false);
     final weekDays = _cachedWeekDays ?? List.filled(7, false);
 
@@ -860,6 +826,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
+          _buildGalleryButton(),
+          const SizedBox(height: 12),
           const SizedBox(height: 24),
           _buildPersonalityButton(),
           const SizedBox(height: 12),
@@ -869,6 +837,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 20),
           const SizedBox(height: 20),
         ],
+      ),
+    );
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 📸 دکمه گالری
+// ═══════════════════════════════════════════════════════════
+  Widget _buildGalleryButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _openGallery,
+        icon: const Icon(Icons.photo_library, size: 20),
+        label: const Text(
+          'گالری من',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _theme.surfaceColor,
+          foregroundColor: _theme.textColor,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.grey.shade300),
+          ),
+          elevation: 0,
+        ),
       ),
     );
   }
@@ -918,90 +913,535 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ==================== بخش آواتار ====================
 
+// ==================== بخش آواتار ====================
+
   Widget _buildAvatarSection() {
-    return Center(
-      child: Stack(
-        children: [
-          Container(
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [_theme.primaryColor, _theme.secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    return Column(
+      children: [
+        Center(
+          child: UserAvatar(
+            avatarUrl: _profile?.avatarUrl,
+            name: _profile?.name,
+            size: 160,
+            showBorder: true,
+            showEditBadge: true,
+            onEditTap: _showAvatarEditOptions,
+            onTap: _showAvatarEditOptions,
+          ),
+        ),
+        const SizedBox(height: 16),
+        // نام کاربری
+        _buildUsernameDisplay(),
+      ],
+    );
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 🆔 نمایش نام کاربری
+// ═══════════════════════════════════════════════════════════
+  Widget _buildUsernameDisplay() {
+    final hasUsername = _profile?.hasUsername ?? false;
+
+    print(
+        '🎨 _buildUsernameDisplay: hasUsername=$hasUsername, username=${_profile?.username}');
+
+    if (!hasUsername) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UsernameSetupScreen(
+                userId: _profile!.userId,
+                currentUsername: null,
+                isFirstTime: false,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: _theme.primaryColor.withOpacity(0.3),
-                  blurRadius: 30,
-                  spreadRadius: 8,
-                ),
-              ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _theme.surfaceColor,
-                ),
-                child: Center(
-                  child: Text(
-                    _profile?.name.substring(0, 1).toUpperCase() ?? '?',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: _theme.primaryColor,
-                    ),
-                  ),
-                ),
-              ),
+          ).then((result) async {
+            if (result == true && mounted) {
+              await _loadProfile();
+            }
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: _theme.primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _theme.primaryColor.withValues(alpha: 0.3),
             ),
           ),
-          Positioned(
-            bottom: 4,
-            right: 4,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: _theme.surfaceColor,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 12,
-                    spreadRadius: 3,
-                  ),
-                ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.alternate_email,
+                color: _theme.primaryColor,
+                size: 18,
               ),
-              child: IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AvatarCustomizationScreen(
-                        userId: _profile!.userId,
-                        currentProfile: _profile!,
-                      ),
-                    ),
-                  ).then((_) => _loadProfile());
-                },
-                icon: Icon(
-                  Icons.edit,
+              const SizedBox(width: 8),
+              Text(
+                'انتخاب نام کاربری',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                   color: _theme.primaryColor,
-                  size: 24,
                 ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ✅ کاربر username دارد
+    return GestureDetector(
+      onTap: _showUsernameOptions,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: _theme.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '@${_profile!.username}',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: _theme.primaryColor,
               ),
             ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.edit,
+              size: 14,
+              color: _theme.primaryColor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+// 📸 نمایش گزینه‌های ویرایش آواتار
+// ═══════════════════════════════════════════════════════════
+  void _showAvatarEditOptions() {
+    // ✅ مستقیم به انتخاب عکس برو
+    _showAvatarSourcePicker();
+  }
+
+  void _showAvatarSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _theme.borderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'تغییر عکس پروفایل',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _theme.textColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSourceButton(
+                        icon: Icons.camera_alt,
+                        label: 'دوربین',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickAndUploadAvatar(ImageSource.camera);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildSourceButton(
+                        icon: Icons.photo_library,
+                        label: 'گالری',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _pickAndUploadAvatar(ImageSource.gallery);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // اگر آواتار داشت، حذف
+                if (_profile?.hasAvatar == true)
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _removeAvatar();
+                    },
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    label: const Text(
+                      'حذف عکس پروفایل',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSourceButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: _theme.primaryColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _theme.primaryColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: _theme.primaryColor, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _theme.textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadAvatar(ImageSource source) async {
+    try {
+      final XFile? picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 90,
+        maxWidth: 1920,
+      );
+
+      if (picked == null) return;
+
+      // ✅ حالا کراپ کن
+      if (!mounted) return;
+
+      final cropService = ImageCropService();
+      final croppedFile = await cropService.cropAvatar(
+        imageFile: File(picked.path),
+        context: context,
+        primaryColor: _theme.primaryColor,
+      );
+
+      if (croppedFile == null) {
+        // کاربر لغو کرد
+        return;
+      }
+
+      setState(() => _isUploadingAvatar = true);
+
+      // ✅ خواندن bytes از فایل کراپ‌شده
+      final bytes = await croppedFile.readAsBytes();
+
+      // آپلود
+      final avatarUrl = await _storage.uploadAvatar(
+        userId: _profile!.userId,
+        bytes: bytes,
+        originalFileName:
+            'avatar.jpg', // همیشه jpg چون image_cropper jpg می‌دهد
+      );
+
+      // ذخیره در DB
+      await _supabase.updateAvatarUrl(_profile!.userId, avatarUrl);
+
+      // Reload
+      await _loadProfile();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📸 عکس پروفایل با موفقیت آپلود شد'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
+  }
+
+  Future<void> _removeAvatar() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _theme.surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Text(
+          'حذف عکس پروفایل',
+          style: TextStyle(color: _theme.textColor),
+        ),
+        content: Text(
+          'آیا مطمئن هستی؟',
+          style: TextStyle(color: _theme.textSecondaryColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('انصراف'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+
+    if (confirm != true) return;
+
+    try {
+      await _supabase.updateAvatarUrl(_profile!.userId, null);
+      await _loadProfile();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🗑️ عکس پروفایل حذف شد'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 🆔 نمایش گزینه‌های username
+// ═══════════════════════════════════════════════════════════
+  void _showUsernameOptions() {
+    if (_profile?.hasUsername != true) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: _theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (dialogContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _theme.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // نمایش فعلی
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _theme.primaryColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _theme.primaryColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.alternate_email,
+                      color: _theme.primaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'نام کاربری فعلی',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _theme.textSecondaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '@${_profile!.username}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _theme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(text: _profile!.username!),
+                        );
+                        Navigator.pop(dialogContext);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ کپی شد'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.copy, color: _theme.primaryColor),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.edit, color: _theme.primaryColor),
+                title: Text(
+                  'ویرایش نام کاربری',
+                  style: TextStyle(color: _theme.textColor),
+                ),
+                subtitle: Text(
+                  'بین هر تغییر ۱ دقیقه فاصله لازم است',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _theme.textSecondaryColor,
+                  ),
+                ),
+                onTap: () async {
+                  Navigator.pop(dialogContext);
+
+                  // ✅ حالا برو به UsernameSetupScreen با username فعلی
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => UsernameSetupScreen(
+                        userId: _profile!.userId,
+                        currentUsername: _profile!.username, // ✅ مهم!
+                      ),
+                    ),
+                  );
+
+                  if (result == true && mounted) {
+                    await _loadProfile();
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+// ═══════════════════════════════════════════════════════════
+// 🚀 متدهای ناوبری
+// ═══════════════════════════════════════════════════════════
+  Future<void> _openGallery() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GalleryScreen(
+          userId: _profile!.userId,
+          userName: _profile!.name,
+        ),
+      ),
+    );
+    // بعد از بازگشت، profile را reload کن (ممکن است آواتار عوض شده باشد)
+    await _loadProfile();
+  }
+
+  Future<void> _openUsernameSetup() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UsernameSetupScreen(
+          userId: _profile!.userId,
+          currentUsername: _profile!.username,
+        ),
+      ),
+    );
+
+    if (result == true) {
+      await _loadProfile();
+    }
+  }
+
+  Future<void> _openAvatarCustomization() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvatarCustomizationScreen(
+          userId: _profile!.userId,
+          currentProfile: _profile!,
+        ),
+      ),
+    );
+    await _loadProfile();
   }
 
   // ==================== بخش اطلاعات کاربر ====================
@@ -1706,18 +2146,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () async {
-                              if (formKey.currentState!.validate()) {
-                                await _updateProfile(
-                                  name: nameController.text,
-                                  phone: phoneController.text,
-                                  email: emailController.text,
-                                  realAge: int.tryParse(ageController.text),
-                                  birthDate: selectedDate,
-                                  gender: _getGenderValue(
-                                    genderController.text,
-                                  ),
-                                );
-                                Navigator.pop(context);
+                              if (!formKey.currentState!.validate()) return;
+
+                              // ✅ Capture context قبل از await
+                              final navigator = Navigator.of(context);
+
+                              await _updateProfile(
+                                name: nameController.text,
+                                phone: phoneController.text,
+                                email: emailController.text,
+                                realAge: int.tryParse(ageController.text),
+                                birthDate: selectedDate,
+                                gender: _getGenderValue(genderController.text),
+                              );
+
+                              // ✅ چک کن هنوز mounted است
+                              if (mounted && navigator.canPop()) {
+                                navigator.pop();
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -1813,54 +2258,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .update(data)
           .eq('user_id', _profile!.userId);
 
-      setState(() {
-        _profile = UserProfile(
-          userId: _profile!.userId,
-          name: name,
-          phone: phone,
-          email: email,
-          birthDate: birthDate,
-          realAge: realAge,
-          gender: gender,
-          registeredAt: _profile!.registeredAt,
-          avatarStyle: _profile!.avatarStyle,
-          skinColor: _profile!.skinColor,
-          hairStyle: _profile!.hairStyle,
-          hairColor: _profile!.hairColor,
-          eyeStyle: _profile!.eyeStyle,
-          eyeColor: _profile!.eyeColor,
-          mouthStyle: _profile!.mouthStyle,
-          accessoryType: _profile!.accessoryType,
-          outfitStyle: _profile!.outfitStyle,
-          backgroundStyle: _profile!.backgroundStyle,
-          totalXp: _profile!.totalXp,
-          weeklyStreak: _profile!.weeklyStreak,
-          lastStreakUpdate: _profile!.lastStreakUpdate,
-          currentStreak: _profile!.currentStreak,
-          bestStreak: _profile!.bestStreak,
+      // ✅ فقط profile را reload کن (نه ساخت دستی)
+      await _loadProfile();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('اطلاعات با موفقیت به‌روزرسانی شد ✅'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
         );
-      });
-
-      // ✅ ذخیره در LocalStorage
-      final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-      final profileMap = _profile!.toMap();
-      profileMap['user_id'] = _profile!.userId;
-      await syncProvider.saveProfileToLocal(profileMap);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('اطلاعات با موفقیت به‌روزرسانی شد ✅'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -1925,31 +2343,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .eq('user_id', _profile!.userId);
 
       setState(() {
-        _profile = UserProfile(
-          userId: _profile!.userId,
-          name: field == 'name' ? value : _profile!.name,
-          phone: field == 'phone' ? value : _profile!.phone,
-          email: _profile!.email,
-          birthDate: _profile!.birthDate,
-          realAge:
-              field == 'real_age' ? int.tryParse(value) : _profile!.realAge,
-          gender: field == 'gender' ? value : _profile!.gender,
-          registeredAt: _profile!.registeredAt,
-          avatarStyle: _profile!.avatarStyle,
-          skinColor: _profile!.skinColor,
-          hairStyle: _profile!.hairStyle,
-          hairColor: _profile!.hairColor,
-          eyeStyle: _profile!.eyeStyle,
-          eyeColor: _profile!.eyeColor,
-          mouthStyle: _profile!.mouthStyle,
-          accessoryType: _profile!.accessoryType,
-          outfitStyle: _profile!.outfitStyle,
-          backgroundStyle: _profile!.backgroundStyle,
-          totalXp: _profile!.totalXp,
-          weeklyStreak: _profile!.weeklyStreak,
-          lastStreakUpdate: _profile!.lastStreakUpdate,
-          currentStreak: _profile!.currentStreak,
-          bestStreak: _profile!.bestStreak,
+        _profile = _profile!.copyWith(
+          name: field == 'name' ? value : null,
+          phone: field == 'phone' ? value : null,
+          realAge: field == 'real_age' ? int.tryParse(value) : null,
+          gender: field == 'gender' ? value : null,
         );
       });
 
