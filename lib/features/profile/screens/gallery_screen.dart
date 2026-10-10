@@ -701,9 +701,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: GridView.builder(
         padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          crossAxisCount: 2, // ✅ از ۳ به ۲ (برای کارت‌های بزرگ‌تر)
+          crossAxisSpacing: 12, // ✅ از ۸ به ۱۲
+          mainAxisSpacing: 12, // ✅ از ۸ به ۱۲
+          childAspectRatio: 0.85, // ✅ نسبت ارتفاع
         ),
         itemCount: _photos.length,
         itemBuilder: (context, index) {
@@ -718,100 +719,192 @@ class _GalleryScreenState extends State<GalleryScreen> {
     return GestureDetector(
       onTap: () => _openPhotoViewer(index),
       onLongPress: () => _showPhotoOptions(photo, theme),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CachedNetworkImage(
-              imageUrl: photo.photoUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: theme.isDarkMode
-                    ? const Color(0xFF2A2A2A)
-                    : Colors.grey.shade200,
-                child: Icon(
-                  Icons.image,
-                  color: theme.textSecondaryColor,
-                ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: theme.isDarkMode ? 0.4 : 0.12,
               ),
-              errorWidget: (context, url, error) => Container(
-                color: theme.isDarkMode
-                    ? const Color(0xFF2A2A2A)
-                    : Colors.grey.shade200,
-                child: Icon(
-                  Icons.broken_image,
-                  color: theme.textSecondaryColor,
-                ),
-              ),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            // کپشن
-            // کپشن (بهبود یافته)
-            if (photo.caption != null && photo.caption!.isNotEmpty)
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ✅ تصویر
+              CachedNetworkImage(
+                imageUrl: photo.photoUrl,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.grey.shade200,
+                  child: Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: theme.isDarkMode
+                      ? const Color(0xFF2A2A2A)
+                      : Colors.grey.shade200,
+                  child: Icon(
+                    Icons.broken_image,
+                    color: theme.textSecondaryColor,
+                    size: 32,
+                  ),
+                ),
+              ),
+
+              // ✅ گرادیانت برای خوانایی کپشن
+              if (photo.caption != null && photo.caption!.isNotEmpty)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                      ),
+                    ),
+                    child: Text(
+                      photo.caption!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black54,
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+
+              // ✅ گرادیانت بالایی (برای خوانایی badge ها)
               Positioned(
-                bottom: 0,
+                top: 0,
                 left: 0,
                 right: 0,
+                height: 40,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
+                        Colors.black.withValues(alpha: 0.4),
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.75),
                       ],
                     ),
                   ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.chat_bubble_outline,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        size: 11,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          photo.caption!,
+                ),
+              ),
+
+              // ✅ badge عکس اصلی (ستاره)
+              if (photo.isPrimary)
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                        SizedBox(width: 2),
+                        Text(
+                          'اصلی',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // ✅ badge لایک
+              if (photo.likesCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 11,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${photo.likesCount}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            height: 1.3,
+                            fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            // badge primary
-            if (photo.isPrimary)
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.star,
-                    color: Colors.white,
-                    size: 12,
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1058,89 +1151,70 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          PhotoViewGallery.builder(
-            pageController: _pageController,
-            itemCount: widget.photos.length,
-            onPageChanged: (index) {
-              setState(() => _currentIndex = index);
-            },
-            builder: (context, index) {
-              final photo = widget.photos[index];
-              return PhotoViewGalleryPageOptions(
-                imageProvider: CachedNetworkImageProvider(photo.photoUrl),
-                minScale: PhotoViewComputedScale.contained,
-                maxScale: PhotoViewComputedScale.covered * 2,
-              );
-            },
-            loadingBuilder: (context, event) => Center(
-              child: CircularProgressIndicator(
-                color: theme.primaryColor,
+      body: SafeArea(
+        top: false,
+        bottom: true, // ✅ رعایت فضای امن پایین
+        child: Stack(
+          children: [
+            // ✅ PhotoViewGallery
+            PhotoViewGallery.builder(
+              pageController: _pageController,
+              itemCount: widget.photos.length,
+              onPageChanged: (index) {
+                setState(() => _currentIndex = index);
+              },
+              builder: (context, index) {
+                final photo = widget.photos[index];
+                return PhotoViewGalleryPageOptions(
+                  imageProvider: CachedNetworkImageProvider(photo.photoUrl),
+                  minScale: PhotoViewComputedScale.contained,
+                  maxScale: PhotoViewComputedScale.covered * 2,
+                );
+              },
+              loadingBuilder: (context, event) => Center(
+                child: CircularProgressIndicator(
+                  color: theme.primaryColor,
+                ),
               ),
             ),
-          ),
-          // کپشن پایین (بهبود یافته)
-          if (currentPhoto.caption != null && currentPhoto.caption!.isNotEmpty)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.85),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.chat_bubble_outline,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'کپشن',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+
+            // ✅ کپشن با احترام به SafeArea
+            if (currentPhoto.caption != null &&
+                currentPhoto.caption!.isNotEmpty)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.85),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
+                    child: Text(
                       currentPhoto.caption!,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
-                        height: 1.6,
+                        height: 1.5,
                         fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

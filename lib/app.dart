@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ اضافه شد
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '/features/auth/screens/login_screen.dart';
 import '/features/home/screens/main_screen.dart';
@@ -12,6 +12,7 @@ import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/features/profile/screens/username_setup_screen.dart';
 import '/services/supabase_service.dart';
+import 'dart:async';
 
 class HeroApp extends StatefulWidget {
   const HeroApp({super.key});
@@ -28,11 +29,41 @@ class _HeroAppState extends State<HeroApp> {
   String? _userName; // ✅ جدید
 
   final SupabaseService _supabase = SupabaseService();
+  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkLoginStatus();
+
+    // ✅ گوش دادن به تغییرات auth (logout/login)
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) {
+        final event = data.event;
+        print('🔔 Auth state changed: $event');
+
+        if (event == AuthChangeEvent.signedOut) {
+          // کاربر خارج شد
+          if (mounted) {
+            setState(() {
+              _isLoggedIn = false;
+              _hasUsername = false;
+              _userId = null;
+              _userName = null;
+            });
+          }
+        } else if (event == AuthChangeEvent.signedIn) {
+          // کاربر وارد شد
+          _checkLoginStatus();
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkLoginStatus() async {

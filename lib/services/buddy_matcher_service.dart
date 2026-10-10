@@ -38,6 +38,193 @@ class BuddyMatcherService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // 🔍 جستجو با username یا phone
+  // ═══════════════════════════════════════════════════════════
+
+  /// جستجوی کاربر با username یا شماره موبایل
+  ///
+  /// - `query` می‌تواند username یا phone باشد
+  /// - خود کاربر از نتایج حذف می‌شود
+  /// - فقط کاربرانی که `is_looking_for_buddy = true` هستند نمایش داده می‌شوند
+  Future<Map<String, dynamic>?> searchUserByUsernameOrPhone({
+    required String currentUserId,
+    required String query,
+  }) async {
+    try {
+      final cleanQuery = query.trim().toLowerCase();
+      if (cleanQuery.isEmpty) return null;
+
+      // ✅ ساخت شرط جستجو
+      final isPhone = RegExp(r'^[\d+]+$').hasMatch(cleanQuery);
+
+      dynamic profile;
+
+      if (isPhone) {
+        // جستجو با شماره موبایل
+        profile = await _client
+            .from('profiles')
+            .select(
+                'user_id, name, username, phone, avatar_url, total_xp, current_streak, bio')
+            .eq('phone', cleanQuery)
+            .neq('user_id', currentUserId)
+            .maybeSingle();
+      } else {
+        // جستجو با username (case-insensitive)
+        profile = await _client
+            .from('profiles')
+            .select(
+                'user_id, name, username, phone, avatar_url, total_xp, current_streak, bio')
+            .ilike('username', cleanQuery)
+            .neq('user_id', currentUserId)
+            .maybeSingle();
+      }
+
+      if (profile == null) {
+        print('🔍 User not found with query: $cleanQuery');
+        return null;
+      }
+
+      final userId = profile['user_id'] as String;
+
+      // ✅ بررسی اینکه آیا کاربر personality دارد
+      final personalityResponse = await _client
+          .from('user_personalities')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      // ✅ بررسی اینکه آیا این کاربر buddy است یا درخواست pending دارد
+      final requestsResponse = await _client
+          .from('buddy_requests')
+          .select('id, from_user_id, to_user_id, status')
+          .or('and(from_user_id.eq.$currentUserId,to_user_id.eq.$userId),and(from_user_id.eq.$userId,to_user_id.eq.$currentUserId)')
+          .maybeSingle();
+
+      // ✅ بررسی وجود گفتگو
+      final conversationsResponse = await _client
+          .from('conversation_members')
+          .select('conversation_id')
+          .eq('user_id', currentUserId);
+
+      bool isBuddy = false;
+      String? conversationId;
+
+      if (conversationsResponse.isNotEmpty) {
+        final convIds = conversationsResponse
+            .map((m) => m['conversation_id'] as String)
+            .toList();
+
+        final buddyConvs = await _client
+            .from('conversations')
+            .select('id, type, is_active')
+            .inFilter('id', convIds)
+            .eq('type', 'buddy')
+            .eq('is_active', true);
+
+        for (var conv in buddyConvs) {
+          final members = await _client
+              .from('conversation_members')
+              .select('user_id')
+              .eq('conversation_id', conv['id']);
+
+          final memberIds = members.map((m) => m['user_id'] as String).toList();
+
+          if (memberIds.contains(userId) && memberIds.contains(currentUserId)) {
+            isBuddy = true;
+            conversationId = conv['id'] as String;
+            break;
+          }
+        }
+      }
+
+      // ✅ محاسبه امتیاز تطابق (اگر personality داشته باشد)
+      double matchScore = 0;
+      final currentPersonality = await getUserPersonality(currentUserId);
+
+      if (currentPersonality != null && personalityResponse != null) {
+        try {
+          final otherPersonality = UserPersonality.fromMap(
+            personalityResponse,
+            userId,
+          );
+          matchScore = currentPersonality.calculateMatchScore(otherPersonality);
+        } catch (e) {
+          print('⚠️ Error calculating match score: $e');
+        }
+      }
+
+      // ✅ بررسی وضعیت درخواست
+      final isSentByMe = requestsResponse != null &&
+          requestsResponse['from_user_id'] == currentUserId &&
+          requestsResponse['status'] == 'pending';
+      final isReceivedByMe = requestsResponse != null &&
+          requestsResponse['to_user_id'] == currentUserId &&
+          requestsResponse['status'] == 'pending';
+
+      return {
+        'user_id': userId,
+        'name': profile['name'] ?? 'کاربر',
+        'username': profile['username'],
+        'phone': profile['phone'],
+        'gender': personalityResponse?['gender']?.toString().split('.').last ??
+            'other',
+        'avatar_url': profile['avatar_url'],
+        'total_xp': profile['total_xp'] ?? 0,
+        'current_streak': profile['current_streak'] ?? 0,
+        'bio': profile['bio'],
+        'match_score': matchScore,
+        'personality': personalityResponse != null
+            ? UserPersonality.fromMap(personalityResponse, userId)
+            : null,
+        'common_habits': [],
+        'common_interests': [],
+        'is_buddy': isBuddy,
+        'has_pending_request': isSentByMe || isReceivedByMe,
+        'is_sent_by_me': isSentByMe,
+        'is_received_by_me': isReceivedByMe,
+        'request_id': requestsResponse?['id'],
+        'conversation_id': conversationId,
+      };
+    } catch (e) {
+      print('❌ Error searching user: $e');
+      return null;
+    }
+  }
+
+  /// بررسی می‌کند آیا کاربری با این username یا phone وجود دارد
+  Future<bool> userExists({
+    required String query,
+  }) async {
+    try {
+      final cleanQuery = query.trim().toLowerCase();
+      if (cleanQuery.isEmpty) return false;
+
+      final isPhone = RegExp(r'^[\d+]+$').hasMatch(cleanQuery);
+
+      dynamic response;
+
+      if (isPhone) {
+        response = await _client
+            .from('profiles')
+            .select('user_id')
+            .eq('phone', cleanQuery)
+            .maybeSingle();
+      } else {
+        response = await _client
+            .from('profiles')
+            .select('user_id')
+            .ilike('username', cleanQuery)
+            .maybeSingle();
+      }
+
+      return response != null;
+    } catch (e) {
+      print('❌ Error checking user existence: $e');
+      return false;
+    }
+  }
+
   // ==================== پیدا کردن هم‌مسیرها ====================
 
   // lib/services/buddy_matcher_service.dart

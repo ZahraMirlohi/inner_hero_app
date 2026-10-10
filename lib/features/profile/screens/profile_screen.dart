@@ -826,9 +826,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
+          const SizedBox(height: 24),
           _buildGalleryButton(),
           const SizedBox(height: 12),
-          const SizedBox(height: 24),
           _buildPersonalityButton(),
           const SizedBox(height: 12),
           _buildTermsButton(),
@@ -1539,10 +1539,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Divider(height: 1),
                   const SizedBox(height: 16),
 
-                  // ─── ID یکتا ───
-                  _buildUniqueIdBox(),
-                  const SizedBox(height: 16),
-
                   // ─── ردیف اطلاعات ───
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1646,121 +1642,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-// ═══════════════════════════════════════════════════════════
-// 🆔 باکس ID یکتا (استخراج شده)
-// ═══════════════════════════════════════════════════════════
-  Widget _buildUniqueIdBox() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: _theme.primaryColor.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _theme.primaryColor.withValues(alpha: 0.15),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: _theme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              Icons.fingerprint,
-              size: 16,
-              color: _theme.primaryColor,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ID یکتا',
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: _theme.textSecondaryColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      _profile?.uniqueId ?? '---',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: _profile?.uniqueId != null
-                            ? _theme.primaryColor
-                            : _theme.textSecondaryColor,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_profile?.uniqueId != null)
-                      GestureDetector(
-                        onTap: () => _copyToClipboard(_profile!.uniqueId!),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _theme.primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.copy,
-                                size: 12,
-                                color: _theme.primaryColor,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'کپی',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: _theme.primaryColor,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (_profile?.uniqueId != null)
-            GestureDetector(
-              onTap: () => _shareUniqueId(_profile!.uniqueId!),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _theme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.share_outlined,
-                  size: 18,
-                  color: _theme.primaryColor,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   // ✅ متد کپی کردن ID
   void _copyToClipboard(String text) {
     // استفاده از Clipboard
@@ -1772,25 +1653,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           content: Text('✅ ID یکتا کپی شد'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  // ✅ متد اشتراک‌گذاری ID
-  void _shareUniqueId(String uniqueId) {
-    // کپی کردن ID
-    _copyToClipboard(uniqueId);
-
-    // همچنین می‌توانید از share_plus استفاده کنید
-    // برای سادگی، پیام کپی نمایش داده می‌شود
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(' ID یکتا برای اشتراک‌گذاری کپی شد'),
-          duration: Duration(seconds: 2),
-          backgroundColor: Colors.blue,
         ),
       );
     }

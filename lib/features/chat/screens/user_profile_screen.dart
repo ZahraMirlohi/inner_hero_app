@@ -2,9 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import '/services/chat_service.dart';
+import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
+import '/features/profile/models/user_photo_model.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -24,8 +28,11 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final ChatService _chatService = ChatService();
+  final SupabaseService _supabase = SupabaseService();
   Map<String, dynamic>? _userData;
+  List<UserPhoto> _photos = [];
   bool _isLoading = true;
+  bool _isLoadingPhotos = false;
   String? _errorMessage;
 
   @override
@@ -34,10 +41,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _loadUserData();
   }
 
-  // lib/features/chat/screens/user_profile_screen.dart
-
   Future<void> _loadUserData() async {
-    if (!mounted) return; // ✅ اضافه شد
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -46,11 +51,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     try {
       final profile = await _chatService.client.from('profiles').select('''
-          name, email, phone, bio, avatar_url,
-          total_xp, current_streak, best_streak, created_at
-        ''').eq('user_id', widget.userId).maybeSingle();
+    name, username, bio, avatar_url,
+    total_xp, current_streak, best_streak, created_at
+  ''').eq('user_id', widget.userId).maybeSingle();
 
-      if (!mounted) return; // ✅ بعد از await چک شود
+      if (!mounted) return;
 
       if (profile != null) {
         final personality = await _chatService.client
@@ -59,12 +64,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             .eq('user_id', widget.userId)
             .maybeSingle();
 
-        if (!mounted) return; // ✅ بعد از await چک شود
+        if (!mounted) return;
 
         setState(() {
           _userData = {'profile': profile, 'personality': personality ?? {}};
           _isLoading = false;
         });
+
+        // ✅ بارگذاری عکس‌های گالری (بعد از profile)
+        _loadUserPhotos();
       } else {
         setState(() {
           _errorMessage = 'اطلاعات کاربر یافت نشد';
@@ -72,11 +80,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         });
       }
     } catch (e) {
-      if (!mounted) return; // ✅
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'خطا در بارگذاری اطلاعات: ${e.toString()}';
         _isLoading = false;
       });
+    }
+  }
+
+  // ✅ بارگذاری عکس‌های گالری
+  Future<void> _loadUserPhotos() async {
+    if (!mounted) return;
+
+    setState(() => _isLoadingPhotos = true);
+
+    try {
+      final photos = await _supabase.getUserPhotos(
+        widget.userId,
+        visibleOnly: true,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _photos = photos;
+        _isLoadingPhotos = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingPhotos = false);
     }
   }
 
@@ -102,7 +134,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         centerTitle: true,
       ),
       body: SafeArea(
-        // ✅ اضافه شد
         child: _isLoading
             ? _buildLoadingState(primaryColor)
             : _errorMessage != null
@@ -171,8 +202,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     final name = profile['name'] as String? ?? 'کاربر';
     final avatarUrl = profile['avatar_url'] as String?;
-    final email = profile['email'] as String?;
-    final phone = profile['phone'] as String?;
+    final username = profile['username'] as String?;
     final bio = profile['bio'] as String? ?? personality['bio'] as String?;
     final totalXp = profile['total_xp'] as int? ?? 0;
     final currentStreak = profile['current_streak'] as int? ?? 0;
@@ -185,21 +215,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final goals = personality['goals'] as List? ?? [];
 
     return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(), // ✅ اضافه شد
-      padding:
-          const EdgeInsets.fromLTRB(16, 16, 16, 32), // ✅ padding پایین بیشتر
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         children: [
           // ✅ کارت اصلی پروفایل
           _buildProfileCard(
             name: name,
             avatarUrl: avatarUrl,
-            email: email,
-            phone: phone,
+            username: username,
             bio: bio,
             theme: theme,
             primaryColor: primaryColor,
           ),
+          const SizedBox(height: 16),
+
+          // ✅ گالری عکس‌ها (جدید)
+          _buildGallerySection(theme, primaryColor),
+
           const SizedBox(height: 16),
 
           // ✅ آمار کاربر
@@ -231,11 +264,368 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // 📸 بخش گالری عکس‌ها (جدید)
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildGallerySection(ThemeProvider theme, Color primaryColor) {
+    // اگر در حال بارگذاری است
+    if (_isLoadingPhotos) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.photo_library,
+                    color: primaryColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'گالری',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: primaryColor,
+                  strokeWidth: 2,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      );
+    }
+
+    // اگر عکسی وجود ندارد
+    if (_photos.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.photo_library,
+                    color: primaryColor,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'گالری',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.photo_library_outlined,
+                      size: 48,
+                      color: theme.textSecondaryColor.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'هنوز عکسی آپلود نکرده',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // نمایش گالری
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // هدر
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.photo_library,
+                  color: primaryColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'گالری',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textColor,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_photos.length} عکس',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Grid عکس‌ها
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemCount: _photos.length,
+            itemBuilder: (context, index) {
+              final photo = _photos[index];
+              return _buildPhotoTile(photo, index, theme, primaryColor);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhotoTile(
+    UserPhoto photo,
+    int index,
+    ThemeProvider theme,
+    Color primaryColor,
+  ) {
+    return GestureDetector(
+      onTap: () => _openPhotoViewer(index),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: photo.photoUrl,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade200,
+                child: Icon(
+                  Icons.image,
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: theme.isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : Colors.grey.shade200,
+                child: Icon(
+                  Icons.broken_image,
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+            ),
+            // کپشن
+            if (photo.caption != null && photo.caption!.isNotEmpty)
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.7),
+                      ],
+                    ),
+                  ),
+                  child: Text(
+                    photo.caption!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            // لایک
+            if (photo.likesCount > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.favorite,
+                        color: Colors.white,
+                        size: 10,
+                      ),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${photo.likesCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // badge primary
+            if (photo.isPrimary)
+              Positioned(
+                top: 4,
+                left: 4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 10,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openPhotoViewer(int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ProfilePhotoViewer(
+          photos: _photos,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
+  }
+
   Widget _buildProfileCard({
     required String name,
+    String? username,
     String? avatarUrl,
-    String? email,
-    String? phone,
     String? bio,
     required ThemeProvider theme,
     required Color primaryColor,
@@ -273,10 +663,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
             child: avatarUrl != null && avatarUrl.isNotEmpty
                 ? ClipOval(
-                    child: Image.network(
-                      avatarUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: avatarUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildAvatarInitial(
+                      placeholder: (_, __) => _buildAvatarInitial(
+                        name,
+                        primaryColor,
+                      ),
+                      errorWidget: (_, __, ___) => _buildAvatarInitial(
                         name,
                         primaryColor,
                       ),
@@ -295,49 +689,40 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               color: theme.textColor,
             ),
           ),
-          const SizedBox(height: 4),
 
-          // ✅ ایمیل
-          if (email != null && email.isNotEmpty)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.email_outlined,
-                  size: 14,
-                  color: theme.textSecondaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  email,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: theme.textSecondaryColor,
+          // ✅ یوزرنیم (به جای ایمیل و شماره)
+          if (username != null && username.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.alternate_email,
+                    size: 14,
+                    color: primaryColor,
                   ),
-                ),
-              ],
-            ),
-
-          // ✅ تلفن
-          if (phone != null && phone.isNotEmpty)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.phone_outlined,
-                  size: 14,
-                  color: theme.textSecondaryColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  phone,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: theme.textSecondaryColor,
+                  const SizedBox(width: 4),
+                  Text(
+                    username,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+          ],
 
           // ✅ بیو
           if (bio != null && bio.isNotEmpty) ...[
@@ -662,5 +1047,111 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } else {
       return '${diff.inDays ~/ 365} سال پیش';
     }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 📷 Photo Viewer (نمایش تمام‌صفحه)
+// ═══════════════════════════════════════════════════════════
+class _ProfilePhotoViewer extends StatefulWidget {
+  final List<UserPhoto> photos;
+  final int initialIndex;
+
+  const _ProfilePhotoViewer({
+    required this.photos,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_ProfilePhotoViewer> createState() => _ProfilePhotoViewerState();
+}
+
+class _ProfilePhotoViewerState extends State<_ProfilePhotoViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final currentPhoto = widget.photos[_currentIndex];
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black.withValues(alpha: 0.5),
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.photos.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Stack(
+        children: [
+          PhotoViewGallery.builder(
+            pageController: _pageController,
+            itemCount: widget.photos.length,
+            onPageChanged: (index) {
+              setState(() => _currentIndex = index);
+            },
+            builder: (context, index) {
+              final photo = widget.photos[index];
+              return PhotoViewGalleryPageOptions(
+                imageProvider: CachedNetworkImageProvider(photo.photoUrl),
+                minScale: PhotoViewComputedScale.contained,
+                maxScale: PhotoViewComputedScale.covered * 2,
+              );
+            },
+            loadingBuilder: (context, event) => Center(
+              child: CircularProgressIndicator(
+                color: theme.primaryColor,
+              ),
+            ),
+          ),
+          // کپشن پایین
+          if (currentPhoto.caption != null && currentPhoto.caption!.isNotEmpty)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.8),
+                    ],
+                  ),
+                ),
+                child: Text(
+                  currentPhoto.caption!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

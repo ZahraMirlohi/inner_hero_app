@@ -7,7 +7,8 @@ import '/services/date_service.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import 'color_picker_screen.dart';
-import '/providers/calendar_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '/services/local_storage_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -71,6 +72,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Consumer<ThemeProvider>(
                     builder: (context, themeProvider, _) {
                       return ListTile(
+                        tileColor: themeProvider.surfaceColor, // ✅ اضافه کن
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -121,6 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                     primaryColor: primaryColor,
+                    theme: theme,
                   ),
                   _buildSwitchTile(
                     icon: Icons.volume_up,
@@ -132,6 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                     primaryColor: primaryColor,
+                    theme: theme,
                   ),
                   _buildSwitchTile(
                     icon: Icons.vibration,
@@ -143,6 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                     primaryColor: primaryColor,
+                    theme: theme,
                   ),
                   _buildColorTile(theme, primaryColor),
                 ],
@@ -170,6 +178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }
                         },
                         primaryColor: primaryColor,
+                        theme: theme, // ✅ اضافه کن
                       );
                     },
                   ),
@@ -192,8 +201,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                     primaryColor: primaryColor,
+                    theme: theme,
                   ),
                   ListTile(
+                    tileColor: theme.surfaceColor, // ✅ اضافه کن
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -228,6 +242,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 theme,
                 [
                   ListTile(
+                    tileColor: theme.surfaceColor, // ✅ اضافه کن
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -250,6 +268,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   ListTile(
+                    tileColor: theme.surfaceColor, // ✅ اضافه کن
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -289,8 +311,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
-                        title: const Text('خروج از حساب'),
-                        content: const Text('آیا از خروج خود مطمئن هستید؟'),
+                        backgroundColor: theme.surfaceColor,
+                        title: Text(
+                          'خروج از حساب',
+                          style: TextStyle(color: theme.textColor),
+                        ),
+                        content: Text(
+                          'آیا از خروج خود مطمئن هستید؟',
+                          style: TextStyle(color: theme.textSecondaryColor),
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -307,9 +336,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                     if (confirm == true) {
-                      await _supabase.logout();
-                      if (mounted) {
-                        Navigator.pushReplacementNamed(context, '/login');
+                      try {
+                        // ✅ 1. پاک کردن LocalStorage
+                        final localStorage = LocalStorageService();
+                        await localStorage.clearAllDataExceptProfile();
+
+                        // ✅ 2. خروج از Supabase
+                        await _supabase.logout();
+
+                        // ✅ 3. پاک کردن user_id از SharedPreferences
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('user_id');
+
+                        // ✅ 4. بستن Settings و برگشت به LoginScreen
+                        if (mounted) {
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('خطا در خروج: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
                       }
                     }
                   },
@@ -342,35 +394,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ThemeProvider theme,
     List<Widget> children,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor,
+    return Material(
+      color: theme.surfaceColor,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textColor,
+                ),
               ),
             ),
-          ),
-          const Divider(height: 1, thickness: 1),
-          ...children,
-        ],
+            const Divider(height: 1, thickness: 1),
+            ...children,
+          ],
+        ),
       ),
     );
   }
@@ -380,6 +436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ═══════════════════════════════════════════════════════════
   Widget _buildColorTile(ThemeProvider theme, Color primaryColor) {
     return ListTile(
+      tileColor: theme.surfaceColor,
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -441,8 +498,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required bool value,
     required Function(bool) onChanged,
     required Color primaryColor,
+    required ThemeProvider theme, // ✅ اضافه کن
   }) {
     return ListTile(
+      tileColor: theme.surfaceColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -451,7 +513,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Icon(icon, color: primaryColor, size: 20),
       ),
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(color: theme.textColor),
+      ),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
@@ -463,6 +528,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ═══════════════════════════════════════════════════════════
   // 📋 آیتم Dropdown
   // ═══════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════
+  // 📋 آیتم Dropdown
+  // ═══════════════════════════════════════════════════════════
   Widget _buildDropdownTile({
     required IconData icon,
     required String title,
@@ -470,8 +538,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required List<String> options,
     required Function(String?) onChanged,
     required Color primaryColor,
+    required ThemeProvider theme, // ✅ اضافه کن
   }) {
     return ListTile(
+      tileColor: theme.surfaceColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -480,12 +553,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         child: Icon(icon, color: primaryColor, size: 20),
       ),
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(color: theme.textColor),
+      ),
       trailing: DropdownButton<String>(
         value: value,
         underline: const SizedBox(),
+        dropdownColor: theme.surfaceColor,
+        style: TextStyle(color: theme.textColor),
         items: options.map((option) {
-          return DropdownMenuItem(value: option, child: Text(option));
+          return DropdownMenuItem(
+            value: option,
+            child: Text(
+              option,
+              style: TextStyle(color: theme.textColor),
+            ),
+          );
         }).toList(),
         onChanged: onChanged,
       ),
@@ -498,28 +582,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showDeleteAccountDialog(ThemeProvider theme, Color primaryColor) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('حذف حساب کاربری'),
-        content: const Text(
-          'آیا از حذف حساب کاربری خود مطمئن هستید؟\n\n'
-          'با حذف حساب، تمام اطلاعات شما از جمله عادت‌ها، تسک‌ها و پیشرفت‌تان پاک خواهد شد و قابل بازیابی نیست.',
-          textAlign: TextAlign.center,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: theme.surfaceColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'حذف حساب کاربری',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: theme.textColor,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'آیا از حذف حساب کاربری خود مطمئن هستید؟',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: theme.textColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '⚠️ هشدار',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'با حذف حساب، تمام اطلاعات شما از جمله:\n'
+                    '• عادت‌ها و تسک‌ها\n'
+                    '• عکس‌های گالری\n'
+                    '• پیشرفت‌ها و XP\n'
+                    '• چت‌ها و پیام‌ها\n'
+                    'برای همیشه پاک می‌شود و قابل بازیابی نیست.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textSecondaryColor,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'انصراف',
+              style: TextStyle(color: theme.textSecondaryColor),
+            ),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('حساب کاربری شما حذف شد'),
-                  backgroundColor: Colors.red,
-                ),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _deleteAccount();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -527,11 +683,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('حذف'),
+            child: const Text(
+              'حذف دائمی',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteAccount() async {
+    try {
+      // نمایش لودینگ
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 12),
+                Text('در حال حذف حساب کاربری...'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // ✅ 1. حذف از Supabase با RPC
+      await _supabase.client.rpc('delete_user_account');
+
+      // ✅ 2. پاک کردن LocalStorage
+      final localStorage = LocalStorageService();
+      await localStorage.clearAllDataExceptProfile();
+
+      // ✅ 3. خروج از session
+      await _supabase.logout();
+
+      // ✅ 4. پاک کردن user_id
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_id');
+
+      // ✅ 5. بستن dialog لودینگ
+      if (mounted) {
+        Navigator.pop(context); // لودینگ
+      }
+
+      // ✅ 6. نمایش پیام موفقیت
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ حساب کاربری شما با موفقیت حذف شد'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      // ✅ 7. بستن Settings و برگشت به LoginScreen
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      // بستن dialog لودینگ
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا در حذف حساب: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════════════

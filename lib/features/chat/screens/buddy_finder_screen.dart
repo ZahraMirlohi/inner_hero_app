@@ -11,6 +11,8 @@ import '/features/profile/screens/personality_screen.dart';
 import '/features/chat/models/conversation_model.dart';
 import 'buddy_chat_screen.dart';
 import 'user_profile_screen.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class BuddyFinderScreen extends StatefulWidget {
   const BuddyFinderScreen({super.key});
@@ -43,6 +45,16 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   Gender? _filterGender;
   double _minMatchScore = 0;
   bool _showFilters = false;
+  String? _myUsername;
+
+  // ==================== وضعیت جستجو ====================
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearching = false;
+  bool _hasSearched = false;
+  Map<String, dynamic>? _searchResult;
+  String? _searchError;
+  String _lastSearchQuery = '';
 
   @override
   void initState() {
@@ -54,7 +66,147 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🔍 جستجوی کاربر با username یا phone
+  // ═══════════════════════════════════════════════════════════
+  Future<void> _performSearch() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty || _userId == null) return;
+
+    // اگه قبلاً همین query رو جستجو کرده، دوباره نکن
+    if (_lastSearchQuery == query && _hasSearched) {
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _hasSearched = true;
+      _searchError = null;
+      _searchResult = null;
+      _lastSearchQuery = query;
+    });
+
+    try {
+      final result = await _matcherService.searchUserByUsernameOrPhone(
+        currentUserId: _userId!,
+        query: query,
+      );
+
+      if (!mounted) return;
+
+      if (result == null) {
+        setState(() {
+          _isSearching = false;
+          _searchError = 'کاربری با این مشخصات پیدا نشد';
+        });
+      } else {
+        setState(() {
+          _isSearching = false;
+          _searchResult = result;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSearching = false;
+        _searchError = 'خطا در جستجو: ${e.toString()}';
+      });
+    }
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      _hasSearched = false;
+      _searchResult = null;
+      _searchError = null;
+      _lastSearchQuery = '';
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 📤 اشتراک‌گذاری لینک دعوت
+  // ═══════════════════════════════════════════════════════════
+  Future<void> _shareInvitationLink() async {
+    try {
+      final appLink =
+          dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
+      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+
+      final myUsername = _myUsername ?? 'یک دوست';
+
+      final message = '''
+🤝 سلام!
+
+من دارم از اپلیکیشن "$appName" استفاده می‌کنم و به نظرم می‌تونه برای تو هم مفید باشه.
+
+می‌تونی با نام کاربری "@$myUsername" من رو توی اپلیکیشن پیدا کنی و با هم هم‌مسیر بشیم!
+
+📱 اپلیکیشن $appName - مدیریت عادت‌ها و رشد شخصی
+🔗 دانلود: $appLink
+
+منتظرتم! 🌟
+''';
+
+      await Share.share(
+        message,
+        subject: 'دعوت به اپلیکیشن $appName',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا در اشتراک‌گذاری: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _shareUserNotFoundInvitation(String query) async {
+    try {
+      final appLink =
+          dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
+      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+
+      final myUsername = _myUsername ?? 'یک دوست';
+
+      final message = '''
+🤝 سلام!
+
+من می‌خواستم توی اپلیکیشن "$appName" با تو هم‌مسیر بشم ولی هنوز عضو نیستی!
+
+بیا به اپلیکیشن ما بپیوند و با هم عادت‌های خوب بسازیم!
+
+می‌تونی من رو با نام کاربری "@$myUsername" پیدا کنی.
+
+📱 اپلیکیشن $appName - مدیریت عادت‌ها و رشد شخصی
+🔗 دانلود: $appLink
+
+منتظرتم! 🌟
+''';
+
+      await Share.share(
+        message,
+        subject: 'دعوت به اپلیکیشن $appName',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطا در اشتراک‌گذاری: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // ==================== بارگذاری داده‌ها ====================
@@ -74,6 +226,23 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       _userId = user.id;
       _isLoading = true;
     });
+
+    // ✅ دریافت username کاربر فعلی
+    try {
+      final myProfile = await _supabaseClient
+          .from('profiles')
+          .select('username')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      if (myProfile != null && mounted) {
+        setState(() {
+          _myUsername = myProfile['username'] as String?;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Error loading my username: $e');
+    }
 
     try {
       final matches = await _matcherService.findMatchingBuddies(
@@ -593,62 +762,316 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   Widget _buildSearchTab(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${_searchResults.length} کاربر پیدا شد',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: theme.textSecondaryColor,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() => _showFilters = !_showFilters);
-                },
-                icon: Icon(
-                  _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-                  size: 18,
-                ),
-                label: const Text('فیلتر'),
-                style: TextButton.styleFrom(
-                  foregroundColor: primaryColor,
-                ),
-              ),
-            ],
+        // ✅ باکس جستجو (جدید)
+        _buildSearchBox(theme, primaryColor),
+
+        // ✅ نمایش نتیجه جستجو (اگر جستجو شده)
+        if (_hasSearched) ...[
+          Expanded(
+            child: _isSearching
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(color: primaryColor),
+                        const SizedBox(height: 16),
+                        Text(
+                          'در حال جستجو...',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : _searchResult != null
+                    ? SingleChildScrollView(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            // نمایش نتیجه
+                            _buildMatchCard(
+                              _searchResult!,
+                              theme,
+                              primaryColor,
+                            ),
+                            const SizedBox(height: 12),
+                            // دکمه پاک کردن
+                            TextButton.icon(
+                              onPressed: _clearSearch,
+                              icon: Icon(
+                                Icons.close,
+                                size: 18,
+                                color: theme.textSecondaryColor,
+                              ),
+                              label: Text(
+                                'پاک کردن جستجو',
+                                style: TextStyle(
+                                  color: theme.textSecondaryColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _buildNotFoundState(theme, primaryColor),
           ),
-        ),
-        if (_showFilters) _buildFilters(theme, primaryColor),
-        Expanded(
-          child: _searchResults.isEmpty
-              ? _buildEmptyState(
-                  icon: Icons.search_off,
-                  title: 'نتیجه‌ای یافت نشد',
-                  subtitle: 'فیلترها را تغییر دهید یا بعداً دوباره امتحان کنید',
-                  theme: theme,
-                  primaryColor: primaryColor,
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadData,
-                  color: primaryColor,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      return _buildMatchCard(
-                        _searchResults[index],
-                        theme,
-                        primaryColor,
-                      );
-                    },
+        ] else ...[
+          // ✅ حالت عادی: فیلترها + نتایج
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${_searchResults.length} کاربر پیشنهادی',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.textSecondaryColor,
+                    ),
                   ),
                 ),
-        ),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _showFilters = !_showFilters);
+                  },
+                  icon: Icon(
+                    _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+                    size: 18,
+                  ),
+                  label: const Text('فیلتر'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: primaryColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_showFilters) _buildFilters(theme, primaryColor),
+          Expanded(
+            child: _searchResults.isEmpty
+                ? _buildEmptyState(
+                    icon: Icons.search_off,
+                    title: 'نتیجه‌ای یافت نشد',
+                    subtitle: 'فیلترها را تغییر دهید یا از جستجو استفاده کنید',
+                    theme: theme,
+                    primaryColor: primaryColor,
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadData,
+                    color: primaryColor,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        return _buildMatchCard(
+                          _searchResults[index],
+                          theme,
+                          primaryColor,
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
       ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // 🔍 باکس جستجو
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildSearchBox(ThemeProvider theme, Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.surfaceColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: _searchFocusNode.hasFocus
+              ? primaryColor.withValues(alpha: 0.5)
+              : theme.borderColor,
+          width: _searchFocusNode.hasFocus ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          Icon(
+            Icons.search,
+            color: primaryColor,
+            size: 22,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              style: TextStyle(color: theme.textColor),
+              decoration: InputDecoration(
+                hintText: 'جستجو با نام کاربری یا شماره موبایل...',
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: theme.textSecondaryColor,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _performSearch(),
+              onChanged: (value) {
+                // اگه کاربر خالی کرد، پاک کن
+                if (value.trim().isEmpty && _hasSearched) {
+                  _clearSearch();
+                }
+              },
+            ),
+          ),
+          // دکمه پاک کردن (اگر متن دارد)
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              onPressed: _clearSearch,
+              icon: Icon(
+                Icons.close,
+                color: theme.textSecondaryColor,
+                size: 18,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          // دکمه جستجو
+          GestureDetector(
+            onTap: _performSearch,
+            child: Container(
+              margin: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Text(
+                'جستجو',
+                style: TextStyle(
+                  color:
+                      theme.isDarkMode ? const Color(0xFF090909) : Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // ❌ حالت کاربر پیدا نشد
+  // ═══════════════════════════════════════════════════════════
+  Widget _buildNotFoundState(ThemeProvider theme, Color primaryColor) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_search,
+                size: 48,
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              _searchError ?? 'کاربری پیدا نشد',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: theme.textColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'می‌تونی از دوستت دعوت کنی که به اپلیکیشن بپیونده',
+              style: TextStyle(
+                fontSize: 13,
+                color: theme.textSecondaryColor,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // در _buildNotFoundState
+            ElevatedButton.icon(
+              onPressed: () => _shareUserNotFoundInvitation(_lastSearchQuery),
+              icon: const Icon(
+                Icons.share,
+                size: 18,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'دعوت دوست به اپلیکیشن',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // دکمه پاک کردن
+            TextButton.icon(
+              onPressed: _clearSearch,
+              icon: Icon(
+                Icons.close,
+                size: 16,
+                color: theme.textSecondaryColor,
+              ),
+              label: Text(
+                'جستجوی جدید',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
