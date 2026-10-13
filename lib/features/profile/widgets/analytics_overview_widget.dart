@@ -36,6 +36,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
   int _todayChallengesCompleted = 0;
   int _todayQuests = 0;
   int _todayQuestsCompleted = 0;
+  bool _isDisposed = false;
 
   double _completionRate = 0.0;
   int _totalItems = 0;
@@ -58,15 +59,21 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     _loadingController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
-    )..repeat();
+    );
 
     _rotationAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _loadingController, curve: Curves.linear),
     );
+
+    // ✅ چک کن قبل از repeat
+    if (mounted) {
+      _loadingController.repeat();
+    }
   }
 
   @override
   void dispose() {
+    _isDisposed = true; // ✅ اولین خط
     _loadingController.dispose();
     super.dispose();
   }
@@ -81,7 +88,10 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
   }
 
   Future<void> _loadStats() async {
+    if (_isDisposed) return;
     if (_isLoading && _isRefreshing) return;
+
+    if (!mounted) return; // ✅ چک کن
 
     setState(() {
       _isLoading = true;
@@ -114,6 +124,11 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         );
         if (isCompleted) {
           todayHabitsCompleted++;
+        }
+        if (!_isDisposed && mounted) {
+          setState(() {
+            // ...
+          });
         }
       }
 
@@ -285,6 +300,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     } catch (e) {
       debugPrint('❌ Error loading stats: $e');
       if (mounted) {
+        // ✅ چک کن
         setState(() {
           _isLoading = false;
         });
@@ -467,6 +483,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return AnimatedBuilder(
       animation: _loadingController,
       builder: (context, child) {
+        if (_isDisposed) return const SizedBox.shrink();
         final delay = index * 0.2;
         final value = ((_loadingController.value + delay) % 1.0);
         final opacity = value > 0.5 ? (1.0 - value) * 2 : value * 2;

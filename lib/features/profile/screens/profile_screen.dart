@@ -121,8 +121,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== متد اصلی بارگذاری پروفایل ====================
 
   Future<void> _loadProfile() async {
-    if (_isLoadingInProgress) {
-      print('⏭️ Skip loading: already in progress');
+    // ✅ چک کن SyncProvider پاک شده
+    final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+    if (syncProvider.isCleared) {
+      print('⏭️ Skip _loadProfile: SyncProvider is cleared');
       return;
     }
 

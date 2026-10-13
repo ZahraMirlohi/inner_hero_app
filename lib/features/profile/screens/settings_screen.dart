@@ -9,6 +9,9 @@ import '/providers/theme_provider.dart';
 import 'color_picker_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '/services/local_storage_service.dart';
+import '/providers/auth_provider.dart';
+import '/providers/sync_provider.dart';
+import '/features/auth/screens/login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -272,6 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -300,14 +304,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 32),
 
-              // دکمه خروج
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
+                      builder: (dialogContext) => AlertDialog(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
                         ),
@@ -322,11 +325,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () => Navigator.pop(context, false),
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, false),
                             child: const Text('انصراف'),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.pop(context, true),
+                            onPressed: () => Navigator.pop(dialogContext, true),
                             child: const Text(
                               'خروج',
                               style: TextStyle(color: Colors.red),
@@ -336,23 +340,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     );
                     if (confirm == true) {
+                      if (!mounted) return;
+
                       try {
                         // ✅ 1. پاک کردن LocalStorage
                         final localStorage = LocalStorageService();
                         await localStorage.clearAllDataExceptProfile();
 
-                        // ✅ 2. خروج از Supabase
-                        await _supabase.logout();
+                        if (!mounted) return;
 
-                        // ✅ 3. پاک کردن user_id از SharedPreferences
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.remove('user_id');
+                        // ✅ 2. پاک کردن SyncProvider
+                        final syncProvider =
+                            Provider.of<SyncProvider>(context, listen: false);
+                        syncProvider.clear(); // ← این خط را اضافه کن
 
-                        // ✅ 4. بستن Settings و برگشت به LoginScreen
-                        if (mounted) {
-                          Navigator.of(context)
-                              .popUntil((route) => route.isFirst);
-                        }
+                        // ✅ 3. Force logout
+                        final auth =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        await auth.forceLogout();
                       } catch (e) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -699,11 +704,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Center(
+        builder: (loadingContext) => Center(
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
+              color: Theme.of(loadingContext).cardColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Column(
@@ -718,26 +723,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      // ✅ 1. حذف از Supabase با RPC
+// ✅ 1. حذف از Supabase با RPC
       await _supabase.client.rpc('delete_user_account');
 
       // ✅ 2. پاک کردن LocalStorage
       final localStorage = LocalStorageService();
       await localStorage.clearAllDataExceptProfile();
 
-      // ✅ 3. خروج از session
-      await _supabase.logout();
-
-      // ✅ 4. پاک کردن user_id
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
-
-      // ✅ 5. بستن dialog لودینگ
+      // ✅ 3. بستن dialog لودینگ
       if (mounted) {
-        Navigator.pop(context); // لودینگ
+        Navigator.pop(context);
       }
 
-      // ✅ 6. نمایش پیام موفقیت
+      if (!mounted) return;
+
+      // ✅ 4. Force logout از AuthProvider (UI خودکار عوض می‌شود)
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await auth.forceLogout();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -746,11 +749,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             duration: Duration(seconds: 3),
           ),
         );
-      }
-
-      // ✅ 7. بستن Settings و برگشت به LoginScreen
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       // بستن dialog لودینگ

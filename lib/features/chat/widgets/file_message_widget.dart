@@ -19,6 +19,9 @@ class FileMessageWidget extends StatefulWidget {
   final String fileType;
   final int fileSize;
   final bool isMe;
+  // ✅ کال‌بک برای باز کردن منو
+  final VoidCallback? onBubbleTap;
+  final VoidCallback? onBubbleLongPress;
 
   const FileMessageWidget({
     super.key,
@@ -27,6 +30,8 @@ class FileMessageWidget extends StatefulWidget {
     required this.fileType,
     required this.fileSize,
     required this.isMe,
+    this.onBubbleTap,
+    this.onBubbleLongPress,
   });
 
   @override
@@ -286,7 +291,6 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
 
-    // ✅ رنگ‌های پویا بر اساس تم روز/شب و اینکه پیام من است یا مقابل
     final Color bgColor = widget.isMe
         ? ChatColors.myBubble(theme)
         : ChatColors.otherBubble(theme);
@@ -297,17 +301,30 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
+    // ✅ کل ویجت با GestureDetector پوشانده می‌شود
+    // onTap → باز کردن منو (اگر دانلود شده) یا دانلود (اگر نشده)
+    // onLongPress → انتخاب پیام
+    Widget content;
+
     if (widget.fileType == 'audio') {
       if (_isDownloading) {
-        return _buildDownloadingCard(bgColor, textColor, textSecondary);
+        content = _buildDownloadingCard(bgColor, textColor, textSecondary);
+      } else if (!_isDownloaded) {
+        content = _buildDownloadCard(bgColor, textColor, textSecondary);
+      } else {
+        content = _buildAudioPlayer(bgColor, textColor, textSecondary);
       }
-      if (!_isDownloaded) {
-        return _buildDownloadCard(bgColor, textColor, textSecondary);
-      }
-      return _buildAudioPlayer(bgColor, textColor, textSecondary);
+    } else {
+      content = _buildFileCard(bgColor, textColor, textSecondary);
     }
 
-    return _buildFileCard(bgColor, textColor, textSecondary);
+    return GestureDetector(
+      // ✅ کلیک روی حباب → باز کردن منو
+      onTap: widget.onBubbleTap,
+      // ✅ نگه داشتن → انتخاب پیام
+      onLongPress: widget.onBubbleLongPress,
+      child: content,
+    );
   }
 
   // ✅ کارت فایل
@@ -320,25 +337,26 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     final bool isDownloaded = _downloadService.isDownloaded(widget.fileUrl);
     final double progress = _downloadService.getProgress(widget.fileUrl);
 
-    return GestureDetector(
-      onTap: isDownloaded ? _openFile : null,
-      child: Container(
-        width: 260,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ✅ آیکون فایل - کلیک → باز کردن فایل (اگر دانلود شده)
+          GestureDetector(
+            onTap: isDownloaded ? _openFile : null,
+            child: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
@@ -362,64 +380,65 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                       size: 22,
                     ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.fileName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.fileName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
                   ),
-                  Text(
-                    isDownloading
-                        ? 'در حال دانلود... ${(progress * 100).toInt()}%'
-                        : _formatFileSize(widget.fileSize),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDownloading ? textColor : textSecondary,
-                      fontWeight:
-                          isDownloading ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: isDownloading ? null : _downloadFile,
-              child: Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: textColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: textColor.withValues(alpha: 0.2),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  isDownloading
+                      ? 'در حال دانلود... ${(progress * 100).toInt()}%'
+                      : _formatFileSize(widget.fileSize),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDownloading ? textColor : textSecondary,
+                    fontWeight:
+                        isDownloading ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
-                child: isDownloading
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: textColor,
-                        ),
-                      )
-                    : Icon(
-                        Icons.download_rounded,
-                        color: textColor,
-                        size: 16,
-                      ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // ✅ دکمه دانلود
+          GestureDetector(
+            onTap: isDownloading ? null : _downloadFile,
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: textColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: textColor.withValues(alpha: 0.2),
+                ),
+              ),
+              child: isDownloading
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: textColor,
+                      ),
+                    )
+                  : Icon(
+                      Icons.download_rounded,
+                      color: textColor,
+                      size: 16,
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -430,63 +449,64 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     Color textColor,
     Color textSecondary,
   ) {
-    return GestureDetector(
-      onTap: _downloadFile,
-      child: Container(
-        width: 260,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: textColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: textColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.download,
-                color: textColor,
-                size: 22,
-              ),
+            child: Icon(
+              Icons.download,
+              color: textColor,
+              size: 22,
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.fileName,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.fileName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
                   ),
-                  Text(
-                    '${_formatFileSize(widget.fileSize)} • برای باز کردن دانلود کنید',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: textSecondary,
-                    ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${_formatFileSize(widget.fileSize)} • برای باز کردن دانلود کنید',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: textSecondary,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Container(
+          ),
+          // ✅ دکمه دانلود
+          GestureDetector(
+            onTap: _downloadFile,
+            child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 10,
                 vertical: 5,
@@ -507,8 +527,8 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -618,28 +638,29 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       displayDuration = const Duration(seconds: 180);
     }
 
-    return GestureDetector(
-      onTap: _openFile,
-      child: Container(
-        width: 260,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // ✅ آیکون موزیک - کلیک → باز کردن فایل
+              GestureDetector(
+                onTap: _openFile,
+                child: Container(
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
@@ -663,144 +684,146 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                           size: 20,
                         ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.fileName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.fileName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
                       ),
-                      Text(
-                        _formatFileSize(widget.fileSize),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _downloadFile,
-                  child: Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: textColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: textColor.withValues(alpha: 0.2),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      _formatFileSize(widget.fileSize),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: textSecondary,
                       ),
                     ),
-                    child: Icon(
-                      Icons.download_rounded,
-                      color: textColor,
-                      size: 16,
+                  ],
+                ),
+              ),
+              // ✅ دکمه دانلود
+              GestureDetector(
+                onTap: _downloadFile,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: textColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: textColor.withValues(alpha: 0.2),
                     ),
                   ),
+                  child: Icon(
+                    Icons.download_rounded,
+                    color: textColor,
+                    size: 16,
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: showLoading ? null : _togglePlayback,
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: showLoading
-                          ? textColor.withValues(alpha: 0.2)
-                          : textColor,
-                      shape: BoxShape.circle,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // ✅ دکمه play/pause
+              GestureDetector(
+                onTap: showLoading ? null : _togglePlayback,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: showLoading
+                        ? textColor.withValues(alpha: 0.2)
+                        : textColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: showLoading
+                      ? Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: textColor,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          isThisPlaying ? Icons.pause : Icons.play_arrow,
+                          color: bgColor,
+                          size: 18,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  children: [
+                    SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 5,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 9,
+                        ),
+                        activeTrackColor: textColor,
+                        inactiveTrackColor: textColor.withValues(alpha: 0.15),
+                        thumbColor: textColor,
+                        overlayColor: textColor.withValues(alpha: 0.2),
+                      ),
+                      child: Slider(
+                        value: displayDuration.inMilliseconds > 0
+                            ? (displayPosition.inMilliseconds /
+                                    displayDuration.inMilliseconds)
+                                .clamp(0.0, 1.0)
+                            : 0.0,
+                        onChanged: showLoading
+                            ? null
+                            : (displayDuration.inMilliseconds > 0
+                                ? _seekTo
+                                : null),
+                        min: 0,
+                        max: 1,
+                      ),
                     ),
-                    child: showLoading
-                        ? Center(
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: textColor,
-                              ),
-                            ),
-                          )
-                        : Icon(
-                            isThisPlaying ? Icons.pause : Icons.play_arrow,
-                            color: bgColor,
-                            size: 18,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDuration(displayPosition),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    children: [
-                      SliderTheme(
-                        data: SliderThemeData(
-                          trackHeight: 3,
-                          thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 5,
-                          ),
-                          overlayShape: const RoundSliderOverlayShape(
-                            overlayRadius: 9,
-                          ),
-                          activeTrackColor: textColor,
-                          inactiveTrackColor: textColor.withValues(alpha: 0.15),
-                          thumbColor: textColor,
-                          overlayColor: textColor.withValues(alpha: 0.2),
                         ),
-                        child: Slider(
-                          value: displayDuration.inMilliseconds > 0
-                              ? (displayPosition.inMilliseconds /
-                                      displayDuration.inMilliseconds)
-                                  .clamp(0.0, 1.0)
-                              : 0.0,
-                          onChanged: showLoading
-                              ? null
-                              : (displayDuration.inMilliseconds > 0
-                                  ? _seekTo
-                                  : null),
-                          min: 0,
-                          max: 1,
+                        Text(
+                          _formatDuration(displayDuration),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatDuration(displayPosition),
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            _formatDuration(displayDuration),
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

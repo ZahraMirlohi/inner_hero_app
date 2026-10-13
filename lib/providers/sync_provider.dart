@@ -25,6 +25,9 @@ class SyncProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   bool get isSyncing => _isSyncing;
   bool get isInitialized => _isInitialized;
+  bool _isCleared = false; // ✅ جدید
+
+  bool get isCleared => _isCleared; // ✅ جدید
 
   SyncProvider() {
     _init();
@@ -52,6 +55,17 @@ class SyncProvider extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+  }
+
+  /// ✅ پاک کردن همه چیز (برای logout)
+  void clear() {
+    print('🗑️ SyncProvider clear called');
+
+    _isCleared = true; // ✅ flag
+    _currentUserId = null;
+    _isSyncing = false;
+
+    notifyListeners();
   }
 
   /// ✅ حذف یک عادت خاص از کش

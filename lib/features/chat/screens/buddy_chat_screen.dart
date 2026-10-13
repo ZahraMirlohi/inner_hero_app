@@ -417,33 +417,34 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     return Colors.grey.shade500;
   }
 
-  // ✅ رنگ متن ساعت (خارج از حباب)
-  Color _getTimeColor(ThemeProvider theme) {
-    return theme.textSecondaryColor;
-  }
+// ✅ در متد _buildMessageBubble
 
-  // ✅ رنگ حباب پیام من
-  // - روز → primaryLight
-  // - شب → primaryColor
+// رنگ حباب من در شب
   Color _getMyBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
+    return theme.isDarkMode
+        ? const Color(0xFF2A2A2A) // ✅ تیره‌تر از primaryColor برای شب
+        : theme.primaryLight;
   }
 
-  // ✅ رنگ حباب کاربر مقابل
-  // - روز → سفید
-  // - شب → مشکی (#1E1E1E)
+// رنگ حباب مقابل در شب
   Color _getOtherBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    return theme.isDarkMode
+        ? const Color(0xFF1E1E1E) // مشکی
+        : Colors.white;
   }
 
-  // ✅ رنگ متن حباب من
+// ✅ رنگ متن حباب من در شب
   Color _getMyBubbleTextColor(ThemeProvider theme) {
-    return const Color(0xFF090909); // مشکی (روی رنگ روشن)
+    return theme.isDarkMode
+        ? Colors.white // ✅ سفید در شب
+        : const Color(0xFF090909); // مشکی در روز
   }
 
-  // ✅ رنگ متن حباب کاربر مقابل
+// ✅ رنگ متن حباب مقابل در شب
   Color _getOtherBubbleTextColor(ThemeProvider theme) {
-    return theme.textColor;
+    return theme.isDarkMode
+        ? Colors.white // ✅ سفید در شب
+        : theme.textColor;
   }
 
   // ✅ متد دریافت چالش کش شده
@@ -2755,7 +2756,8 @@ ${data.completionMessage}
     }
   }
 
-  // ==================== Build Message Menu ====================
+// ==================== Build Message Menu ====================
+// ==================== Build Message Menu ====================
   Widget _buildMessageActionsPopup(ThemeProvider theme, Color primaryColor) {
     if (_menuMessage == null || _menuPosition == null) {
       return const SizedBox.shrink();
@@ -2769,176 +2771,254 @@ ${data.completionMessage}
     final double bubbleX = _menuPosition!.dx;
     final double bubbleY = _menuPosition!.dy;
 
-    const double menuWidth = 220;
-    const double reactionsHeight = 52;
-    const double menuItemsHeight = 270;
-    const double gap = 6;
-    const double totalHeight = reactionsHeight + gap + menuItemsHeight;
+    const double menuWidth = 210;
+    const double reactionsHeight = 44; // ✅ کوچک‌تر شد (از 52 به 44)
+    const double gap = 5;
+    const double itemHeight = 38.0; // ✅ کوچک‌تر شد (از 44 به 38)
+    const double menuPadding = 6;
+
+    // ✅ محاسبه دقیق تعداد آیتم‌ها
+    int menuItemCount = 2; // پاسخ + کپی
+    if (isOwnMessage && message.canBeEdited) menuItemCount++;
+    menuItemCount++; // پین
+    if (isOwnMessage) menuItemCount++; // حذف برای من
+    if (isOwnMessage && !message.isDeleted) menuItemCount++; // حذف برای همه
+    menuItemCount++; // اشتراک‌گذاری
+
+    final double menuItemsHeight = menuItemCount * itemHeight + menuPadding;
+    final double totalHeight = reactionsHeight + gap + menuItemsHeight;
+
+    // ✅ محدوده امن (فاصله از لبه‌های صفحه)
+    final double safeTop = MediaQuery.of(context).padding.top + 70;
+    final double safeBottom = MediaQuery.of(context).padding.bottom + 120;
+
+    final double availableHeight = screenSize.height - safeTop - safeBottom;
+    final double maxTop = screenSize.height - totalHeight - safeBottom;
 
     double left;
     double top;
 
+    // ✅ موقعیت افقی
     if (isOwnMessage) {
-      left = bubbleX - menuWidth - 20;
+      left = bubbleX - menuWidth - 12;
     } else {
       left = bubbleX + 2;
     }
 
+    // ✅ موقعیت عمودی - ابتدا تلاش برای قرار دادن در مرکز
     top = bubbleY - (totalHeight / 2);
 
-    if (left < 10) left = 10;
-    if (left + menuWidth > screenSize.width - 10) {
-      left = screenSize.width - menuWidth - 10;
-    }
-    if (top < 60) top = 60;
-    if (top + totalHeight > screenSize.height - 20) {
-      top = screenSize.height - totalHeight - 20;
+    // ✅ اگر بالای صفحه است، به بالا بچسبان
+    if (top < safeTop) {
+      top = safeTop;
     }
 
+    // ✅ اگر پایین صفحه است، به بالا بچسبان
+    if (top > maxTop) {
+      top = maxTop;
+    }
+
+    // ✅ اگر هنوز maxTop < safeTop، یعنی منو جا نمی‌شود
+    // → از بالای صفحه شروع کن و اسکرول بده
+    if (maxTop < safeTop) {
+      top = safeTop;
+    }
+
+    // ✅ محدود کردن افقی
+    if (left < 8) left = 8;
+    if (left + menuWidth > screenSize.width - 8) {
+      left = screenSize.width - menuWidth - 8;
+    }
+
+    // ✅ اگر حتی با محدودیت هم جا نمی‌شود، عرض را کم کن
+    final double actualMenuWidth = (left + menuWidth > screenSize.width - 8)
+        ? screenSize.width - 16
+        : menuWidth;
+
+    // ✅ حداکثر ارتفاع قابل نمایش
+    final double maxMenuHeight = availableHeight;
+
+    // ✅ رنگ سایه‌ها
     final List<BoxShadow> shadows = [
       BoxShadow(
-        color: Colors.black.withValues(alpha: 0.12),
-        blurRadius: 16,
+        color: theme.isDarkMode
+            ? Colors.black.withValues(alpha: 0.6)
+            : Colors.black.withValues(alpha: 0.2),
+        blurRadius: 20,
         spreadRadius: 2,
-        offset: const Offset(0, 4),
+        offset: const Offset(0, 6),
       ),
     ];
 
     return Positioned(
       left: left,
       top: top,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ✅ حباب ری‌اکشن‌ها
-          Container(
-            width: menuWidth,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            decoration: BoxDecoration(
-              color: theme.surfaceColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: shadows,
-            ),
-            child: SizedBox(
-              height: 44,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                itemCount: _popularReactions.length,
-                itemBuilder: (context, index) {
-                  final emoji = _popularReactions[index];
-                  final isSelected = message.reactions?.any(
-                        (r) => r.emoji == emoji && r.userId == _userId,
-                      ) ??
-                      false;
-
-                  return GestureDetector(
-                    onTap: () {
-                      _closeMenu();
-                      _toggleReaction(message, emoji);
-                    },
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? primaryColor.withValues(alpha: 0.15)
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: isSelected
-                            ? Border.all(
-                                color: primaryColor,
-                                width: 1.5,
-                              )
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+      child: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: maxMenuHeight,
+            maxWidth: actualMenuWidth,
           ),
-
-          const SizedBox(height: 6),
-
-          // ✅ حباب گزینه‌های منو
-          Container(
-            width: menuWidth,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: theme.surfaceColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: shadows,
-            ),
+          // ✅ اگر منو بلندتر از فضای موجود بود، اسکرول شود
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildPopupMenuItem(
-                  icon: Icons.reply,
-                  label: 'پاسخ',
-                  onTap: () {
-                    _closeMenu();
-                    _setReplyTo(message);
-                  },
-                ),
-                if (isOwnMessage && message.canBeEdited)
-                  _buildPopupMenuItem(
-                    icon: Icons.edit,
-                    label: 'ویرایش',
-                    onTap: () {
-                      _closeMenu();
-                      _editMessage(message, primaryColor);
-                    },
+                // ✅ حباب ری‌اکشن‌ها (کوچک‌تر)
+                Container(
+                  width: actualMenuWidth,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.surfaceColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: theme.isDarkMode
+                          ? theme.borderColor
+                          : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                    boxShadow: shadows,
                   ),
-                _buildPopupMenuItem(
-                  icon: isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                  label: isPinned ? 'لغو پین' : 'پین کردن',
-                  color: isPinned ? Colors.orange : primaryColor,
-                  onTap: () {
-                    _closeMenu();
-                    if (isPinned) {
-                      _unpinMessage(message);
-                    } else {
-                      _pinMessage(message);
-                    }
-                  },
+                  child: SizedBox(
+                    height: 36, // ✅ کوچک‌تر
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      itemCount: _popularReactions.length,
+                      itemBuilder: (context, index) {
+                        final emoji = _popularReactions[index];
+                        final isSelected = message.reactions?.any(
+                              (r) => r.emoji == emoji && r.userId == _userId,
+                            ) ??
+                            false;
+
+                        return GestureDetector(
+                          onTap: () {
+                            _closeMenu();
+                            _toggleReaction(message, emoji);
+                          },
+                          child: Container(
+                            width: 32, // ✅ کوچک‌تر
+                            height: 32,
+                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? primaryColor.withValues(alpha: 0.2)
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: isSelected
+                                  ? Border.all(
+                                      color: primaryColor,
+                                      width: 1.5,
+                                    )
+                                  : null,
+                            ),
+                            child: Center(
+                              child: Text(
+                                emoji,
+                                style:
+                                    const TextStyle(fontSize: 20), // ✅ کوچک‌تر
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                _buildPopupMenuItem(
-                  icon: Icons.copy,
-                  label: 'کپی',
-                  onTap: () {
-                    _closeMenu();
-                    _copyMessage(message);
-                  },
-                ),
-                _buildPopupMenuItem(
-                  icon: Icons.delete_outline,
-                  label: 'حذف',
-                  color: Colors.red,
-                  onTap: () {
-                    _closeMenu();
-                    _showDeleteOptionsDialog(message, primaryColor);
-                  },
-                ),
-                _buildPopupMenuItem(
-                  icon: Icons.share,
-                  label: 'اشتراک‌گذاری',
-                  onTap: () {
-                    _closeMenu();
-                    _forwardMessage(message);
-                  },
+
+                const SizedBox(height: 4),
+
+                // ✅ حباب گزینه‌های منو
+                Container(
+                  width: actualMenuWidth,
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.surfaceColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: theme.isDarkMode
+                          ? theme.borderColor
+                          : Colors.grey.shade200,
+                      width: 1,
+                    ),
+                    boxShadow: shadows,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildPopupMenuItem(
+                        icon: Icons.reply,
+                        label: 'پاسخ',
+                        onTap: () {
+                          _closeMenu();
+                          _setReplyTo(message);
+                        },
+                        theme: theme,
+                      ),
+                      if (isOwnMessage && message.canBeEdited)
+                        _buildPopupMenuItem(
+                          icon: Icons.edit,
+                          label: 'ویرایش',
+                          onTap: () {
+                            _closeMenu();
+                            _editMessage(message, primaryColor);
+                          },
+                          theme: theme,
+                        ),
+                      _buildPopupMenuItem(
+                        icon:
+                            isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        label: isPinned ? 'لغو پین' : 'پین کردن',
+                        color: isPinned ? Colors.orange : primaryColor,
+                        onTap: () {
+                          _closeMenu();
+                          if (isPinned) {
+                            _unpinMessage(message);
+                          } else {
+                            _pinMessage(message);
+                          }
+                        },
+                        theme: theme,
+                      ),
+                      _buildPopupMenuItem(
+                        icon: Icons.copy,
+                        label: 'کپی',
+                        onTap: () {
+                          _closeMenu();
+                          _copyMessage(message);
+                        },
+                        theme: theme,
+                      ),
+                      _buildPopupMenuItem(
+                        icon: Icons.delete_outline,
+                        label: 'حذف',
+                        color: Colors.red,
+                        onTap: () {
+                          _closeMenu();
+                          _showDeleteOptionsDialog(message, primaryColor);
+                        },
+                        theme: theme,
+                      ),
+                      _buildPopupMenuItem(
+                        icon: Icons.share,
+                        label: 'اشتراک‌گذاری',
+                        onTap: () {
+                          _closeMenu();
+                          _forwardMessage(message);
+                        },
+                        theme: theme,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -3099,17 +3179,36 @@ ${data.completionMessage}
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.08),
+          // ✅ پس‌زمینه واضح‌تر
+          color: theme.isDarkMode
+              ? primaryColor.withValues(alpha: 0.2)
+              : primaryColor.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(16),
+          // ✅ border پررنگ‌تر
           border: Border.all(
-            color: primaryColor.withValues(alpha: 0.2),
-            width: 1,
+            color: theme.isDarkMode
+                ? primaryColor.withValues(alpha: 0.6)
+                : primaryColor.withValues(alpha: 0.5),
+            width: 1.5,
           ),
+          // ✅ سایه برای برجستگی
+          boxShadow: [
+            BoxShadow(
+              color: primaryColor.withValues(alpha: 0.15),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: [
-            Icon(Icons.push_pin, color: primaryColor, size: 16),
+            Icon(
+              Icons.push_pin,
+              color:
+                  theme.isDarkMode ? Colors.white : primaryColor, // ✅ روشن‌تر
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -3153,22 +3252,40 @@ ${data.completionMessage}
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    required ThemeProvider theme,
     Color? color,
   }) {
+    final finalColor =
+        color ?? (theme.isDarkMode ? Colors.white : Colors.grey.shade800);
+    final bgColor = color?.withValues(alpha: 0.15) ??
+        (theme.isDarkMode
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.grey.shade100);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        // ✅ ارتفاع کوچک‌تر شد
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: color ?? Colors.grey.shade700),
-            const SizedBox(width: 14),
+            Container(
+              width: 26, // ✅ کوچک‌تر
+              height: 26,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 15, color: finalColor), // ✅ کوچک‌تر
+            ),
+            const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
-                color: color ?? Colors.grey.shade700,
+                fontSize: 13, // ✅ کوچک‌تر
+                fontWeight: FontWeight.w500,
+                color: finalColor,
               ),
             ),
           ],
@@ -3381,7 +3498,10 @@ ${data.completionMessage}
     }
   }
 
-  Widget _buildScrollToBottomButton(Color primaryColor) {
+  Widget _buildScrollToBottomButton(
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     if (_messages.length < 5) return const SizedBox.shrink();
 
     bool isAtBottom = true;
@@ -3401,19 +3521,26 @@ ${data.completionMessage}
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: primaryColor,
+            color: theme.isDarkMode ? const Color(0xFF090909) : primaryColor,
             shape: BoxShape.circle,
+            border: Border.all(
+              color: theme.isDarkMode ? primaryColor : Colors.white,
+              width: 2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: primaryColor.withValues(alpha: 0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: theme.isDarkMode
+                    ? primaryColor.withValues(alpha: 0.5)
+                    : Colors.black.withValues(alpha: 0.3),
+                blurRadius: 12,
+                spreadRadius: 2,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
-          child: const Icon(
+          child: Icon(
             Icons.arrow_downward,
-            color: Colors.white,
+            color: theme.isDarkMode ? primaryColor : Colors.white,
             size: 24,
           ),
         ),
@@ -4142,7 +4269,11 @@ ${data.completionMessage}
     return null;
   }
 
-  Widget _buildReactions(ChatMessage message, Color primaryColor) {
+  Widget _buildReactions(
+    ChatMessage message,
+    Color primaryColor,
+    ThemeProvider theme,
+  ) {
     final reactions = message.reactions;
     if (reactions == null || reactions.isEmpty) {
       return const SizedBox.shrink();
@@ -4173,7 +4304,18 @@ ${data.completionMessage}
                     ? Border.all(color: primaryColor, width: 1.5)
                     : null,
                 borderRadius: BorderRadius.circular(14),
-                color: Colors.transparent,
+                color: theme.isDarkMode
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.white.withValues(alpha: 0.9),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                      alpha: theme.isDarkMode ? 0.3 : 0.08,
+                    ),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -4182,7 +4324,9 @@ ${data.completionMessage}
                     emoji,
                     style: TextStyle(
                       fontSize: 15,
-                      color: isUserReacted ? primaryColor : Colors.black87,
+                      color: isUserReacted
+                          ? primaryColor
+                          : (theme.isDarkMode ? Colors.white : Colors.black87),
                     ),
                   ),
                   if (count > 1) ...[
@@ -4191,8 +4335,11 @@ ${data.completionMessage}
                       '$count',
                       style: TextStyle(
                         fontSize: 10,
-                        color:
-                            isUserReacted ? primaryColor : Colors.grey.shade600,
+                        color: isUserReacted
+                            ? primaryColor
+                            : (theme.isDarkMode
+                                ? Colors.grey.shade400
+                                : Colors.grey.shade600),
                         fontWeight:
                             isUserReacted ? FontWeight.bold : FontWeight.w500,
                       ),
@@ -4366,7 +4513,7 @@ ${message.content}
     );
   }
 
-  // ==================== ساخت پیام ====================
+// ==================== ساخت پیام ====================
   Widget _buildMessageBubble(
     ChatMessage message,
     ThemeProvider theme,
@@ -4376,26 +4523,28 @@ ${message.content}
     final isSystem = message.type == MessageType.system;
     final isSelected = _selectedMessageIds.contains(message.id);
     final isFailed = message.status == MessageStatus.failed;
+    final isHighlighted = _highlightedMessageId == message.id;
 
     if (!_messageKeys.containsKey(message.id)) {
       _messageKeys[message.id] = GlobalKey();
     }
     final key = _messageKeys[message.id]!;
 
+    // ✅ پیام سیستمی
     if (isSystem) {
       return Container(
         key: key,
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: theme.systemBubble, // ✅ جدید
+          color: theme.systemBubble,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           message.content,
           style: TextStyle(
             fontSize: 11,
-            color: theme.textSecondaryColor, // ✅
+            color: theme.textSecondaryColor,
           ),
         ),
       );
@@ -4404,12 +4553,26 @@ ${message.content}
     // ✅ تشخیص ویجت
     final bool isWidgetMessage = _isWidgetMessage(message);
 
-    // ✅ رنگ‌های حباب
-    final Color myBubbleColor = _getMyBubbleColor(theme);
-    final Color otherBubbleColor = _getOtherBubbleColor(theme);
+    // ✅ رنگ‌های حباب بر اساس تم روز/شب
+    // - روز: حباب من = primaryLight | حباب مقابل = سفید
+    // - شب: حباب من = primaryColor | حباب مقابل = مشکی #1E1E1E
+    final Color myBubbleColor =
+        theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
+    final Color otherBubbleColor =
+        theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final Color bubbleColor = isMe ? myBubbleColor : otherBubbleColor;
-    final Color textColor =
-        isMe ? _getMyBubbleTextColor(theme) : _getOtherBubbleTextColor(theme);
+    final Color textColor = isMe ? const Color(0xFF090909) : theme.textColor;
+
+    // ✅ رنگ‌های هایلایت
+    final Color highlightBorderColor =
+        theme.isDarkMode ? Colors.yellow : const Color(0xFFFF6B00);
+    final Color highlightShadowColor = theme.isDarkMode
+        ? Colors.yellow.withValues(alpha: 0.7)
+        : const Color(0xFFFF6B00).withValues(alpha: 0.6);
+
+    // ✅ رنگ‌های پیام پین شده
+    final Color pinnedBorderColor = Colors.orange;
+    final Color pinnedShadowColor = Colors.orange.withValues(alpha: 0.5);
 
     return Dismissible(
       key: Key(message.id),
@@ -4419,24 +4582,24 @@ ${message.content}
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 16),
         decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
+          color: primaryColor.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: primaryColor.withValues(alpha: 0.3),
-            width: 1,
+            color: primaryColor.withValues(alpha: 0.4),
+            width: 1.5,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.reply, color: primaryColor, size: 18),
+            Icon(Icons.reply, color: primaryColor, size: 20),
             const SizedBox(width: 6),
             Text(
               'پاسخ',
               style: TextStyle(
                 color: primaryColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
             ),
           ],
@@ -4449,12 +4612,6 @@ ${message.content}
       child: Container(
         key: key,
         margin: const EdgeInsets.only(bottom: 2),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? primaryColor.withValues(alpha: 0.08)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
           child: Column(
@@ -4462,223 +4619,330 @@ ${message.content}
                 isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () {
-                  if (isFailed) {
-                    _showFailedMessageOptions(message);
-                    return;
-                  }
-
-                  if (_isSelectMode) {
-                    _toggleMessageSelection(message.id);
-                  } else {
-                    try {
-                      final RenderBox renderBox =
-                          key.currentContext!.findRenderObject() as RenderBox;
-
-                      Offset position;
-
-                      if (isMe) {
-                        position = renderBox.localToGlobal(
-                          Offset(
-                            renderBox.size.width,
-                            renderBox.size.height / 2,
+              // ✅ ردیف افقی: تیک انتخاب + حباب پیام
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // ✅ تیک انتخاب - در سمت چپ حباب برای پیام‌های من
+                  // و سمت راست حباب برای پیام‌های مقابل
+                  if (_isSelectMode)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: isMe ? 0 : 6,
+                        right: isMe ? 6 : 0,
+                        bottom: 4,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isSelected
+                              ? primaryColor
+                              : (theme.isDarkMode
+                                  ? const Color(0xFF2A2A2A)
+                                  : Colors.white),
+                          border: Border.all(
+                            color: isSelected
+                                ? primaryColor
+                                : (theme.isDarkMode
+                                    ? Colors.grey.shade600
+                                    : Colors.grey.shade400),
+                            width: 2,
                           ),
-                        );
-                      } else {
-                        position = renderBox.localToGlobal(
-                          Offset(0, renderBox.size.height / 2),
-                        );
-                      }
-
-                      _showMessageActionsPopup(message, position);
-                    } catch (e) {
-                      _showMessageActionsPopup(message, const Offset(100, 200));
-                    }
-                  }
-                },
-                onLongPress: () {
-                  if (!_isSelectMode) {
-                    _enterSelectMode(message.id);
-                  }
-                },
-                child: Container(
-                  padding: isWidgetMessage
-                      ? EdgeInsets.zero
-                      : const EdgeInsets.symmetric(
-                          horizontal: 11,
-                          vertical: 6,
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: primaryColor.withValues(alpha: 0.4),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
-                  decoration: isWidgetMessage
-                      ? null
-                      : BoxDecoration(
-                          color: bubbleColor,
-                          borderRadius: BorderRadius.circular(18),
-                          border: message.isPinned
-                              ? Border.all(color: Colors.orange, width: 2)
-                              : _highlightedMessageId == message.id
-                                  ? Border.all(color: primaryColor, width: 2)
-                                  : null,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                            if (message.isPinned)
-                              BoxShadow(
-                                color: Colors.orange.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                spreadRadius: 1,
-                              ),
-                            if (_highlightedMessageId == message.id)
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                spreadRadius: 2,
-                              ),
-                            if (isFailed)
-                              BoxShadow(
-                                color: Colors.red.withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              ),
-                          ],
-                        ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // پیام پین شده
-                      if (message.isPinned && !isWidgetMessage)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 3),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
+                        child: isSelected
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 16,
+                              )
+                            : null,
+                      ),
+                    ),
+
+                  // ✅ حباب پیام
+                  Flexible(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (isFailed) {
+                          _showFailedMessageOptions(message);
+                          return;
+                        }
+
+                        if (_isSelectMode) {
+                          _toggleMessageSelection(message.id);
+                        } else {
+                          try {
+                            final RenderBox renderBox = key.currentContext!
+                                .findRenderObject() as RenderBox;
+
+                            Offset position;
+
+                            if (isMe) {
+                              position = renderBox.localToGlobal(
+                                Offset(
+                                  renderBox.size.width,
+                                  renderBox.size.height / 2,
+                                ),
+                              );
+                            } else {
+                              position = renderBox.localToGlobal(
+                                Offset(0, renderBox.size.height / 2),
+                              );
+                            }
+
+                            _showMessageActionsPopup(message, position);
+                          } catch (e) {
+                            _showMessageActionsPopup(
+                                message, const Offset(100, 200));
+                          }
+                        }
+                      },
+                      onLongPress: () {
+                        if (!_isSelectMode) {
+                          _enterSelectMode(message.id);
+                        }
+                      },
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        // ✅ کم‌رنگ شدن پیام انتخاب شده
+                        opacity: isSelected ? 0.55 : 1.0,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: isWidgetMessage
+                              ? EdgeInsets.zero
+                              : const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 6,
+                                ),
+                          decoration: isWidgetMessage
+                              ? null
+                              : BoxDecoration(
+                                  color: bubbleColor,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: message.isPinned
+                                      ? Border.all(
+                                          color: pinnedBorderColor,
+                                          width: 2.5,
+                                        )
+                                      : isHighlighted
+                                          ? Border.all(
+                                              color: highlightBorderColor,
+                                              width: 3,
+                                            )
+                                          : null,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: theme.isDarkMode ? 0.3 : 0.04,
+                                      ),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                    if (message.isPinned)
+                                      BoxShadow(
+                                        color: pinnedShadowColor,
+                                        blurRadius: 12,
+                                        spreadRadius: 3,
+                                      ),
+                                    if (isHighlighted)
+                                      BoxShadow(
+                                        color: highlightShadowColor,
+                                        blurRadius: 24,
+                                        spreadRadius: 5,
+                                      ),
+                                    if (isFailed)
+                                      BoxShadow(
+                                        color:
+                                            Colors.red.withValues(alpha: 0.3),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                      ),
+                                  ],
+                                ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.push_pin,
-                                size: 9,
-                                color: Colors.orange,
-                              ),
-                              SizedBox(width: 3),
-                              Text(
-                                'پین شده',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w500,
+                              // ✅ پیام پین شده
+                              if (message.isPinned && !isWidgetMessage)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color:
+                                          Colors.orange.withValues(alpha: 0.5),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.push_pin,
+                                        size: 10,
+                                        color: Colors.orange,
+                                      ),
+                                      SizedBox(width: 3),
+                                      Text(
+                                        'پین شده',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: Colors.orange,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+
+                              // ✅ reply preview
+                              if (message.replyTo != null)
+                                GestureDetector(
+                                  onTap: () {
+                                    _scrollToMessage(message.replyToId!);
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isWidgetMessage
+                                          ? (isMe
+                                              ? myBubbleColor.withValues(
+                                                  alpha: 0.6)
+                                              : otherBubbleColor.withValues(
+                                                  alpha: 0.6))
+                                          : (isMe
+                                              ? (theme.isDarkMode
+                                                  ? Colors.white
+                                                      .withValues(alpha: 0.1)
+                                                  : const Color(0xFF090909)
+                                                      .withValues(alpha: 0.08))
+                                              : (theme.isDarkMode
+                                                  ? Colors.white
+                                                      .withValues(alpha: 0.05)
+                                                  : Colors.grey.shade100)),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: isMe
+                                              ? (theme.isDarkMode
+                                                  ? primaryColor
+                                                  : primaryColor.withValues(
+                                                      alpha: 0.8))
+                                              : primaryColor,
+                                          width: 3,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.reply_outlined,
+                                              size: 9,
+                                              color: isMe
+                                                  ? (theme.isDarkMode
+                                                      ? Colors.white.withValues(
+                                                          alpha: 0.9)
+                                                      : const Color(0xFF090909)
+                                                          .withValues(
+                                                              alpha: 0.9))
+                                                  : primaryColor,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Flexible(
+                                              child: Text(
+                                                _getReplyToSenderName(message),
+                                                style: TextStyle(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isMe
+                                                      ? (theme.isDarkMode
+                                                          ? Colors.white
+                                                              .withValues(
+                                                                  alpha: 0.9)
+                                                          : const Color(
+                                                                  0xFF090909)
+                                                              .withValues(
+                                                                  alpha: 0.9))
+                                                      : primaryColor,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 1),
+                                        Text(
+                                          _truncateText(
+                                              message.replyTo!.content, 40),
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: isMe
+                                                ? (theme.isDarkMode
+                                                    ? Colors.white
+                                                        .withValues(alpha: 0.8)
+                                                    : const Color(0xFF090909)
+                                                        .withValues(alpha: 0.8))
+                                                : (theme.isDarkMode
+                                                    ? Colors.grey.shade400
+                                                    : Colors.grey.shade700),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                              // ✅ محتوا
+                              _buildMessageContent(
+                                message,
+                                isMe,
+                                theme,
+                                primaryColor,
                               ),
                             ],
                           ),
                         ),
-
-                      // reply preview
-                      if (message.replyTo != null)
-                        GestureDetector(
-                          onTap: () {
-                            _scrollToMessage(message.replyToId!);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 3),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isWidgetMessage
-                                  ? (isMe
-                                      ? myBubbleColor.withValues(alpha: 0.6)
-                                      : otherBubbleColor.withValues(alpha: 0.6))
-                                  : (isMe
-                                      ? const Color(0xFF090909)
-                                          .withValues(alpha: 0.08)
-                                      : Colors.grey.shade100),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border(
-                                left: BorderSide(
-                                  color: isMe
-                                      ? primaryColor.withValues(alpha: 0.8)
-                                      : primaryColor,
-                                  width: 3,
-                                ),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.reply_outlined,
-                                      size: 9,
-                                      color: isMe
-                                          ? const Color(0xFF090909)
-                                              .withValues(alpha: 0.9)
-                                          : primaryColor,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Flexible(
-                                      child: Text(
-                                        _getReplyToSenderName(message),
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w600,
-                                          color: isMe
-                                              ? const Color(0xFF090909)
-                                                  .withValues(alpha: 0.9)
-                                              : primaryColor,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  _truncateText(message.replyTo!.content, 40),
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: isMe
-                                        ? const Color(0xFF090909)
-                                            .withValues(alpha: 0.8)
-                                        : Colors.grey.shade700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      // محتوا
-                      _buildMessageContent(
-                        message,
-                        isMe,
-                        theme,
-                        primaryColor,
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
 
-              // واکنش‌ها
-              _buildReactions(message, primaryColor),
+              // ✅ واکنش‌ها
+              _buildReactions(message, primaryColor, theme),
 
-              // ✅ ساعت + وضعیت بازدید (خارج از حباب)
+              // ✅ ساعت + وضعیت بازدید
               Padding(
                 padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
                 child: Row(
@@ -4690,7 +4954,7 @@ ${message.content}
                       _getTimeOnly(message.createdAt),
                       style: TextStyle(
                         fontSize: 9,
-                        color: _getTimeColor(theme),
+                        color: theme.textSecondaryColor,
                       ),
                     ),
                     if (isMe) ...[
@@ -4958,10 +5222,25 @@ ${message.content}
     Color primaryColor, {
     bool isMe = true,
   }) {
-    // ✅ رنگ تیک (چون خارج از حباب است، رنگ‌ها ثابت)
-    final Color checkColor = status == MessageStatus.seen
-        ? (isMe ? const Color(0xFF4FC3F7) : primaryColor)
-        : Colors.grey.shade500;
+    final Color checkColor;
+
+    switch (status) {
+      case MessageStatus.seen:
+        checkColor = isMe ? const Color(0xFF4FC3F7) : Colors.green;
+        break;
+      case MessageStatus.delivered:
+        checkColor = isMe ? const Color(0xFF4FC3F7) : Colors.grey.shade500;
+        break;
+      case MessageStatus.sent:
+        checkColor = Colors.grey.shade500;
+        break;
+      case MessageStatus.failed:
+        checkColor = Colors.red;
+        break;
+      case MessageStatus.sending:
+        checkColor = Colors.grey.shade500;
+        break;
+    }
 
     switch (status) {
       case MessageStatus.sending:
@@ -4979,14 +5258,14 @@ ${message.content}
       case MessageStatus.seen:
         return Icon(
           Icons.done_all,
-          size: 13,
+          size: 14,
           color: checkColor,
         );
 
       case MessageStatus.failed:
         return const Icon(
           Icons.error_outline,
-          size: 13,
+          size: 14,
           color: Colors.red,
         );
     }
@@ -5026,7 +5305,8 @@ ${message.content}
       _highlightedMessageId = messageId;
     });
 
-    Future.delayed(const Duration(seconds: 3), () {
+    // ✅ از 3 ثانیه به 5 ثانیه افزایش یافت
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _highlightedMessageId = null;
@@ -5335,7 +5615,7 @@ ${message.content}
       }
     }
 
-    // ✅ فایل و موزیک
+// ✅ فایل و موزیک
     if (message.metadata != null &&
         (message.metadata!['file_url'] != null ||
             message.metadata!['file_name'] != null)) {
@@ -5355,9 +5635,42 @@ ${message.content}
         fileType: fileType,
         fileSize: fileSize,
         isMe: isMe,
+        // ✅ کلیک روی حباب → باز کردن منو
+        onBubbleTap: () {
+          if (_isSelectMode) {
+            _toggleMessageSelection(message.id);
+          } else {
+            // موقعیت منو را از پیام بگیر
+            final key = _messageKeys[message.id];
+            if (key?.currentContext != null) {
+              try {
+                final renderBox =
+                    key!.currentContext!.findRenderObject() as RenderBox;
+                Offset position;
+                if (isMe) {
+                  position = renderBox.localToGlobal(
+                    Offset(renderBox.size.width, renderBox.size.height / 2),
+                  );
+                } else {
+                  position = renderBox.localToGlobal(
+                    Offset(0, renderBox.size.height / 2),
+                  );
+                }
+                _showMessageActionsPopup(message, position);
+              } catch (e) {
+                _showMessageActionsPopup(message, const Offset(100, 200));
+              }
+            }
+          }
+        },
+        // ✅ نگه داشتن → انتخاب پیام
+        onBubbleLongPress: () {
+          if (!_isSelectMode) {
+            _enterSelectMode(message.id);
+          }
+        },
       );
     }
-
     // ✅ کارت پیشرفت
     if (message.metadata != null &&
         message.metadata!['is_progress_card'] == true) {
@@ -6024,7 +6337,7 @@ ${message.content}
                       ],
                     ),
                     _buildMessageActionsPopup(theme, accentColor),
-                    _buildScrollToBottomButton(accentColor),
+                    _buildScrollToBottomButton(accentColor, theme),
                   ],
                 ),
               ),
@@ -6429,27 +6742,39 @@ ${message.content}
 
                     const SizedBox(width: 4),
 
-                    // ورودی متن
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          // ✅ در تم شب تیره، در تم روز روشن
+                          color: theme.isDarkMode
+                              ? const Color(0xFF1E1E1E) // تیره برای شب
+                              : const Color(0xFFF5F5F5), // روشن برای روز
                           borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: theme.isDarkMode
+                                ? const Color(0xFF333333) // border تیره برای شب
+                                : Colors.grey.shade300,
+                            width: 1,
+                          ),
                         ),
                         child: TextField(
                           controller: _messageController,
                           focusNode: _focusNode,
-                          onChanged: (value) {
-                            _sendTypingStatus(value.isNotEmpty);
-                            setState(() {});
-                          },
+                          style: TextStyle(
+                            color: theme.isDarkMode
+                                ? Colors.white
+                                : Colors.black, // ✅ متن واضح
+                            fontSize: 14,
+                          ),
                           decoration: InputDecoration(
                             hintText: _replyToMessage != null
                                 ? 'پاسخ به ${_replyToMessage!.senderName ?? "کاربر"}...'
                                 : 'پیام خود را بنویسید...',
                             hintStyle: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade500,
+                              color: theme.isDarkMode
+                                  ? Colors.grey.shade500 // ✅ hint واضح در شب
+                                  : Colors.grey.shade500,
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(

@@ -11,6 +11,7 @@ import 'services/local_storage_service.dart';
 import 'services/audio_player_service.dart';
 import 'services/download_service.dart';
 import 'providers/theme_provider.dart';
+import 'providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +62,7 @@ void main() async {
     runApp(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
           ChangeNotifierProvider(create: (_) => SyncProvider()),
           ChangeNotifierProvider(create: (_) => AudioPlayerService()),
           ChangeNotifierProvider(create: (_) => DownloadService()),
