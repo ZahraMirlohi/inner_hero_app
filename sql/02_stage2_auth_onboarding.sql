@@ -34,19 +34,30 @@ security definer
 set search_path = public, auth
 as $$
 begin
-  insert into public.profiles (user_id, email, name, unique_id, total_xp)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
-    public.generate_unique_id(),
-    0
-  )
-  on conflict (user_id) do nothing;
+  -- هر کدام جدا و محافظت‌شده: اگر ساخت پروفایل خطا بدهد، ثبت‌نام خراب نمی‌شود
+  -- (برنامه خودش در صورت نبودن پروفایل آن را می‌سازد).
+  begin
+    if not exists (select 1 from public.profiles where user_id = new.id) then
+      insert into public.profiles (user_id, email, name, unique_id, total_xp)
+      values (
+        new.id,
+        new.email,
+        coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+        public.generate_unique_id(),
+        0
+      );
+    end if;
+  exception when others then
+    raise warning 'handle_new_user profiles: %', sqlerrm;
+  end;
 
-  insert into public.user_progress (user_id, total_xp, weekly_xp, monthly_xp)
-  values (new.id, 0, 0, 0)
-  on conflict (user_id) do nothing;
+  begin
+    if not exists (select 1 from public.user_progress where user_id = new.id) then
+      insert into public.user_progress (user_id, total_xp) values (new.id, 0);
+    end if;
+  exception when others then
+    raise warning 'handle_new_user user_progress: %', sqlerrm;
+  end;
 
   return new;
 end;

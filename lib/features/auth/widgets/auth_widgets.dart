@@ -307,7 +307,21 @@ String authErrorText(BuildContext context, Object error) {
       raw.contains('network')) {
     return tr('auth.err_network');
   }
-  return tr('auth.err_generic');
+  if (raw.contains('signups not allowed') || raw.contains('signup_disabled')) {
+    return tr('auth.err_signup_disabled');
+  }
+  if (raw.contains('database error')) {
+    return tr('auth.err_db');
+  }
+  if (raw.contains('invalid') && raw.contains('email')) {
+    return tr('auth.err_email_invalid');
+  }
+  // دلیل فنی را کوتاه نشان می‌دهیم تا اگر خطای تازه‌ای بود، پیدا کردنش راحت باشد
+  var detail = (error is AuthException ? error.message : error.toString())
+      .replaceAll('\n', ' ')
+      .trim();
+  if (detail.length > 140) detail = '${detail.substring(0, 140)}...';
+  return '${tr('auth.err_generic')}\n($detail)';
 }
 
 /// اعتبارسنجی‌های مشترک
