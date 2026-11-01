@@ -1965,7 +1965,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                   )
                 : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                     child: _buildTodayContent(primaryColor, theme),
                   ),
           );
@@ -2019,7 +2019,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 )
               : SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                   child: _buildTodayContent(primaryColor, theme),
                 ),
         );
@@ -2053,9 +2053,26 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 Text(
                   'انجام شده',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                     color: theme.textColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.cardSecondaryColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_completedHabits.length + _completedTasks.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: theme.textColor,
+                    ),
                   ),
                 ),
               ],

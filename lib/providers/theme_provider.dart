@@ -142,6 +142,25 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Color get disabledButtonBackground => _disabledButton;
   Color get neutralChipBackground => _neutralChip;
 
+  /// نسخهٔ ملایم رنگ اصلی (برای دایره‌ها و پس‌زمینهٔ آیکون‌ها، مثل طراحی‌ها)
+  Color get primarySoft => _dark
+      ? _effectivePrimary.withValues(alpha: 0.22)
+      : Color.lerp(_effectivePrimary, Colors.white, 0.7)!;
+
+  /// سایهٔ نرم کارت‌ها (طراحی: بدون حاشیه، فقط سایه)
+  List<BoxShadow> get softShadow => _dark
+      ? const []
+      : [
+          BoxShadow(
+              color: const Color(0xFF090909).withValues(alpha: 0.04),
+              blurRadius: 2,
+              offset: const Offset(0, 1)),
+          BoxShadow(
+              color: const Color(0xFF3C500A).withValues(alpha: 0.07),
+              blurRadius: 20,
+              offset: const Offset(0, 6)),
+        ];
+
   /// تن‌های پاستلی ثابت برنامه (برای آیکون‌ها و کارت‌های رنگارنگ)
   ToneColors tone(Tone t) => AppPalette.of(t, dark: _dark);
 

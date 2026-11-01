@@ -122,7 +122,7 @@ class _HabitCardState extends State<HabitCard>
             : cardColor); // روی کارت مشکی، آیکون هم‌رنگ کارت
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Column(
         children: [
           // ============================================================
@@ -131,228 +131,123 @@ class _HabitCardState extends State<HabitCard>
           GestureDetector(
             onTap: _toggleExpansion,
             behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: theme.isDarkMode ? 0.3 : 0.06,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.all(widget.isCompleted ? 10 : 14),
+              decoration: BoxDecoration(
+                color: widget.isCompleted ? theme.cardColor : cardColor,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: widget.isCompleted ? theme.softShadow : null,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // دایرهٔ سیاه آیکون؛ لمس = انجام دادن
+                  AnimatedCheckOverlay(
+                    onTap: widget.onToggle,
+                    checkColor: checkIconColor,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: widget.isCompleted ? 40 : 48,
+                      height: widget.isCompleted ? 40 : 48,
+                      decoration: BoxDecoration(
+                        color: widget.isCompleted
+                            ? theme.cardSecondaryColor
+                            : const Color(0xFF090909),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        widget.isCompleted
+                            ? Icons.check_rounded
+                            : _getIconData(widget.habit.iconName),
+                        color: widget.isCompleted
+                            ? theme.textSecondaryColor
+                            : cardColor,
+                        size: widget.isCompleted ? 20 : 22,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                if (isChallenge || isQuest) ...[
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      isChallenge ? '🏆' : '🎯',
-                                      style: const TextStyle(fontSize: 10),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ],
-                                Expanded(
-                                  child: Text(
-                                    widget.habit.title,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                      decoration: widget.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textDirection: TextDirection.rtl,
-                                  ),
+                            if (isChallenge || isQuest) ...[
+                              _chip(
+                                icon: isChallenge
+                                    ? Icons.emoji_events_rounded
+                                    : Icons.flag_rounded,
+                                label: isChallenge ? 'چالش' : 'ماموریت',
+                                bg: const Color(0xFF090909),
+                                fg: Colors.white,
+                                height: 24,
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Text(
+                                widget.habit.title,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: widget.isCompleted
+                                      ? FontWeight.w600
+                                      : FontWeight.w700,
+                                  color: widget.isCompleted
+                                      ? theme.textSecondaryColor
+                                      : textColor,
+                                  decoration: widget.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                // تگ XP
-                                if (!widget.isCompleted)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.6),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '+${widget.habit.xpReward}',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF090909),
-                                      ),
-                                    ),
-                                  ),
-                                // تگ زمان رکورد شده (اگه وجود داشته باشه)
-                                if (widget.recordedTimeSeconds != null &&
-                                    widget.recordedTimeSeconds! > 0) ...[
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF8B5CF6)
-                                          .withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFF8B5CF6)
-                                            .withOpacity(0.3),
-                                        width: 0.8,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.timer_outlined,
-                                          size: 10,
-                                          color: Color(0xFF8B5CF6),
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          _formatRecordedTime(
-                                              widget.recordedTimeSeconds!),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF8B5CF6),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                                const Spacer(),
-                                Wrap(
-                                  alignment: WrapAlignment.end,
-                                  spacing: 4,
-                                  runSpacing: 2,
-                                  children: [
-                                    _buildInfoChip(
-                                      icon: Icons.access_time,
-                                      label: _getTimeOfDayText(
-                                          widget.habit.timeOfDay),
-                                      isCompleted: widget.isCompleted,
-                                      theme: theme,
-                                    ),
-                                    if (widget.habit.reminders.isNotEmpty)
-                                      _buildInfoChip(
-                                        icon: Icons.alarm,
-                                        label:
-                                            '${widget.habit.reminders.length}',
-                                        isCompleted: widget.isCompleted,
-                                        theme: theme,
-                                      ),
-                                    if (widget.habit.currentStreak > 0)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              Colors.orange.withOpacity(0.12),
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.local_fire_department,
-                                              size: 10,
-                                              color: Colors.orange,
-                                            ),
-                                            const SizedBox(width: 2),
-                                            Text(
-                                              '${widget.habit.currentStreak}',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.orange,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    AnimatedCheckOverlay(
-                      onTap: widget.onToggle,
-                      checkColor: checkIconColor,
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: checkButtonBg,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _getIconData(widget.habit.iconName),
-                            color: checkIconColor,
-                            size: 18,
+                        if (!widget.isCompleted) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _chip(label: '+${widget.habit.xpReward}'),
+                              if (widget.recordedTimeSeconds != null &&
+                                  widget.recordedTimeSeconds! > 0)
+                                _chip(
+                                  icon: Icons.timer_outlined,
+                                  label: _formatRecordedTime(
+                                      widget.recordedTimeSeconds!),
+                                  bg: theme.tone(Tone.lilac).bg,
+                                ),
+                              _chip(
+                                icon: Icons.access_time_rounded,
+                                label:
+                                    _getTimeOfDayText(widget.habit.timeOfDay),
+                              ),
+                              if (widget.habit.reminders.isNotEmpty)
+                                _chip(
+                                  icon: Icons.alarm_rounded,
+                                  label: '${widget.habit.reminders.length}',
+                                ),
+                              if (widget.habit.currentStreak > 0)
+                                _chip(
+                                  icon: Icons.local_fire_department_rounded,
+                                  label: '${widget.habit.currentStreak}',
+                                  bg: theme.tone(Tone.apricot).bg,
+                                  iconColor: const Color(0xFFE8890C),
+                                ),
+                            ],
                           ),
-                        ),
-                      ),
+                        ],
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -363,26 +258,15 @@ class _HabitCardState extends State<HabitCard>
           SizeTransition(
             sizeFactor: _expansionAnimation,
             child: Container(
+              margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 12,
+                vertical: 14,
               ),
               decoration: BoxDecoration(
-                color: widget.isCompleted
-                    ? (theme.isDarkMode
-                        ? const Color(0xFF1A1A1A)
-                        : Colors.grey.shade50)
-                    : theme.cardColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: theme.borderColor,
-                    width: 1,
-                  ),
-                ),
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: theme.softShadow,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,6 +467,42 @@ class _HabitCardState extends State<HabitCard>
                         ? Colors.white
                         : const Color(0xFF090909)))
                 .withOpacity(0.6),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// چیپ کوچک گرد؛ پیش‌فرض سفید نیمه‌شفاف روی کارت رنگی
+  Widget _chip({
+    IconData? icon,
+    required String label,
+    Color? bg,
+    Color fg = const Color(0xFF090909),
+    Color? iconColor,
+    double height = 26,
+  }) {
+    return Container(
+      height: height,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: bg ?? Colors.white.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(height / 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: iconColor ?? fg),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
           ),
         ],
       ),

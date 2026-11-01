@@ -254,10 +254,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                         itemCount: habits.length,
                         itemBuilder: (context, index) {
                           final habit = habits[index];

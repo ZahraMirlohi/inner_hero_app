@@ -189,7 +189,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                         itemCount: tasks.length,
                         itemBuilder: (context, index) {
                           final task = tasks[index];

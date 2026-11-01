@@ -91,7 +91,7 @@ class _TaskCardState extends State<TaskCard>
         : theme.onCheckButton;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Column(
         children: [
           // ============================================================
@@ -100,152 +100,84 @@ class _TaskCardState extends State<TaskCard>
           GestureDetector(
             onTap: _toggleExpansion,
             behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: theme.isDarkMode ? 0.3 : 0.06,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.task.title,
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                      decoration: widget.isCompleted
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textDirection: TextDirection.rtl,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                if (!widget.isCompleted)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: theme.isDarkMode
-                                          ? Colors.white.withOpacity(0.2)
-                                          : Colors.white.withOpacity(0.6),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '+${widget.task.xpReward}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w700,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                  ),
-                                const Spacer(),
-                                if (widget.task.dueDate != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: theme.isDarkMode
-                                          ? Colors.white.withOpacity(0.2)
-                                          : Colors.white.withOpacity(0.6),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _formatDate(
-                                              widget.task.dueDate!, calendar),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w500,
-                                            color: textColor,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Icon(
-                                          Icons.calendar_today,
-                                          size: 10,
-                                          color: textColor,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.all(widget.isCompleted ? 10 : 14),
+              decoration: BoxDecoration(
+                color: widget.isCompleted ? theme.cardColor : cardColor,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: widget.isCompleted ? theme.softShadow : null,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  AnimatedCheckOverlay(
+                    onTap: widget.onToggle,
+                    checkColor: checkIconColor,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: widget.isCompleted ? 40 : 48,
+                      height: widget.isCompleted ? 40 : 48,
+                      decoration: BoxDecoration(
+                        color: widget.isCompleted
+                            ? theme.cardSecondaryColor
+                            : const Color(0xFF090909),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        widget.isCompleted
+                            ? Icons.check_rounded
+                            : Icons.assignment_outlined,
+                        color: widget.isCompleted
+                            ? theme.textSecondaryColor
+                            : cardColor,
+                        size: widget.isCompleted ? 20 : 22,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    AnimatedCheckOverlay(
-                      onTap: widget.onToggle,
-                      checkColor: checkIconColor,
-                      child: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: checkButtonBg,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            widget.isCompleted
-                                ? Icons.check
-                                : Icons.assignment_outlined,
-                            color: checkIconColor,
-                            size: 18,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.task.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: widget.isCompleted
+                                ? FontWeight.w600
+                                : FontWeight.w700,
+                            color: widget.isCompleted
+                                ? theme.textSecondaryColor
+                                : textColor,
+                            decoration: widget.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                        if (!widget.isCompleted) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _chip('+${widget.task.xpReward}', null),
+                              if (widget.task.dueDate != null)
+                                _chip(
+                                  _formatDate(widget.task.dueDate!, calendar),
+                                  Icons.calendar_today_rounded,
+                                ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -256,26 +188,15 @@ class _TaskCardState extends State<TaskCard>
           SizeTransition(
             sizeFactor: _expansionAnimation,
             child: Container(
+              margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 12,
+                vertical: 14,
               ),
               decoration: BoxDecoration(
-                color: widget.isCompleted
-                    ? (theme.isDarkMode
-                        ? const Color(0xFF1A1A1A)
-                        : Colors.grey.shade50)
-                    : theme.cardColor,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border(
-                  top: BorderSide(
-                    color: theme.borderColor,
-                    width: 1,
-                  ),
-                ),
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: theme.softShadow,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +307,34 @@ class _TaskCardState extends State<TaskCard>
                   ],
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, IconData? icon) {
+    return Container(
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: const Color(0xFF090909)),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF090909),
             ),
           ),
         ],
