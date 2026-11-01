@@ -23,11 +23,16 @@ begin
     raise exception 'delta too large';
   end if;
 
-  insert into public.user_progress (user_id, total_xp)
-  values (p_user_id, greatest(0, p_delta))
-  on conflict (user_id) do update
-    set total_xp = greatest(0, public.user_progress.total_xp + p_delta)
-  returning total_xp into new_total;
+  update public.user_progress
+     set total_xp = greatest(0, total_xp + p_delta)
+   where user_id = p_user_id
+   returning total_xp into new_total;
+
+  if not found then
+    insert into public.user_progress (user_id, total_xp)
+    values (p_user_id, greatest(0, p_delta))
+    returning total_xp into new_total;
+  end if;
 
   update public.profiles
      set total_xp = new_total
