@@ -11,6 +11,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/app_palette.dart';
+
 enum AppThemeMode { system, light, dark }
 
 class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
@@ -139,6 +141,9 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Color get systemBubble => _systemBubble;
   Color get disabledButtonBackground => _disabledButton;
   Color get neutralChipBackground => _neutralChip;
+
+  /// تن‌های پاستلی ثابت برنامه (برای آیکون‌ها و کارت‌های رنگارنگ)
+  ToneColors tone(Tone t) => AppPalette.of(t, dark: _dark);
 
   Color primaryWithOpacity(double opacity) =>
       _primaryColor.withValues(alpha: opacity);

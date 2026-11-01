@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '/core/app_palette.dart';
 import '/l10n/app_strings.dart';
 import '/providers/auth_provider.dart';
 import '/providers/calendar_provider.dart';
@@ -38,20 +39,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
           children: [
-            _section(theme, context.tr('settings.section_look'), [
+            _section(theme, Tone.lilac, Icons.auto_awesome_rounded,
+                context.tr('settings.section_look'), [
               _themeModeRow(theme),
               _colorTile(theme),
               _calendarRow(theme),
             ]),
-            _section(theme, context.tr('settings.section_language'), [
+            _section(theme, Tone.sky, Icons.translate_rounded,
+                context.tr('settings.section_language'), [
               _languageRow(theme, settings),
             ]),
-            _section(theme, context.tr('settings.section_feedback'), [
-              _switchTile(
+            _section(theme, Tone.butter, Icons.graphic_eq_rounded,
+                context.tr('settings.section_feedback'), [
+              _switchRow(
                 theme,
-                icon: Icons.graphic_eq_rounded,
+                tone: Tone.butter,
+                icon: Icons.music_note_rounded,
                 title: context.tr('settings.sound'),
                 subtitle: context.tr('settings.sound_hint'),
                 value: settings.soundEnabled,
@@ -60,8 +65,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (v) SoundService.instance.play(Sfx.check);
                 },
               ),
-              _switchTile(
+              _switchRow(
                 theme,
+                tone: Tone.peach,
                 icon: Icons.vibration_rounded,
                 title: context.tr('settings.vibration'),
                 subtitle: context.tr('settings.vibration_hint'),
@@ -72,41 +78,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ]),
-            _section(theme, context.tr('settings.section_notifications'), [
-              _switchTile(
+            _section(theme, Tone.peach, Icons.notifications_rounded,
+                context.tr('settings.section_notifications'), [
+              _switchRow(
                 theme,
-                icon: Icons.notifications_rounded,
+                tone: Tone.peach,
+                icon: Icons.notifications_active_rounded,
                 title: context.tr('settings.notifications'),
                 subtitle: context.tr('settings.notifications_hint'),
                 value: settings.notificationsEnabled,
                 onChanged: settings.setNotifications,
               ),
-              _switchTile(
+              _switchRow(
                 theme,
+                tone: Tone.mint,
                 icon: Icons.checklist_rounded,
                 title: context.tr('settings.notif_habits'),
                 value: settings.rawNotifHabits,
                 enabled: settings.notificationsEnabled,
                 onChanged: settings.setNotifHabits,
               ),
-              _switchTile(
+              _switchRow(
                 theme,
+                tone: Tone.sky,
                 icon: Icons.chat_bubble_rounded,
                 title: context.tr('settings.notif_chat'),
                 value: settings.rawNotifChat,
                 enabled: settings.notificationsEnabled,
                 onChanged: settings.setNotifChat,
               ),
-              _switchTile(
+              _switchRow(
                 theme,
+                tone: Tone.butter,
                 icon: Icons.emoji_events_rounded,
                 title: context.tr('settings.notif_challenges'),
                 value: settings.rawNotifChallenges,
                 enabled: settings.notificationsEnabled,
                 onChanged: settings.setNotifChallenges,
               ),
-              _switchTile(
+              _switchRow(
                 theme,
+                tone: Tone.rose,
                 icon: Icons.card_giftcard_rounded,
                 title: context.tr('settings.notif_xp'),
                 value: settings.rawNotifXp,
@@ -114,19 +126,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setNotifXp,
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
                 child: Text(
                   context.tr('settings.notif_note'),
                   style: TextStyle(
                     color: theme.textSecondaryColor,
-                    fontSize: 12,
+                    fontSize: 11.5,
+                    height: 1.5,
                   ),
                 ),
               ),
             ]),
-            _section(theme, context.tr('settings.section_privacy'), [
-              _switchTile(
+            _section(theme, Tone.mint, Icons.shield_rounded,
+                context.tr('settings.section_privacy'), [
+              _switchRow(
                 theme,
+                tone: Tone.mint,
                 icon: Icons.lock_rounded,
                 title: context.tr('settings.private_profile'),
                 subtitle: context.tr('settings.private_profile_hint'),
@@ -136,30 +151,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 badge: context.tr('common.soon'),
               ),
             ]),
-            _section(theme, context.tr('settings.section_account'), [
-              _actionTile(
+            _section(theme, Tone.rose, Icons.person_rounded,
+                context.tr('settings.section_account'), [
+              _row(
                 theme,
+                tone: Tone.sky,
                 icon: Icons.logout_rounded,
                 title: context.tr('settings.logout'),
                 onTap: _logout,
               ),
-              _actionTile(
+              _row(
                 theme,
+                tone: Tone.rose,
                 icon: Icons.delete_forever_rounded,
                 title: context.tr('settings.delete_account'),
-                color: _danger,
+                danger: true,
                 onTap: _confirmDeleteAccount,
               ),
             ]),
-            _section(theme, context.tr('settings.section_about'), [
-              _infoTile(
+            _section(theme, Tone.lime, Icons.info_rounded,
+                context.tr('settings.section_about'), [
+              _row(
                 theme,
-                icon: Icons.info_rounded,
+                tone: Tone.lime,
+                icon: Icons.tag_rounded,
                 title: context.tr('settings.version'),
-                value: _appVersion,
+                trailing: Text(
+                  _appVersion,
+                  style: TextStyle(
+                    color: theme.textSecondaryColor,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-              _actionTile(
+              _row(
                 theme,
+                tone: Tone.lilac,
                 icon: Icons.people_rounded,
                 title: context.tr('settings.team'),
                 onTap: _showTeamDialog,
@@ -171,53 +198,170 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ─────────────────────────── بخش‌ها ───────────────────────────
+  // ─────────────────────────── ساختار ───────────────────────────
 
-  Widget _section(ThemeProvider theme, String title, List<Widget> children) {
+  /// کارت یک بخش: سرتیتر کوچک رنگی + سطرهای فشرده
+  Widget _section(ThemeProvider theme, Tone tone, IconData icon, String title,
+      List<Widget> children) {
+    final t = theme.tone(tone);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 8, bottom: 8),
-            child: Text(
-              title,
-              style: TextStyle(
-                color: theme.textSecondaryColor,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(26),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: t.bg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 15, color: t.fg),
+                        const SizedBox(width: 6),
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: t.fg,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(children: children),
-          ),
-        ],
+            ...children,
+            const SizedBox(height: 4),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _iconBox(ThemeProvider theme, IconData icon, [Color? color]) {
-    final c = color ?? theme.primaryColor;
+  Widget _iconBox(ThemeProvider theme, Tone tone, IconData icon,
+      {bool danger = false}) {
+    final t = theme.tone(tone);
     return Container(
-      width: 40,
-      height: 40,
+      width: 34,
+      height: 34,
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(14),
+        color: t.bg,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, color: c, size: 22),
+      child: Icon(icon, color: danger ? _danger : t.fg, size: 19),
     );
   }
 
-  Widget _switchTile(
+  /// سطر فشرده: آیکون رنگی، عنوان، توضیح کوتاه، و عنصر انتهایی
+  Widget _row(
     ThemeProvider theme, {
+    required Tone tone,
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+    bool danger = false,
+    String? badge,
+    bool enabled = true,
+  }) {
+    final showChevron = trailing == null && onTap != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Row(
+            children: [
+              _iconBox(theme, tone, icon, danger: danger),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: danger ? _danger : theme.textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: theme.tone(Tone.butter).bg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              badge,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: theme.tone(Tone.butter).fg,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (subtitle != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: theme.textSecondaryColor,
+                            fontSize: 11.5,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+              if (showChevron)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: theme.textSecondaryColor,
+                  textDirection: TextDirection.ltr,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _switchRow(
+    ThemeProvider theme, {
+    required Tone tone,
     required IconData icon,
     required String title,
     String? subtitle,
@@ -226,92 +370,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool enabled = true,
     String? badge,
   }) {
-    return Opacity(
-      opacity: enabled ? 1 : 0.45,
-      child: ListTile(
-        minVerticalPadding: 10,
-        leading: _iconBox(theme, icon),
-        title: Row(
-          children: [
-            Flexible(
-              child: Text(title, style: TextStyle(color: theme.textColor)),
-            ),
-            if (badge != null) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  badge,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: theme.textColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        subtitle: subtitle == null
-            ? null
-            : Text(
-                subtitle,
-                style: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 12,
-                ),
-              ),
-        trailing: Switch(
+    return _row(
+      theme,
+      tone: tone,
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      badge: badge,
+      enabled: enabled,
+      onTap: () => onChanged(!value),
+      trailing: Transform.scale(
+        scale: 0.8,
+        child: Switch(
           value: value,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           onChanged: enabled ? (v) => onChanged(v) : null,
         ),
-        onTap: enabled ? () => onChanged(!value) : null,
       ),
     );
   }
 
-  Widget _actionTile(
-    ThemeProvider theme, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    return ListTile(
-      minVerticalPadding: 10,
-      leading: _iconBox(theme, icon, color),
-      title: Text(title, style: TextStyle(color: color ?? theme.textColor)),
-      trailing: Icon(
-        Icons.chevron_right_rounded,
-        color: theme.textSecondaryColor,
-        textDirection: TextDirection.ltr,
-      ),
-      onTap: onTap,
-    );
-  }
-
-  Widget _infoTile(
-    ThemeProvider theme, {
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return ListTile(
-      minVerticalPadding: 10,
-      leading: _iconBox(theme, icon),
-      title: Text(title, style: TextStyle(color: theme.textColor)),
-      trailing: Text(value, style: TextStyle(color: theme.textSecondaryColor)),
-    );
-  }
-
-  /// ردیفی از گزینه‌های انتخابی (چیپ‌های کاملاً گرد و بدون حاشیه)
+  /// ردیف انتخاب‌ها: عنوان + چیپ‌های کوچک و کاملاً گرد
   Widget _choiceRow<T>(
     ThemeProvider theme, {
+    required Tone tone,
     required IconData icon,
     required String title,
     String? subtitle,
@@ -319,26 +401,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required T selected,
     required ValueChanged<T> onSelected,
   }) {
+    final t = theme.tone(tone);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(14, 7, 14, 9),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _iconBox(theme, icon),
+              _iconBox(theme, tone, icon),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(color: theme.textColor)),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: theme.textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     if (subtitle != null)
                       Text(
                         subtitle,
                         style: TextStyle(
                           color: theme.textSecondaryColor,
-                          fontSize: 12,
+                          fontSize: 11.5,
                         ),
                       ),
                   ],
@@ -346,15 +436,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           Row(
             children: [
               for (final o in options)
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: _chip(theme, o.key == selected, o.value, o.key,
-                        onSelected),
+                    child: GestureDetector(
+                      onTap: () {
+                        SoundService.instance.play(Sfx.tap);
+                        onSelected(o.key);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: o.key == selected ? t.fg : t.bg,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Text(
+                          o.value,
+                          style: TextStyle(
+                            color: o.key == selected ? t.onFg : t.fg,
+                            fontWeight: o.key == selected
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -364,37 +477,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _chip<T>(ThemeProvider theme, bool active, String label, T value,
-      ValueChanged<T> onSelected) {
-    return GestureDetector(
-      onTap: () {
-        SoundService.instance.play(Sfx.tap);
-        onSelected(value);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 44,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: active ? theme.primaryColor : theme.cardSecondaryColor,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? theme.onPrimaryColor : theme.textColor,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _themeModeRow(ThemeProvider theme) {
     return _choiceRow<AppThemeMode>(
       theme,
-      icon: theme.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+      tone: Tone.lilac,
+      icon:
+          theme.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
       title: context.tr('settings.theme_mode'),
       subtitle: context.tr('settings.theme_mode_hint'),
       selected: theme.themeMode,
@@ -408,18 +496,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _colorTile(ThemeProvider theme) {
-    return ListTile(
-      minVerticalPadding: 10,
-      leading: _iconBox(theme, Icons.palette_rounded),
-      title: Text(context.tr('settings.color'),
-          style: TextStyle(color: theme.textColor)),
-      subtitle: Text(
-        context.tr('settings.color_hint'),
-        style: TextStyle(color: theme.textSecondaryColor, fontSize: 12),
-      ),
+    return _row(
+      theme,
+      tone: Tone.apricot,
+      icon: Icons.palette_rounded,
+      title: context.tr('settings.color'),
+      subtitle: context.tr('settings.color_hint'),
       trailing: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
           color: theme.primaryColor,
           shape: BoxShape.circle,
@@ -439,6 +524,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context, calendar, _) {
         return _choiceRow<CalendarType>(
           theme,
+          tone: Tone.sky,
           icon: Icons.calendar_month_rounded,
           title: context.tr('settings.calendar'),
           selected:
@@ -458,7 +544,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _languageRow(ThemeProvider theme, SettingsProvider settings) {
     return _choiceRow<String>(
       theme,
-      icon: Icons.translate_rounded,
+      tone: Tone.sky,
+      icon: Icons.language_rounded,
       title: context.tr('settings.language'),
       subtitle: context.tr('settings.language_hint'),
       selected: settings.language,

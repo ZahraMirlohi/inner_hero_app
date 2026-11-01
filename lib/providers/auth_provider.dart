@@ -19,28 +19,32 @@ import '../services/supabase_service.dart';
 
 enum SignUpResult { signedIn, needsEmailConfirmation }
 
-/// پاسخ‌های سوال‌های معرفی
+/// پاسخ‌های سوال‌های معرفی (همه اختیاری)
 class OnboardingAnswers {
-  final List<String> goals;
-  final String? obstacle;
-  final String? level;
+  final String? goal;
+  final String? firstTask;
+  final String? energy; // intro | mixed | extro
+  final String? style; // planner | mixed | flow
   final String wakeTime; // HH:mm
   final String remindTime; // HH:mm
   final String language;
 
   const OnboardingAnswers({
-    required this.goals,
-    required this.obstacle,
-    required this.level,
+    this.goal,
+    this.firstTask,
+    this.energy,
+    this.style,
     required this.wakeTime,
     required this.remindTime,
     required this.language,
   });
 
   Map<String, dynamic> toJson() => {
-        'goals': goals,
-        'obstacle': obstacle,
-        'level': level,
+        'goals': goal == null ? <String>[] : [goal],
+        'goal': goal,
+        'first_task': firstTask,
+        'energy': energy,
+        'planning_style': style,
         'wake_time': wakeTime,
         'remind_time': remindTime,
         'language': language,

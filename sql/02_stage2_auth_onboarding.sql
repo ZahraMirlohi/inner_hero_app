@@ -70,6 +70,12 @@ create table if not exists public.user_onboarding (
   updated_at timestamptz not null default now()
 );
 
+-- ستون‌های نسخهٔ دوم سوال‌ها (اگر جدول را از قبل ساخته‌اید، این‌ها اضافه می‌شوند)
+alter table public.user_onboarding add column if not exists goal text;
+alter table public.user_onboarding add column if not exists first_task text;
+alter table public.user_onboarding add column if not exists energy text;
+alter table public.user_onboarding add column if not exists planning_style text;
+
 alter table public.user_onboarding enable row level security;
 
 drop policy if exists "onboarding_select_own" on public.user_onboarding;
