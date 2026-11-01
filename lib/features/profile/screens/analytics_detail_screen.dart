@@ -127,12 +127,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   List<DateTime> _getSampleActiveDays() {
-    final now = DateTime.now();
-    final List<DateTime> days = [];
-    for (int i = 0; i < 14; i++) {
-      days.add(now.subtract(Duration(days: i)));
-    }
-    return days;
+    // داده‌ی نمونه نشان نمی‌دهیم؛ بدون فعالیت یعنی خالی
+    return <DateTime>[];
   }
 
   Map<String, List<bool>>? _cachedWeeklyStatus;
@@ -299,6 +295,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         for (var habit in activeHabits) {
           if (!habit.shouldDoOnDate(date)) continue;
+          // روزهای قبل از ساخته شدن عادت شکست حساب نمی‌شوند
+          final created = DateTime(habit.createdAt.year, habit.createdAt.month,
+              habit.createdAt.day);
+          if (DateTime(date.year, date.month, date.day).isBefore(created)) {
+            continue;
+          }
 
           totalItems++;
           final isCompleted = completions[habit.id]?.contains(dateStr) ?? false;
@@ -352,6 +354,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         for (var habit in activeHabits) {
           if (!habit.shouldDoOnDate(date)) continue;
+          // روزهای قبل از ساخته شدن عادت شکست حساب نمی‌شوند
+          final created = DateTime(habit.createdAt.year, habit.createdAt.month,
+              habit.createdAt.day);
+          if (DateTime(date.year, date.month, date.day).isBefore(created)) {
+            continue;
+          }
           totalItems++;
 
           final isActiveDay = _activeDays.any(

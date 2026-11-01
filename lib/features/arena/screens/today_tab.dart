@@ -260,10 +260,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   // ==================== بارگذاری داده‌ها ====================
 
+  bool _hasLoadedOnce = false;
+
   Future<void> _loadData() async {
     if (!mounted) return;
 
-    setState(() => _isLoading = true);
+    // فقط بار اول «در حال بارگذاری» نشان بده؛ رفرش‌های بعدی بی‌صدا جایگزین می‌شوند
+    if (!_hasLoadedOnce) setState(() => _isLoading = true);
 
     try {
       final user = await _supabase.getCurrentUser();
@@ -293,6 +296,18 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       final List<Habit> pendingHabits = [];
       final List<Habit> completedHabits = [];
 
+      // دو درخواست برای کل روز (قبلاً دو درخواست برای هر عادت بود)
+      Set<String>? completedIds;
+      if (syncProvider.isOnline) {
+        final results = await Future.wait([
+          _supabase.getCompletedHabitIdsOnDate(
+              _currentUserId!, widget.selectedDate),
+          _supabase.getHabitTimesOnDate(_currentUserId!, widget.selectedDate),
+        ]);
+        completedIds = results[0] as Set<String>?;
+        _habitRecordedTimes.addAll(results[1] as Map<String, int>);
+      }
+
       for (var habit in allHabits) {
         if (!habit.isActive) continue;
 
@@ -308,21 +323,10 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
         if (!shouldShow) continue;
 
-        // ✅ گرفتن زمان رکورد شده برای این عادت
-        final timeSeconds = await _supabase.getHabitTimeOnDate(
-          habitId: habit.id,
-          userId: _currentUserId!,
-          date: widget.selectedDate,
-        );
-        if (timeSeconds != null && timeSeconds > 0) {
-          _habitRecordedTimes[habit.id] = timeSeconds;
-        }
-
-        final isCompleted = await _supabase.isHabitCompletedOnDate(
-          habit.id,
-          _currentUserId!,
-          widget.selectedDate,
-        );
+        // آفلاین یا خطا: به وضعیتی که قبلاً در حافظه داریم تکیه می‌کنیم
+        final isCompleted = completedIds != null
+            ? completedIds.contains(habit.id)
+            : (_habitCompletionStatus[habit.id] == true);
 
         if (isCompleted) {
           completedHabits.add(habit);
@@ -354,6 +358,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           _completedHabits = completedHabits;
           _completedTasks = completedTasks;
           _isLoading = false;
+          _hasLoadedOnce = true;
         });
       }
 

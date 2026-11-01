@@ -517,6 +517,42 @@ class SupabaseService {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  /// همهٔ عادت‌های تکمیل‌شدهٔ یک روز در «یک» درخواست (به‌جای یک درخواست برای هر عادت).
+  /// در خطا null برمی‌گرداند تا صدا زننده بداند داده معتبر نیست.
+  Future<Set<String>?> getCompletedHabitIdsOnDate(
+      String userId, DateTime date) async {
+    try {
+      final rows = await client
+          .from('habit_completions')
+          .select('habit_id')
+          .eq('user_id', userId)
+          .eq('date', _getDateString(date));
+      return rows.map<String>((r) => r['habit_id'].toString()).toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// زمان ثبت‌شدهٔ همهٔ عادت‌ها در یک روز (habitId -> ثانیه) در یک درخواست
+  Future<Map<String, int>> getHabitTimesOnDate(
+      String userId, DateTime date) async {
+    try {
+      final rows = await client
+          .from('habit_time_tracking')
+          .select('habit_id,total_seconds')
+          .eq('user_id', userId)
+          .eq('date', date.toIso8601String().split('T').first);
+      final out = <String, int>{};
+      for (final r in rows) {
+        final sec = r['total_seconds'];
+        if (sec is int && sec > 0) out[r['habit_id'].toString()] = sec;
+      }
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<bool> isHabitCompletedOnDate(
     String habitId,
     String userId,
@@ -3044,10 +3080,13 @@ class SupabaseService {
 
         if (lastActivity != null) {
           final lastDate = DateTime.parse(lastActivity['activity_date']);
-          final daysDiff = today.difference(lastDate).inDays;
+          final daysDiff = DateTime(today.year, today.month, today.day)
+              .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+              .inDays;
           if (daysDiff == 1) {
-            currentStreak = 0;
-          } else if (daysDiff > 1) {
+            // امروز هنوز وقت دارد؛ استریک تا دیروز نگه داشته می‌شود
+            currentStreak = await _calculateStreak(userId, lastDate);
+          } else {
             currentStreak = 0;
           }
         }
@@ -3102,30 +3141,27 @@ class SupabaseService {
     }
   }
 
+  /// تعداد روزهای فعالِ پشت‌سرهم تا endDate؛ فقط یک درخواست (قبلاً یک درخواست برای هر روز)
   Future<int> _calculateStreak(String userId, DateTime endDate) async {
+    final rows = await client
+        .from('user_daily_activity')
+        .select('activity_date')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .lte('activity_date', endDate.toIso8601String().split('T').first)
+        .order('activity_date', ascending: false)
+        .limit(800);
+
+    final active = <String>{
+      for (final r in rows) r['activity_date'].toString().split('T').first,
+    };
+
     int streak = 0;
-    DateTime currentDate = endDate;
-
-    while (true) {
-      final dateStr = currentDate.toIso8601String().split('T').first;
-
-      final activity = await client
-          .from('user_daily_activity')
-          .select('is_active')
-          .eq('user_id', userId)
-          .eq('activity_date', dateStr)
-          .maybeSingle();
-
-      final bool isActive = activity != null && activity['is_active'] == true;
-
-      if (isActive) {
-        streak++;
-        currentDate = currentDate.subtract(const Duration(days: 1));
-      } else {
-        break;
-      }
+    var d = DateTime(endDate.year, endDate.month, endDate.day);
+    while (active.contains(d.toIso8601String().split('T').first)) {
+      streak++;
+      d = DateTime(d.year, d.month, d.day - 1);
     }
-
     return streak;
   }
 
