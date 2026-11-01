@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 import '../l10n/app_strings.dart';
 
@@ -84,10 +85,17 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setSound(bool v) => _set(_kSound, v, () => _sound = v);
   Future<void> setVibration(bool v) =>
       _set(_kVibration, v, () => _vibration = v);
-  Future<void> setNotifications(bool v) =>
-      _set(_kNotif, v, () => _notifications = v);
-  Future<void> setNotifHabits(bool v) =>
-      _set(_kNotifHabits, v, () => _notifHabits = v);
+  Future<void> setNotifications(bool v) async {
+    await _set(_kNotif, v, () => _notifications = v);
+    if (v) await NotificationService.instance.requestPermission();
+    await NotificationService.instance.reschedule();
+  }
+
+  Future<void> setNotifHabits(bool v) async {
+    await _set(_kNotifHabits, v, () => _notifHabits = v);
+    if (v) await NotificationService.instance.requestPermission();
+    await NotificationService.instance.reschedule();
+  }
   Future<void> setNotifChat(bool v) =>
       _set(_kNotifChat, v, () => _notifChat = v);
   Future<void> setNotifChallenges(bool v) =>

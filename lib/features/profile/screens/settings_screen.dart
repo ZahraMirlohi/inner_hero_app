@@ -11,6 +11,7 @@ import '/providers/settings_provider.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/services/local_storage_service.dart';
+import '/services/notification_service.dart';
 import '/services/sound_service.dart';
 import '/services/supabase_service.dart';
 import 'color_picker_screen.dart';
@@ -97,6 +98,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.rawNotifHabits,
                 enabled: settings.notificationsEnabled,
                 onChanged: settings.setNotifHabits,
+              ),
+              _row(
+                theme,
+                tone: Tone.apricot,
+                icon: Icons.schedule_rounded,
+                title: context.tr('settings.remind_time'),
+                enabled: settings.notifHabits,
+                onTap: () async {
+                  final cur = await NotificationService.instance.reminderTime();
+                  if (!context.mounted) return;
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay(hour: cur.hour, minute: cur.minute),
+                  );
+                  if (picked != null) {
+                    await NotificationService.instance
+                        .setReminderTime(picked.hour, picked.minute);
+                    if (mounted) setState(() {});
+                  }
+                },
               ),
               _switchRow(
                 theme,

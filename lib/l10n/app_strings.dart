@@ -83,7 +83,7 @@ class AppStrings {
     'settings.notif_chat': 'پیام‌های جدید',
     'settings.notif_challenges': 'چالش‌ها و دعوت‌ها',
     'settings.notif_xp': 'هدیه و امتیاز',
-    'settings.notif_note': 'ترجیح‌هات الان ذخیره می‌شن و با فعال شدن اعلان‌ها اعمال می‌شن.',
+    'settings.notif_note': 'فعلاً یادآور روزانهٔ عادت‌ها کار می‌کنه؛ بقیه اعلان‌ها با آماده شدن سرورشون روشن می‌شن.',
     'settings.section_privacy': 'حریم خصوصی',
     'settings.private_profile': 'پروفایل خصوصی',
     'settings.private_profile_hint': 'فقط وقتی سرورش آماده شد روشن می‌شه.',
@@ -110,6 +110,14 @@ class AppStrings {
     'settings.team': 'تیم سازنده',
     'settings.team_support': 'پشتیبانی',
     'settings.team_ok': 'خوش باشید',
+
+    'settings.remind_time': 'ساعت یادآور روزانه',
+    'notif.channel': 'یادآور روزانه',
+    'notif.title': 'قهرمان درون',
+    'notif.body1': 'عادت‌هات دلشون برات تنگ شده. یه سر بزن.',
+    'notif.body2': 'استریکت بدون تو غذا نمی‌خوره. بیا نجاتش بده.',
+    'notif.body3': 'پنج دقیقه وقت داری؟ قهرمان‌ها از همین پنج دقیقه‌ها ساخته می‌شن.',
+    'notif.body4': 'امروز هنوز تیکی نخوردی؛ ما که قضاوت نمی‌کنیم ;)',
 
     // تم و رنگ
     'color.title': 'رنگ برنامه',
@@ -168,7 +176,7 @@ class AppStrings {
     'settings.notif_challenges': 'Challenges and invites',
     'settings.notif_xp': 'Gifts and points',
     'settings.notif_note':
-        'Your preferences are saved now and apply once notifications are enabled.',
+        'The daily habit reminder works now; other notifications turn on as their servers get ready.',
     'settings.section_privacy': 'Privacy',
     'settings.private_profile': 'Private profile',
     'settings.private_profile_hint': 'Available once the server side is ready.',
@@ -195,6 +203,14 @@ class AppStrings {
     'settings.team': 'Team',
     'settings.team_support': 'Support',
     'settings.team_ok': 'Got it',
+
+    'settings.remind_time': 'Daily reminder time',
+    'notif.channel': 'Daily reminder',
+    'notif.title': 'Inner Hero',
+    'notif.body1': 'Your habits miss you. Come say hi.',
+    'notif.body2': 'Your streak needs you. Do not let it down.',
+    'notif.body3': 'Got five minutes? Heroes are made of those.',
+    'notif.body4': 'No check-ins today yet. No judgment, promise.',
 
     'color.title': 'App color',
     'color.reset': 'Reset to default',

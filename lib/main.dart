@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'services/notification_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -46,6 +47,9 @@ Future<void> _bootstrap() async {
     ]);
     final settings = results[2] as SettingsProvider;
     final themeProvider = results[3] as ThemeProvider;
+
+    // یادآور روزانه (روی وب بی‌اثر است)؛ منتظرش نمی‌مانیم تا شروع برنامه کند نشود
+    unawaited(NotificationService.instance.reschedule());
 
     runApp(
       MultiProvider(
