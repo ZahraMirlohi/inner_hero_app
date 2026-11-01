@@ -373,6 +373,29 @@ class SupabaseService {
     }
   }
 
+  /// نسخهٔ «سخت‌گیر»: روی خطا throw می‌کند تا همگام‌سازی نتواند «خطا» را با «لیست خالی» اشتباه بگیرد.
+  Future<List<Habit>> getHabitsStrict(String userId) async {
+    final response = await client
+        .from('habits')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return response
+        .map((data) => Habit.fromMap(data['id'], _convertKeys(data)))
+        .toList();
+  }
+
+  Future<List<Task>> getTasksStrict(String userId) async {
+    final response = await client
+        .from('tasks')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return response
+        .map((data) => Task.fromMap(data['id'], _convertKeys(data)))
+        .toList();
+  }
+
   Future<void> createHabit(Habit habit) async {
     final data = habit.toMap();
     data.remove('id');

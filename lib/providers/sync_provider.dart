@@ -1,9 +1,12 @@
 // lib/providers/sync_provider.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthState, AuthChangeEvent, Supabase;
 import '../services/supabase_service.dart';
 import '../services/local_storage_service.dart';
 import '../features/arena/models/habit_model.dart';
@@ -27,6 +30,12 @@ class SyncProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   bool _isCleared = false; // ✅ جدید
 
+  StreamSubscription<dynamic>? _authSub;
+  StreamSubscription<InternetConnectionStatus>? _connSub;
+  final Map<String, int> _opFailures = {};
+  static const int _maxOpRetries = 5;
+  int _opCounter = 0;
+
   bool get isCleared => _isCleared; // ✅ جدید
 
   SyncProvider() {
@@ -38,8 +47,13 @@ class SyncProvider extends ChangeNotifier {
       await _localStorage.init();
       print('✅ LocalStorage initialized');
 
-      final prefs = await SharedPreferences.getInstance();
-      _currentUserId = prefs.getString('user_id');
+      // شناسهٔ کاربر از نشست Supabase (نه فقط یک کلید ذخیره‌شده) خوانده می‌شود
+      _currentUserId = Supabase.instance.client.auth.currentSession?.user.id;
+      if (_currentUserId == null) {
+        final prefs = await SharedPreferences.getInstance();
+        _currentUserId = prefs.getString('user_id');
+      }
+      _listenToAuth();
       print('👤 Current user: $_currentUserId');
 
       _isInitialized = true;
@@ -55,6 +69,47 @@ class SyncProvider extends ChangeNotifier {
       _isInitialized = true;
       notifyListeners();
     }
+  }
+
+  /// با ورود یا خروج کاربر، شناسهٔ کاربر و همگام‌سازی خودکار به‌روز می‌شود
+  /// (قبلاً تا ریستارت برنامه، بعد از ورود تازه هیچ همگام‌سازی‌ای کار نمی‌کرد).
+  void _listenToAuth() {
+    _authSub?.cancel();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((AuthState data) {
+      final userId = data.session?.user.id;
+      switch (data.event) {
+        case AuthChangeEvent.signedIn:
+        case AuthChangeEvent.initialSession:
+          if (userId != null && userId != _currentUserId) {
+            _currentUserId = userId;
+            _isCleared = false;
+            _opFailures.clear();
+            notifyListeners();
+            if (_isOnline) _syncAllData();
+          }
+          break;
+        case AuthChangeEvent.signedOut:
+          _currentUserId = null;
+          _opFailures.clear();
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  /// ارسال عملیات آفلاین باقی‌مانده (مثلاً قبل از خروج از حساب)
+  Future<void> flushPendingOperations() async {
+    if (!_isOnline || _currentUserId == null) return;
+    await _syncOfflineOperations();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    _connSub?.cancel();
+    super.dispose();
   }
 
   /// ✅ پاک کردن همه چیز (برای logout)
@@ -144,7 +199,8 @@ class SyncProvider extends ChangeNotifier {
     }
 
     try {
-      InternetConnectionChecker().onStatusChange.listen((status) {
+      _connSub?.cancel();
+      _connSub = InternetConnectionChecker().onStatusChange.listen((status) {
         final isOnline = status == InternetConnectionStatus.connected;
         if (_isOnline != isOnline) {
           _isOnline = isOnline;
@@ -179,10 +235,11 @@ class SyncProvider extends ChangeNotifier {
       print('🔄 Force refreshing data...');
 
       // دریافت مجدد همه داده‌ها از دیتابیس
-      final habits = await _supabase.getHabits(_currentUserId!);
+      // سخت‌گیر: اگر درخواست خطا بدهد، throw می‌شود و کش دست‌نخورده می‌ماند
+      final habits = await _supabase.getHabitsStrict(_currentUserId!);
       await _localStorage.saveHabits(habits);
 
-      final tasks = await _supabase.getTasks(_currentUserId!);
+      final tasks = await _supabase.getTasksStrict(_currentUserId!);
       await _localStorage.saveTasks(tasks);
 
       final quests = await _supabase.getQuests();
@@ -250,15 +307,13 @@ class SyncProvider extends ChangeNotifier {
       await _syncOfflineOperations();
 
       // ✅ دریافت همه عادت‌ها (شامل ماموریت‌ها)
-      final habits = await _supabase.getHabits(_currentUserId!);
-      if (habits.isNotEmpty) {
-        await _localStorage.saveHabits(habits);
-      }
+      // لیست خالیِ موفق یعنی «واقعاً خالیه» (مثلاً آخرین عادت از دستگاه دیگر حذف شده)،
+      // ولی خطا throw می‌شود و کش حفظ می‌شود.
+      final habits = await _supabase.getHabitsStrict(_currentUserId!);
+      await _localStorage.saveHabits(habits);
 
-      final tasks = await _supabase.getTasks(_currentUserId!);
-      if (tasks.isNotEmpty) {
-        await _localStorage.saveTasks(tasks);
-      }
+      final tasks = await _supabase.getTasksStrict(_currentUserId!);
+      await _localStorage.saveTasks(tasks);
 
       final quests = await _supabase.getQuests();
       if (quests.isNotEmpty) {
@@ -312,9 +367,26 @@ class SyncProvider extends ChangeNotifier {
       try {
         await _executeOfflineOperation(operation);
         await _localStorage.removeOfflineOperation(operation.id);
+        _opFailures.remove(operation.id);
       } catch (e) {
         print('⚠️ Failed to sync operation: $e');
-        if (e.toString().contains('SocketException')) break;
+        final text = e.toString();
+        final isNetwork = text.contains('SocketException') ||
+            text.contains('ClientException') ||
+            text.contains('Failed host lookup') ||
+            text.contains('TimeoutException') ||
+            text.contains('Connection');
+        // خطای شبکه: بقیه را هم الان نفرست، بعداً دوباره تلاش می‌شود (بدون شمارش شکست)
+        if (isNetwork) break;
+
+        // خطای دیگر: بعد از چند بار شکست، عملیات خراب را کنار می‌گذاریم تا صف برای همیشه گیر نکند
+        final fails = (_opFailures[operation.id] ?? 0) + 1;
+        _opFailures[operation.id] = fails;
+        if (fails >= _maxOpRetries) {
+          print('🗑️ Dropping operation ${operation.id} after $fails failures');
+          await _localStorage.removeOfflineOperation(operation.id);
+          _opFailures.remove(operation.id);
+        }
       }
     }
   }
@@ -465,7 +537,7 @@ class SyncProvider extends ChangeNotifier {
     if (_currentUserId == null) return;
 
     final operation = OfflineOperation(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_opCounter++}',
       type: type,
       data: data,
       timestamp: DateTime.now(),

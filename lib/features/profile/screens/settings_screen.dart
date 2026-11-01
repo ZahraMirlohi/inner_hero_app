@@ -1,17 +1,18 @@
-// lib/features/profile/widgets/settings_screen.dart
+// lib/features/profile/screens/settings_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:inner_hero_app/providers/calendar_provider.dart';
 import 'package:provider/provider.dart';
-import '/services/date_service.dart';
-import '/services/supabase_service.dart';
-import '/providers/theme_provider.dart';
-import 'color_picker_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '/services/local_storage_service.dart';
+
+import '/l10n/app_strings.dart';
 import '/providers/auth_provider.dart';
+import '/providers/calendar_provider.dart';
+import '/providers/settings_provider.dart';
 import '/providers/sync_provider.dart';
-import '/features/auth/screens/login_screen.dart';
+import '/providers/theme_provider.dart';
+import '/services/local_storage_service.dart';
+import '/services/sound_service.dart';
+import '/services/supabase_service.dart';
+import 'color_picker_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -21,469 +22,408 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final SupabaseService _supabase = SupabaseService();
-  bool _notificationsEnabled = true;
-  bool _soundEnabled = true;
-  bool _vibrationEnabled = true;
-  bool _privateProfile = false;
-  String _calendarType = 'jalali';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final calendar = await DateService.getCalendarType();
-    if (mounted) {
-      setState(() {
-        _calendarType = calendar == 'jalali' ? 'شمسی' : 'میلادی';
-      });
-    }
-  }
+  static const String _appVersion = '1.0.0';
+  static const Color _danger = Color(0xFFE5483A);
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+    final theme = context.watch<ThemeProvider>();
+    final settings = context.watch<SettingsProvider>();
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
-        title: Text(
-          'تنظیمات',
-          style: TextStyle(color: theme.textColor),
-        ),
-        backgroundColor: theme.surfaceColor,
-        elevation: 0,
-        foregroundColor: theme.textColor,
+        title: Text(context.tr('settings.title')),
+        backgroundColor: theme.backgroundColor,
       ),
       body: SafeArea(
-        // ✅ SafeArea
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-          //                                    ↑ پدینگ اضافه پایین
-          child: Column(
-            children: [
-              // بخش تنظیمات عمومی
-              _buildSettingsGroup(
-                'عمومی',
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+          children: [
+            _section(theme, context.tr('settings.section_look'), [
+              _themeModeRow(theme),
+              _colorTile(theme),
+              _calendarRow(theme),
+            ]),
+            _section(theme, context.tr('settings.section_language'), [
+              _languageRow(theme, settings),
+            ]),
+            _section(theme, context.tr('settings.section_feedback'), [
+              _switchTile(
                 theme,
-                [
-                  // ✅ حالت تاریک با Consumer
-                  Consumer<ThemeProvider>(
-                    builder: (context, themeProvider, _) {
-                      return ListTile(
-                        tileColor: themeProvider.surfaceColor, // ✅ اضافه کن
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            themeProvider.isDarkMode
-                                ? Icons.dark_mode
-                                : Icons.light_mode,
-                            color: primaryColor,
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          themeProvider.isDarkMode ? 'حالت روز' : 'حالت شب',
-                          style: TextStyle(color: theme.textColor),
-                        ),
-                        subtitle: Text(
-                          themeProvider.isDarkMode
-                              ? 'رفتن به تم روشن'
-                              : 'رفتن به تم تاریک',
-                          style: TextStyle(
-                            color: theme.textSecondaryColor,
-                            fontSize: 12,
-                          ),
-                        ),
-                        trailing: Switch(
-                          value: themeProvider.isDarkMode,
-                          onChanged: (value) {
-                            themeProvider.setDarkMode(value);
-                          },
-                          activeColor: primaryColor,
-                        ),
-                        onTap: () {
-                          themeProvider.toggleDarkMode();
-                        },
-                      );
-                    },
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.notifications,
-                    title: 'اعلان‌ها',
-                    value: _notificationsEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _notificationsEnabled = value;
-                      });
-                    },
-                    primaryColor: primaryColor,
-                    theme: theme,
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.volume_up,
-                    title: 'صدا',
-                    value: _soundEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _soundEnabled = value;
-                      });
-                    },
-                    primaryColor: primaryColor,
-                    theme: theme,
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.vibration,
-                    title: 'لرزش',
-                    value: _vibrationEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _vibrationEnabled = value;
-                      });
-                    },
-                    primaryColor: primaryColor,
-                    theme: theme,
-                  ),
-                  _buildColorTile(theme, primaryColor),
-                ],
+                icon: Icons.graphic_eq_rounded,
+                title: context.tr('settings.sound'),
+                subtitle: context.tr('settings.sound_hint'),
+                value: settings.soundEnabled,
+                onChanged: (v) async {
+                  await settings.setSound(v);
+                  if (v) SoundService.instance.play(Sfx.check);
+                },
               ),
-              const SizedBox(height: 16),
-
-              // بخش تنظیمات نمایش
-              _buildSettingsGroup(
-                'نمایش',
+              _switchTile(
                 theme,
-                [
-                  Consumer<CalendarProvider>(
-                    builder: (context, calendarProvider, _) {
-                      return _buildDropdownTile(
-                        icon: Icons.calendar_today,
-                        title: 'نوع تقویم',
-                        value: calendarProvider.isJalali ? 'شمسی' : 'میلادی',
-                        options: const ['شمسی', 'میلادی'],
-                        onChanged: (value) {
-                          if (value != null) {
-                            final type = value == 'شمسی'
-                                ? CalendarType.jalali
-                                : CalendarType.gregorian;
-                            calendarProvider.setCalendarType(type);
-                          }
-                        },
-                        primaryColor: primaryColor,
-                        theme: theme, // ✅ اضافه کن
-                      );
-                    },
-                  ),
-                ],
+                icon: Icons.vibration_rounded,
+                title: context.tr('settings.vibration'),
+                subtitle: context.tr('settings.vibration_hint'),
+                value: settings.vibrationEnabled,
+                onChanged: (v) async {
+                  await settings.setVibration(v);
+                  if (v) SoundService.instance.play(Sfx.tap);
+                },
               ),
-              const SizedBox(height: 16),
-
-              // بخش حریم خصوصی
-              _buildSettingsGroup(
-                'حریم خصوصی',
+            ]),
+            _section(theme, context.tr('settings.section_notifications'), [
+              _switchTile(
                 theme,
-                [
-                  _buildSwitchTile(
-                    icon: Icons.lock,
-                    title: 'پروفایل خصوصی',
-                    value: _privateProfile,
-                    onChanged: (value) {
-                      setState(() {
-                        _privateProfile = value;
-                      });
-                    },
-                    primaryColor: primaryColor,
-                    theme: theme,
-                  ),
-                  ListTile(
-                    tileColor: theme.surfaceColor, // ✅ اضافه کن
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF44336).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.delete_forever,
-                        color: Color(0xFFF44336),
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      'حذف حساب کاربری',
-                      style: TextStyle(color: theme.textColor),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: theme.textSecondaryColor,
-                    ),
-                    onTap: () {
-                      _showDeleteAccountDialog(theme, primaryColor);
-                    },
-                  ),
-                ],
+                icon: Icons.notifications_rounded,
+                title: context.tr('settings.notifications'),
+                subtitle: context.tr('settings.notifications_hint'),
+                value: settings.notificationsEnabled,
+                onChanged: settings.setNotifications,
               ),
-              const SizedBox(height: 16),
-
-              // بخش درباره
-              _buildSettingsGroup(
-                'درباره',
+              _switchTile(
                 theme,
-                [
-                  ListTile(
-                    tileColor: theme.surfaceColor, // ✅ اضافه کن
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.info,
-                        color: primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      'نسخه اپلیکیشن',
-                      style: TextStyle(color: theme.textColor),
-                    ),
-                    trailing: Text(
-                      '1.0.0',
-                      style: TextStyle(color: theme.textSecondaryColor),
-                    ),
-                  ),
-                  ListTile(
-                    tileColor: theme.surfaceColor, // ✅ اضافه کن
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.people,
-                        color: primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      'تیم توسعه',
-                      style: TextStyle(color: theme.textColor),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: theme.textSecondaryColor,
-                    ),
-                    onTap: () {
-                      _showTeamDialog(theme, primaryColor);
-                    },
-                  ),
-                ],
+                icon: Icons.checklist_rounded,
+                title: context.tr('settings.notif_habits'),
+                value: settings.rawNotifHabits,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifHabits,
               ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (dialogContext) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        backgroundColor: theme.surfaceColor,
-                        title: Text(
-                          'خروج از حساب',
-                          style: TextStyle(color: theme.textColor),
-                        ),
-                        content: Text(
-                          'آیا از خروج خود مطمئن هستید؟',
-                          style: TextStyle(color: theme.textSecondaryColor),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.pop(dialogContext, false),
-                            child: const Text('انصراف'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(dialogContext, true),
-                            child: const Text(
-                              'خروج',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      if (!mounted) return;
-
-                      try {
-                        // ✅ 1. پاک کردن LocalStorage
-                        final localStorage = LocalStorageService();
-                        await localStorage.clearAllDataExceptProfile();
-
-                        if (!mounted) return;
-
-                        // ✅ 2. پاک کردن SyncProvider
-                        final syncProvider =
-                            Provider.of<SyncProvider>(context, listen: false);
-                        syncProvider.clear(); // ← این خط را اضافه کن
-
-                        // ✅ 3. Force logout
-                        final auth =
-                            Provider.of<AuthProvider>(context, listen: false);
-                        await auth.forceLogout();
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('خطا در خروج: ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.red),
-                  label: const Text(
-                    'خروج از حساب',
-                    style: TextStyle(color: Colors.red),
+              _switchTile(
+                theme,
+                icon: Icons.chat_bubble_rounded,
+                title: context.tr('settings.notif_chat'),
+                value: settings.rawNotifChat,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifChat,
+              ),
+              _switchTile(
+                theme,
+                icon: Icons.emoji_events_rounded,
+                title: context.tr('settings.notif_challenges'),
+                value: settings.rawNotifChallenges,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifChallenges,
+              ),
+              _switchTile(
+                theme,
+                icon: Icons.card_giftcard_rounded,
+                title: context.tr('settings.notif_xp'),
+                value: settings.rawNotifXp,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifXp,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Text(
+                  context.tr('settings.notif_note'),
+                  style: TextStyle(
+                    color: theme.textSecondaryColor,
+                    fontSize: 12,
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                ),
+              ),
+            ]),
+            _section(theme, context.tr('settings.section_privacy'), [
+              _switchTile(
+                theme,
+                icon: Icons.lock_rounded,
+                title: context.tr('settings.private_profile'),
+                subtitle: context.tr('settings.private_profile_hint'),
+                value: settings.privateProfile,
+                enabled: false, // تا وقتی ستون سرورش ساخته نشده فقط «به‌زودی»
+                onChanged: settings.setPrivateProfile,
+                badge: context.tr('common.soon'),
+              ),
+            ]),
+            _section(theme, context.tr('settings.section_account'), [
+              _actionTile(
+                theme,
+                icon: Icons.logout_rounded,
+                title: context.tr('settings.logout'),
+                onTap: _logout,
+              ),
+              _actionTile(
+                theme,
+                icon: Icons.delete_forever_rounded,
+                title: context.tr('settings.delete_account'),
+                color: _danger,
+                onTap: _confirmDeleteAccount,
+              ),
+            ]),
+            _section(theme, context.tr('settings.section_about'), [
+              _infoTile(
+                theme,
+                icon: Icons.info_rounded,
+                title: context.tr('settings.version'),
+                value: _appVersion,
+              ),
+              _actionTile(
+                theme,
+                icon: Icons.people_rounded,
+                title: context.tr('settings.team'),
+                onTap: _showTeamDialog,
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────── بخش‌ها ───────────────────────────
+
+  Widget _section(ThemeProvider theme, String title, List<Widget> children) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 8, bottom: 8),
+            child: Text(
+              title,
+              style: TextStyle(
+                color: theme.textSecondaryColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: children),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _iconBox(ThemeProvider theme, IconData icon, [Color? color]) {
+    final c = color ?? theme.primaryColor;
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: c, size: 22),
+    );
+  }
+
+  Widget _switchTile(
+    ThemeProvider theme, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required bool value,
+    required Future<void> Function(bool) onChanged,
+    bool enabled = true,
+    String? badge,
+  }) {
+    return Opacity(
+      opacity: enabled ? 1 : 0.45,
+      child: ListTile(
+        minVerticalPadding: 10,
+        leading: _iconBox(theme, icon),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(title, style: TextStyle(color: theme.textColor)),
+            ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  badge,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.textColor,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
+          ],
+        ),
+        subtitle: subtitle == null
+            ? null
+            : Text(
+                subtitle,
+                style: TextStyle(
+                  color: theme.textSecondaryColor,
+                  fontSize: 12,
+                ),
+              ),
+        trailing: Switch(
+          value: value,
+          onChanged: enabled ? (v) => onChanged(v) : null,
+        ),
+        onTap: enabled ? () => onChanged(!value) : null,
+      ),
+    );
+  }
+
+  Widget _actionTile(
+    ThemeProvider theme, {
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return ListTile(
+      minVerticalPadding: 10,
+      leading: _iconBox(theme, icon, color),
+      title: Text(title, style: TextStyle(color: color ?? theme.textColor)),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: theme.textSecondaryColor,
+        textDirection: TextDirection.ltr,
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget _infoTile(
+    ThemeProvider theme, {
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return ListTile(
+      minVerticalPadding: 10,
+      leading: _iconBox(theme, icon),
+      title: Text(title, style: TextStyle(color: theme.textColor)),
+      trailing: Text(value, style: TextStyle(color: theme.textSecondaryColor)),
+    );
+  }
+
+  /// ردیفی از گزینه‌های انتخابی (چیپ‌های کاملاً گرد و بدون حاشیه)
+  Widget _choiceRow<T>(
+    ThemeProvider theme, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required List<MapEntry<T, String>> options,
+    required T selected,
+    required ValueChanged<T> onSelected,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _iconBox(theme, icon),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(color: theme.textColor)),
+                    if (subtitle != null)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: theme.textSecondaryColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              for (final o in options)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: _chip(theme, o.key == selected, o.value, o.key,
+                        onSelected),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip<T>(ThemeProvider theme, bool active, String label, T value,
+      ValueChanged<T> onSelected) {
+    return GestureDetector(
+      onTap: () {
+        SoundService.instance.play(Sfx.tap);
+        onSelected(value);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? theme.primaryColor : theme.cardSecondaryColor,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? theme.onPrimaryColor : theme.textColor,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
           ),
         ),
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📦 گروه تنظیمات
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildSettingsGroup(
-    String title,
-    ThemeProvider theme,
-    List<Widget> children,
-  ) {
-    return Material(
-      color: theme.surfaceColor,
-      borderRadius: BorderRadius.circular(20),
-      elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textColor,
-                ),
-              ),
-            ),
-            const Divider(height: 1, thickness: 1),
-            ...children,
-          ],
-        ),
-      ),
+  Widget _themeModeRow(ThemeProvider theme) {
+    return _choiceRow<AppThemeMode>(
+      theme,
+      icon: theme.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+      title: context.tr('settings.theme_mode'),
+      subtitle: context.tr('settings.theme_mode_hint'),
+      selected: theme.themeMode,
+      onSelected: theme.setThemeMode,
+      options: [
+        MapEntry(AppThemeMode.system, context.tr('settings.theme_system')),
+        MapEntry(AppThemeMode.light, context.tr('settings.theme_light')),
+        MapEntry(AppThemeMode.dark, context.tr('settings.theme_dark')),
+      ],
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🎨 آیتم انتخاب رنگ
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildColorTile(ThemeProvider theme, Color primaryColor) {
+  Widget _colorTile(ThemeProvider theme) {
     return ListTile(
-      tileColor: theme.surfaceColor,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(
-          Icons.color_lens,
-          color: primaryColor,
-          size: 20,
-        ),
-      ),
-      title: Text(
-        'رنگ اپلیکیشن',
-        style: TextStyle(color: theme.textColor),
-      ),
+      minVerticalPadding: 10,
+      leading: _iconBox(theme, Icons.palette_rounded),
+      title: Text(context.tr('settings.color'),
+          style: TextStyle(color: theme.textColor)),
       subtitle: Text(
-        'انتخاب رنگ اصلی برنامه',
+        context.tr('settings.color_hint'),
         style: TextStyle(color: theme.textSecondaryColor, fontSize: 12),
       ),
-      trailing: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: themeProvider.primaryColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right,
-                color: theme.textSecondaryColor,
-              ),
-            ],
-          );
-        },
+      trailing: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: theme.primaryColor,
+          shape: BoxShape.circle,
+        ),
       ),
       onTap: () {
         Navigator.push(
@@ -494,305 +434,252 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🔘 آیتم سوییچ
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required bool value,
-    required Function(bool) onChanged,
-    required Color primaryColor,
-    required ThemeProvider theme, // ✅ اضافه کن
-  }) {
-    return ListTile(
-      tileColor: theme.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: primaryColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(color: theme.textColor),
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: primaryColor,
-      ),
+  Widget _calendarRow(ThemeProvider theme) {
+    return Consumer<CalendarProvider>(
+      builder: (context, calendar, _) {
+        return _choiceRow<CalendarType>(
+          theme,
+          icon: Icons.calendar_month_rounded,
+          title: context.tr('settings.calendar'),
+          selected:
+              calendar.isJalali ? CalendarType.jalali : CalendarType.gregorian,
+          onSelected: calendar.setCalendarType,
+          options: [
+            MapEntry(CalendarType.jalali,
+                context.tr('settings.calendar_jalali')),
+            MapEntry(CalendarType.gregorian,
+                context.tr('settings.calendar_gregorian')),
+          ],
+        );
+      },
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 📋 آیتم Dropdown
-  // ═══════════════════════════════════════════════════════════
-  // ═══════════════════════════════════════════════════════════
-  // 📋 آیتم Dropdown
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildDropdownTile({
-    required IconData icon,
-    required String title,
-    required String value,
-    required List<String> options,
-    required Function(String?) onChanged,
-    required Color primaryColor,
-    required ThemeProvider theme, // ✅ اضافه کن
-  }) {
-    return ListTile(
-      tileColor: theme.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: primaryColor, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(color: theme.textColor),
-      ),
-      trailing: DropdownButton<String>(
-        value: value,
-        underline: const SizedBox(),
-        dropdownColor: theme.surfaceColor,
-        style: TextStyle(color: theme.textColor),
-        items: options.map((option) {
-          return DropdownMenuItem(
-            value: option,
-            child: Text(
-              option,
-              style: TextStyle(color: theme.textColor),
-            ),
-          );
-        }).toList(),
-        onChanged: onChanged,
-      ),
+  Widget _languageRow(ThemeProvider theme, SettingsProvider settings) {
+    return _choiceRow<String>(
+      theme,
+      icon: Icons.translate_rounded,
+      title: context.tr('settings.language'),
+      subtitle: context.tr('settings.language_hint'),
+      selected: settings.language,
+      onSelected: settings.setLanguage,
+      options: [
+        MapEntry('fa', AppStrings.t('fa', 'settings.lang_fa')),
+        MapEntry('en', AppStrings.t('en', 'settings.lang_en')),
+      ],
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 🗑️ دیالوگ حذف حساب
-  // ═══════════════════════════════════════════════════════════
-  void _showDeleteAccountDialog(ThemeProvider theme, Color primaryColor) {
-    showDialog(
+  // ─────────────────────────── خروج و حذف حساب ───────────────────────────
+
+  Future<bool> _askConfirm({
+    required String title,
+    required String body,
+    required String confirmLabel,
+    Color? confirmColor,
+  }) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: theme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.red,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              'حذف حساب کاربری',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'آیا از حذف حساب کاربری خود مطمئن هستید؟',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: theme.textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '⚠️ هشدار',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'با حذف حساب، تمام اطلاعات شما از جمله:\n'
-                    '• عادت‌ها و تسک‌ها\n'
-                    '• عکس‌های گالری\n'
-                    '• پیشرفت‌ها و XP\n'
-                    '• چت‌ها و پیام‌ها\n'
-                    'برای همیشه پاک می‌شود و قابل بازیابی نیست.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.textSecondaryColor,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(title),
+        content: Text(body),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(
-              'انصراف',
-              style: TextStyle(color: theme.textSecondaryColor),
-            ),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(ctx.tr('common.cancel')),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await _deleteAccount();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'حذف دائمی',
-              style: TextStyle(color: Colors.white),
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: confirmColor == null
+                ? null
+                : TextButton.styleFrom(foregroundColor: confirmColor),
+            child: Text(confirmLabel),
           ),
         ],
       ),
     );
+    return result == true;
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _logout() async {
+    final sync = context.read<SyncProvider>();
+    final auth = context.read<AuthProvider>();
+    final storage = LocalStorageService();
+
+    // اول سعی می‌کنیم کارهای مونده رو بفرستیم تا چیزی گم نشه
+    if (sync.isOnline && storage.getOfflineOperations().isNotEmpty) {
+      _snack(context.tr('settings.logout_syncing'));
+      await sync.flushPendingOperations();
+    }
+    if (!mounted) return;
+
+    final pending = storage.getOfflineOperations().length;
+    final body = pending > 0
+        ? context.tr('settings.logout_unsynced', {'count': '$pending'})
+        : context.tr('settings.logout_body');
+
+    final ok = await _askConfirm(
+      title: context.tr('settings.logout_title'),
+      body: body,
+      confirmLabel: context.tr('settings.logout'),
+      confirmColor: pending > 0 ? _danger : null,
+    );
+    if (!ok || !mounted) return;
+
+    final errorText = context.tr('settings.logout_error');
+    try {
+      sync.clear();
+      await storage.clearAllUserData();
+      await auth.forceLogout();
+    } catch (_) {
+      _snack(errorText);
+    }
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final word = context.tr('settings.delete_word');
+    final controller = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) {
+          final matches = controller.text.trim().toLowerCase() ==
+              word.toLowerCase();
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            title: Text(ctx.tr('settings.delete_title')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ctx.tr('settings.delete_body')),
+                const SizedBox(height: 16),
+                Text(
+                  ctx.tr('settings.delete_type_hint', {'word': word}),
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: controller,
+                  onChanged: (_) => setLocal(() {}),
+                  decoration: InputDecoration(
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(ctx.tr('common.cancel')),
+              ),
+              TextButton(
+                onPressed: matches ? () => Navigator.pop(ctx, true) : null,
+                style: TextButton.styleFrom(foregroundColor: _danger),
+                child: Text(ctx.tr('settings.delete_confirm_btn')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    controller.dispose();
+    if (confirmed == true) await _deleteAccount();
   }
 
   Future<void> _deleteAccount() async {
-    try {
-      // نمایش لودینگ
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (loadingContext) => Center(
+    if (!mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final sync = context.read<SyncProvider>();
+    final auth = context.read<AuthProvider>();
+    final loadingText = context.tr('settings.delete_loading');
+    final doneText = context.tr('settings.delete_done');
+    final theme = context.read<ThemeProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => PopScope(
+        canPop: false,
+        child: Center(
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Theme.of(loadingContext).cardColor,
-              borderRadius: BorderRadius.circular(20),
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(28),
             ),
-            child: const Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 12),
-                Text('در حال حذف حساب کاربری...'),
+                CircularProgressIndicator(color: theme.primaryColor),
+                const SizedBox(height: 16),
+                Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    loadingText,
+                    style: TextStyle(color: theme.textColor),
+                  ),
+                ),
               ],
             ),
           ),
         ),
-      );
+      ),
+    );
 
-// ✅ 1. حذف از Supabase با RPC
-      await _supabase.client.rpc('delete_user_account');
-
-      // ✅ 2. پاک کردن LocalStorage
-      final localStorage = LocalStorageService();
-      await localStorage.clearAllDataExceptProfile();
-
-      // ✅ 3. بستن dialog لودینگ
-      if (mounted) {
-        Navigator.pop(context);
-      }
-
-      if (!mounted) return;
-
-      // ✅ 4. Force logout از AuthProvider (UI خودکار عوض می‌شود)
-      final auth = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      await SupabaseService().client.rpc('delete_user_account');
+      sync.clear();
+      await LocalStorageService().clearAllUserData();
+      navigator.pop(); // بستن لودینگ
       await auth.forceLogout();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ حساب کاربری شما با موفقیت حذف شد'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(doneText)));
     } catch (e) {
-      // بستن dialog لودینگ
-      if (mounted) {
-        Navigator.pop(context);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا در حذف حساب: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      navigator.pop();
+      if (!mounted) return;
+      _snack(context.tr('settings.delete_error', {'error': '$e'}));
     }
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // 👥 دیالوگ تیم توسعه
-  // ═══════════════════════════════════════════════════════════
-  void _showTeamDialog(ThemeProvider theme, Color primaryColor) {
+  void _showTeamDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('تیم توسعه'),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(ctx.tr('settings.team')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('🌟 قهرمان درون'),
-            SizedBox(height: 8),
-            Text('Elisa :توسعه‌دهنده'),
-            SizedBox(height: 4),
-            Text('Elisa : تیم طراحی'),
-            SizedBox(height: 4),
-            Text('zahramirlohiiii@gmail.com : پشتیبانی'),
+          children: [
+            Text(ctx.tr('app.name'),
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            const Text('Elisa'),
+            const SizedBox(height: 8),
+            Text('${ctx.tr('settings.team_support')}: zahramirlohiiii@gmail.com'),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('متوجه شدم'),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.tr('settings.team_ok')),
           ),
         ],
       ),

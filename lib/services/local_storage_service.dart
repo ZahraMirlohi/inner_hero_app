@@ -1,6 +1,8 @@
 // lib/services/local_storage_service.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../features/arena/models/habit_model.dart';
 import '../features/arena/models/task_model.dart';
 import '../features/explore/models/quest_model.dart';
@@ -77,6 +79,8 @@ class LocalStorageService {
       _challengesBox = await _openBoxWithFallback(_challengesBoxName);
       _userChallengesBox = await _openBoxWithFallback(_userChallengesBoxName);
 
+      await _runMigrations();
+
       _isInitialized = true;
       print('✅ LocalStorageService initialized successfully');
       print('   - Offline operations: ${_offlineBox.length}');
@@ -91,6 +95,12 @@ class LocalStorageService {
     try {
       return await Hive.openBox(boxName);
     } catch (e) {
+      if (boxName == _offlineBoxName) {
+        // صف آفلاین کار ذخیره‌نشدهٔ کاربر است؛ یک بار دیگر بدون حذف تلاش می‌کنیم
+        try {
+          return await Hive.openBox(boxName, crashRecovery: true);
+        } catch (_) {}
+      }
       print(
         '⚠️ Error opening $boxName box, attempting to delete and recreate...',
       );
@@ -529,6 +539,62 @@ class LocalStorageService {
       print('❌ Error clearing all data: $e');
       rethrow;
     }
+  }
+
+
+  // ═══════════════════════════════════════════════════════════
+  // مهاجرت ساختار داده (Schema migrations)
+  // ═══════════════════════════════════════════════════════════
+  // هر بار ساختار ذخیره‌سازی عوض شد، currentSchemaVersion را +1 کنید و
+  // یک case به _migrateStep اضافه کنید. نسخه در SharedPreferences ذخیره می‌شود
+  // (نه در Hive) تا با پاک شدن جعبه‌ها از بین نرود.
+  static const int currentSchemaVersion = 2;
+  static const String _schemaVersionKey = 'hive_schema_version';
+
+  Future<void> _runMigrations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var version = prefs.getInt(_schemaVersionKey) ?? 1;
+      while (version < currentSchemaVersion) {
+        await _migrateStep(version);
+        version++;
+        await prefs.setInt(_schemaVersionKey, version);
+        debugPrint('Hive migrated to schema v$version');
+      }
+    } catch (e) {
+      // مهاجرت نباید جلوی بالا آمدن برنامه را بگیرد؛ داده‌ها از سرور دوباره همگام می‌شوند
+      debugPrint('Hive migration error: $e');
+    }
+  }
+
+  Future<void> _migrateStep(int from) async {
+    switch (from) {
+      case 1:
+        // v1 → v2: داده‌های کش‌شده (عادت، کار، ماموریت، بسته، چالش) را پاک می‌کنیم تا
+        // با ساختار و کدگذاری جدید روزهای هفته از سرور تازه بیایند.
+        // صف عملیات آفلاین و پروفایل دست نمی‌خورند تا کار ذخیره‌نشدهٔ کاربر گم نشود.
+        await _habitsBox.clear();
+        await _tasksBox.clear();
+        await _questsBox.clear();
+        await _packagesBox.clear();
+        await _challengesBox.clear();
+        await _userChallengesBox.clear();
+        break;
+    }
+  }
+
+  /// پاک کردن کامل داده‌های کاربر (هنگام خروج یا حذف حساب)؛ پروفایل هم پاک می‌شود
+  /// تا کاربر بعدی روی همین گوشی داده‌های قبلی را نبیند.
+  Future<void> clearAllUserData() async {
+    await _habitsBox.clear();
+    await _tasksBox.clear();
+    await _questsBox.clear();
+    await _packagesBox.clear();
+    await _settingsBox.clear();
+    await _userProfileBox.clear();
+    await _offlineBox.clear();
+    await _challengesBox.clear();
+    await _userChallengesBox.clear();
   }
 
   Future<void> clearAllDataExceptProfile() async {
