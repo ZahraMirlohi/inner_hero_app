@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '../widgets/calendar_header.dart';
 import 'today_tab.dart';
 import 'habits_tab.dart';
@@ -244,16 +246,10 @@ class _ArenaScreenState extends State<ArenaScreen>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
+                    color: Colors.black
+                        .withValues(alpha: themeProvider.isDarkMode ? 0.25 : 0.05),
                     blurRadius: 24,
-                    spreadRadius: 2,
                     offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.20),
-                    blurRadius: 32,
-                    spreadRadius: -4,
-                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
@@ -694,22 +690,24 @@ class _ArenaScreenState extends State<ArenaScreen>
     final Color primaryColor = theme.primaryColor;
     String statusText;
     IconData statusIcon;
-    Color statusColor = primaryColor;
+    Tone tone;
 
     if (!syncProvider.isOnline) {
-      statusText = '📡 آفلاین - تغییرات در صف ذخیره می‌شوند';
-      statusIcon = Icons.wifi_off;
-      statusColor = primaryColor;
+      statusText = context.tr('arena.offline');
+      statusIcon = Icons.wifi_off_rounded;
+      tone = Tone.peach;
     } else if (syncProvider.hasOfflineOperations) {
-      statusText =
-          '🔄 ${syncProvider.offlineOperationsCount} تغییرات در حال همگام‌سازی...';
-      statusIcon = Icons.sync;
-      statusColor = primaryColor;
+      statusText = context.tr(
+          'arena.syncing', {'n': '${syncProvider.offlineOperationsCount}'});
+      statusIcon = Icons.sync_rounded;
+      tone = Tone.sky;
     } else {
-      statusText = '✅ آنلاین';
-      statusIcon = Icons.wifi;
-      statusColor = primaryColor;
+      statusText = context.tr('arena.online');
+      statusIcon = Icons.wifi_rounded;
+      tone = Tone.mint;
     }
+    final t = theme.tone(tone);
+    final Color statusColor = t.fg;
 
     return Container(
       width: double.infinity,
@@ -719,16 +717,8 @@ class _ArenaScreenState extends State<ArenaScreen>
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: t.bg,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         children: [

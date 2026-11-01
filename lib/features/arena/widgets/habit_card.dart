@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/habit_model.dart';
 import '../screens/habit_detail_screen.dart';
+import '/core/app_palette.dart';
 import '/providers/theme_provider.dart';
 import 'animated_check_overlay.dart';
 
@@ -86,12 +87,11 @@ class _HabitCardState extends State<HabitCard>
     Color getCardColor() {
       if (widget.isCompleted) {
         // کارت تکمیل‌شده: در تم شب تیره، در تم روز روشن
-        return theme.isDarkMode
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFFF5F5F5);
+        return theme.cardSecondaryColor;
       }
-      // کارت عادت فعال: همیشه رنگ اصلی خودش (چه تم روز چه شب)
-      if (isChallenge || isQuest) return primaryColor;
+      // چالش و ماموریت هرکدام رنگ پاستلی خودشان را دارند تا از عادت‌های معمولی جدا باشند
+      if (isChallenge) return theme.tone(Tone.butter).bg;
+      if (isQuest) return theme.tone(Tone.lilac).bg;
       final savedColor = widget.habit.backgroundColor;
       if (savedColor != 0) return Color(savedColor);
       return primaryColor;
@@ -104,7 +104,7 @@ class _HabitCardState extends State<HabitCard>
     // - کارت تکمیل‌شده: در تم شب روشن، در تم روز مشکی
     final Color textColor;
     if (widget.isCompleted) {
-      textColor = theme.isDarkMode ? Colors.white : const Color(0xFF090909);
+      textColor = theme.textColor;
     } else {
       // روی کارت رنگی، متن همیشه مشکی
       textColor = const Color(0xFF090909);
@@ -112,7 +112,7 @@ class _HabitCardState extends State<HabitCard>
 
     // رنگ دکمه انجام (دایره سمت چپ)
     final Color checkButtonBg = widget.isCompleted
-        ? (theme.isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0))
+        ? theme.disabledButtonBackground
         : const Color(0xFF090909);
 
     final Color checkIconColor = widget.isCompleted

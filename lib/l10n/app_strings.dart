@@ -138,6 +138,10 @@ class AppStrings {
     'xp.needed': 'تا سطح بعدی',
     'xp.progress': 'پیشرفت به سطح {n}',
 
+    'arena.offline': 'آفلاینی؛ کارهات تو صف می‌مونن و بعداً می‌رن.',
+    'arena.syncing': '{n} تغییر داره به سرور می‌ره...',
+    'arena.online': 'آنلاین و آماده',
+
     // تم و رنگ
     'color.title': 'رنگ برنامه',
     'color.reset': 'برگردون به حالت اول',
@@ -248,6 +252,10 @@ class AppStrings {
     'xp.level': 'Level',
     'xp.needed': 'To next level',
     'xp.progress': 'Progress to level {n}',
+
+    'arena.offline': 'You are offline. Changes are queued and will sync later.',
+    'arena.syncing': 'Syncing {n} changes...',
+    'arena.online': 'Online',
 
     'color.title': 'App color',
     'color.reset': 'Reset to default',

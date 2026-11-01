@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
+import '/core/app_palette.dart';
 import '/providers/theme_provider.dart';
 import 'animated_check_overlay.dart';
 import '/providers/calendar_provider.dart';
@@ -72,9 +73,9 @@ class _TaskCardState extends State<TaskCard>
     final Color primaryColor = theme.primaryColor;
 
     // در تم شب، تسک‌ها کارت تیره می‌گیرند
-    final Color cardColor = widget.isCompleted
-        ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5))
-        : primaryColor;
+    // تسک‌ها آبی پاستلی می‌گیرند تا از عادت‌ها (رنگ خود کاربر) جدا باشند
+    final Color cardColor =
+        widget.isCompleted ? theme.cardSecondaryColor : theme.tone(Tone.sky).bg;
 
     // رنگ متن روی کارت
     final Color textColor =
@@ -82,7 +83,7 @@ class _TaskCardState extends State<TaskCard>
 
     // رنگ آیکون دکمه انجام
     final Color checkButtonBg = widget.isCompleted
-        ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0))
+        ? theme.disabledButtonBackground
         : theme.checkButtonBackground;
 
     final Color checkIconColor = widget.isCompleted

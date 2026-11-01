@@ -136,7 +136,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
 
     // رنگ آیکون انتخاب‌شده (داخل دایره primaryColor)
     // - در هر دو تم: مشکی (چون دایره primaryColor روشنه)
-    const Color activeIconColor = Color(0xFF090909);
+    final Color activeIconColor = theme.onPrimaryColor;
 
     const double inactiveVerticalOffset = 7;
 
