@@ -1,7 +1,12 @@
 // lib/features/profile/widgets/xp_stats_widget.dart
+//
+// سکه‌ها و سطح: سه آمار رنگی + نوار پیشرفت گرد.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 
 class XpStatsWidget extends StatelessWidget {
@@ -18,148 +23,109 @@ class XpStatsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+    final theme = context.watch<ThemeProvider>();
 
     final currentLevelXp = (level - 1) * 100;
-    final xpInCurrentLevel = totalXp - currentLevelXp;
-    final progressPercent = xpInCurrentLevel / 100;
-    final int xpNeeded = 100 - xpInCurrentLevel;
+    final xpInLevel = (totalXp - currentLevelXp).clamp(0, 100);
+    final progress = xpInLevel / 100;
+    final xpNeeded = 100 - xpInLevel;
+    final bar = theme.tone(Tone.lime);
+
+    Widget stat(Tone tone, IconData icon, String value, String label) {
+      final c = theme.tone(tone);
+      return Expanded(
+        child: Column(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(color: c.bg, shape: BoxShape.circle),
+              child: Icon(icon, color: c.fg, size: 23),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                color: theme.textColor,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 11.5),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.surfaceColor, // ✅ از تم
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // عنوان
-          Center(
-            child: Text(
-              'سکه‌ها و سطح',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: theme.textColor, // ✅ از تم
-              ),
+          Text(
+            context.tr('xp.title'),
+            style: TextStyle(
+              color: theme.textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildXpStat(
-                  'کل سکه‌ها', '$totalXp', Icons.stars, primaryColor, theme),
-              _buildXpStat(
-                  'لول', '$level', Icons.emoji_events, primaryColor, theme),
-              _buildXpStat('نیاز به لول بعدی', '$xpNeeded', Icons.trending_up,
-                  primaryColor, theme),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'پیشرفت به لول ${level + 1}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.textSecondaryColor, // ✅ از تم
-                    ),
-                  ),
-                  Text(
-                    '${(progressPercent * 100).toInt()}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: primaryColor,
-                    ),
-                  ),
-                ],
+              stat(Tone.butter, Icons.stars_rounded, '$totalXp',
+                  context.tr('xp.total')),
+              stat(Tone.lilac, Icons.emoji_events_rounded, '$level',
+                  context.tr('xp.level')),
+              stat(Tone.sky, Icons.trending_up_rounded, '$xpNeeded',
+                  context.tr('xp.needed')),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                context.tr('xp.progress', {'n': '${level + 1}'}),
+                style:
+                    TextStyle(color: theme.textSecondaryColor, fontSize: 12),
               ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progressPercent.clamp(0.0, 1.0),
-                  backgroundColor: theme.isDarkMode
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.grey.shade200, // ✅ از تم
-                  color: primaryColor,
-                  minHeight: 8,
+              Text(
+                '${(progress * 100).toInt()}%',
+                style: TextStyle(
+                  color: theme.textColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$xpNeeded سکه تا لول بعدی',
-              style: TextStyle(
-                fontSize: 12,
-                color: primaryColor,
-                fontWeight: FontWeight.w600,
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, __) => LinearProgressIndicator(
+                value: v,
+                minHeight: 12,
+                backgroundColor: bar.bg,
+                color: theme.primaryColor,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildXpStat(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    ThemeProvider theme,
-  ) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: theme.textSecondaryColor, // ✅ از تم
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
     );
   }
 }

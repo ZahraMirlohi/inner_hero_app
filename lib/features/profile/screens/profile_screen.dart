@@ -1,5 +1,7 @@
 // lib/features/profile/screens/profile_screen.dart
 
+import '/l10n/app_strings.dart';
+import '/core/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -744,6 +746,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // ==================== میانبرهای رنگی ====================
+
+  Widget _buildShortcuts() {
+    Widget tile(Tone tone, IconData icon, String label, VoidCallback onTap) {
+      final c = _theme.tone(tone);
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 92,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _theme.cardColor,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(color: c.bg, shape: BoxShape.circle),
+                  child: Icon(icon, color: c.fg, size: 22),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _theme.textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            tile(Tone.sky, Icons.photo_library_rounded,
+                context.tr('profile.gallery'), _openGallery),
+            const SizedBox(width: 12),
+            tile(Tone.lilac, Icons.psychology_rounded,
+                context.tr('profile.personality'), () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PersonalityScreen()),
+              ).then((_) => _loadProfile());
+            }),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            tile(Tone.butter, Icons.description_rounded,
+                context.tr('profile.terms'), () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const TermsAndConditionsScreen()),
+              );
+            }),
+            const SizedBox(width: 12),
+            tile(Tone.mint, Icons.settings_rounded,
+                context.tr('profile.settings'), () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
   // ==================== محتوای اصلی پروفایل ====================
   // در بخش دکمه‌های profile_screen.dart
 
@@ -829,14 +912,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 24),
-          _buildGalleryButton(),
-          const SizedBox(height: 12),
-          _buildPersonalityButton(),
-          const SizedBox(height: 12),
-          _buildTermsButton(),
-          const SizedBox(height: 12),
-          _buildSettingsButton(),
-          const SizedBox(height: 20),
+          _buildShortcuts(),
           const SizedBox(height: 20),
         ],
       ),
@@ -1455,15 +1531,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final calendar = Provider.of<CalendarProvider>(context, listen: false);
     return Container(
       decoration: BoxDecoration(
-        color: _theme.surfaceColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: _theme.cardColor,
+        borderRadius: BorderRadius.circular(32),
       ),
       child: Column(
         children: [

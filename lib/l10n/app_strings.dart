@@ -127,6 +127,17 @@ class AppStrings {
     'streak.keep': 'استریکت منتظرته؛ یه تیک بزن.',
     'streak.today_done': 'امروز رو گرفتی. فردا هم بیا!',
 
+    'profile.gallery': 'گالری من',
+    'profile.personality': 'شخصیت من',
+    'profile.terms': 'قوانین و مقررات',
+    'profile.settings': 'تنظیمات',
+
+    'xp.title': 'سکه‌ها و سطح',
+    'xp.total': 'کل سکه‌ها',
+    'xp.level': 'سطح',
+    'xp.needed': 'تا سطح بعدی',
+    'xp.progress': 'پیشرفت به سطح {n}',
+
     // تم و رنگ
     'color.title': 'رنگ برنامه',
     'color.reset': 'برگردون به حالت اول',
@@ -226,6 +237,17 @@ class AppStrings {
     'streak.start': 'Start today!',
     'streak.keep': 'Your streak is waiting. Tick one off.',
     'streak.today_done': 'Today is done. See you tomorrow!',
+
+    'profile.gallery': 'My gallery',
+    'profile.personality': 'My personality',
+    'profile.terms': 'Terms',
+    'profile.settings': 'Settings',
+
+    'xp.title': 'Coins and level',
+    'xp.total': 'Total coins',
+    'xp.level': 'Level',
+    'xp.needed': 'To next level',
+    'xp.progress': 'Progress to level {n}',
 
     'color.title': 'App color',
     'color.reset': 'Reset to default',
