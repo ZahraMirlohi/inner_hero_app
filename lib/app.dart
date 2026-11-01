@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 
 import '/core/app_theme.dart';
 import '/features/auth/screens/login_screen.dart';
+import '/features/auth/screens/reset_password_screen.dart';
 import '/features/home/screens/main_screen.dart';
+import '/features/onboarding/screens/onboarding_screen.dart';
 import '/features/profile/screens/username_setup_screen.dart';
 import '/l10n/app_strings.dart';
 import '/providers/auth_provider.dart';
@@ -33,14 +35,15 @@ class HeroApp extends StatelessWidget {
           ],
           // جهت متن (RTL/LTR) خودکار از زبان انتخابی می‌آید.
           theme: AppTheme.build(themeProvider),
-          // با تغییر وضعیت ورود، کل پشتهٔ صفحه‌ها ریست می‌شود
+          // با ورود/خروج، کل پشتهٔ صفحه‌ها ریست می‌شود؛ تغییرهای دیگر (معرفی، username و ...)
+          // داخل همان مسیر با Consumer بازسازی می‌شوند.
           home: Navigator(
-            key: ValueKey(
-              'nav_${authProvider.isLoggedIn}_${authProvider.hasUsername}',
-            ),
-            onGenerateRoute: (settings) {
+            key: ValueKey('nav_${authProvider.isLoggedIn}'),
+            onGenerateRoute: (routeSettings) {
               return MaterialPageRoute(
-                builder: (context) => _buildHome(authProvider),
+                builder: (context) => Consumer<AuthProvider>(
+                  builder: (context, auth, _) => _buildHome(auth),
+                ),
               );
             },
           ),
@@ -57,6 +60,14 @@ class HeroApp extends StatelessWidget {
 
     if (!auth.isLoggedIn) {
       return const LoginScreen();
+    }
+
+    if (auth.needsPasswordReset) {
+      return const ResetPasswordScreen();
+    }
+
+    if (!auth.onboardingDone) {
+      return const OnboardingScreen();
     }
 
     if (!auth.hasUsername && auth.userId != null) {
