@@ -548,7 +548,7 @@ class LocalStorageService {
   // هر بار ساختار ذخیره‌سازی عوض شد، currentSchemaVersion را +1 کنید و
   // یک case به _migrateStep اضافه کنید. نسخه در SharedPreferences ذخیره می‌شود
   // (نه در Hive) تا با پاک شدن جعبه‌ها از بین نرود.
-  static const int currentSchemaVersion = 2;
+  static const int currentSchemaVersion = 3;
   static const String _schemaVersionKey = 'hive_schema_version';
 
   Future<void> _runMigrations() async {
@@ -579,6 +579,11 @@ class LocalStorageService {
         await _packagesBox.clear();
         await _challengesBox.clear();
         await _userChallengesBox.clear();
+        break;
+      case 2:
+        // v2 → v3: روزهای هفته شنبه=۰ شد و داده‌های سرور با SQL اصلاح می‌شوند؛
+        // کش دوباره از سرور پر شود (صف آفلاین دست‌نخورده می‌ماند).
+        await _habitsBox.clear();
         break;
     }
   }

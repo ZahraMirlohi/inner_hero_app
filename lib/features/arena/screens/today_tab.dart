@@ -1,5 +1,6 @@
 // lib/features/arena/screens/today_tab.dart
 
+import '/services/sound_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -404,6 +405,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     _calculateAndUpdateProgress();
 
     final xpEarned = (habit.xpReward * level.xpMultiplier / 100).round();
+    SoundService.instance
+        .play(level == CompletionLevel.full ? Sfx.complete : Sfx.check);
     if (mounted) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -605,6 +608,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
   Future<void> _unmarkHabit(Habit habit) async {
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
+    SoundService.instance.play(Sfx.tap);
 
     setState(() {
       _completedHabits.remove(habit);
@@ -620,14 +624,11 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     Future.microtask(() async {
       try {
         if (syncProvider.isOnline) {
-          await _supabase.markHabitCompletedOnDate(
-            habit.id,
-            _currentUserId!,
-            widget.selectedDate,
-            false,
+          await _supabase.uncompleteHabitAndRefundXp(
+            habitId: habit.id,
+            userId: _currentUserId!,
+            date: widget.selectedDate,
           );
-
-          await _supabase.removeXP(_currentUserId!, habit.xpReward);
 
           if (habit.challengeId != null) {
             await _supabase.removeChallengeDay(
@@ -808,6 +809,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     });
 
     _calculateAndUpdateProgress();
+
+    SoundService.instance.play(Sfx.complete);
 
     try {
       if (syncProvider.isOnline) {
@@ -1275,7 +1278,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     } else {
       await syncProvider.addOfflineOperation(
         type: OperationType.updateTask,
-        data: updatedTask.toMap(),
+        data: {...updatedTask.toMap(), 'id': updatedTask.id},
       );
     }
   }

@@ -14,6 +14,7 @@ import '../features/arena/models/task_model.dart';
 import '../features/explore/models/quest_model.dart';
 import '../features/explore/models/package_model.dart';
 import '../models/offline_operation.dart';
+import 'package:uuid/uuid.dart';
 import '../features/arena/models/habit_completion.dart';
 
 class SyncProvider extends ChangeNotifier {
@@ -427,13 +428,11 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.addXP(operation.userId, data['xpReward']);
         break;
       case OperationType.uncompleteHabit:
-        await _supabase.markHabitCompletedOnDate(
-          data['habitId'],
-          operation.userId,
-          DateTime.parse(data['date']),
-          false,
+        await _supabase.uncompleteHabitAndRefundXp(
+          habitId: data['habitId'],
+          userId: operation.userId,
+          date: DateTime.parse(data['date']),
         );
-        await _supabase.removeXP(operation.userId, data['xpReward']);
         break;
       case OperationType.completeTask:
         final task = Task.fromMap(data['id'], data);
@@ -489,19 +488,12 @@ class SyncProvider extends ChangeNotifier {
         break;
 
       case OperationType.uncompleteHabitWithLevel:
-        // حذف تکمیل عادت با سطح
-        await _supabase.markHabitCompletedOnDate(
-          data['habitId'],
-          operation.userId,
-          DateTime.parse(data['date']),
-          false,
+        // حذف تکمیل و برگرداندن دقیق XP همان روز
+        await _supabase.uncompleteHabitAndRefundXp(
+          habitId: data['habitId'],
+          userId: operation.userId,
+          date: DateTime.parse(data['date']),
         );
-        // حذف XP (با توجه به سطح)
-        final xpReward = data['xpReward'] as int? ?? 10;
-        final levelStr = data['level'] ?? 'full';
-        final level = CompletionLevelExtension.fromString(levelStr);
-        final xpToRemove = (xpReward * level.xpMultiplier / 100).round();
-        await _supabase.removeXP(operation.userId, xpToRemove);
         break;
       default:
     }
@@ -663,6 +655,84 @@ class SyncProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error saving habit to local: $e');
     }
+  }
+
+  // ==================== ساخت/ویرایش آفلاین‌پسند ====================
+  // اول در گوشی ذخیره می‌شود (رابط بلافاصله به‌روز می‌شود)، بعد ارسال به سرور؛
+  // اگر نت نبود یا خطا شد، در صف می‌ماند و بعداً خودکار ارسال می‌شود. هیچ‌وقت خطا نمی‌دهد.
+
+  /// شناسهٔ یکتای جدید که سمت سرور هم همان‌طور پذیرفته می‌شود
+  static String newId() => const Uuid().v4();
+
+  Future<void> createHabitSmart(Habit habit) async {
+    await saveHabitToLocal(habit);
+    final data = {...habit.toMap(), 'id': habit.id};
+    if (_isOnline) {
+      try {
+        await _supabase.createHabit(habit);
+        return;
+      } catch (e) {
+        print('⚠️ createHabit queued: $e');
+      }
+    }
+    await _queueOnly(OperationType.createHabit, data);
+  }
+
+  Future<void> updateHabitSmart(Habit habit) async {
+    final updated = [
+      for (final h in habits) h.id == habit.id ? habit : h,
+    ];
+    await saveHabits(updated);
+    final data = {...habit.toMap(), 'id': habit.id};
+    if (_isOnline) {
+      try {
+        await _supabase.updateHabit(habit);
+        return;
+      } catch (e) {
+        print('⚠️ updateHabit queued: $e');
+      }
+    }
+    await _queueOnly(OperationType.updateHabit, data);
+  }
+
+  Future<void> createTaskSmart(Task task) async {
+    await saveTaskToLocal(task);
+    final data = {...task.toMap(), 'id': task.id};
+    if (_isOnline) {
+      try {
+        await _supabase.createTask(task);
+        return;
+      } catch (e) {
+        print('⚠️ createTask queued: $e');
+      }
+    }
+    await _queueOnly(OperationType.createTask, data);
+  }
+
+  Future<void> updateTaskSmart(Task task) async {
+    await saveTaskToLocal(task);
+    final data = {...task.toMap(), 'id': task.id};
+    if (_isOnline) {
+      try {
+        await _supabase.updateTask(task);
+        return;
+      } catch (e) {
+        print('⚠️ updateTask queued: $e');
+      }
+    }
+    await _queueOnly(OperationType.updateTask, data);
+  }
+
+  /// فقط در صف می‌گذارد؛ ارسال فوری ندارد (تلاش آنلاین قبلاً انجام شده)
+  Future<void> _queueOnly(OperationType type, Map<String, dynamic> data) async {
+    if (_currentUserId == null) return;
+    await _localStorage.addOfflineOperation(OfflineOperation(
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_opCounter++}',
+      type: type,
+      data: data,
+      timestamp: DateTime.now(),
+      userId: _currentUserId!,
+    ));
   }
 
   Future<void> saveTaskToLocal(Task task) async {
