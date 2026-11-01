@@ -22,6 +22,23 @@ end;
 $$;
 
 -- هر کاربر فقط یک پروفایل و یک user_progress
+-- ردیف‌های تکراری (اگر هستند) پاک می‌شوند: برای هر کاربر ردیفی با بیشترین XP می‌ماند
+delete from public.profiles p
+ using (
+   select ctid as rid, row_number() over (
+            partition by user_id order by coalesce(total_xp, 0) desc, ctid) as rn
+     from public.profiles
+ ) d
+ where p.ctid = d.rid and d.rn > 1;
+
+delete from public.user_progress p
+ using (
+   select ctid as rid, row_number() over (
+            partition by user_id order by coalesce(total_xp, 0) desc, ctid) as rn
+     from public.user_progress
+ ) d
+ where p.ctid = d.rid and d.rn > 1;
+
 create unique index if not exists profiles_user_id_key on public.profiles (user_id);
 create unique index if not exists user_progress_user_id_key on public.user_progress (user_id);
 
