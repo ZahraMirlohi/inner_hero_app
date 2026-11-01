@@ -1,9 +1,14 @@
+// lib/features/auth/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
-import '/services/supabase_service.dart'; // ← تغییر
-import '/features/home/screens/main_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
+
+import '/l10n/app_strings.dart';
+import '/providers/auth_provider.dart';
+import '/providers/theme_provider.dart';
+import '/services/sound_service.dart';
+import '../widgets/auth_widgets.dart';
+import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,328 +20,152 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _supabase = SupabaseService(); // ← تغییر
+  final _email = TextEditingController();
+  final _password = TextEditingController();
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _loading = false;
+  bool _googleLoading = false;
+  String? _error;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
+    FocusScope.of(context).unfocus();
     setState(() {
-      _isLoading = true;
+      _loading = true;
+      _error = null;
     });
 
+    final auth = context.read<AuthProvider>();
     try {
-      final response = await _supabase.login(
-        // ← تغییر
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-
-      if (mounted && response.user != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_id', response.user!.id);
-        if (_rememberMe) {
-          // می‌توانید از SharedPreferences برای ذخیره وضعیت استفاده کنید
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('خوش آمدید!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-        );
-      }
+      await auth.signInWithEmail(_email.text, _password.text);
+      // صفحهٔ اصلی خودکار باز می‌شود (HeroApp به وضعیت ورود گوش می‌دهد)
     } catch (e) {
-      if (mounted) {
-        String errorMessage = e.toString().replaceFirst('Exception: ', '');
-        if (errorMessage.contains('invalid_credentials')) {
-          errorMessage = 'ایمیل یا رمز عبور اشتباه است';
-        } else if (errorMessage.contains('email_not_confirmed')) {
-          errorMessage = 'لطفاً ایمیل خود را تأیید کنید';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا در ورود: $errorMessage'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+      SoundService.instance.play(Sfx.error);
+      if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ==================== بقیه متدها بدون تغییر ====================
+  Future<void> _google() async {
+    setState(() {
+      _googleLoading = true;
+      _error = null;
+    });
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.signInWithGoogle();
+    } catch (e) {
+      if (mounted) setState(() => _error = context.tr('auth.err_google'));
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
+    final theme = context.watch<ThemeProvider>();
 
-    return Scaffold(
-      backgroundColor: theme.backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+    return AuthShell(
+      title: context.tr('auth.login_title'),
+      subtitle: context.tr('auth.login_sub'),
+      children: [
+        if (_error != null) AuthMessage(text: _error!),
+        Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              _buildHeader(),
-              const SizedBox(height: 40),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(),
-                    const SizedBox(height: 8),
-                    _buildRememberMeRow(),
-                    const SizedBox(height: 24),
-                    _buildLoginButton(),
-                    const SizedBox(height: 16),
-                    _buildDivider(),
-                    const SizedBox(height: 16),
-                    _buildSignupButton(),
-                  ],
-                ),
+              AuthField(
+                controller: _email,
+                label: context.tr('auth.email'),
+                icon: Icons.mail_rounded,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                validator: (v) => AuthValidators.email(context, v),
               ),
-              const SizedBox(height: 20),
-              _buildForgotPasswordButton(),
+              const SizedBox(height: 14),
+              AuthField(
+                controller: _password,
+                label: context.tr('auth.password'),
+                icon: Icons.lock_rounded,
+                isPassword: true,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                onSubmitted: (_) => _login(),
+                validator: (v) => (v == null || v.isEmpty)
+                    ? context.tr('auth.err_password_required')
+                    : null,
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            color: const Color(0xFF4A90E2).withAlpha(20),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.emoji_events,
-            size: 50,
-            color: Color(0xFF4A90E2),
-          ),
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'قهرمان درون',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A2E),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'به سفر قهرمانی خود خوش آمدید',
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmailField() {
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      textInputAction: TextInputAction.next,
-      decoration: InputDecoration(
-        labelText: 'ایمیل',
-        hintText: 'example@email.com',
-        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF4A90E2)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً ایمیل خود را وارد کنید';
-        }
-        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-        if (!emailRegex.hasMatch(value)) {
-          return 'لطفاً یک ایمیل معتبر وارد کنید';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      textInputAction: TextInputAction.done,
-      decoration: InputDecoration(
-        labelText: 'رمز عبور',
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF4A90E2)),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً رمز عبور خود را وارد کنید';
-        }
-        if (value.length < 6) {
-          return 'رمز عبور باید حداقل ۶ کاراکتر باشد';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildRememberMeRow() {
-    return Row(
-      children: [
-        Checkbox(
-          value: _rememberMe,
-          onChanged: (value) {
-            setState(() {
-              _rememberMe = value ?? false;
-            });
-          },
-          activeColor: const Color(0xFF4A90E2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        ),
-        const Text('مرا به خاطر بسپار', style: TextStyle(fontSize: 14)),
-        const Spacer(),
-      ],
-    );
-  }
-
-  Widget _buildLoginButton() {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : _handleLogin,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4A90E2),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      child: _isLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    ForgotPasswordScreen(initialEmail: _email.text.trim()),
               ),
-            )
-          : const Text(
-              'ورود',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: Colors.grey.shade300)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('یا', style: TextStyle(color: Colors.grey.shade500)),
-        ),
-        Expanded(child: Divider(color: Colors.grey.shade300)),
-      ],
-    );
-  }
-
-  Widget _buildSignupButton() {
-    return OutlinedButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SignupScreen()),
-        );
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF4A90E2),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: const BorderSide(color: Color(0xFF4A90E2)),
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      child: const Text(
-        'ثبت‌نام',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-
-  Widget _buildForgotPasswordButton() {
-    return TextButton(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('بازیابی رمز عبور به زودی اضافه می‌شود'),
-            duration: Duration(seconds: 2),
+            child: Text(context.tr('auth.forgot')),
           ),
-        );
-      },
-      child: Text(
-        'رمز عبور خود را فراموش کرده‌اید؟',
-        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-      ),
+        ),
+        const SizedBox(height: 4),
+        AuthButton(
+          label: context.tr('auth.login_btn'),
+          onPressed: _login,
+          isLoading: _loading,
+        ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.borderColor)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                context.tr('auth.or'),
+                style: TextStyle(color: theme.textSecondaryColor),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.borderColor)),
+          ],
+        ),
+        const SizedBox(height: 18),
+        AuthButton(
+          label: context.tr('auth.google'),
+          icon: Icons.g_mobiledata_rounded,
+          filled: false,
+          onPressed: _google,
+          isLoading: _googleLoading,
+        ),
+        const SizedBox(height: 22),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              context.tr('auth.no_account'),
+              style: TextStyle(color: theme.textSecondaryColor),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SignupScreen()),
+              ),
+              child: Text(context.tr('auth.go_signup')),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

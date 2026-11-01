@@ -29,6 +29,9 @@ class SupabaseService {
 
   SupabaseClient get client => Supabase.instance.client;
 
+  static final RegExp _uuidRe = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+
   /// ✅ Alias برای استفاده در متدهای جدید (سازگاری)
   SupabaseClient get _client => client;
 
@@ -188,6 +191,42 @@ class SupabaseService {
     }
   }
 
+  /// لغو تیک عادت و برگرداندن «دقیقاً همان XP» که برای آن روز داده شده بود.
+  /// برمی‌گرداند چند XP کم شد (۰ اگر تیکی ثبت نشده بود).
+  Future<int> uncompleteHabitAndRefundXp({
+    required String habitId,
+    required String userId,
+    required DateTime date,
+  }) async {
+    final dateStr = _getDateString(date);
+    int refund = 0;
+    try {
+      final prev = await client
+          .from('habit_completions')
+          .select('completion_level')
+          .eq('habit_id', habitId)
+          .eq('user_id', userId)
+          .eq('date', dateStr)
+          .maybeSingle();
+      if (prev != null) {
+        int xpReward = 10;
+        try {
+          final habit = await getHabit(habitId);
+          xpReward = (habit?['xp_reward'] as int?) ?? 10;
+        } catch (_) {}
+        // تیک ساده (بدون سطح) یعنی کامل
+        final raw = prev['completion_level'];
+        final lv = CompletionLevelExtension.fromString(
+            (raw == null ? 'full' : raw.toString()));
+        refund = (xpReward * lv.xpMultiplier / 100).round();
+      }
+    } catch (_) {}
+
+    await markHabitCompletedOnDate(habitId, userId, date, false);
+    if (refund > 0) await removeXP(userId, refund);
+    return refund;
+  }
+
 // ✅ اصلاح متد markHabitCompletedWithLevel - حذف onConflict
   Future<void> markHabitCompletedWithLevel({
     required String habitId,
@@ -212,6 +251,24 @@ class SupabaseService {
 
       final xpEarned = (xpReward * level.xpMultiplier / 100).round();
 
+      // XP قبلاً داده‌شدهٔ همین روز (اگر بود) تا فقط «تفاوت» اعمال شود
+      int previousXp = 0;
+      try {
+        final prev = await client
+            .from('habit_completions')
+            .select('completion_level')
+            .eq('habit_id', habitId)
+            .eq('user_id', userId)
+            .eq('date', dateStr)
+            .maybeSingle();
+        if (prev != null) {
+          final lv = CompletionLevelExtension.fromString(
+              (prev['completion_level'] ?? 'full').toString());
+          previousXp = (xpReward * lv.xpMultiplier / 100).round();
+        }
+      } catch (_) {}
+      final xpDelta = xpEarned - previousXp;
+
       // 2. حذف رکورد قبلی
       await client
           .from('habit_completions')
@@ -232,7 +289,8 @@ class SupabaseService {
 
       // 4. اجرای همزمان دو عملیات
       await Future.wait([
-        addXP(userId, xpEarned),
+        if (xpDelta > 0) addXP(userId, xpDelta),
+        if (xpDelta < 0) removeXP(userId, -xpDelta),
         updateUserStreak(userId),
       ]);
 
@@ -373,10 +431,35 @@ class SupabaseService {
     }
   }
 
+  /// نسخهٔ «سخت‌گیر»: روی خطا throw می‌کند تا همگام‌سازی نتواند «خطا» را با «لیست خالی» اشتباه بگیرد.
+  Future<List<Habit>> getHabitsStrict(String userId) async {
+    final response = await client
+        .from('habits')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return response
+        .map((data) => Habit.fromMap(data['id'], _convertKeys(data)))
+        .toList();
+  }
+
+  Future<List<Task>> getTasksStrict(String userId) async {
+    final response = await client
+        .from('tasks')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return response
+        .map((data) => Task.fromMap(data['id'], _convertKeys(data)))
+        .toList();
+  }
+
   Future<void> createHabit(Habit habit) async {
     final data = habit.toMap();
     data.remove('id');
-    await client.from('habits').insert(data);
+    // شناسهٔ UUID ساخته‌شده در برنامه (برای کار آفلاین) حفظ می‌شود
+    if (_uuidRe.hasMatch(habit.id)) data['id'] = habit.id;
+    await client.from('habits').upsert(data);
   }
 
   Future<void> updateHabit(Habit habit) async {
@@ -414,7 +497,8 @@ class SupabaseService {
   Future<void> createTask(Task task) async {
     final data = task.toMap();
     data.remove('id');
-    await client.from('tasks').insert(data);
+    if (_uuidRe.hasMatch(task.id)) data['id'] = task.id;
+    await client.from('tasks').upsert(data);
   }
 
   Future<void> updateTask(Task task) async {
@@ -582,7 +666,19 @@ class SupabaseService {
 
   // ==================== XP Management ====================
 
+  /// تغییر اتمیک XP با تابع سرور `adjust_xp` (فایل sql/03). اگر هنوز ساخته نشده باشد
+  /// false برمی‌گرداند و روش قدیمی اجرا می‌شود.
+  Future<bool> _adjustXpRpc(String userId, int delta) async {
+    try {
+      await client.rpc('adjust_xp', params: {'p_user_id': userId, 'p_delta': delta});
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> addXP(String userId, int amount) async {
+    if (await _adjustXpRpc(userId, amount)) return;
     try {
       final response = await client
           .from('user_progress')
@@ -656,6 +752,7 @@ class SupabaseService {
   // lib/services/supabase_service.dart
 
   Future<void> removeXP(String userId, int amount) async {
+    if (await _adjustXpRpc(userId, -amount)) return;
     try {
       print('🗑️ Removing $amount XP from user: $userId');
 

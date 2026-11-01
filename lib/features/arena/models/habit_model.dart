@@ -111,9 +111,9 @@ class Habit {
     return true;
   }
 
-  // محاسبه روز هفته شمسی
+  // روز هفته با کدگذاری واحد برنامه: شنبه=۰ ... جمعه=۶
   int _getJalaliWeekday(DateTime date) {
-    return date.weekday % 7;
+    return (date.weekday + 1) % 7;
   }
 
   // بررسی اینکه آیا عادت در تاریخ امروز باید انجام شود

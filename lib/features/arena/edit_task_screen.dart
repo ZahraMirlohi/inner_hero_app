@@ -532,14 +532,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         updatedAt: DateTime.now(),
       );
 
-      await _supabase.updateTask(updatedTask);
-
-      try {
-        final syncProvider = Provider.of<SyncProvider>(context, listen: false);
-        await syncProvider.saveTaskToLocal(updatedTask);
-      } catch (e) {
-        debugPrint('⚠️ Error saving task to local: $e');
-      }
+      await Provider.of<SyncProvider>(context, listen: false)
+          .updateTaskSmart(updatedTask);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

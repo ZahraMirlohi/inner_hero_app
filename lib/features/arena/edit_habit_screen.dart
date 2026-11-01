@@ -47,7 +47,13 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
 
   final _supabase = SupabaseService();
 
-  final List<String> _weekdayLetters = ['د', 'س', 'چ', 'پ', 'ج', 'ش', 'ی'];
+  // شنبه=۰ ... جمعه=۶ (همان کدگذاری مدل عادت)
+  static const List<String> _weekdayLettersFa = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  static const List<String> _weekdayLettersEn = ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
+  List<String> get _weekdayLetters =>
+      Localizations.localeOf(context).languageCode == 'en'
+          ? _weekdayLettersEn
+          : _weekdayLettersFa;
 
   final List<Map<String, dynamic>> _icons = [
     {'name': 'fitness_center', 'icon': Icons.fitness_center},
@@ -1065,28 +1071,8 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         basicDescription: _basicDescription,
       );
 
-      await _supabase.updateHabit(updatedHabit);
-      print('✅ Habit updated in Supabase');
-
-      if (mounted) {
-        try {
-          final syncProvider =
-              Provider.of<SyncProvider>(context, listen: false);
-
-          final currentHabits = syncProvider.habits;
-          final updatedHabits = currentHabits.map((h) {
-            if (h.id == updatedHabit.id) {
-              return updatedHabit;
-            }
-            return h;
-          }).toList();
-
-          await syncProvider.saveHabits(updatedHabits);
-          print('✅ Habit updated in LocalStorage');
-        } catch (e) {
-          print('⚠️ Error updating LocalStorage: $e');
-        }
-      }
+      await Provider.of<SyncProvider>(context, listen: false)
+          .updateHabitSmart(updatedHabit);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

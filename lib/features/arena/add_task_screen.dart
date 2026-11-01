@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:inner_hero_app/providers/sync_provider.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
+import '/services/sound_service.dart';
 import '/features/arena/models/task_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import '/providers/theme_provider.dart';
@@ -486,7 +487,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       final user = await _supabase.getCurrentUser();
       if (user != null && mounted) {
         final task = Task(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: SyncProvider.newId(),
           userId: user.id,
           title: _titleController.text,
           description: _descriptionController.text,
@@ -499,25 +500,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           updatedAt: DateTime.now(),
         );
 
-        await _supabase.createTask(task);
-
-        // ✅ اضافه کردن به LocalStorage فوری
-        if (mounted) {
-          try {
-            final syncProvider =
-                Provider.of<SyncProvider>(context, listen: false);
-
-            // ✅ ذخیره تسک جدید در LocalStorage
-            await syncProvider.saveTaskToLocal(task);
-
-            // ✅ در صورت آنلاین بودن، force refresh از سرور
-            if (syncProvider.isOnline) {
-              await syncProvider.refreshHabitsAndTasks(); // ← سبک‌تر
-            }
-          } catch (e) {
-            print('⚠️ Error refreshing local storage: $e');
-          }
-        }
+        await Provider.of<SyncProvider>(context, listen: false)
+            .createTaskSmart(task);
+        SoundService.instance.play(Sfx.check);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

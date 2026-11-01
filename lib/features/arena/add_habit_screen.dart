@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:inner_hero_app/providers/sync_provider.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
+import '/services/sound_service.dart';
 import '/features/arena/models/habit_model.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'category_selection_screen.dart';
@@ -56,7 +57,13 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
   String? _halfDescription;
   String? _basicDescription;
 
-  final List<String> _weekdayLetters = ['د', 'س', 'چ', 'پ', 'ج', 'ش', 'ی'];
+  // شنبه=۰ ... جمعه=۶ (همان کدگذاری مدل عادت)
+  static const List<String> _weekdayLettersFa = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  static const List<String> _weekdayLettersEn = ['S', 'S', 'M', 'T', 'W', 'T', 'F'];
+  List<String> get _weekdayLetters =>
+      Localizations.localeOf(context).languageCode == 'en'
+          ? _weekdayLettersEn
+          : _weekdayLettersFa;
 
   final List<Map<String, dynamic>> _icons = [
     {'name': 'fitness_center', 'icon': Icons.fitness_center},
@@ -1005,7 +1012,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
       setState(() {
         _reminders.add(
           Reminder(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            id: SyncProvider.newId(),
             hour: selectedTime.hour,
             minute: selectedTime.minute,
             isEnabled: true,
@@ -1268,25 +1275,10 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           basicDescription: _basicDescription,
         );
 
-        await _supabase.createHabit(habit);
-
-        // ✅ اضافه کردن به LocalStorage فوری
-        if (mounted) {
-          try {
-            final syncProvider =
-                Provider.of<SyncProvider>(context, listen: false);
-
-            // ✅ ذخیره عادت جدید در LocalStorage
-            await syncProvider.saveHabitToLocal(habit);
-
-            // ✅ در صورت آنلاین بودن، force refresh از سرور
-            if (syncProvider.isOnline) {
-              await syncProvider.refreshHabitsAndTasks(); // ← سبک‌تر
-            }
-          } catch (e) {
-            print('⚠️ Error refreshing local storage: $e');
-          }
-        }
+        // ذخیرهٔ آفلاین‌پسند: اول گوشی، بعد سرور (یا صف)
+        await Provider.of<SyncProvider>(context, listen: false)
+            .createHabitSmart(habit);
+        SoundService.instance.play(Sfx.check);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

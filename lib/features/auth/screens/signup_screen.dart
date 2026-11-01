@@ -1,10 +1,15 @@
+// lib/features/auth/screens/signup_screen.dart
+
 import 'package:flutter/material.dart';
-import '/services/supabase_service.dart'; // ← تغییر
-import '/features/home/screens/main_screen.dart';
-import '/../../utils/unique_id_generator.dart';
-import 'login_screen.dart';
-import '/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
+
+import '/features/profile/screens/terms_and_conditions_screen.dart';
+import '/l10n/app_strings.dart';
+import '/providers/auth_provider.dart';
+import '/providers/theme_provider.dart';
+import '/services/sound_service.dart';
+import '../widgets/auth_widgets.dart';
+import 'verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,426 +20,208 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  final _supabase = SupabaseService(); // ← تغییر
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
 
-  bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _agreeToTerms = false;
+  bool _agree = false;
+  bool _loading = false;
+  bool _googleLoading = false;
+  String? _error;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSignup() async {
+  Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لطفاً قوانین و مقررات را بپذیرید'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
+    if (!_agree) {
+      setState(() => _error = context.tr('auth.err_terms'));
       return;
     }
-
+    FocusScope.of(context).unfocus();
     setState(() {
-      _isLoading = true;
+      _loading = true;
+      _error = null;
     });
 
+    final auth = context.read<AuthProvider>();
+    final navigator = Navigator.of(context);
     try {
-      // ✅ تولید ID یکتا
-      final uniqueId = UniqueIdGenerator.generateSecure();
-      print('🔑 Generated Unique ID: $uniqueId');
-
-      final response = await _supabase.signup(
-        _emailController.text.trim(),
-        _passwordController.text,
-        _nameController.text.trim(),
+      final result = await auth.signUpWithEmail(
+        email: _email.text,
+        password: _password.text,
+        name: _name.text,
       );
-
-      if (mounted && response.user != null) {
-        // ✅ ایجاد پروفایل با unique_id
-        await _supabase.createProfile(
-          response.user!.id,
-          _emailController.text.trim(),
-          _nameController.text.trim(),
-        );
-
-        // ✅ ایجاد user_progress
-        await _supabase.createUserProgress(response.user!.id);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ثبت‌نام با موفقیت انجام شد! 🎉'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+      if (!mounted) return;
+      if (result == SignUpResult.needsEmailConfirmation) {
+        navigator.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(email: _email.text.trim()),
           ),
         );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainScreen()),
-        );
+      } else {
+        // وارد شد؛ HeroApp خودش معرفی را نشان می‌دهد. این صفحه باید بسته شود.
+        navigator.popUntil((r) => r.isFirst);
       }
     } catch (e) {
-      // ... مدیریت خطا
+      SoundService.instance.play(Sfx.error);
+      if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ==================== بقیه متدها بدون تغییر ====================
+  Future<void> _google() async {
+    setState(() {
+      _googleLoading = true;
+      _error = null;
+    });
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.signInWithGoogle();
+    } catch (e) {
+      if (mounted) setState(() => _error = context.tr('auth.err_google'));
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
+    final theme = context.watch<ThemeProvider>();
 
-    return Scaffold(
-      backgroundColor: theme.backgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+    return AuthShell(
+      title: context.tr('auth.signup_title'),
+      subtitle: context.tr('auth.signup_sub'),
+      showBack: true,
+      children: [
+        if (_error != null) AuthMessage(text: _error!),
+        Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
-              _buildHeader(),
-              const SizedBox(height: 30),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    _buildNameField(),
-                    const SizedBox(height: 16),
-                    _buildEmailField(),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(),
-                    const SizedBox(height: 16),
-                    _buildConfirmPasswordField(),
-                    const SizedBox(height: 8),
-                    _buildTermsCheckbox(),
-                    const SizedBox(height: 24),
-                    _buildSignupButton(),
-                    const SizedBox(height: 16),
-                    _buildDivider(),
-                    const SizedBox(height: 16),
-                    _buildLoginButton(),
-                  ],
-                ),
+              AuthField(
+                controller: _name,
+                label: context.tr('auth.name'),
+                icon: Icons.person_rounded,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.name],
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? context.tr('auth.err_name_required')
+                    : null,
+              ),
+              const SizedBox(height: 14),
+              AuthField(
+                controller: _email,
+                label: context.tr('auth.email'),
+                icon: Icons.mail_rounded,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                validator: (v) => AuthValidators.email(context, v),
+              ),
+              const SizedBox(height: 14),
+              AuthField(
+                controller: _password,
+                label: context.tr('auth.password'),
+                icon: Icons.lock_rounded,
+                isPassword: true,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
+                validator: (v) => AuthValidators.password(context, v),
+              ),
+              const SizedBox(height: 14),
+              AuthField(
+                controller: _confirm,
+                label: context.tr('auth.confirm_password'),
+                icon: Icons.lock_outline_rounded,
+                isPassword: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _signup(),
+                validator: (v) => v != _password.text
+                    ? context.tr('auth.err_password_mismatch')
+                    : null,
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: const Color(0xFF4A90E2).withAlpha(20),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.person_add_alt_1,
-            size: 40,
-            color: Color(0xFF4A90E2),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'ایجاد حساب کاربری',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A2E),
-          ),
-        ),
         const SizedBox(height: 8),
-        Text(
-          'برای شروع سفر قهرمانی خود ثبت‌نام کنید',
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNameField() {
-    return TextFormField(
-      controller: _nameController,
-      textInputAction: TextInputAction.next,
-      decoration: InputDecoration(
-        labelText: 'نام و نام خانوادگی',
-        hintText: 'مثال: علی محمدی',
-        prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF4A90E2)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً نام خود را وارد کنید';
-        }
-        if (value.length < 3) {
-          return 'نام باید حداقل ۳ کاراکتر باشد';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildEmailField() {
-    return TextFormField(
-      controller: _emailController,
-      keyboardType: TextInputType.emailAddress,
-      textInputAction: TextInputAction.next,
-      decoration: InputDecoration(
-        labelText: 'ایمیل',
-        hintText: 'example@email.com',
-        prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF4A90E2)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً ایمیل خود را وارد کنید';
-        }
-        final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-        if (!emailRegex.hasMatch(value)) {
-          return 'لطفاً یک ایمیل معتبر وارد کنید';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      textInputAction: TextInputAction.next,
-      decoration: InputDecoration(
-        labelText: 'رمز عبور',
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF4A90E2)),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
+        CheckboxListTile(
+          value: _agree,
+          onChanged: (v) => setState(() => _agree = v ?? false),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            context.tr('auth.agree_terms'),
+            style: TextStyle(color: theme.textColor, fontSize: 13),
           ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً رمز عبور را وارد کنید';
-        }
-        if (value.length < 6) {
-          return 'رمز عبور باید حداقل ۶ کاراکتر باشد';
-        }
-        if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(value)) {
-          return 'رمز عبور باید شامل حروف و اعداد باشد';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildConfirmPasswordField() {
-    return TextFormField(
-      controller: _confirmPasswordController,
-      obscureText: _obscureConfirmPassword,
-      textInputAction: TextInputAction.done,
-      decoration: InputDecoration(
-        labelText: 'تکرار رمز عبور',
-        prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF4A90E2)),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscureConfirmPassword = !_obscureConfirmPassword;
-            });
-          },
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'لطفاً رمز عبور را تکرار کنید';
-        }
-        if (value != _passwordController.text) {
-          return 'رمز عبور با تکرار آن مطابقت ندارد';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildTermsCheckbox() {
-    return Row(
-      children: [
-        Checkbox(
-          value: _agreeToTerms,
-          onChanged: (value) {
-            setState(() {
-              _agreeToTerms = value ?? false;
-            });
-          },
-          activeColor: const Color(0xFF4A90E2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        ),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _agreeToTerms = !_agreeToTerms;
-              });
-            },
-            child: Text.rich(
-              TextSpan(
-                text: 'من ',
-                style: TextStyle(color: Colors.grey.shade700),
-                children: [
-                  TextSpan(
-                    text: 'قوانین و مقررات',
-                    style: const TextStyle(
-                      color: Color(0xFF4A90E2),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  TextSpan(
-                    text: ' را می‌پذیرم',
-                    style: TextStyle(color: Colors.grey.shade700),
-                  ),
-                ],
+          subtitle: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const TermsAndConditionsScreen(),
               ),
-              style: const TextStyle(fontSize: 14),
+            ),
+            child: Text(
+              context.tr('auth.terms_link'),
+              style: TextStyle(
+                color: theme.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSignupButton() {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : _handleSignup,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4A90E2),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      child: _isLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-          : const Text(
-              'ثبت‌نام',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-    );
-  }
-
-  Widget _buildDivider() {
-    return Row(
-      children: [
-        Expanded(child: Divider(color: Colors.grey.shade300)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('یا', style: TextStyle(color: Colors.grey.shade500)),
+        const SizedBox(height: 12),
+        AuthButton(
+          label: context.tr('auth.signup_btn'),
+          onPressed: _signup,
+          isLoading: _loading,
         ),
-        Expanded(child: Divider(color: Colors.grey.shade300)),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(child: Divider(color: theme.borderColor)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                context.tr('auth.or'),
+                style: TextStyle(color: theme.textSecondaryColor),
+              ),
+            ),
+            Expanded(child: Divider(color: theme.borderColor)),
+          ],
+        ),
+        const SizedBox(height: 18),
+        AuthButton(
+          label: context.tr('auth.google'),
+          icon: Icons.g_mobiledata_rounded,
+          filled: false,
+          onPressed: _google,
+          isLoading: _googleLoading,
+        ),
+        const SizedBox(height: 22),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              context.tr('auth.have_account'),
+              style: TextStyle(color: theme.textSecondaryColor),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(context.tr('auth.go_login')),
+            ),
+          ],
+        ),
       ],
-    );
-  }
-
-  Widget _buildLoginButton() {
-    return OutlinedButton(
-      onPressed: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF4A90E2),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: const BorderSide(color: Color(0xFF4A90E2)),
-        minimumSize: const Size(double.infinity, 50),
-      ),
-      child: const Text(
-        'ورود به حساب کاربری',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-      ),
     );
   }
 }
