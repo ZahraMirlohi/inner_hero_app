@@ -43,11 +43,11 @@ class ImageCropService {
 
       if (croppedFile == null) return null;
 
-      // ✅ در Web، باید bytes را بخوانیم و به File تبدیل کنیم
+      // در Web، باید bytes را بخوانیم و به File تبدیل کنیم
       // اما image_cropper در Web یک فایل موقت می‌سازد که path دارد
       return File(croppedFile.path);
     } catch (e) {
-      debugPrint('❌ Error cropping: $e');
+      debugPrint('Error cropping: $e');
       return null;
     }
   }
@@ -97,7 +97,7 @@ class ImageCropService {
       if (croppedFile == null) return null;
       return File(croppedFile.path);
     } catch (e) {
-      debugPrint('❌ Error cropping: $e');
+      debugPrint('Error cropping: $e');
       return null;
     }
   }

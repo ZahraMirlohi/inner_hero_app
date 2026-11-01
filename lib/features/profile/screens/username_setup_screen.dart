@@ -166,7 +166,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🎉 نام کاربری با موفقیت ذخیره شد'),
+            content: Text('نام کاربری با موفقیت ذخیره شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -404,7 +404,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '📋 قوانین نام کاربری',
+                      'قوانین نام کاربری',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

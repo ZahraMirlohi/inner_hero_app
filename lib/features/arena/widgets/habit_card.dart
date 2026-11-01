@@ -17,7 +17,7 @@ class HabitCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Function(String)? onToggleSubHabit;
 
-  // ✅ پارامتر جدید
+  // پارامتر جدید
   final int? recordedTimeSeconds;
 
   const HabitCard({
@@ -30,7 +30,7 @@ class HabitCard extends StatefulWidget {
     this.onTimer,
     this.onTap,
     this.onToggleSubHabit,
-    this.recordedTimeSeconds, // ✅
+    this.recordedTimeSeconds, // 
   });
 
   @override
@@ -81,16 +81,16 @@ class _HabitCardState extends State<HabitCard>
     final bool isChallenge = widget.habit.challengeId != null;
     final bool isQuest = widget.habit.questId != null;
 
-    // ✅ رنگ کارت عادت - دست‌نخورده باقی می‌مونه (همون رنگ ذخیره‌شده کاربر)
+    // رنگ کارت عادت - دست‌نخورده باقی می‌مونه (همون رنگ ذخیره‌شده کاربر)
     // فقط در صورت تکمیل شدن، خنثی (خاکستری) میشه
     Color getCardColor() {
       if (widget.isCompleted) {
-        // ✅ کارت تکمیل‌شده: در تم شب تیره، در تم روز روشن
+        // کارت تکمیل‌شده: در تم شب تیره، در تم روز روشن
         return theme.isDarkMode
             ? const Color(0xFF2A2A2A)
             : const Color(0xFFF5F5F5);
       }
-      // ✅ کارت عادت فعال: همیشه رنگ اصلی خودش (چه تم روز چه شب)
+      // کارت عادت فعال: همیشه رنگ اصلی خودش (چه تم روز چه شب)
       if (isChallenge || isQuest) return primaryColor;
       final savedColor = widget.habit.backgroundColor;
       if (savedColor != 0) return Color(savedColor);
@@ -99,18 +99,18 @@ class _HabitCardState extends State<HabitCard>
 
     final Color cardColor = getCardColor();
 
-    // ✅ رنگ متن روی کارت
+    // رنگ متن روی کارت
     // - کارت رنگی (فعال): متن مشکی (چون پس‌زمینه رنگیه)
     // - کارت تکمیل‌شده: در تم شب روشن، در تم روز مشکی
     final Color textColor;
     if (widget.isCompleted) {
       textColor = theme.isDarkMode ? Colors.white : const Color(0xFF090909);
     } else {
-      // ✅ روی کارت رنگی، متن همیشه مشکی
+      // روی کارت رنگی، متن همیشه مشکی
       textColor = const Color(0xFF090909);
     }
 
-    // ✅ رنگ دکمه انجام (دایره سمت چپ)
+    // رنگ دکمه انجام (دایره سمت چپ)
     final Color checkButtonBg = widget.isCompleted
         ? (theme.isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0))
         : const Color(0xFF090909);
@@ -202,7 +202,7 @@ class _HabitCardState extends State<HabitCard>
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                // ✅ تگ XP
+                                // تگ XP
                                 if (!widget.isCompleted)
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -222,7 +222,7 @@ class _HabitCardState extends State<HabitCard>
                                       ),
                                     ),
                                   ),
-                                // ✅ تگ زمان رکورد شده (اگه وجود داشته باشه)
+                                // تگ زمان رکورد شده (اگه وجود داشته باشه)
                                 if (widget.recordedTimeSeconds != null &&
                                     widget.recordedTimeSeconds! > 0) ...[
                                   const SizedBox(width: 4),
@@ -443,7 +443,7 @@ class _HabitCardState extends State<HabitCard>
                     ],
                   ),
 
-                  // ✅ لیست زیرعادت‌ها
+                  // لیست زیرعادت‌ها
                   if (widget.habit.subHabits.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Divider(height: 1, color: theme.borderColor),
@@ -520,7 +520,7 @@ class _HabitCardState extends State<HabitCard>
     );
   }
 
-  /// ✅ فرمت زمان به صورت خوانا
+  /// فرمت زمان به صورت خوانا
   /// - کمتر از 1 دقیقه: "45s"
   /// - بین 1 تا 60 دقیقه: "5m"
   /// - بیشتر از 60 دقیقه: "1h 20m"
@@ -546,7 +546,7 @@ class _HabitCardState extends State<HabitCard>
     bool isCompleted = false,
     required ThemeProvider theme,
   }) {
-    // ✅ روی کارت رنگی (فعال)، چیپ همیشه روشن با متن مشکی
+    // روی کارت رنگی (فعال)، چیپ همیشه روشن با متن مشکی
     // روی کارت تکمیل‌شده، چیپ با تم هماهنگ میشه
     final bool isOnColoredCard = !widget.isCompleted;
 

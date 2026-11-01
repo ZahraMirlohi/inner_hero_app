@@ -22,9 +22,9 @@ class TodayHabitsListWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
 
-    // ✅ رنگ‌های استاندارد بر اساس تم روز/شب
-    // - من: روز → primaryLight | شب → primaryColor
-    // - مقابل: روز → سفید | شب → مشکی
+    // رنگ‌های استاندارد بر اساس تم روز/شب
+    // - من: روز primaryLight | شب primaryColor
+    // - مقابل: روز سفید | شب مشکی
     final Color bgColor =
         isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
     final Color textColor = isMe
@@ -34,7 +34,7 @@ class TodayHabitsListWidget extends StatelessWidget {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
-    final calendar = Provider.of<CalendarProvider>(context); // ✅
+    final calendar = Provider.of<CalendarProvider>(context); // 
     final dateString = calendar.formatWithMonthName(data.date);
     final rate = (data.completionRate * 100).toInt();
 
@@ -42,7 +42,7 @@ class TodayHabitsListWidget extends StatelessWidget {
       width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bgColor, // ✅ پس‌زمینه پویا
+        color: bgColor, // پس‌زمینه پویا
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -333,7 +333,7 @@ class TodayHabitsListWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '🏆',
+                '',
                 style: TextStyle(fontSize: 9, color: textColor),
               ),
             ),
@@ -346,7 +346,7 @@ class TodayHabitsListWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '🎯',
+                '',
                 style: TextStyle(fontSize: 9, color: textColor),
               ),
             ),
@@ -457,7 +457,7 @@ class TodayHabitsListWidget extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '🏆 ${challenge.title}',
+              '${challenge.title}',
               style: TextStyle(
                 fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
@@ -534,7 +534,7 @@ class TodayHabitsListWidget extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '🎯 ${quest.title}',
+              '${quest.title}',
               style: TextStyle(
                 fontSize: 12,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,

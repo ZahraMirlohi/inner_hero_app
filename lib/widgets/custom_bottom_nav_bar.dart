@@ -36,7 +36,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
   late Animation<double> _slideAnimation;
   late Animation<double> _scaleAnimation;
 
-  // ✅ اندازه‌های ثابت
+  // اندازه‌های ثابت
   static const double _containerWidth = 280;
   static const double _containerHeight = 60;
   static const double _itemSize = 44;
@@ -114,7 +114,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ محاسبه فاصله بین آیتم‌ها
+    // محاسبه فاصله بین آیتم‌ها
     final double availableWidth = _containerWidth - (_horizontalPadding * 2);
     final double totalItemsWidth = _itemSize * widget.items.length;
     final double totalSpacing = availableWidth - totalItemsWidth;
@@ -122,19 +122,19 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ رنگ‌های تم‌محور
+    // رنگ‌های تم‌محور
     // - در تم شب: پس‌زمینه سفید
     // - در تم روز: پس‌زمینه مشکی
     final Color navBarColor =
         theme.isDarkMode ? Colors.white : const Color(0xFF090909);
 
-    // ✅ رنگ آیکون‌های غیرفعال
+    // رنگ آیکون‌های غیرفعال
     // - در تم شب: خاکستری متوسط (خوانا روی سفید)
     // - در تم روز: خاکستری تیره (خوانا روی مشکی)
     final Color inactiveIconColor =
         theme.isDarkMode ? Colors.grey.shade400 : const Color(0xFF6A6A6A);
 
-    // ✅ رنگ آیکون انتخاب‌شده (داخل دایره primaryColor)
+    // رنگ آیکون انتخاب‌شده (داخل دایره primaryColor)
     // - در هر دو تم: مشکی (چون دایره primaryColor روشنه)
     const Color activeIconColor = Color(0xFF090909);
 
@@ -143,7 +143,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Center(
-        // ✅ اجبار به LTR برای اینکه ترتیب آیتم‌ها به‌هم نریزد
+        // اجبار به LTR برای اینکه ترتیب آیتم‌ها به‌هم نریزد
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: Container(
@@ -151,7 +151,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
             height: _containerHeight,
             padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
             decoration: BoxDecoration(
-              // ✅ تم‌محور
+              // تم‌محور
               color: navBarColor,
               borderRadius: BorderRadius.circular(_containerHeight / 2),
               boxShadow: [
@@ -184,7 +184,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // ✅ دایره رنگی متحرک
+                // دایره رنگی متحرک
                 AnimatedBuilder(
                   animation: _slideAnimation,
                   builder: (context, child) {
@@ -222,7 +222,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                   },
                 ),
 
-                // ✅ همه آیتم‌ها
+                // همه آیتم‌ها
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(widget.items.length, (index) {
@@ -244,7 +244,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                                 child: Center(
                                   child: Icon(
                                     widget.items[index].icon,
-                                    // ✅ تم‌محور
+                                    // تم‌محور
                                     color: inactiveIconColor,
                                     size: _iconSize,
                                   ),

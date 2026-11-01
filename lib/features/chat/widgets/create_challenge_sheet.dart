@@ -69,7 +69,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ رنگ‌های محاسبه شده
+    // رنگ‌های محاسبه شده
     final Color inputFillColor =
         theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50;
 
@@ -450,7 +450,7 @@ class _CreateChallengeSheetState extends State<CreateChallengeSheet> {
                 ),
               ),
               child: const Text(
-                'ارسال چالش 🚀',
+                'ارسال چالش ',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

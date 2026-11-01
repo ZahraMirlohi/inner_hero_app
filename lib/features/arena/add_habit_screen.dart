@@ -345,7 +345,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '🎯 تنظیمات سطوح انجام عادت',
+              'تنظیمات سطوح انجام عادت',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1283,7 +1283,7 @@ class _AddHabitScreenState extends State<AddHabitScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('عادت با موفقیت ایجاد شد! 🎉'),
+              content: Text('عادت با موفقیت ایجاد شد! '),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),

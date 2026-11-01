@@ -9,7 +9,7 @@ class StorageService {
   final SupabaseClient _client = Supabase.instance.client;
 
   // ═══════════════════════════════════════════════════════════
-  // 📤 آپلود عکس پروفایل
+  // آپلود عکس پروفایل
   // ═══════════════════════════════════════════════════════════
   Future<String> uploadAvatar({
     required String userId,
@@ -38,16 +38,16 @@ class StorageService {
       final publicUrl =
           _client.storage.from('avatars').getPublicUrl(storagePath);
 
-      print('✅ Avatar uploaded: $publicUrl');
+      print('Avatar uploaded: $publicUrl');
       return publicUrl;
     } catch (e) {
-      print('❌ Error uploading avatar: $e');
+      print('Error uploading avatar: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📤 آپلود عکس گالری
+  // آپلود عکس گالری
   // ═══════════════════════════════════════════════════════════
   Future<Map<String, dynamic>> uploadGalleryPhoto({
     required String userId,
@@ -73,7 +73,7 @@ class StorageService {
       final publicUrl =
           _client.storage.from('user_gallery').getPublicUrl(storagePath);
 
-      print('✅ Gallery photo uploaded: $publicUrl');
+      print('Gallery photo uploaded: $publicUrl');
 
       return {
         'storage_path': storagePath,
@@ -81,13 +81,13 @@ class StorageService {
         'file_size': compressed.length,
       };
     } catch (e) {
-      print('❌ Error uploading gallery photo: $e');
+      print('Error uploading gallery photo: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🗑️ حذف فایل
+  // حذف فایل
   // ═══════════════════════════════════════════════════════════
   Future<void> deleteFile({
     required String bucket,
@@ -95,15 +95,15 @@ class StorageService {
   }) async {
     try {
       await _client.storage.from(bucket).remove([storagePath]);
-      print('✅ File deleted: $bucket/$storagePath');
+      print('File deleted: $bucket/$storagePath');
     } catch (e) {
-      print('❌ Error deleting file: $e');
+      print('Error deleting file: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🖼️ فشرده‌سازی عکس (پشتیبانی از Web و Mobile)
+  // فشرده‌سازی عکس (پشتیبانی از Web و Mobile)
   // ═══════════════════════════════════════════════════════════
   Future<Uint8List> _compressImage(
     Uint8List originalBytes, {
@@ -115,12 +115,12 @@ class StorageService {
         try {
           final decoded = img.decodeImage(originalBytes);
           if (decoded == null) {
-            // نمی‌توان decode کرد → مستقیم برگردان
+            // نمی‌توان decode کرد مستقیم برگردان
             return originalBytes;
           }
           return _encodeWithResize(decoded, originalBytes.length, maxSizeKB);
         } catch (e) {
-          print('⚠️ Web compression failed, returning original: $e');
+          print('Web compression failed, returning original: $e');
           return originalBytes;
         }
       }
@@ -133,7 +133,7 @@ class StorageService {
 
       return _encodeWithResize(decoded, originalBytes.length, maxSizeKB);
     } catch (e) {
-      print('❌ Error compressing image: $e');
+      print('Error compressing image: $e');
       rethrow;
     }
   }
@@ -192,7 +192,7 @@ class StorageService {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🧹 حذف همه‌ی عکس‌های یک کاربر
+  // حذف همه‌ی عکس‌های یک کاربر
   // ═══════════════════════════════════════════════════════════
   Future<void> deleteAllUserFiles({
     required String userId,
@@ -206,9 +206,9 @@ class StorageService {
       final paths = files.map((f) => '$userId/${f.name}').toList();
       await _client.storage.from(bucket).remove(paths);
 
-      print('✅ Deleted ${paths.length} files from $bucket');
+      print('Deleted ${paths.length} files from $bucket');
     } catch (e) {
-      print('❌ Error deleting user files: $e');
+      print('Error deleting user files: $e');
     }
   }
 }

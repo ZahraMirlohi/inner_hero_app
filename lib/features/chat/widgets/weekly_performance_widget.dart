@@ -23,7 +23,7 @@ class WeeklyPerformanceWidget extends StatelessWidget {
     final theme = Provider.of<ThemeProvider>(context);
     final calendar = Provider.of<CalendarProvider>(context);
 
-    // ✅ رنگ‌های استاندارد بر اساس تم روز/شب
+    // رنگ‌های استاندارد بر اساس تم روز/شب
     final Color bgColor =
         isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
     final Color textColor = isMe
@@ -33,12 +33,12 @@ class WeeklyPerformanceWidget extends StatelessWidget {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
-    // ✅ حروف روزهای هفته از CalendarProvider
+    // حروف روزهای هفته از CalendarProvider
     final weekDayLetters = calendar.weekDayHeaders;
 
     final successPercent = (data.successRate * 100).toInt();
 
-    // ✅ ایندکس امروز بر اساس تقویم
+    // ایندکس امروز بر اساس تقویم
     final int todayIndex = _getTodayIndex(calendar);
 
     return Container(
@@ -255,7 +255,7 @@ class WeeklyPerformanceWidget extends StatelessWidget {
     );
   }
 
-  /// ✅ فرمت بازه هفته با CalendarProvider
+  /// فرمت بازه هفته با CalendarProvider
   String _formatWeekRange(
     DateTime start,
     DateTime end,
@@ -264,7 +264,7 @@ class WeeklyPerformanceWidget extends StatelessWidget {
     return '${calendar.formatShort(start)} - ${calendar.formatShort(end)}';
   }
 
-  /// ✅ محاسبه ایندکس امروز در هفته
+  /// محاسبه ایندکس امروز در هفته
   /// شمسی: 0=شنبه، میلادی: 0=Monday
   int _getTodayIndex(CalendarProvider calendar) {
     if (calendar.isJalali) {

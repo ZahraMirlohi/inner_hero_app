@@ -6,7 +6,7 @@ import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 
 // ═══════════════════════════════════════════════════════════════
-// 🎨 SOFT GLASS DESIGN SYSTEM
+// SOFT GLASS DESIGN SYSTEM
 // ═══════════════════════════════════════════════════════════════
 
 class SoftShadows {
@@ -58,13 +58,13 @@ class SoftShadows {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🔲 CLIPPER: حفره مستطیل با گوشه‌های گرد
+// CLIPPER: حفره مستطیل با گوشه‌های گرد
 // ═══════════════════════════════════════════════════════════════
 
 class _CardNotchClipper extends CustomClipper<Path> {
   final double notchWidth; // عرض حفره
   final double notchDepth; // عمق حفره
-  final double notchCorner; // ✅ گردی گوشه‌های حفره
+  final double notchCorner; // گردی گوشه‌های حفره
   final double notchPosition; // 0.0 = چپ, 1.0 = راست
   final bool isTop; // بالا یا پایین
   final double cornerRadius; // گردی گوشه‌های کارت
@@ -72,7 +72,7 @@ class _CardNotchClipper extends CustomClipper<Path> {
   const _CardNotchClipper({
     this.notchWidth = 80,
     this.notchDepth = 20,
-    this.notchCorner = 25, // ✅ این پارامتر باید اینجا تعریف بشه
+    this.notchCorner = 25, // این پارامتر باید اینجا تعریف بشه
     this.notchPosition = 5.0,
     this.isTop = true,
     this.cornerRadius = 50,
@@ -91,7 +91,7 @@ class _CardNotchClipper extends CustomClipper<Path> {
     final double notchStartX = notchCenterX - halfWidth;
     final double notchEndX = notchCenterX + halfWidth;
 
-    // 🔑 محدود کردن گردی گوشه به نصف ابعاد حفره
+    // محدود کردن گردی گوشه به نصف ابعاد حفره
     final double maxCorner = (halfWidth < notchDepth ? halfWidth : notchDepth);
     final double c = notchCorner.clamp(0.0, maxCorner);
 
@@ -104,7 +104,7 @@ class _CardNotchClipper extends CustomClipper<Path> {
       path.lineTo(notchStartX, 0);
 
       // ═══════════════════════════════════════════════
-      // 🟦 حفره مستطیل گوشه‌گرد
+      // حفره مستطیل گوشه‌گرد
       // ═══════════════════════════════════════════════
 
       // گوشه بالا-چپ حفره
@@ -278,12 +278,12 @@ class _NotchedChallengeCard extends StatelessWidget {
     final isBoss = challenge['is_boss'] == true;
 
     // ═══════════════════════════════════════════════════════
-    // 🎨 رنگ‌بندی بر اساس حالت کارت
+    // رنگ‌بندی بر اساس حالت کارت
     // ═══════════════════════════════════════════════════════
 
-    // 🟢 کارت فعال → رنگ تم
-    // 🟢 کارت موفق → سبز ملایم (در تم شب تیره‌تر)
-    // ⚪ کارت جدید → theme.cardColor
+    // کارت فعال رنگ تم
+    // کارت موفق سبز ملایم (در تم شب تیره‌تر)
+    // کارت جدید theme.cardColor
     final Color cardColor = isActive
         ? primaryColor
         : (isCompleted
@@ -299,7 +299,7 @@ class _NotchedChallengeCard extends StatelessWidget {
     final double borderWidth = isActive ? 0 : 2.5;
 
     // ═══════════════════════════════════════════════════════
-    // 🎛️ پارامترهای حفره
+    // پارامترهای حفره
     // ═══════════════════════════════════════════════════════
     const double notchWidth = 80;
     const double notchDepth = 40;
@@ -361,7 +361,7 @@ class _NotchedChallengeCard extends StatelessWidget {
                     borderColor: borderColor,
                     borderWidth: borderWidth,
                     contentTopPadding: contentTopPadding,
-                    theme: theme, // ✅ پاس دادن theme
+                    theme: theme, // پاس دادن theme
                   ),
                 )
               : Container(
@@ -383,7 +383,7 @@ class _NotchedChallengeCard extends StatelessWidget {
                       borderColor: borderColor,
                       borderWidth: borderWidth,
                       contentTopPadding: contentTopPadding,
-                      theme: theme, // ✅ پاس دادن theme
+                      theme: theme, // پاس دادن theme
                     ),
                   ),
                 ),
@@ -404,7 +404,7 @@ class _NotchedChallengeCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎨 محتوای داخلی کارت
+  // محتوای داخلی کارت
   // ═══════════════════════════════════════════════════════════
   Widget _buildCardContent({
     required String title,
@@ -415,11 +415,11 @@ class _NotchedChallengeCard extends StatelessWidget {
     required Color borderColor,
     required double borderWidth,
     required double contentTopPadding,
-    required ThemeProvider theme, // ✅ پارامتر جدید
+    required ThemeProvider theme, // پارامتر جدید
   }) {
     final bool isDarkBackground = isActive;
-    // ✅ روی کارت رنگی (فعال): متن مشکی
-    // ✅ روی کارت غیرفعال: theme.textColor
+    // روی کارت رنگی (فعال): متن مشکی
+    // روی کارت غیرفعال: theme.textColor
     final Color textColor =
         isDarkBackground ? const Color(0xFF090909) : theme.textColor;
     final Color subtleTextColor = isDarkBackground
@@ -482,7 +482,7 @@ class _NotchedChallengeCard extends StatelessWidget {
               _buildProgressBar(
                 progressValue!,
                 progressText ?? '',
-                theme, // ✅ پاس دادن theme
+                theme, // پاس دادن theme
               ),
             ],
 
@@ -496,7 +496,7 @@ class _NotchedChallengeCard extends StatelessWidget {
                   isDarkBackground ? Colors.white : accentColor,
                   isCompleted,
                   textColor: textColor,
-                  theme: theme, // ✅
+                  theme: theme, // 
                 ),
                 const Spacer(),
                 _buildTag(
@@ -519,7 +519,7 @@ class _NotchedChallengeCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🏷️ متدهای کمکی
+  // متدهای کمکی
   // ═══════════════════════════════════════════════════════════
 
   Widget _buildTag({
@@ -636,7 +636,7 @@ class _NotchedChallengeCard extends StatelessWidget {
   Widget _buildProgressBar(
     double progress,
     String text,
-    ThemeProvider theme, // ✅ پارامتر جدید
+    ThemeProvider theme, // پارامتر جدید
   ) {
     final bool isDarkBg = isActive;
     final Color textColor =
@@ -779,7 +779,7 @@ class _NotchedChallengeCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 WIDGET اصلی صفحه چالش‌ها
+// WIDGET اصلی صفحه چالش‌ها
 // ═══════════════════════════════════════════════════════════════
 
 class ChallengesTab extends StatefulWidget {
@@ -950,7 +950,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     }
 
     return Container(
-      color: theme.backgroundColor, // ✅ از Color(0xFFF7FCEB) به theme
+      color: theme.backgroundColor, // از Color(0xFFF7FCEB) به theme
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 100, 16, 120),
         child: Column(
@@ -990,7 +990,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               _buildSectionHeader(
                 icon: Icons.play_circle,
                 title: ' چالش‌های فعال من',
-                color: theme.textColor, // ✅ از 0xFF090909
+                color: theme.textColor, // از 0xFF090909
                 centered: true,
               ),
               const SizedBox(height: 12),
@@ -1022,7 +1022,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               _buildSectionHeader(
                 icon: Icons.explore,
                 title: ' چالش‌های جدید',
-                color: theme.textColor, // ✅
+                color: theme.textColor, // 
                 centered: true,
               ),
               const SizedBox(height: 12),
@@ -1037,7 +1037,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             (index, challenge) => MapEntry(
                               index,
                               Padding(
-                                // ✅ از 14 به 6
+                                // از 14 به 6
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: SizedBox(
                                   height: 170,
@@ -1054,7 +1054,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                           .toList(),
                     ),
                   ),
-                  const SizedBox(width: 10), // ✅ از 12 به 10
+                  const SizedBox(width: 10), // از 12 به 10
                   Expanded(
                     child: Column(
                       children: rightColumn
@@ -1063,7 +1063,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             (index, challenge) => MapEntry(
                               index,
                               Padding(
-                                // ✅ از 14 به 6
+                                // از 14 به 6
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: SizedBox(
                                   height: 170,
@@ -1104,7 +1104,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
         width: 130,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          // ✅ گرادیانت طلایی-نارنجی پس‌زمینه
+          // گرادیانت طلایی-نارنجی پس‌زمینه
           gradient: const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -1119,7 +1119,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
-            // ✅ درخشش طلایی قوی‌تر از ماموریت
+            // درخشش طلایی قوی‌تر از ماموریت
             BoxShadow(
               color: const Color(0xFFFFA500).withValues(alpha: 0.25),
               blurRadius: 24,
@@ -1134,7 +1134,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // ═══════════════════════════════════════════
-              // 🌟 ستاره‌های تزئینی گوشه
+              // ستاره‌های تزئینی گوشه
               // ═══════════════════════════════════════════
               SizedBox(
                 height: 14,
@@ -1166,13 +1166,13 @@ class _ChallengesTabState extends State<ChallengesTab> {
               ),
 
               // ═══════════════════════════════════════════
-              // 🏆 جام طلایی
+              // جام طلایی
               // ═══════════════════════════════════════════
               Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
-                  // ✅ هاله درخشش پشت جام
+                  // هاله درخشش پشت جام
                   Container(
                     width: 90,
                     height: 90,
@@ -1186,13 +1186,13 @@ class _ChallengesTabState extends State<ChallengesTab> {
                       ),
                     ),
                   ),
-                  // ✅ جام
+                  // جام
                   Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      // ✅ گرادیانت طلایی براق
+                      // گرادیانت طلایی براق
                       gradient: const RadialGradient(
                         center: Alignment(-0.4, -0.4),
                         radius: 0.9,
@@ -1233,7 +1233,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             ),
                           ),
                         ),
-                        // ✅ آیکون جام
+                        // آیکون جام
                         const Center(
                           child: Icon(
                             Icons.emoji_events,
@@ -1241,7 +1241,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                             color: Color(0xFF5D4037), // قهوه‌ای تیره
                           ),
                         ),
-                        // ✨ درخشش بالا-راست
+                        // درخشش بالا-راست
                         Positioned(
                           top: 6,
                           right: 8,
@@ -1275,7 +1275,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               const SizedBox(height: 6),
 
               // ═══════════════════════════════════════════
-              // 📛 پلاک نام
+              // پلاک نام
               // ═══════════════════════════════════════════
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -1283,7 +1283,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  // ✅ پس‌زمینه پلاک قهوه‌ای تیره
+                  // پس‌زمینه پلاک قهوه‌ای تیره
                   color: const Color(0xFF5D4037),
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
@@ -1311,7 +1311,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               const SizedBox(height: 4),
 
               // ═══════════════════════════════════════════
-              // 🏅 برچسب «قهرمان»
+              // برچسب «قهرمان»
               // ═══════════════════════════════════════════
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -1359,7 +1359,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final Color primaryLight = themeProvider.primaryLight;
 
-    // ✅ حذف dynamicGreen — استفاده مستقیم از primaryColor
+    // حذف dynamicGreen — استفاده مستقیم از primaryColor
 
     return FutureBuilder<List<dynamic>>(
       key: ValueKey('active_${challengeId}_$_refreshCounter'),
@@ -1386,7 +1386,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
         return Container(
           decoration: BoxDecoration(
-            color: primaryColor, // ✅ رنگ تم اپلیکیشن
+            color: primaryColor, // رنگ تم اپلیکیشن
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -1558,7 +1558,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
                     ),
                     const Spacer(),
 
-                    // ✅ دکمه مشاهده (مشکی)
+                    // دکمه مشاهده (مشکی)
                     GestureDetector(
                       onTap: () => widget.showChallengeDetails(challenge),
                       child: Container(
@@ -1594,7 +1594,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
                     const SizedBox(width: 6),
 
-                    // ✅ دکمه حذف (primaryLight)
+                    // دکمه حذف (primaryLight)
                     GestureDetector(
                       onTap: () => _showLeaveChallengeDialog(challenge),
                       child: Container(
@@ -1646,7 +1646,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
     final isExpired = challenge['isRegistrationClosed'] == true;
     final duration = challenge['challenge_duration'] as int? ?? 7;
 
-    // 🎨 پالت رنگ‌های متنوع برای کارت‌های جدید
+    // پالت رنگ‌های متنوع برای کارت‌های جدید
     final List<Color> cardColors = [
       const Color(0xFF4A90E2),
       const Color(0xFFE74C3C),
@@ -1671,8 +1671,8 @@ class _ChallengesTabState extends State<ChallengesTab> {
           accentColor: accentColor,
           primaryColor: primaryColor,
           participants: snapshot.data,
-          notchLabel: '$duration روز', // ← اینجا تغییر کرد
-          notchIcon: Icons.calendar_today, // ← آیکون تقویم
+          notchLabel: '$duration روز', // اینجا تغییر کرد
+          notchIcon: Icons.calendar_today, // آیکون تقویم
           onTap: () => widget.showChallengeDetails(challenge),
         );
       },
@@ -1816,9 +1816,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
               children: [
                 Text(
                   spark['type'] == 'quote'
-                      ? '✨ جرقه روزانه'
+                      ? 'جرقه روزانه'
                       : spark['type'] == 'challenge'
-                          ? '⚡ چالش روزانه'
+                          ? 'چالش روزانه'
                           : '💡 واقعیت علمی',
                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                 ),
@@ -1850,7 +1850,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
   Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Container(
-      color: theme.backgroundColor, // ✅
+      color: theme.backgroundColor, // 
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1871,7 +1871,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
             Text(
               'هنوز چالشی وجود ندارد',
               style: TextStyle(
-                color: theme.textSecondaryColor, // ✅
+                color: theme.textSecondaryColor, // 
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -1880,7 +1880,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
             Text(
               'برای اضافه شدن چالش‌های جدید منتظر بمانید',
               style: TextStyle(
-                color: theme.textSecondaryColor, // ✅
+                color: theme.textSecondaryColor, // 
                 fontSize: 12,
               ),
             ),

@@ -292,7 +292,7 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('بسته "${widget.package.title}" فعال شد! 🎉'),
+              content: Text('بسته "${widget.package.title}" فعال شد! '),
               backgroundColor: Colors.green,
             ),
           );

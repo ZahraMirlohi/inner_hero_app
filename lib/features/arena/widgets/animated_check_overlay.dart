@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-/// ✅ ویجت انیمیشن تیک که روی دایره آیکون ظاهر می‌شود
+/// ویجت انیمیشن تیک که روی دایره آیکون ظاهر می‌شود
 /// هنگام کلیک، یک تیک با انیمیشن scale + fade ظاهر و محو می‌شود
 class AnimatedCheckOverlay extends StatefulWidget {
   final Widget child;
@@ -80,7 +80,7 @@ class _AnimatedCheckOverlayState extends State<AnimatedCheckOverlay>
         alignment: Alignment.center,
         children: [
           widget.child,
-          // ✅ تیک انیمیشنی
+          // تیک انیمیشنی
           IgnorePointer(
             child: AnimatedBuilder(
               animation: _controller,
@@ -108,7 +108,7 @@ class _AnimatedCheckOverlayState extends State<AnimatedCheckOverlay>
                       ),
                       child: Icon(
                         Icons.check,
-                        // ✅ رنگ تیک به صورت هوشمند انتخاب می‌شه:
+                        // رنگ تیک به صورت هوشمند انتخاب می‌شه:
                         // - اگه checkColor سفید باشه، تیک سبز (روی دکمه تیره)
                         // - اگه checkColor مشکی/رنگی باشه، تیک سفید (روی دکمه روشن)
                         color: widget.checkColor == Colors.white

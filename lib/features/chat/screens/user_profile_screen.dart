@@ -71,7 +71,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _isLoading = false;
         });
 
-        // ✅ بارگذاری عکس‌های گالری (بعد از profile)
+        // بارگذاری عکس‌های گالری (بعد از profile)
         _loadUserPhotos();
       } else {
         setState(() {
@@ -88,7 +88,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // ✅ بارگذاری عکس‌های گالری
+  // بارگذاری عکس‌های گالری
   Future<void> _loadUserPhotos() async {
     if (!mounted) return;
 
@@ -219,7 +219,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         children: [
-          // ✅ کارت اصلی پروفایل
+          // کارت اصلی پروفایل
           _buildProfileCard(
             name: name,
             avatarUrl: avatarUrl,
@@ -230,12 +230,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ✅ گالری عکس‌ها (جدید)
+          // گالری عکس‌ها (جدید)
           _buildGallerySection(theme, primaryColor),
 
           const SizedBox(height: 16),
 
-          // ✅ آمار کاربر
+          // آمار کاربر
           _buildStatsCard(
             totalXp: totalXp,
             currentStreak: currentStreak,
@@ -246,7 +246,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ✅ اطلاعات شخصیت
+          // اطلاعات شخصیت
           if (mbtiType != null || interests.isNotEmpty || goals.isNotEmpty)
             _buildPersonalityCard(
               mbtiType: mbtiType,
@@ -257,7 +257,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           const SizedBox(height: 16),
 
-          // ✅ دکمه بازگشت
+          // دکمه بازگشت
           _buildActionButtons(primaryColor),
         ],
       ),
@@ -265,7 +265,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📸 بخش گالری عکس‌ها (جدید)
+  // بخش گالری عکس‌ها (جدید)
   // ═══════════════════════════════════════════════════════════
   Widget _buildGallerySection(ThemeProvider theme, Color primaryColor) {
     // اگر در حال بارگذاری است
@@ -645,7 +645,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       child: Column(
         children: [
-          // ✅ آواتار
+          // آواتار
           Container(
             width: 100,
             height: 100,
@@ -680,7 +680,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ✅ نام
+          // نام
           Text(
             name,
             style: TextStyle(
@@ -690,7 +690,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ),
 
-          // ✅ یوزرنیم (به جای ایمیل و شماره)
+          // یوزرنیم (به جای ایمیل و شماره)
           if (username != null && username.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
@@ -724,7 +724,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             ),
           ],
 
-          // ✅ بیو
+          // بیو
           if (bio != null && bio.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
@@ -1051,7 +1051,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 📷 Photo Viewer (نمایش تمام‌صفحه)
+// Photo Viewer (نمایش تمام‌صفحه)
 // ═══════════════════════════════════════════════════════════
 class _ProfilePhotoViewer extends StatefulWidget {
   final List<UserPhoto> photos;

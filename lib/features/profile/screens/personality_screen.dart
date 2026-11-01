@@ -175,7 +175,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('اطلاعات با موفقیت ذخیره شد ✅'),
+            content: Text('اطلاعات با موفقیت ذخیره شد '),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -368,7 +368,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           Row(
             children: [
               Text(
-                '🧠 تایپ شخصیتی MBTI',
+                'تایپ شخصیتی MBTI',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -496,7 +496,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          '🧠 تست شخصیت MBTI',
+          'تست شخصیت MBTI',
           style: TextStyle(color: theme.textColor),
         ),
         content: Column(
@@ -517,7 +517,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
               child: GestureDetector(
                 onTap: () {},
                 child: Text(
-                  '🔗 www.16personalities.com/fa',
+                  'www.16personalities.com/fa',
                   style: TextStyle(
                     color: primaryColor,
                     fontSize: 14,

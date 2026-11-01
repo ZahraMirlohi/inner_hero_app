@@ -296,14 +296,14 @@ class _QuestsTabState extends State<QuestsTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ماموریت "${quest.title}" شروع شد! 🎉'),
+            content: Text('ماموریت "${quest.title}" شروع شد! '),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      print('❌ Error starting quest: $e');
+      print('Error starting quest: $e');
       if (mounted) {
         String message = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -919,7 +919,7 @@ class _QuestsTabState extends State<QuestsTab> {
         );
       }
     } catch (e) {
-      print('❌ Error cancelling quest: $e');
+      print('Error cancelling quest: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

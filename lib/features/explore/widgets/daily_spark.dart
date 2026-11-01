@@ -61,7 +61,7 @@ class _DailySparkState extends State<DailySpark> {
 
     final spark = _dailySpark[DateTime.now().day % _dailySpark.length];
 
-    // ✅ در تم شب از گرادیانت تیره‌تر استفاده کن
+    // در تم شب از گرادیانت تیره‌تر استفاده کن
     final List<Color> gradientColors = theme.isDarkMode
         ? [
             const Color(0xFFB85C1F), // نارنجی تیره
@@ -116,9 +116,9 @@ class _DailySparkState extends State<DailySpark> {
               children: [
                 Text(
                   spark['type'] == 'quote'
-                      ? '✨ جرقه روزانه'
+                      ? 'جرقه روزانه'
                       : spark['type'] == 'challenge'
-                          ? '⚡ چالش روزانه'
+                          ? 'چالش روزانه'
                           : '💡 واقعیت علمی',
                   style: const TextStyle(
                     fontSize: 12,

@@ -51,17 +51,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _currentStreak = 0;
   int _bestStreak = 0;
   int _weeklyStreak = 0;
-  final ImagePicker _imagePicker = ImagePicker(); // ✅ جدید
-  final StorageService _storage = StorageService(); // ✅ جدید
-  bool _isUploadingAvatar = false; // ✅ جدید
+  final ImagePicker _imagePicker = ImagePicker(); // جدید
+  final StorageService _storage = StorageService(); // جدید
+  bool _isUploadingAvatar = false; // جدید
 
   DateTime? _lastRefreshTime;
   static const Duration _minRefreshInterval = Duration(seconds: 1);
 
-  // ✅ برای جلوگیری از بارگذاری مجدد در حین بارگذاری
+  // برای جلوگیری از بارگذاری مجدد در حین بارگذاری
   bool _isLoadingInProgress = false;
 
-  // 🎨 رنگ‌های تم اپلیکیشن (از ThemeProvider) — فقط برای ظاهر، در منطق استفاده نمی‌شه
+  // رنگ‌های تم اپلیکیشن (از ThemeProvider) — فقط برای ظاهر، در منطق استفاده نمی‌شه
   late ThemeProvider _theme;
 
   @override
@@ -69,10 +69,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _loadProfile();
 
-    // ✅ گوش دادن به تغییرات notifier
+    // گوش دادن به تغییرات notifier
     widget.refreshNotifier?.addListener(_onRefreshTriggered);
 
-    // ✅ اگر notifier مقداردهی شده، یکبار ریفرش کن (برای همگام‌سازی اولیه)
+    // اگر notifier مقداردهی شده، یکبار ریفرش کن (برای همگام‌سازی اولیه)
     if (widget.refreshNotifier != null && widget.refreshNotifier!.value > 0) {
       _onRefreshTriggered();
     }
@@ -86,47 +86,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _onRefreshTriggered() {
     print(
-      '🔄 Profile refresh triggered from notifier: ${widget.refreshNotifier?.value}',
+      'Profile refresh triggered from notifier: ${widget.refreshNotifier?.value}',
     );
 
     final now = DateTime.now();
     if (_lastRefreshTime != null &&
         now.difference(_lastRefreshTime!) < _minRefreshInterval) {
-      print('⏭️ Skip refresh: too soon');
+      print('Skip refresh: too soon');
       return;
     }
     _lastRefreshTime = now;
 
     if (_isRefreshing) {
-      print('⏭️ Skip refresh: already refreshing');
+      print('Skip refresh: already refreshing');
       return;
     }
 
     _isRefreshing = true;
-    print('🔄 Refreshing profile...');
+    print('Refreshing profile...');
 
-    // ✅ فقط کش weekDays را پاک کن (چون _cachedHabits و _cachedTasks وجود ندارند)
+    // فقط کش weekDays را پاک کن (چون _cachedHabits و _cachedTasks وجود ندارند)
     _cachedWeekDays = null;
 
-    // ✅ اجباری کردن بارگذاری از دیتابیس
+    // اجباری کردن بارگذاری از دیتابیس
     _isLoadingInProgress = false;
 
     _loadProfile().then((_) {
       _analyticsKey.currentState?.refreshData();
       _isRefreshing = false;
-      debugPrint('✅ Profile refresh completed');
+      debugPrint('Profile refresh completed');
     }).catchError((e) {
-      debugPrint('❌ Profile refresh error: $e');
+      debugPrint('Profile refresh error: $e');
       _isRefreshing = false;
     });
   }
   // ==================== متد اصلی بارگذاری پروفایل ====================
 
   Future<void> _loadProfile() async {
-    // ✅ چک کن SyncProvider پاک شده
+    // چک کن SyncProvider پاک شده
     final syncProvider = Provider.of<SyncProvider>(context, listen: false);
     if (syncProvider.isCleared) {
-      print('⏭️ Skip _loadProfile: SyncProvider is cleared');
+      print('Skip _loadProfile: SyncProvider is cleared');
       return;
     }
 
@@ -142,15 +142,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ همیشه از دیتابیس بخوان
+      // همیشه از دیتابیس بخوان
       if (syncProvider.isOnline) {
-        print('🌐 Online - loading from Supabase...');
+        print('Online - loading from Supabase...');
         final success = await _loadFromSupabase(syncProvider);
         if (success) {
           _isLoadingInProgress = false;
           final calendar =
               Provider.of<CalendarProvider>(context, listen: false);
-          await _recalculateWeeklyStreak(calendar); // ✅ با calendar
+          await _recalculateWeeklyStreak(calendar); // با calendar
           if (mounted) {
             setState(() {});
           }
@@ -159,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       // اگر آنلاین نبود، از localStorage بخوان
-      print('📱 Loading from LocalStorage...');
+      print('Loading from LocalStorage...');
       final localSuccess = await _loadFromLocal(syncProvider);
 
       if (!localSuccess && mounted) {
@@ -175,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error loading profile: $e');
+      print('Error loading profile: $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'خطا در بارگذاری: ${e.toString()}';
@@ -194,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final now = DateTime.now();
 
-      // ✅ محاسبه شروع هفته بر اساس تقویم انتخابی
+      // محاسبه شروع هفته بر اساس تقویم انتخابی
       int daysToSubtract;
       if (calendar.isJalali) {
         final jalaliToday = Jalali.fromDateTime(now);
@@ -241,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      debugPrint('⚠️ Error recalculating weekly streak: $e');
+      debugPrint('Error recalculating weekly streak: $e');
     }
   }
   // ==================== بارگذاری از LocalStorage ====================
@@ -261,13 +261,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _bestStreak = localProfile['best_streak'] ?? 0;
         _weeklyStreak = localProfile['weekly_streak'] ?? 0;
 
-        // ✅ اطمینان از اینکه total_xp از localStorage صحیح است
+        // اطمینان از اینکه total_xp از localStorage صحیح است
         _profile!.totalXp = localProfile['total_xp'] ?? 0;
         print(
-          '📊 Profile loaded from LOCAL storage with XP: ${_profile!.totalXp}',
+          'Profile loaded from LOCAL storage with XP: ${_profile!.totalXp}',
         );
 
-        print('✅ Profile loaded from LOCAL storage');
+        print('Profile loaded from LOCAL storage');
         print('   - Name: ${_profile?.name}');
         print('   - XP: ${_profile?.totalXp}');
         print('   - Streak: $_currentStreak');
@@ -280,10 +280,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return true;
       }
 
-      print('⚠️ No profile found in LOCAL storage');
+      print('No profile found in LOCAL storage');
       return false;
     } catch (e) {
-      print('❌ Error loading from local: $e');
+      print('Error loading from local: $e');
       return false;
     }
   }
@@ -296,7 +296,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final currentUser = await _supabase.getCurrentUser();
       if (currentUser == null) {
-        print('⚠️ No user logged in');
+        print('No user logged in');
         if (mounted) {
           setState(() {
             _errorMessage = 'لطفاً وارد حساب کاربری خود شوید';
@@ -306,9 +306,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return false;
       }
 
-      print('👤 Loading profile for user: ${currentUser.id}');
+      print('Loading profile for user: ${currentUser.id}');
 
-      // ✅ دریافت پروفایل با XP از دیتابیس
+      // دریافت پروفایل با XP از دیتابیس
       final response = await _supabase.client
           .from('profiles')
           .select()
@@ -316,17 +316,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .maybeSingle();
 
       if (response != null) {
-        // ✅ اطمینان از وجود unique_id
+        // اطمینان از وجود unique_id
         if (response['unique_id'] == null || response['unique_id'].isEmpty) {
           final newUniqueId = UniqueIdGenerator.generateSecure();
           await _supabase.client
               .from('profiles')
               .update({'unique_id': newUniqueId}).eq('user_id', currentUser.id);
           response['unique_id'] = newUniqueId;
-          print('✅ Unique ID generated for user: $newUniqueId');
+          print('Unique ID generated for user: $newUniqueId');
         }
 
-        // ✅ دریافت XP از user_progress (منبع اصلی)
+        // دریافت XP از user_progress (منبع اصلی)
         int totalXP = response['total_xp'] ?? 0;
         try {
           final progressResponse = await _supabase.client
@@ -337,38 +337,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           if (progressResponse != null) {
             final progressXP = progressResponse['total_xp'] as int? ?? 0;
-            // ✅ از user_progress استفاده کن چون منبع اصلی است
+            // از user_progress استفاده کن چون منبع اصلی است
             totalXP = progressXP;
-            print('📊 XP from user_progress: $totalXP');
+            print('XP from user_progress: $totalXP');
 
-            // ✅ اگر profiles با user_progress هماهنگ نیست، آن را به‌روزرسانی کن
+            // اگر profiles با user_progress هماهنگ نیست، آن را به‌روزرسانی کن
             if (response['total_xp'] != totalXP) {
               await _supabase.client
                   .from('profiles')
                   .update({'total_xp': totalXP}).eq('user_id', currentUser.id);
-              print('📊 Profile XP updated to match user_progress: $totalXP');
+              print('Profile XP updated to match user_progress: $totalXP');
             }
           }
         } catch (e) {
-          print('⚠️ Error getting user_progress: $e');
+          print('Error getting user_progress: $e');
         }
 
-        // ✅ ساخت پروفایل با XP صحیح
+        // ساخت پروفایل با XP صحیح
         _profile = UserProfile.fromMap(response, currentUser.id);
         _currentStreak = response['current_streak'] ?? 0;
         _bestStreak = response['best_streak'] ?? 0;
         _weeklyStreak = response['weekly_streak'] ?? 0;
 
-        // ✅ تنظیم total_xp با مقدار صحیح
+        // تنظیم total_xp با مقدار صحیح
         _profile!.totalXp = totalXP;
-        print('📊 Profile XP set to: ${_profile!.totalXp}');
+        print('Profile XP set to: ${_profile!.totalXp}');
 
         final calendar = Provider.of<CalendarProvider>(context, listen: false);
         _cachedWeekDays = await _calculateWeekDaysFromDatabase(
           currentUser.id,
           calendar,
         );
-        // ✅ ذخیره در LocalStorage با مقدار صحیح
+        // ذخیره در LocalStorage با مقدار صحیح
         final profileMap = _profile!.toMap();
         profileMap['user_id'] = currentUser.id;
         profileMap['current_streak'] = _currentStreak;
@@ -377,7 +377,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profileMap['total_xp'] = totalXP;
         await syncProvider.saveProfileToLocal(profileMap);
 
-        print('✅ Profile loaded from SUPABASE');
+        print('Profile loaded from SUPABASE');
         print('   - Name: ${_profile?.name}');
         print('   - XP: ${_profile?.totalXp}');
         print('   - Streak: $_currentStreak');
@@ -390,19 +390,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return true;
       }
 
-      print('🆕 No profile found, creating new...');
+      print('No profile found, creating new...');
       await _createNewProfile();
       return true;
     } catch (e) {
-      print('❌ Error loading from Supabase: $e');
+      print('Error loading from Supabase: $e');
       return false;
     }
   }
 
-  // ✅ کش برای weekDays
+  // کش برای weekDays
   List<bool>? _cachedWeekDays;
 
-  // ✅ متد محاسبه weekDays از دیتابیس (با await)
+  // متد محاسبه weekDays از دیتابیس (با await)
   Future<List<bool>> _calculateWeekDaysFromDatabase(
     String userId,
     CalendarProvider calendar,
@@ -412,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final now = DateTime.now();
 
-      // ✅ محاسبه شروع هفته بر اساس تقویم
+      // محاسبه شروع هفته بر اساس تقویم
       int daysToSubtract;
       if (calendar.isJalali) {
         final jalaliNow = Jalali.fromDateTime(now);
@@ -439,7 +439,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       return weekDays;
     } catch (e) {
-      debugPrint('⚠️ Error calculating weekDays: $e');
+      debugPrint('Error calculating weekDays: $e');
       return weekDays;
     }
   }
@@ -461,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      // ✅ تولید ID یکتا
+      // تولید ID یکتا
       final uniqueId = UniqueIdGenerator.generateSecure();
 
       final newProfile = UserProfile(
@@ -469,34 +469,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
         name: currentUser.email?.split('@').first.isNotEmpty == true
             ? currentUser.email!.split('@').first
             : 'کاربر',
-        uniqueId: uniqueId, // ✅ اضافه کردن uniqueId
+        uniqueId: uniqueId, // اضافه کردن uniqueId
         email: currentUser.email,
         registeredAt: DateTime.now(),
         totalXp: 0,
       );
 
-      // ✅ ذخیره در Supabase با unique_id
+      // ذخیره در Supabase با unique_id
       await _supabase.client.from('profiles').insert({
         'user_id': currentUser.id,
         'name': newProfile.name,
         'email': newProfile.email,
-        'unique_id': uniqueId, // ✅ ذخیره unique_id
+        'unique_id': uniqueId, // ذخیره unique_id
         'total_xp': 0,
         'current_streak': 0,
         'best_streak': 0,
         'weekly_streak': 0,
       });
 
-      // ✅ ایجاد user_progress
+      // ایجاد user_progress
       await _supabase.createUserProgress(currentUser.id);
 
-      // ✅ تنظیم پروفایل محلی
+      // تنظیم پروفایل محلی
       _profile = newProfile;
       _currentStreak = 0;
       _bestStreak = 0;
       _weeklyStreak = 0;
 
-      // ✅ ذخیره در LocalStorage
+      // ذخیره در LocalStorage
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final profileMap = newProfile.toMap();
       profileMap['user_id'] = currentUser.id;
@@ -505,7 +505,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       profileMap['weekly_streak'] = 0;
       await syncProvider.saveProfileToLocal(profileMap);
 
-      print('✅ New profile created with Unique ID: $uniqueId');
+      print('New profile created with Unique ID: $uniqueId');
 
       if (mounted) {
         setState(() {
@@ -513,7 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error creating profile: $e');
+      print('Error creating profile: $e');
       await _createFallbackProfile();
     }
   }
@@ -543,7 +543,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         profileMap['weekly_streak'] = 0;
         await syncProvider.saveProfileToLocal(profileMap);
 
-        print('✅ Fallback profile created');
+        print('Fallback profile created');
 
         if (mounted) {
           setState(() {
@@ -552,7 +552,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      print('❌ Error creating fallback profile: $e');
+      print('Error creating fallback profile: $e');
     }
   }
 
@@ -570,7 +570,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .update(data)
           .eq('user_id', _profile!.userId);
 
-      // ✅ ذخیره در LocalStorage
+      // ذخیره در LocalStorage
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final profileMap = _profile!.toMap();
       profileMap['user_id'] = _profile!.userId;
@@ -579,9 +579,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       profileMap['weekly_streak'] = _weeklyStreak;
       await syncProvider.saveProfileToLocal(profileMap);
 
-      print('✅ Profile saved to Supabase and LocalStorage');
+      print('Profile saved to Supabase and LocalStorage');
     } catch (e) {
-      print('❌ Error saving profile: $e');
+      print('Error saving profile: $e');
     }
   }
 
@@ -641,7 +641,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } catch (e) {
-      print('⚠️ Error calculating weekly streak: $e');
+      print('Error calculating weekly streak: $e');
     }
   }
 
@@ -654,7 +654,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: _theme.backgroundColor,
       body: Consumer<SyncProvider>(
         builder: (context, syncProvider, child) {
-          // ✅ حالت بارگذاری
+          // حالت بارگذاری
           if (_isLoading && _profile == null) {
             return Center(
               child: Column(
@@ -671,17 +671,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
 
-          // ✅ حالت خطا
+          // حالت خطا
           if (_errorMessage != null && _profile == null) {
             return _buildErrorState();
           }
 
-          // ✅ حالت خالی
+          // حالت خالی
           if (_profile == null) {
             return _buildEmptyState();
           }
 
-          // ✅ نمایش محتوا
+          // نمایش محتوا
           return _buildProfileContent();
         },
       ),
@@ -867,15 +867,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final calendar = Provider.of<CalendarProvider>(context, listen: false);
     final weekDays = _cachedWeekDays ?? List.filled(7, false);
 
-    debugPrint('📊 Profile weekDays: $weekDays');
-    debugPrint('📊 Profile weeklyStreak: $_weeklyStreak');
-    debugPrint('📊 _currentStreak: $_currentStreak');
-    debugPrint('📊 _bestStreak: $_bestStreak');
+    debugPrint('Profile weekDays: $weekDays');
+    debugPrint('Profile weeklyStreak: $_weeklyStreak');
+    debugPrint('_currentStreak: $_currentStreak');
+    debugPrint('_bestStreak: $_bestStreak');
 
     final int todayIndex = calendar.isJalali
         ? Jalali.fromDateTime(DateTime.now()).weekDay - 1
         : DateTime.now().weekday % 7;
-    debugPrint('📅 Today index: $todayIndex');
+    debugPrint('Today index: $todayIndex');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
@@ -889,7 +889,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             currentStreak: _currentStreak,
             bestStreak: _bestStreak,
             weeklyStreak: _weeklyStreak,
-            weekDays: weekDays, // ✅ ارسال weekDays واقعی از کش
+            weekDays: weekDays, // ارسال weekDays واقعی از کش
           ),
           const SizedBox(height: 24),
           XpStatsWidget(
@@ -920,7 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 📸 دکمه گالری
+// دکمه گالری
 // ═══════════════════════════════════════════════════════════
   Widget _buildGalleryButton() {
     return SizedBox(
@@ -946,7 +946,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ✅ متد جدید برای دریافت weekDays از دیتابیس
+  // متد جدید برای دریافت weekDays از دیتابیس
   List<bool> _getWeekDaysFromDatabase() {
     // مقدار پیش‌فرض (همه false)
     List<bool> weekDays = List.filled(7, false);
@@ -981,10 +981,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
-      print('📊 Generated weekDays: $weekDays');
+      print('Generated weekDays: $weekDays');
       return weekDays;
     } catch (e) {
-      print('⚠️ Error getting weekDays: $e');
+      print('Error getting weekDays: $e');
       return weekDays;
     }
   }
@@ -1015,7 +1015,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 🆔 نمایش نام کاربری
+// نمایش نام کاربری
 // ═══════════════════════════════════════════════════════════
   Widget _buildUsernameDisplay() {
     final hasUsername = _profile?.hasUsername ?? false;
@@ -1073,7 +1073,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    // ✅ کاربر username دارد
+    // کاربر username دارد
     return GestureDetector(
       onTap: _showUsernameOptions,
       child: Container(
@@ -1106,10 +1106,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-// 📸 نمایش گزینه‌های ویرایش آواتار
+// نمایش گزینه‌های ویرایش آواتار
 // ═══════════════════════════════════════════════════════════
   void _showAvatarEditOptions() {
-    // ✅ مستقیم به انتخاب عکس برو
+    // مستقیم به انتخاب عکس برو
     _showAvatarSourcePicker();
   }
 
@@ -1236,7 +1236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (picked == null) return;
 
-      // ✅ حالا کراپ کن
+      // حالا کراپ کن
       if (!mounted) return;
 
       final cropService = ImageCropService();
@@ -1253,7 +1253,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() => _isUploadingAvatar = true);
 
-      // ✅ خواندن bytes از فایل کراپ‌شده
+      // خواندن bytes از فایل کراپ‌شده
       final bytes = await croppedFile.readAsBytes();
 
       // آپلود
@@ -1273,7 +1273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📸 عکس پروفایل با موفقیت آپلود شد'),
+            content: Text('عکس پروفایل با موفقیت آپلود شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1332,7 +1332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🗑️ عکس پروفایل حذف شد'),
+            content: Text('عکس پروفایل حذف شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -1350,7 +1350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 🆔 نمایش گزینه‌های username
+// نمایش گزینه‌های username
 // ═══════════════════════════════════════════════════════════
   void _showUsernameOptions() {
     if (_profile?.hasUsername != true) return;
@@ -1425,7 +1425,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.pop(dialogContext);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('✅ کپی شد'),
+                            content: Text('کپی شد'),
                             duration: Duration(seconds: 2),
                           ),
                         );
@@ -1452,13 +1452,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () async {
                   Navigator.pop(dialogContext);
 
-                  // ✅ حالا برو به UsernameSetupScreen با username فعلی
+                  // حالا برو به UsernameSetupScreen با username فعلی
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => UsernameSetupScreen(
                         userId: _profile!.userId,
-                        currentUsername: _profile!.username, // ✅ مهم!
+                        currentUsername: _profile!.username, // مهم!
                       ),
                     ),
                   );
@@ -1477,7 +1477,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 🚀 متدهای ناوبری
+// متدهای ناوبری
 // ═══════════════════════════════════════════════════════════
   Future<void> _openGallery() async {
     await Navigator.push(
@@ -1525,7 +1525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== بخش اطلاعات کاربر ====================
 
 // ═══════════════════════════════════════════════════════════
-// 🎯 ویجت اطلاعات کاربر (کشویی)
+// ویجت اطلاعات کاربر (کشویی)
 // ═══════════════════════════════════════════════════════════
   Widget _buildUserInfoSection() {
     final calendar = Provider.of<CalendarProvider>(context, listen: false);
@@ -1638,7 +1638,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _buildMinimalInfoItem(
                               label: 'تاریخ تولد',
                               value: _formatDateShort(
-                                  _profile?.birthDate, calendar), // ✅
+                                  _profile?.birthDate, calendar), // 
                               icon: Icons.cake_outlined,
                             ),
                           ],
@@ -1663,7 +1663,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _buildMinimalInfoItem(
                               label: 'عضو از',
                               value: _formatDateShort(
-                                  _profile?.registeredAt, calendar), // ✅
+                                  _profile?.registeredAt, calendar), // 
                               icon: Icons.history_outlined,
                             ),
                             const SizedBox(height: 14),
@@ -1713,7 +1713,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ✅ متد کپی کردن ID
+  // متد کپی کردن ID
   void _copyToClipboard(String text) {
     // استفاده از Clipboard
     Clipboard.setData(ClipboardData(text: text));
@@ -1721,7 +1721,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ ID یکتا کپی شد'),
+          content: Text('ID یکتا کپی شد'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
@@ -2026,13 +2026,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: TextStyle(
                                       color: selectedDate != null
                                           ? _theme.textColor
-                                          : _theme.textSecondaryColor, // ✅
+                                          : _theme.textSecondaryColor, // 
                                     ),
                                   ),
                                 ),
                                 Icon(
                                   Icons.arrow_drop_down,
-                                  color: _theme.textSecondaryColor, // ✅
+                                  color: _theme.textSecondaryColor, // 
                                 ),
                               ],
                             ),
@@ -2041,12 +2041,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           value: _getGenderValue(genderController.text),
-                          style: TextStyle(color: _theme.textColor), // ✅
-                          dropdownColor: _theme.surfaceColor, // ✅
+                          style: TextStyle(color: _theme.textColor), // 
+                          dropdownColor: _theme.surfaceColor, // 
                           decoration: InputDecoration(
                             labelText: 'جنسیت',
                             labelStyle: TextStyle(
-                                color: _theme.textSecondaryColor), // ✅
+                                color: _theme.textSecondaryColor), // 
                             prefixIcon: Icon(
                               Icons.people_outline,
                               color: _theme.primaryColor,
@@ -2056,7 +2056,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderSide: BorderSide.none,
                             ),
                             filled: true,
-                            // ✅ تم‌محور
+                            // تم‌محور
                             fillColor: _theme.isDarkMode
                                 ? const Color(0xFF2A2A2A)
                                 : Colors.grey.shade50,
@@ -2081,7 +2081,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onPressed: () async {
                               if (!formKey.currentState!.validate()) return;
 
-                              // ✅ Capture context قبل از await
+                              // Capture context قبل از await
                               final navigator = Navigator.of(context);
 
                               await _updateProfile(
@@ -2093,7 +2093,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 gender: _getGenderValue(genderController.text),
                               );
 
-                              // ✅ چک کن هنوز mounted است
+                              // چک کن هنوز mounted است
                               if (mounted && navigator.canPop()) {
                                 navigator.pop();
                               }
@@ -2142,10 +2142,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       enabled: enabled,
       keyboardType: keyboardType,
       validator: validator,
-      style: TextStyle(color: _theme.textColor), // ✅
+      style: TextStyle(color: _theme.textColor), // 
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: _theme.textSecondaryColor), // ✅
+        labelStyle: TextStyle(color: _theme.textSecondaryColor), // 
         prefixIcon: Icon(icon, color: _theme.primaryColor),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -2156,7 +2156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderSide: BorderSide.none,
         ),
         filled: true,
-        // ✅ تم‌محور
+        // تم‌محور
         fillColor:
             _theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade50,
         disabledBorder: OutlineInputBorder(
@@ -2191,13 +2191,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .update(data)
           .eq('user_id', _profile!.userId);
 
-      // ✅ فقط profile را reload کن (نه ساخت دستی)
+      // فقط profile را reload کن (نه ساخت دستی)
       await _loadProfile();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('اطلاعات با موفقیت به‌روزرسانی شد ✅'),
+            content: Text('اطلاعات با موفقیت به‌روزرسانی شد '),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),

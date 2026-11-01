@@ -108,7 +108,7 @@ class WeeklyPerformanceService {
         successRate: successRate,
       );
     } catch (e) {
-      print('❌ Error getting weekly performance: $e');
+      print('Error getting weekly performance: $e');
       return null;
     }
   }

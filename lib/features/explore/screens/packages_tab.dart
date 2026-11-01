@@ -148,7 +148,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   Future<void> _loadActivePackages() async {
-    // ⚠️ خط ۸۰: اینجا setState صدا زده می‌شه
+    // خط ۸۰: اینجا setState صدا زده می‌شه
     // قبلش چک کن mounted باشه
     if (!mounted) return;
 
@@ -157,7 +157,7 @@ class _PackagesTabState extends State<PackagesTab> {
     try {
       final userPackages = await _getUserActivePackages(widget.currentUserId);
 
-      // ⚠️ خط ۱۱۴: اینجا setState صدا زده می‌شه
+      // خط ۱۱۴: اینجا setState صدا زده می‌شه
       // قبلش چک کن mounted باشه
       if (!mounted) return;
 
@@ -166,7 +166,7 @@ class _PackagesTabState extends State<PackagesTab> {
         _isLoadingActive = false;
       });
     } catch (e) {
-      print('❌ Error loading active packages: $e');
+      print('Error loading active packages: $e');
 
       if (!mounted) return;
 
@@ -201,7 +201,7 @@ class _PackagesTabState extends State<PackagesTab> {
         return Package.fromMap(item, id);
       }).toList();
     } catch (e) {
-      print('❌ Error getting user active packages: $e');
+      print('Error getting user active packages: $e');
       return [];
     }
   }
@@ -212,7 +212,7 @@ class _PackagesTabState extends State<PackagesTab> {
     final Color primaryColor = theme.primaryColor;
 
     return Container(
-      color: theme.backgroundColor, // ✅ از Color(0xFFF7FCEB)
+      color: theme.backgroundColor, // از Color(0xFFF7FCEB)
       child: _buildBody(primaryColor, theme),
     );
   }
@@ -248,7 +248,7 @@ class _PackagesTabState extends State<PackagesTab> {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // ✅ از 12 به 100
+      padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // از 12 به 100
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -261,9 +261,9 @@ class _PackagesTabState extends State<PackagesTab> {
               count: activePackages.length,
             ),
             const SizedBox(height: 12),
-            // ✅ اسکرول افقی
+            // اسکرول افقی
             SizedBox(
-              height: 260, // ✅ ارتفاع ثابت برای کارت‌های فعال
+              height: 260, // ارتفاع ثابت برای کارت‌های فعال
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -272,7 +272,7 @@ class _PackagesTabState extends State<PackagesTab> {
                   return Padding(
                     padding: const EdgeInsets.only(left: 12),
                     child: SizedBox(
-                      width: 260, // ✅ عرض ثابت برای هر کارت
+                      width: 260, // عرض ثابت برای هر کارت
                       child: _PackageCard(
                         package: activePackages[index],
                         isActive: true,
@@ -286,9 +286,9 @@ class _PackagesTabState extends State<PackagesTab> {
                           activePackages[index],
                           primaryColor,
                         ),
-                        // ✅ اصلاح شد
+                        // اصلاح شد
                         onView: () => _showPackageDetailDialog(
-                          // ✅ دیالوگ جدید
+                          // دیالوگ جدید
                           activePackages[index],
                           primaryColor,
                         ),
@@ -336,7 +336,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📋 دیالوگ مشاهده جزئیات بسته (فقط خواندنی)
+  // دیالوگ مشاهده جزئیات بسته (فقط خواندنی)
   // ═══════════════════════════════════════════════════════════
   void _showPackageDetailDialog(Package package, Color primaryColor) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -357,7 +357,7 @@ class _PackagesTabState extends State<PackagesTab> {
           builder: (context, scrollController) {
             return Container(
               decoration: BoxDecoration(
-                color: theme.cardColor, // ✅ از Colors.white
+                color: theme.cardColor, // از Colors.white
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(28),
                 ),
@@ -371,7 +371,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       width: 60,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: theme.borderColor, // ✅
+                        color: theme.borderColor, // 
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -421,7 +421,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: theme.textColor, // ✅
+                                        color: theme.textColor, // 
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -432,7 +432,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                           style: TextStyle(
                                             fontSize: 13,
                                             color:
-                                                theme.textSecondaryColor, // ✅
+                                                theme.textSecondaryColor, // 
                                           ),
                                         ),
                                         const SizedBox(width: 8),
@@ -482,7 +482,7 @@ class _PackagesTabState extends State<PackagesTab> {
                             package.description,
                             style: TextStyle(
                               fontSize: 14,
-                              color: theme.textColor, // ✅
+                              color: theme.textColor, // 
                               height: 1.6,
                             ),
                           ),
@@ -566,7 +566,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: theme.textColor, // ✅
+                                  color: theme.textColor, // 
                                 ),
                               ),
                               const Spacer(),
@@ -602,7 +602,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                     : theme.cardColor,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: theme.borderColor, // ✅
+                                  color: theme.borderColor, // 
                                   width: 1,
                                 ),
                               ),
@@ -635,7 +635,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: theme.textColor, // ✅
+                                            color: theme.textColor, // 
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -647,7 +647,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               color:
-                                                  theme.textSecondaryColor, // ✅
+                                                  theme.textSecondaryColor, // 
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -699,7 +699,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       color: theme.cardColor,
                       border: Border(
                         top: BorderSide(
-                          color: theme.borderColor, // ✅
+                          color: theme.borderColor, // 
                           width: 1,
                         ),
                       ),
@@ -737,7 +737,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🏷️ هدر بخش
+  // هدر بخش
   // ═══════════════════════════════════════════════════════════
   Widget _buildSectionHeader({
     required IconData icon,
@@ -754,12 +754,12 @@ class _PackagesTabState extends State<PackagesTab> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: theme.textColor.withValues(alpha: 0.08), // ✅
+              color: theme.textColor.withValues(alpha: 0.08), // 
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color: theme.textColor, // ✅
+              color: theme.textColor, // 
               size: 16,
             ),
           ),
@@ -769,7 +769,7 @@ class _PackagesTabState extends State<PackagesTab> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: theme.textColor, // ✅
+              color: theme.textColor, // 
             ),
           ),
           const SizedBox(width: 8),
@@ -784,7 +784,7 @@ class _PackagesTabState extends State<PackagesTab> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
-                color: theme.textColor, // ✅
+                color: theme.textColor, // 
               ),
             ),
           ),
@@ -794,7 +794,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📦 Empty State
+  // Empty State
   // ═══════════════════════════════════════════════════════════
   Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
     return Center(
@@ -817,7 +817,7 @@ class _PackagesTabState extends State<PackagesTab> {
           Text(
             'هنوز بسته‌ای وجود ندارد',
             style: TextStyle(
-              color: theme.textSecondaryColor, // ✅
+              color: theme.textSecondaryColor, // 
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -826,7 +826,7 @@ class _PackagesTabState extends State<PackagesTab> {
           Text(
             'به زودی بسته‌های جدید اضافه می‌شوند',
             style: TextStyle(
-              color: theme.textSecondaryColor, // ✅
+              color: theme.textSecondaryColor, // 
               fontSize: 12,
             ),
           ),
@@ -836,13 +836,13 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ✅ فعال‌سازی بسته
+  // فعال‌سازی بسته
   // ═══════════════════════════════════════════════════════════
   Future<void> _activatePackage(Package package, Color primaryColor) async {
     try {
       await _supabase.activatePackage(widget.currentUserId, package.id);
 
-      // ✅ چک کن mounted
+      // چک کن mounted
       if (!mounted) return;
 
       setState(() => _activePackageIds.add(package.id));
@@ -852,7 +852,7 @@ class _PackagesTabState extends State<PackagesTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('بسته "${package.title}" فعال شد! 🎉'),
+            content: Text('بسته "${package.title}" فعال شد! '),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -871,7 +871,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🗑️ غیرفعال‌سازی بسته (با دیالوگ)
+  // غیرفعال‌سازی بسته (با دیالوگ)
   // ═══════════════════════════════════════════════════════════
   void _showDeactivateDialog(Package package, Color primaryColor) {
     showDialog(
@@ -984,7 +984,7 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
   // ═══════════════════════════════════════════════════════════
-// 📋 دیالوگ پیش‌نمایش و فعال‌سازی بسته
+// دیالوگ پیش‌نمایش و فعال‌سازی بسته
 // ═══════════════════════════════════════════════════════════
   void _showActivatePreviewDialog(Package package, Color primaryColor) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -1005,7 +1005,7 @@ class _PackagesTabState extends State<PackagesTab> {
           builder: (context, scrollController) {
             return Container(
               decoration: BoxDecoration(
-                color: theme.cardColor, // ✅
+                color: theme.cardColor, // 
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(28),
                 ),
@@ -1019,7 +1019,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       width: 60,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: theme.borderColor, // ✅
+                        color: theme.borderColor, // 
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1068,7 +1068,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
-                                        color: theme.textColor, // ✅
+                                        color: theme.textColor, // 
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -1076,7 +1076,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                       _getCategoryText(package.category),
                                       style: TextStyle(
                                         fontSize: 13,
-                                        color: theme.textSecondaryColor, // ✅
+                                        color: theme.textSecondaryColor, // 
                                       ),
                                     ),
                                   ],
@@ -1092,7 +1092,7 @@ class _PackagesTabState extends State<PackagesTab> {
                             package.description,
                             style: TextStyle(
                               fontSize: 14,
-                              color: theme.textColor, // ✅
+                              color: theme.textColor, // 
                               height: 1.6,
                             ),
                           ),
@@ -1174,7 +1174,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
-                                  color: theme.textColor, // ✅
+                                  color: theme.textColor, // 
                                 ),
                               ),
                               const Spacer(),
@@ -1210,7 +1210,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                     : theme.cardColor,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: theme.borderColor, // ✅
+                                  color: theme.borderColor, // 
                                   width: 1,
                                 ),
                               ),
@@ -1245,7 +1245,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: theme.textColor, // ✅
+                                            color: theme.textColor, // 
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1257,7 +1257,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               color:
-                                                  theme.textSecondaryColor, // ✅
+                                                  theme.textSecondaryColor, // 
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -1320,7 +1320,7 @@ class _PackagesTabState extends State<PackagesTab> {
                                     'با فعال‌سازی این بسته، ${package.habits.length} عادت جدید به لیست عادت‌های شما اضافه می‌شود و می‌توانید پیشرفت خود را دنبال کنید.',
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: theme.textColor, // ✅
+                                      color: theme.textColor, // 
                                       height: 1.5,
                                     ),
                                   ),
@@ -1347,7 +1347,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       color: theme.cardColor,
                       border: Border(
                         top: BorderSide(
-                          color: theme.borderColor, // ✅
+                          color: theme.borderColor, // 
                           width: 1,
                         ),
                       ),
@@ -1358,9 +1358,9 @@ class _PackagesTabState extends State<PackagesTab> {
                           child: OutlinedButton(
                             onPressed: () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: theme.textSecondaryColor, // ✅
+                              foregroundColor: theme.textSecondaryColor, // 
                               side: BorderSide(
-                                color: theme.borderColor, // ✅
+                                color: theme.borderColor, // 
                                 width: 1.5,
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1424,14 +1424,14 @@ class _PackagesTabState extends State<PackagesTab> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 🏷️ ردیف اطلاعات در دیالوگ
+// ردیف اطلاعات در دیالوگ
 // ═══════════════════════════════════════════════════════════
   Widget _buildPreviewInfoRow({
     required IconData icon,
     required String label,
     required String value,
     required Color primaryColor,
-    required ThemeProvider theme, // ✅ پارامتر جدید
+    required ThemeProvider theme, // پارامتر جدید
     Color? iconColor,
   }) {
     return Row(
@@ -1458,7 +1458,7 @@ class _PackagesTabState extends State<PackagesTab> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: theme.textSecondaryColor, // ✅
+              color: theme.textSecondaryColor, // 
             ),
           ),
         ),
@@ -1467,7 +1467,7 @@ class _PackagesTabState extends State<PackagesTab> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: theme.textColor, // ✅
+            color: theme.textColor, // 
           ),
         ),
       ],
@@ -1476,18 +1476,18 @@ class _PackagesTabState extends State<PackagesTab> {
 
   Future<void> _deactivatePackage(Package package, Color primaryColor) async {
     try {
-      // ✅ ۱. غیرفعال‌سازی بسته در دیتابیس
+      // ۱. غیرفعال‌سازی بسته در دیتابیس
       await _supabase.deactivatePackage(widget.currentUserId, package.id);
 
       if (!mounted) return;
 
-      // ✅ ۲. حذف عادت‌های این بسته از کش محلی
+      // ۲. حذف عادت‌های این بسته از کش محلی
       try {
         final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
         // پیدا کردن عادت‌های این بسته در کش
         final habitsToRemove = syncProvider.habits.where((habit) {
-          // عادت‌های بسته با '📦' شروع می‌شن
+          // عادت‌های بسته با '' شروع می‌شن
           return habit.title.startsWith('📦') &&
               habit.title.contains(package.title);
         }).toList();
@@ -1500,10 +1500,10 @@ class _PackagesTabState extends State<PackagesTab> {
         print(
             '✅ Removed ${habitsToRemove.length} habits from package "${package.title}"');
       } catch (e) {
-        print('⚠️ Error removing package habits from cache: $e');
+        print('Error removing package habits from cache: $e');
       }
 
-      // ✅ ۳. ریفرش
+      // ۳. ریفرش
       if (!mounted) return;
       setState(() => _activePackageIds.remove(package.id));
       widget.onRefresh();
@@ -1531,18 +1531,18 @@ class _PackagesTabState extends State<PackagesTab> {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// 🎯 کارت بسته (ترکیب ایده ۲ + ۴)
+// کارت بسته (ترکیب ایده ۲ + ۴)
 // ═══════════════════════════════════════════════════════════════
 
 class _PackageCard extends StatelessWidget {
   final Package package;
   final bool isActive;
   final Color primaryColor;
-  final Color primaryLight; // ✅ اضافه شد
+  final Color primaryLight; // اضافه شد
   final VoidCallback onChanged;
   final VoidCallback? onActivate;
   final VoidCallback? onDeactivate;
-  final VoidCallback? onView; // ✅ اضافه شد
+  final VoidCallback? onView; // اضافه شد
 
   const _PackageCard({
     required this.package,
@@ -1555,7 +1555,7 @@ class _PackageCard extends StatelessWidget {
     this.onView,
   });
 
-  // ✅ پالت رنگ‌های پاستیلی ساده
+  // پالت رنگ‌های پاستیلی ساده
   static const List<Color> _pastelColors = [
     Color(0xFFFFE0B2), // نارنجی پاستیلی
     Color(0xFFB3E5FC), // آبی پاستیلی
@@ -1565,13 +1565,13 @@ class _PackageCard extends StatelessWidget {
     Color(0xFFFFF9C4), // زرد پاستیلی
   ];
 
-  // ✅ انتخاب رنگ پاستیلی بر اساس hashCode پکیج
+  // انتخاب رنگ پاستیلی بر اساس hashCode پکیج
   Color get _iconBgColor {
     final index = package.id.hashCode.abs() % _pastelColors.length;
     return _pastelColors[index];
   }
 
-  // ✅ رنگ تیره‌تر برای آیکون (هم‌خانواده با پاستیلی)
+  // رنگ تیره‌تر برای آیکون (هم‌خانواده با پاستیلی)
   Color get _iconColor {
     final index = package.id.hashCode.abs() % _pastelColors.length;
     const darkerColors = [
@@ -1589,11 +1589,11 @@ class _PackageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
 
-    // ✅ کارت فعال: صورتی (رنگ ثابت دلخواه) | غیرفعال: theme.cardColor
+    // کارت فعال: صورتی (رنگ ثابت دلخواه) | غیرفعال: theme.cardColor
     final Color cardColor =
         isActive ? const Color.fromARGB(255, 216, 124, 159) : theme.cardColor;
 
-    // ✅ متن روی کارت فعال مشکی، روی غیرفعال theme.textColor
+    // متن روی کارت فعال مشکی، روی غیرفعال theme.textColor
     final Color textColor =
         isActive ? const Color(0xFF090909) : theme.textColor;
 
@@ -1686,14 +1686,14 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎨 آیکون شناور با پس‌زمینه پاستیلی
+  // آیکون شناور با پس‌زمینه پاستیلی
   // ═══════════════════════════════════════════════════════════
   Widget _buildFloatingIcon() {
     return Container(
       width: 50,
       height: 50,
       decoration: BoxDecoration(
-        color: _iconBgColor, // ✅ پس‌زمینه پاستیلی
+        color: _iconBgColor, // پس‌زمینه پاستیلی
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1706,7 +1706,7 @@ class _PackageCard extends StatelessWidget {
       child: Center(
         child: Icon(
           _getIconData(package.icon),
-          color: _iconColor, // ✅ آیکون رنگ تیره هم‌خانواده
+          color: _iconColor, // آیکون رنگ تیره هم‌خانواده
           size: 26,
         ),
       ),
@@ -1714,7 +1714,7 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📋 پیش‌نمایش عادت‌ها
+  // پیش‌نمایش عادت‌ها
   // ═══════════════════════════════════════════════════════════
   Widget _buildHabitPreview(ThemeProvider theme) {
     final habits = package.habits.take(3).toList();
@@ -1759,7 +1759,7 @@ class _PackageCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: theme.textColor, // ✅
+                          color: theme.textColor, // 
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -1776,7 +1776,7 @@ class _PackageCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   fontStyle: FontStyle.italic,
-                  color: theme.textSecondaryColor, // ✅
+                  color: theme.textSecondaryColor, // 
                 ),
               ),
             ),
@@ -1786,7 +1786,7 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎯 ردیف پایین: اطلاعات + دکمه‌ها
+  // ردیف پایین: اطلاعات + دکمه‌ها
   // ═══════════════════════════════════════════════════════════
   Widget _buildBottomRow(ThemeProvider theme) {
     return Row(
@@ -1854,9 +1854,9 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ✅ دکمه مشاهده (مشکی)
+  // دکمه مشاهده (مشکی)
   // ═══════════════════════════════════════════════════════════
-  // ✅ دکمه مشاهده — روی کارت فعال: سفید با متن مشکی | روی کارت غیرفعال: مشکی
+  // دکمه مشاهده — روی کارت فعال: سفید با متن مشکی | روی کارت غیرفعال: مشکی
   Widget _buildViewButton(VoidCallback onView) {
     return GestureDetector(
       onTap: onView,
@@ -1864,7 +1864,7 @@ class _PackageCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? const Color.fromARGB(255, 0, 0, 0) // ✅ روی سبز: سفید
+              ? const Color.fromARGB(255, 0, 0, 0) // روی سبز: سفید
               : const Color.fromARGB(255, 255, 255, 255), // روی سفید: مشکی
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
@@ -1902,7 +1902,7 @@ class _PackageCard extends StatelessWidget {
     );
   }
 
-  // ✅ دکمه غیرفعال — روی کارت فعال: سفید با متن مشکی | روی غیرفعال: primaryLight
+  // دکمه غیرفعال — روی کارت فعال: سفید با متن مشکی | روی غیرفعال: primaryLight
   Widget _buildDeactivateButton(VoidCallback onDeactivate) {
     return GestureDetector(
       onTap: onDeactivate,
@@ -1910,7 +1910,7 @@ class _PackageCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
-              ? Colors.white.withValues(alpha: 0.95) // ✅ روی سبز: سفید
+              ? Colors.white.withValues(alpha: 0.95) // روی سبز: سفید
               : const Color.fromARGB(
                   255, 209, 180, 255), // روی سفید: primaryLight
           borderRadius: BorderRadius.circular(12),
@@ -1943,7 +1943,7 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🟢 دکمه فعال‌سازی (مشکی)
+  // دکمه فعال‌سازی (مشکی)
   // ═══════════════════════════════════════════════════════════
   Widget _buildActivateButton(VoidCallback onActivate) {
     return GestureDetector(
@@ -1951,7 +1951,7 @@ class _PackageCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFF090909), // ✅ مشکی
+          color: const Color(0xFF090909), // مشکی
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -1981,7 +1981,7 @@ class _PackageCard extends StatelessWidget {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🎨 آیکون‌ها
+  // آیکون‌ها
   // ═══════════════════════════════════════════════════════════
   IconData _getIconData(String iconName) {
     switch (iconName) {

@@ -33,7 +33,7 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   final List<String> _quickSuggestions = [
     'چطور می‌تونم امروز بهتر باشم؟',
-    'به من انگیزه بده 🚀',
+    'به من انگیزه بده ',
     'برنامه امروز من چیه؟',
     'چطور استریکم رو حفظ کنم؟',
     'برای فردا برنامه‌ریزی کن',
@@ -199,7 +199,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                 color: primaryColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Text('🤖', style: TextStyle(fontSize: 20)),
+              child: const Text('', style: TextStyle(fontSize: 20)),
             ),
             const SizedBox(width: 12),
             Column(
@@ -328,7 +328,7 @@ class _AIChatScreenState extends State<AIChatScreen>
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          // ✅ رنگ پس‌زمینه system message با تم هماهنگ
+          // رنگ پس‌زمینه system message با تم هماهنگ
           color:
               theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(16),
@@ -337,13 +337,13 @@ class _AIChatScreenState extends State<AIChatScreen>
           message.content,
           style: TextStyle(
             fontSize: 11,
-            color: theme.textSecondaryColor, // ✅
+            color: theme.textSecondaryColor, // 
           ),
         ),
       );
     }
 
-    // ✅ رنگ‌های حباب
+    // رنگ‌های حباب
     final Color myBubbleColor =
         theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
     final Color otherBubbleColor =
@@ -374,7 +374,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                         color: primaryColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Text('🤖', style: TextStyle(fontSize: 9)),
+                      child: const Text('', style: TextStyle(fontSize: 9)),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -430,7 +430,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                     Icon(
                       Icons.check,
                       size: 12,
-                      color: theme.textSecondaryColor, // ✅
+                      color: theme.textSecondaryColor, // 
                     ),
                   ],
                 ],
@@ -501,7 +501,7 @@ class _AIChatScreenState extends State<AIChatScreen>
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  // ✅ ورودی متن با تم هماهنگ
+                  // ورودی متن با تم هماهنگ
                   color: theme.isDarkMode
                       ? const Color(0xFF2A2A2A)
                       : primaryColor.withValues(alpha: 0.06),

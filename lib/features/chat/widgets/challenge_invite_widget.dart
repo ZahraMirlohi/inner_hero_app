@@ -29,7 +29,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
 
-    // ✅ رنگ‌های استاندارد بر اساس تم روز/شب
+    // رنگ‌های استاندارد بر اساس تم روز/شب
     final Color bgColor = widget.isMe
         ? ChatColors.myBubble(theme)
         : ChatColors.otherBubble(theme);
@@ -50,7 +50,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
       width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bgColor, // ✅ پس‌زمینه پویا
+        color: bgColor, // پس‌زمینه پویا
         borderRadius: BorderRadius.circular(18),
         border: isPending
             ? Border.all(
@@ -131,7 +131,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
 
           // ==================== لیست عادت‌ها ====================
           Text(
-            '📋 عادت‌های چالش:',
+            'عادت‌های چالش:',
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -201,7 +201,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
                             ),
                           )
                         : Text(
-                            'قبول چالش 🚀',
+                            'قبول چالش ',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: bgColor,
@@ -294,7 +294,7 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
-                '${widget.challenge.creatorName} ➜ ${widget.challenge.opponentName}',
+                '${widget.challenge.creatorName} ${widget.challenge.opponentName}',
                 style: TextStyle(
                   fontSize: 9,
                   color: textSecondary,
@@ -314,27 +314,27 @@ class _ChallengeInviteWidgetState extends State<ChallengeInviteWidget> {
     switch (widget.challenge.status) {
       case ChallengeStatus.pending:
         color = Colors.orange;
-        label = '⏳ در انتظار';
+        label = 'در انتظار';
         break;
       case ChallengeStatus.accepted:
         color = textColor;
-        label = '✅ پذیرفته شد';
+        label = 'پذیرفته شد';
         break;
       case ChallengeStatus.active:
         color = textColor;
-        label = '🔥 فعال';
+        label = 'فعال';
         break;
       case ChallengeStatus.completed:
         color = textColor;
-        label = '🏆 کامل شد';
+        label = 'کامل شد';
         break;
       case ChallengeStatus.cancelled:
         color = Colors.orange;
-        label = '⛔ لغو شد';
+        label = 'لغو شد';
         break;
       case ChallengeStatus.rejected:
         color = Colors.red;
-        label = '❌ رد شد';
+        label = 'رد شد';
         break;
     }
 

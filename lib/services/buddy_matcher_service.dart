@@ -20,7 +20,7 @@ class BuddyMatcherService {
       if (response == null) return null;
       return UserPersonality.fromMap(response, userId);
     } catch (e) {
-      print('❌ Error getting user personality: $e');
+      print('Error getting user personality: $e');
       return null;
     }
   }
@@ -33,13 +33,13 @@ class BuddyMatcherService {
 
       await _client.from('user_personalities').upsert(data);
     } catch (e) {
-      print('❌ Error saving user personality: $e');
+      print('Error saving user personality: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🔍 جستجو با username یا phone
+  // جستجو با username یا phone
   // ═══════════════════════════════════════════════════════════
 
   /// جستجوی کاربر با username یا شماره موبایل
@@ -55,7 +55,7 @@ class BuddyMatcherService {
       final cleanQuery = query.trim().toLowerCase();
       if (cleanQuery.isEmpty) return null;
 
-      // ✅ ساخت شرط جستجو
+      // ساخت شرط جستجو
       final isPhone = RegExp(r'^[\d+]+$').hasMatch(cleanQuery);
 
       dynamic profile;
@@ -81,27 +81,27 @@ class BuddyMatcherService {
       }
 
       if (profile == null) {
-        print('🔍 User not found with query: $cleanQuery');
+        print('User not found with query: $cleanQuery');
         return null;
       }
 
       final userId = profile['user_id'] as String;
 
-      // ✅ بررسی اینکه آیا کاربر personality دارد
+      // بررسی اینکه آیا کاربر personality دارد
       final personalityResponse = await _client
           .from('user_personalities')
           .select()
           .eq('user_id', userId)
           .maybeSingle();
 
-      // ✅ بررسی اینکه آیا این کاربر buddy است یا درخواست pending دارد
+      // بررسی اینکه آیا این کاربر buddy است یا درخواست pending دارد
       final requestsResponse = await _client
           .from('buddy_requests')
           .select('id, from_user_id, to_user_id, status')
           .or('and(from_user_id.eq.$currentUserId,to_user_id.eq.$userId),and(from_user_id.eq.$userId,to_user_id.eq.$currentUserId)')
           .maybeSingle();
 
-      // ✅ بررسی وجود گفتگو
+      // بررسی وجود گفتگو
       final conversationsResponse = await _client
           .from('conversation_members')
           .select('conversation_id')
@@ -138,7 +138,7 @@ class BuddyMatcherService {
         }
       }
 
-      // ✅ محاسبه امتیاز تطابق (اگر personality داشته باشد)
+      // محاسبه امتیاز تطابق (اگر personality داشته باشد)
       double matchScore = 0;
       final currentPersonality = await getUserPersonality(currentUserId);
 
@@ -150,11 +150,11 @@ class BuddyMatcherService {
           );
           matchScore = currentPersonality.calculateMatchScore(otherPersonality);
         } catch (e) {
-          print('⚠️ Error calculating match score: $e');
+          print('Error calculating match score: $e');
         }
       }
 
-      // ✅ بررسی وضعیت درخواست
+      // بررسی وضعیت درخواست
       final isSentByMe = requestsResponse != null &&
           requestsResponse['from_user_id'] == currentUserId &&
           requestsResponse['status'] == 'pending';
@@ -187,7 +187,7 @@ class BuddyMatcherService {
         'conversation_id': conversationId,
       };
     } catch (e) {
-      print('❌ Error searching user: $e');
+      print('Error searching user: $e');
       return null;
     }
   }
@@ -220,7 +220,7 @@ class BuddyMatcherService {
 
       return response != null;
     } catch (e) {
-      print('❌ Error checking user existence: $e');
+      print('Error checking user existence: $e');
       return false;
     }
   }
@@ -239,7 +239,7 @@ class BuddyMatcherService {
       final currentPersonality = await getUserPersonality(userId);
       if (currentPersonality == null) return [];
 
-      // ✅ یک کوئری برای همه کاربران
+      // یک کوئری برای همه کاربران
       final allUsers = await _client.from('user_personalities').select();
       final lookingUsers = allUsers.where((u) {
         final looking = u['is_looking_for_buddy'];
@@ -256,7 +256,7 @@ class BuddyMatcherService {
       final otherUserIds =
           otherUsers.map((u) => u['user_id'] as String).toList();
 
-      // ✅ گرفتن همه پروفایل‌ها با یک کوئری
+      // گرفتن همه پروفایل‌ها با یک کوئری
       final profilesResponse = await _client
           .from('profiles')
           .select('user_id, name, avatar_url, total_xp, current_streak')
@@ -266,7 +266,7 @@ class BuddyMatcherService {
         for (var p in profilesResponse) p['user_id'] as String: p,
       };
 
-      // ✅ گرفتن blocked users
+      // گرفتن blocked users
       final blockedResponse = await _client
           .from('blocked_users')
           .select('blocked_id')
@@ -274,7 +274,7 @@ class BuddyMatcherService {
       final blockedIds =
           blockedResponse.map((b) => b['blocked_id'] as String).toSet();
 
-      // ✅ گرفتن همه درخواست‌ها با یک کوئری
+      // گرفتن همه درخواست‌ها با یک کوئری
       final allRequestsResponse = await _client
           .from('buddy_requests')
           .select('id, from_user_id, to_user_id, status')
@@ -291,7 +291,7 @@ class BuddyMatcherService {
         }
       }
 
-      // ✅ گرفتن گفتگوهای buddy فقط (با is_active = true)
+      // گرفتن گفتگوهای buddy فقط (با is_active = true)
       final conversationsResponse = await _client
           .from('conversations')
           .select('id, type, is_active')
@@ -301,7 +301,7 @@ class BuddyMatcherService {
       final buddyConversationIds =
           conversationsResponse.map((c) => c['id'] as String).toList();
 
-      // ✅ گرفتن همه اعضای این گفتگوها با یک کوئری
+      // گرفتن همه اعضای این گفتگوها با یک کوئری
       final existingBuddyMap = <String, String>{};
       if (buddyConversationIds.isNotEmpty) {
         final membersResponse = await _client
@@ -310,7 +310,7 @@ class BuddyMatcherService {
             .inFilter('conversation_id', buddyConversationIds)
             .inFilter('user_id', otherUserIds);
 
-        // ✅ گرفتن همه اعضای این گفتگوها (نه فقط otherUserIds)
+        // گرفتن همه اعضای این گفتگوها (نه فقط otherUserIds)
         final allMembersResponse = await _client
             .from('conversation_members')
             .select('conversation_id, user_id')
@@ -324,7 +324,7 @@ class BuddyMatcherService {
           convMembers.putIfAbsent(convId, () => []).add(uid);
         }
 
-        // ✅ فقط گفتگوهایی که هر دو کاربر در آن هستند
+        // فقط گفتگوهایی که هر دو کاربر در آن هستند
         for (var entry in convMembers.entries) {
           if (entry.value.contains(userId) && entry.value.length >= 2) {
             for (var memberId in entry.value) {
@@ -336,7 +336,7 @@ class BuddyMatcherService {
         }
       }
 
-      // ✅ ساخت لیست match
+      // ساخت لیست match
       List<Map<String, dynamic>> matches = [];
 
       for (var userData in otherUsers) {
@@ -391,7 +391,7 @@ class BuddyMatcherService {
 
       return matches.take(limit).toList();
     } catch (e) {
-      print('❌ Error finding matching buddies: $e');
+      print('Error finding matching buddies: $e');
       return [];
     }
   }
@@ -404,19 +404,19 @@ class BuddyMatcherService {
     String? message,
   }) async {
     try {
-      // ✅ چک کردن auth.uid() و تطابق با fromUserId
+      // چک کردن auth.uid() و تطابق با fromUserId
       final currentUser = _client.auth.currentUser;
 
-      print('🔍 ===== SEND BUDDY REQUEST DEBUG =====');
-      print('🔍 Current auth.uid(): ${currentUser?.id}');
-      print('🔍 fromUserId param:    $fromUserId');
-      print('🔍 toUserId param:      $toUserId');
+      print('===== SEND BUDDY REQUEST DEBUG =====');
+      print('Current auth.uid(): ${currentUser?.id}');
+      print('fromUserId param:    $fromUserId');
+      print('toUserId param:      $toUserId');
 
       if (currentUser == null) {
         throw Exception('کاربر احراز هویت نشده است');
       }
 
-      // ✅ استفاده از auth.uid() به جای پارامتر (اجباری برای RLS)
+      // استفاده از auth.uid() به جای پارامتر (اجباری برای RLS)
       final actualFromUserId = currentUser.id;
 
       if (actualFromUserId != fromUserId) {
@@ -424,8 +424,8 @@ class BuddyMatcherService {
             '⚠️ Mismatch detected! Using auth.uid() instead: $actualFromUserId');
       }
 
-      print('🔍 Using actualFromUserId: $actualFromUserId');
-      print('🔍 ====================================');
+      print('Using actualFromUserId: $actualFromUserId');
+      print('====================================');
 
       // 1. حذف درخواست‌های قبلی بین این دو کاربر
       await _client
@@ -434,7 +434,7 @@ class BuddyMatcherService {
           .eq('from_user_id', actualFromUserId)
           .eq('to_user_id', toUserId);
 
-      print('🗑️ Removed previous requests');
+      print('Removed previous requests');
 
       // 2. محاسبه امتیاز تطابق
       final fromPersonality = await getUserPersonality(actualFromUserId);
@@ -445,31 +445,31 @@ class BuddyMatcherService {
         matchScore = fromPersonality.calculateMatchScore(toPersonality);
       }
 
-      print('📊 Match score: $matchScore');
+      print('Match score: $matchScore');
 
       // 3. ایجاد درخواست جدید با actualFromUserId
       final insertResponse = await _client.from('buddy_requests').insert({
-        'from_user_id': actualFromUserId, // ✅ auth.uid()
+        'from_user_id': actualFromUserId, // auth.uid()
         'to_user_id': toUserId,
-        'message': message ?? 'سلام! می‌خواهم با شما هم‌مسیر شوم 🤝',
+        'message': message ?? 'سلام! می‌خواهم با شما هم‌مسیر شوم ',
         'match_score': matchScore,
         'status': 'pending',
         'created_at': DateTime.now().toIso8601String(),
       }).select();
 
       if (insertResponse.isNotEmpty) {
-        print('✅ Buddy request sent successfully');
-        print('📊 New request ID: ${insertResponse[0]['id']}');
+        print('Buddy request sent successfully');
+        print('New request ID: ${insertResponse[0]['id']}');
       } else {
-        print('⚠️ Request sent but no response');
+        print('Request sent but no response');
       }
     } catch (e) {
-      print('❌ Error sending buddy request: $e');
+      print('Error sending buddy request: $e');
       rethrow;
     }
   }
 
-  // ✅ دریافت درخواست‌های ارسال شده
+  // دریافت درخواست‌های ارسال شده
   Future<List<Map<String, dynamic>>> getSentBuddyRequests(String userId) async {
     try {
       final response = await _client
@@ -478,7 +478,7 @@ class BuddyMatcherService {
           .eq('from_user_id', userId)
           .order('created_at', ascending: false);
 
-      print('📊 Sent requests for user $userId: ${response.length}');
+      print('Sent requests for user $userId: ${response.length}');
 
       if (response.isEmpty) return [];
 
@@ -500,7 +500,7 @@ class BuddyMatcherService {
 
       return result;
     } catch (e) {
-      print('❌ Error getting sent buddy requests: $e');
+      print('Error getting sent buddy requests: $e');
       return [];
     }
   }
@@ -534,14 +534,14 @@ class BuddyMatcherService {
 
       return result;
     } catch (e) {
-      print('❌ Error getting buddy requests: $e');
+      print('Error getting buddy requests: $e');
       return [];
     }
   }
 
   // lib/services/buddy_matcher_service.dart
 
-  // ✅ اضافه کردن متد برای پاک کردن تاریخچه درخواست‌ها
+  // اضافه کردن متد برای پاک کردن تاریخچه درخواست‌ها
   Future<void> clearRequestHistory(String userId) async {
     try {
       await _client
@@ -549,14 +549,14 @@ class BuddyMatcherService {
           .delete()
           .or('from_user_id.eq.$userId,to_user_id.eq.$userId');
 
-      print('🗑️ All buddy requests cleared for user: $userId');
+      print('All buddy requests cleared for user: $userId');
     } catch (e) {
-      print('❌ Error clearing request history: $e');
+      print('Error clearing request history: $e');
       rethrow;
     }
   }
 
-  // ✅ اضافه کردن متد برای دریافت تاریخچه کامل درخواست‌ها
+  // اضافه کردن متد برای دریافت تاریخچه کامل درخواست‌ها
   Future<List<Map<String, dynamic>>> getRequestHistory(String userId) async {
     try {
       final response = await _client
@@ -595,7 +595,7 @@ class BuddyMatcherService {
 
       return result;
     } catch (e) {
-      print('❌ Error getting request history: $e');
+      print('Error getting request history: $e');
       return [];
     }
   }
@@ -613,8 +613,8 @@ class BuddyMatcherService {
         throw Exception('کاربر احراز هویت نشده است');
       }
 
-      print('🔍 Responding to request: $requestId');
-      print('🔍 Current user: ${currentUser.id}');
+      print('Responding to request: $requestId');
+      print('Current user: ${currentUser.id}');
 
       // 1. بررسی وجود درخواست
       final checkRequest = await _client
@@ -627,22 +627,22 @@ class BuddyMatcherService {
         throw Exception('درخواست یافت نشد');
       }
 
-      print('📊 Found request:');
+      print('Found request:');
       print('   - ID: ${checkRequest['id']}');
       print('   - from: ${checkRequest['from_user_id']}');
       print('   - to: ${checkRequest['to_user_id']}');
       print('   - status: ${checkRequest['status']}');
 
-      // ✅ چک: کاربر فعلی باید گیرنده درخواست باشد
+      // چک: کاربر فعلی باید گیرنده درخواست باشد
       if (checkRequest['to_user_id'] != currentUser.id) {
-        print('⚠️ Current user is not the recipient of this request');
+        print('Current user is not the recipient of this request');
       }
 
-      // ✅ 2. اگر accept، اول conversation رو بساز
-      // ✅ بعد status رو آپدیت کن (تا اگه خطا داد، درخواست خراب نشه)
+      // 2. اگر accept، اول conversation رو بساز
+      // بعد status رو آپدیت کن (تا اگه خطا داد، درخواست خراب نشه)
       if (accept) {
         final request = checkRequest;
-        print('📊 Accepting request:');
+        print('Accepting request:');
         print('   - from_user_id: ${request['from_user_id']}');
         print('   - to_user_id: ${request['to_user_id']}');
 
@@ -664,7 +664,7 @@ class BuddyMatcherService {
             if (hasFromUser && hasToUser) {
               conversationExists = true;
               existingConversationId = conv.id;
-              print('ℹ️ Conversation already exists: ${conv.id}');
+              print('ℹConversation already exists: ${conv.id}');
               break;
             }
           }
@@ -679,7 +679,7 @@ class BuddyMatcherService {
           ].where((id) => id.isNotEmpty).toList();
 
           if (memberIds.length >= 2) {
-            print('🔍 Creating conversation with members: $memberIds');
+            print('Creating conversation with members: $memberIds');
 
             conversationId = await chatService.createConversation(
               type: 'buddy',
@@ -687,7 +687,7 @@ class BuddyMatcherService {
               name: null,
               createdBy: currentUser.id,
             );
-            print('✅ Conversation created: $conversationId');
+            print('Conversation created: $conversationId');
           } else {
             throw Exception('Invalid members for conversation');
           }
@@ -695,7 +695,7 @@ class BuddyMatcherService {
           conversationId = existingConversationId;
         }
 
-        // ✅ حالا که conversation ساخته شد، status رو آپدیت کن
+        // حالا که conversation ساخته شد، status رو آپدیت کن
         final updateResponse = await _client
             .from('buddy_requests')
             .update({'status': 'accepted'})
@@ -706,9 +706,9 @@ class BuddyMatcherService {
           throw Exception('به‌روزرسانی درخواست انجام نشد');
         }
 
-        print('✅ Request accepted and conversation created: $conversationId');
+        print('Request accepted and conversation created: $conversationId');
       } else {
-        // ✅ برای reject، فقط status رو آپدیت کن
+        // برای reject، فقط status رو آپدیت کن
         final updateResponse = await _client
             .from('buddy_requests')
             .update({'status': 'rejected'})
@@ -719,19 +719,19 @@ class BuddyMatcherService {
           throw Exception('به‌روزرسانی درخواست انجام نشد');
         }
 
-        print('✅ Request rejected');
+        print('Request rejected');
       }
     } catch (e) {
-      print('❌ Error responding to buddy request: $e');
+      print('Error responding to buddy request: $e');
       rethrow;
     }
   }
 
   Future<void> cancelBuddyRequest(String fromUserId, String toUserId) async {
     try {
-      print('📊 Cancelling request from $fromUserId to $toUserId');
+      print('Cancelling request from $fromUserId to $toUserId');
 
-      // ✅ حذف درخواست
+      // حذف درخواست
       final deleteResponse = await _client
           .from('buddy_requests')
           .delete()
@@ -741,12 +741,12 @@ class BuddyMatcherService {
           .select();
 
       if (deleteResponse.isEmpty) {
-        print('⚠️ No pending request found to cancel');
+        print('No pending request found to cancel');
       } else {
-        print('🗑️ Buddy request cancelled successfully');
+        print('Buddy request cancelled successfully');
       }
     } catch (e) {
-      print('❌ Error cancelling buddy request: $e');
+      print('Error cancelling buddy request: $e');
       rethrow;
     }
   }

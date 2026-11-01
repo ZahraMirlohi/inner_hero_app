@@ -71,16 +71,16 @@ class _TaskCardState extends State<TaskCard>
     final calendar = Provider.of<CalendarProvider>(context);
     final Color primaryColor = theme.primaryColor;
 
-    // ✅ در تم شب، تسک‌ها کارت تیره می‌گیرند
+    // در تم شب، تسک‌ها کارت تیره می‌گیرند
     final Color cardColor = widget.isCompleted
         ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF5F5F5))
         : primaryColor;
 
-    // ✅ رنگ متن روی کارت
+    // رنگ متن روی کارت
     final Color textColor =
         theme.isDarkMode ? Colors.white : const Color(0xFF090909);
 
-    // ✅ رنگ آیکون دکمه انجام
+    // رنگ آیکون دکمه انجام
     final Color checkButtonBg = widget.isCompleted
         ? (theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0))
         : theme.checkButtonBackground;
@@ -311,7 +311,7 @@ class _TaskCardState extends State<TaskCard>
                     ],
                   ),
 
-                  // ✅ لیست زیرتسک‌ها
+                  // لیست زیرتسک‌ها
                   if (widget.task.subTasks.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Divider(height: 1, color: theme.borderColor),

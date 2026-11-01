@@ -108,7 +108,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                         child: Column(
                           children: [
                             const Text(
-                              '🎉 تبریک! 🎉',
+                              'تبریک! ',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -219,7 +219,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
-                                            '🏆 چالش کامل',
+                                            'چالش کامل',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
@@ -256,7 +256,7 @@ class _ChallengeCompletionScreenState extends State<ChallengeCompletionScreen>
                             elevation: 4,
                           ),
                           child: const Text(
-                            'ادامه ماجراجویی 🚀',
+                            'ادامه ماجراجویی ',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

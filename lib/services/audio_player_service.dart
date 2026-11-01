@@ -13,7 +13,7 @@ class AudioPlayerService extends ChangeNotifier {
 
   final AudioPlayer _player = AudioPlayer();
 
-  // ✅ وضعیت‌ها
+  // وضعیت‌ها
   bool _isPlaying = false;
   bool _isLoading = false;
   bool _isBuffering = false;
@@ -91,15 +91,15 @@ class AudioPlayerService extends ChangeNotifier {
 
   // ==================== متدهای اصلی ====================
 
-  /// ✅ پخش آهنگ جدید
+  /// پخش آهنگ جدید
   Future<void> play(String url, {String? fileName}) async {
     if (_isDisposed) return;
     if (url.isEmpty) return;
 
-    debugPrint('🎵 [AudioPlayerService] play() called for: $url');
+    debugPrint('[AudioPlayerService] play() called for: $url');
 
     if (_currentUrl == url && _isPlaying) {
-      debugPrint('🎵 Already playing this URL');
+      debugPrint('Already playing this URL');
       return;
     }
 
@@ -116,61 +116,61 @@ class AudioPlayerService extends ChangeNotifier {
       _duration = Duration.zero;
       notifyListeners();
 
-      debugPrint('🎵 Setting audio source...');
+      debugPrint('Setting audio source...');
 
-      // ✅ Timeout 30 ثانیه‌ای برای جلوگیری از گیر کردن
+      // Timeout 30 ثانیه‌ای برای جلوگیری از گیر کردن
       await _player.setAudioSource(AudioSource.uri(Uri.parse(url))).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          debugPrint('❌ [AudioPlayerService] Timeout loading audio');
+          debugPrint('[AudioPlayerService] Timeout loading audio');
           throw TimeoutException('Audio loading timeout');
         },
       );
 
-      debugPrint('🎵 Starting playback...');
+      debugPrint('Starting playback...');
       await _player.play();
 
-      debugPrint('🎵 Playback started successfully');
+      debugPrint('Playback started successfully');
 
-      // ✅ بعد از 5 ثانیه اگر still loading، false کن
+      // بعد از 5 ثانیه اگر still loading، false کن
       Future.delayed(const Duration(seconds: 5), () {
         if (_isLoading && !_isDisposed) {
-          debugPrint('⚠️ Force loading=false after timeout');
+          debugPrint('Force loading=false after timeout');
           _isLoading = false;
           notifyListeners();
         }
       });
     } catch (e) {
-      debugPrint('❌ [AudioPlayerService] Play error: $e');
+      debugPrint('[AudioPlayerService] Play error: $e');
       _isLoading = false;
       _isBuffering = false;
       _currentUrl = null;
       _currentFileName = null;
       notifyListeners();
 
-      // ✅ اگه خطا داد، دوباره به کاربر اطلاع بده
+      // اگه خطا داد، دوباره به کاربر اطلاع بده
       rethrow;
     }
   }
 
-  /// ✅ مکث
+  /// مکث
   Future<void> pause() async {
     if (_isDisposed) return;
-    debugPrint('🎵 [AudioPlayerService] pause() called');
+    debugPrint('[AudioPlayerService] pause() called');
 
     try {
       await _player.pause();
       _isPlaying = false;
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ [AudioPlayerService] Pause error: $e');
+      debugPrint('[AudioPlayerService] Pause error: $e');
     }
   }
 
-  /// ✅ توقف کامل
+  /// توقف کامل
   Future<void> stop() async {
     if (_isDisposed) return;
-    debugPrint('🎵 [AudioPlayerService] stop() called');
+    debugPrint('[AudioPlayerService] stop() called');
 
     try {
       await _player.stop();
@@ -178,21 +178,21 @@ class AudioPlayerService extends ChangeNotifier {
       _isLoading = false;
       _isBuffering = false;
       _position = Duration.zero;
-      _duration = Duration.zero; // ✅ حالا duration هم صفر میشه
+      _duration = Duration.zero; // حالا duration هم صفر میشه
       _currentUrl = null;
       _currentFileName = null;
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ [AudioPlayerService] Stop error: $e');
+      debugPrint('[AudioPlayerService] Stop error: $e');
     }
   }
 
-  /// ✅ تغییر وضعیت پلی/مکث
+  /// تغییر وضعیت پلی/مکث
   Future<void> togglePlayback(String url, {String? fileName}) async {
     if (_isDisposed) return;
     if (url.isEmpty) return;
 
-    debugPrint('🎵 [AudioPlayerService] togglePlayback() called');
+    debugPrint('[AudioPlayerService] togglePlayback() called');
 
     if (_currentUrl == url && _isPlaying) {
       await pause();
@@ -202,7 +202,7 @@ class AudioPlayerService extends ChangeNotifier {
         _isPlaying = true;
         notifyListeners();
       } catch (e) {
-        debugPrint('❌ Resume error: $e');
+        debugPrint('Resume error: $e');
         await play(url, fileName: fileName);
       }
     } else {
@@ -210,7 +210,7 @@ class AudioPlayerService extends ChangeNotifier {
     }
   }
 
-  /// ✅ تغییر موقعیت (Seek)
+  /// تغییر موقعیت (Seek)
   Future<void> seek(Duration position) async {
     if (_isDisposed) return;
     if (_duration.inMilliseconds == 0) return;
@@ -220,7 +220,7 @@ class AudioPlayerService extends ChangeNotifier {
       _position = position;
       notifyListeners();
     } catch (e) {
-      debugPrint('❌ [AudioPlayerService] Seek error: $e');
+      debugPrint('[AudioPlayerService] Seek error: $e');
     }
   }
 
@@ -228,7 +228,7 @@ class AudioPlayerService extends ChangeNotifier {
     return _currentUrl == url && _isPlaying;
   }
 
-  /// ✅ آزادسازی منابع
+  /// آزادسازی منابع
   Future<void> releasePlayer() async {
     if (_isDisposed) return;
     try {
@@ -241,9 +241,9 @@ class AudioPlayerService extends ChangeNotifier {
       _currentUrl = null;
       _currentFileName = null;
       notifyListeners();
-      debugPrint('🎵 Player released');
+      debugPrint('Player released');
     } catch (e) {
-      debugPrint('❌ Release error: $e');
+      debugPrint('Release error: $e');
     }
   }
 

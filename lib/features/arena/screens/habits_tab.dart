@@ -61,7 +61,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
 
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ اگه LocalStorage خالیه، از سرور بخون
+      // اگه LocalStorage خالیه، از سرور بخون
       if (syncProvider.habits.isEmpty && syncProvider.isOnline) {
         await syncProvider.forceRefresh();
       }
@@ -71,7 +71,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     }
   }
 
-  /// ✅ لیست عادت‌های فعال (از SyncProvider مستقیم خونده می‌شه)
+  /// لیست عادت‌های فعال (از SyncProvider مستقیم خونده می‌شه)
   List<Habit> get _habits {
     try {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
@@ -108,8 +108,8 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     );
 
     if (result == true && mounted) {
-      print('🔄 Habit edited, reloading data...');
-      // ✅ SyncProvider خودش notifyListeners می‌کنه و Consumer آپدیت میشه
+      print('Habit edited, reloading data...');
+      // SyncProvider خودش notifyListeners می‌کنه و Consumer آپدیت میشه
     }
   }
 
@@ -153,38 +153,38 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ 1. حذف فوری از LocalStorage
+      // 1. حذف فوری از LocalStorage
       syncProvider.removeHabit(habit.id);
 
       try {
-        // ✅ 2. حذف از Supabase
+        // 2. حذف از Supabase
         if (syncProvider.isOnline) {
           await _supabase.deleteHabit(habit.id);
 
-          // ✅ 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
+          // 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
           await syncProvider.refreshHabitsAndTasks();
 
-          print('✅ Habit deleted and refreshed');
+          print('Habit deleted and refreshed');
         } else {
-          // ✅ حالت آفلاین
+          // حالت آفلاین
           await syncProvider.addOfflineOperation(
             type: OperationType.deleteHabit,
             data: {'id': habit.id},
           );
-          print('📝 Habit deletion saved offline: ${habit.title}');
+          print('Habit deletion saved offline: ${habit.title}');
         }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('عادت با موفقیت حذف شد 🗑️'),
+              content: Text('عادت با موفقیت حذف شد '),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
           );
         }
       } catch (e) {
-        print('❌ Error deleting habit: $e');
+        print('Error deleting habit: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -200,7 +200,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
   void _showTimerDialog(Habit habit) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('⏱️ تایمر به زودی اضافه می‌شود'),
+        content: Text('تایمر به زودی اضافه می‌شود'),
         duration: Duration(seconds: 1),
       ),
     );
@@ -211,7 +211,7 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
     final theme = Provider.of<ThemeProvider>(context);
     final Color primaryColor = theme.primaryColor;
 
-    // ✅ Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
+    // Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
     return Consumer<SyncProvider>(
       builder: (context, syncProvider, child) {
         final habits = syncProvider.habits

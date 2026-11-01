@@ -65,7 +65,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
       CurvedAnimation(parent: _loadingController, curve: Curves.linear),
     );
 
-    // ✅ چک کن قبل از repeat
+    // چک کن قبل از repeat
     if (mounted) {
       _loadingController.repeat();
     }
@@ -73,7 +73,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
 
   @override
   void dispose() {
-    _isDisposed = true; // ✅ اولین خط
+    _isDisposed = true; // اولین خط
     _loadingController.dispose();
     super.dispose();
   }
@@ -91,7 +91,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     if (_isDisposed) return;
     if (_isLoading && _isRefreshing) return;
 
-    if (!mounted) return; // ✅ چک کن
+    if (!mounted) return; // چک کن
 
     setState(() {
       _isLoading = true;
@@ -298,9 +298,9 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading stats: $e');
+      debugPrint('Error loading stats: $e');
       if (mounted) {
-        // ✅ چک کن
+        // چک کن
         setState(() {
           _isLoading = false;
         });
@@ -316,7 +316,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: theme.surfaceColor, // ✅ از تم
+        color: theme.surfaceColor, // از تم
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -338,7 +338,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: theme.textColor, // ✅ از تم
+                color: theme.textColor, // از تم
               ),
             ),
           ),
@@ -505,7 +505,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
   Widget _buildCompletionRateCard(Color primaryColor, ThemeProvider theme) {
     final percent = (_completionRate * 100).toInt();
 
-    // ✅ در تم شب از primary استفاده می‌کنیم، در تم روز مشکی
+    // در تم شب از primary استفاده می‌کنیم، در تم روز مشکی
     final Color cardColor =
         theme.isDarkMode ? primaryColor : const Color(0xFF090909);
     final Color contentColor =
@@ -576,7 +576,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
     final bool hasItems = total > 0;
     final bool allDone = hasItems && completed == total;
 
-    // ✅ رنگ پس‌زمینه ردیف
+    // رنگ پس‌زمینه ردیف
     final Color rowBg = theme.isDarkMode
         ? Colors.white.withValues(alpha: 0.05)
         : color.withValues(alpha: 0.06);
@@ -609,7 +609,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: theme.textColor, // ✅ از تم
+                color: theme.textColor, // از تم
               ),
             ),
           ),
@@ -645,7 +645,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
               'هیچی',
               style: TextStyle(
                 fontSize: 12,
-                color: theme.textSecondaryColor, // ✅ از تم
+                color: theme.textSecondaryColor, // از تم
               ),
             ),
           ],
@@ -698,7 +698,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'برای امروز هیچ کاری تعیین نکردی! یک عادت یا تسک جدید اضافه کن 🎯',
+                'برای امروز هیچ کاری تعیین نکردی! یک عادت یا تسک جدید اضافه کن ',
                 style: TextStyle(
                   fontSize: 12,
                   color: theme.textSecondaryColor,
@@ -726,7 +726,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '🎉 همه کارهای امروز رو انجام دادی! تو یک قهرمان واقعی هستی!',
+                'همه کارهای امروز رو انجام دادی! تو یک قهرمان واقعی هستی!',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -757,7 +757,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '🔥 فقط $remaining کار دیگه مونده! ادامه بده، به قهرمانی نزدیک میشی!',
+              'فقط $remaining کار دیگه مونده! ادامه بده، به قهرمانی نزدیک میشی!',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

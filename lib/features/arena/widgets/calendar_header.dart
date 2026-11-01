@@ -208,7 +208,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         children: [
-          // ✅ هدر تقویم
+          // هدر تقویم
           GestureDetector(
             onTap: _toggleExpanded,
             child: Padding(
@@ -274,7 +274,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
             ),
           ),
 
-          // ✅ کشوی تقویم
+          // کشوی تقویم
           if (_isExpanded)
             SizeTransition(
               sizeFactor: _scaleAnimation,

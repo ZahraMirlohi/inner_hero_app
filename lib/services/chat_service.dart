@@ -20,14 +20,14 @@ class ChatService {
 
   Future<List<Conversation>> getUserConversations(String userId) async {
     try {
-      // ✅ مرحله 1: گرفتن همه گفتگوهای فعال کاربر
+      // مرحله 1: گرفتن همه گفتگوهای فعال کاربر
       final conversationsResponse = await _client
           .from('conversation_members')
           .select('conversation_id')
           .eq('user_id', userId);
 
       if (conversationsResponse.isEmpty) {
-        print('📊 No conversation memberships found for user: $userId');
+        print('No conversation memberships found for user: $userId');
         return [];
       }
 
@@ -35,9 +35,9 @@ class ChatService {
           .map((m) => m['conversation_id'] as String)
           .toList();
 
-      print('📊 User is member of ${conversationIds.length} conversations');
+      print('User is member of ${conversationIds.length} conversations');
 
-      // ✅ مرحله 2: گرفتن گفتگوهای فعال از بین این‌ها
+      // مرحله 2: گرفتن گفتگوهای فعال از بین این‌ها
       final activeConversationsResponse = await _client
           .from('conversations')
           .select()
@@ -45,7 +45,7 @@ class ChatService {
           .eq('is_active', true)
           .order('last_message_at', ascending: false);
 
-      print('📊 Active conversations: ${activeConversationsResponse.length}');
+      print('Active conversations: ${activeConversationsResponse.length}');
 
       if (activeConversationsResponse.isEmpty) {
         return [];
@@ -54,7 +54,7 @@ class ChatService {
       final activeConversationIds =
           activeConversationsResponse.map((c) => c['id'] as String).toList();
 
-      // ✅ مرحله 3: گرفتن همه اعضای این گفتگوها با یک کوئری
+      // مرحله 3: گرفتن همه اعضای این گفتگوها با یک کوئری
       final allMembersResponse = await _client
           .from('conversation_members')
           .select('conversation_id, user_id')
@@ -67,7 +67,7 @@ class ChatService {
         membersByConv.putIfAbsent(convId, () => []).add(uid);
       }
 
-      // ✅ مرحله 4: گرفتن همه پروفایل‌های اعضا با یک کوئری
+      // مرحله 4: گرفتن همه پروفایل‌های اعضا با یک کوئری
       final allMemberIds = allMembersResponse
           .map((m) => m['user_id'] as String)
           .toSet()
@@ -82,7 +82,7 @@ class ChatService {
         for (var p in profilesResponse) p['user_id'] as String: p,
       };
 
-      // ✅ مرحله 5: گرفتن آخرین پیام هر گفتگو با یک کوئری
+      // مرحله 5: گرفتن آخرین پیام هر گفتگو با یک کوئری
       final lastMessagesResponse = await _client
           .from('messages')
           .select('conversation_id, content, created_at, sender_id')
@@ -98,14 +98,14 @@ class ChatService {
         }
       }
 
-      // ✅ مرحله 6: ساخت لیست نهایی
+      // مرحله 6: ساخت لیست نهایی
       final List<Conversation> conversations = [];
 
       for (var convData in activeConversationsResponse) {
         final conversationId = convData['id'] as String;
         final memberIds = membersByConv[conversationId] ?? [];
 
-        // ✅ اگر بعد از همه چک‌ها، عضو کمتر از 2 بود، این گفتگو را رد کن
+        // اگر بعد از همه چک‌ها، عضو کمتر از 2 بود، این گفتگو را رد کن
         if (memberIds.length < 2) {
           print(
               '⚠️ Skipping conversation $conversationId: only ${memberIds.length} members');
@@ -189,7 +189,7 @@ class ChatService {
         );
       }
 
-      print('📊 Total conversations loaded: ${conversations.length}');
+      print('Total conversations loaded: ${conversations.length}');
       for (var conv in conversations) {
         print(
             '   - ${conv.id}: ${conv.type} - ${conv.displayName} (${conv.memberIds.length} members) - Last: ${conv.lastMessage}');
@@ -197,7 +197,7 @@ class ChatService {
 
       return conversations;
     } catch (e) {
-      print('❌ Error getting conversations: $e');
+      print('Error getting conversations: $e');
       return [];
     }
   }
@@ -212,7 +212,7 @@ class ChatService {
 
       final memberIds =
           membersResponse.map((m) => m['user_id'] as String).toList();
-      print('📊 Members in conversation: $memberIds');
+      print('Members in conversation: $memberIds');
 
       // 2. حذف پیام‌ها
       await _client
@@ -229,25 +229,25 @@ class ChatService {
       // 4. حذف گفتگو
       await _client.from('conversations').delete().eq('id', conversationId);
 
-      // 5. ✅ حذف همه درخواست‌های هم‌مسیر بین این دو کاربر
+      // 5. حذف همه درخواست‌های هم‌مسیر بین این دو کاربر
       if (memberIds.length >= 2) {
         final user1 = memberIds[0];
         final user2 = memberIds[1];
 
-        // ✅ حذف درخواست‌ها (همه وضعیت‌ها: pending, accepted, rejected)
+        // حذف درخواست‌ها (همه وضعیت‌ها: pending, accepted, rejected)
         final deleteResult = await _client
             .from('buddy_requests')
             .delete()
             .or('from_user_id.eq.$user1,to_user_id.eq.$user1')
             .or('from_user_id.eq.$user2,to_user_id.eq.$user2');
 
-        print('🗑️ Removed all buddy requests between $user1 and $user2');
-        print('📊 Delete result: $deleteResult');
+        print('Removed all buddy requests between $user1 and $user2');
+        print('Delete result: $deleteResult');
       }
 
-      print('🗑️ Conversation and all related data deleted: $conversationId');
+      print('Conversation and all related data deleted: $conversationId');
     } catch (e) {
-      print('❌ Error deleting conversation: $e');
+      print('Error deleting conversation: $e');
       rethrow;
     }
   }
@@ -261,18 +261,18 @@ class ChatService {
     String? challengeId,
   }) async {
     try {
-      print('📊 ===== CREATE CONVERSATION START =====');
+      print('===== CREATE CONVERSATION START =====');
 
-      // ✅ فقط چک کن کاربر وجود داره، بدون refresh اجباری
+      // فقط چک کن کاربر وجود داره، بدون refresh اجباری
       final user = _client.auth.currentUser;
       if (user == null) {
         throw Exception('لطفاً دوباره وارد حساب کاربری شوید');
       }
 
       final actualCreatedBy = user.id;
-      print('✅ Using actualCreatedBy: $actualCreatedBy');
+      print('Using actualCreatedBy: $actualCreatedBy');
 
-      // ✅ 2. بررسی گفتگوی موجود
+      // 2. بررسی گفتگوی موجود
       try {
         final existingConversations =
             await getUserConversations(actualCreatedBy);
@@ -281,16 +281,16 @@ class ChatService {
             final allMembersExist =
                 memberIds.every((id) => conv.memberIds.contains(id));
             if (allMembersExist) {
-              print('ℹ️ Conversation already exists: ${conv.id}');
+              print('ℹConversation already exists: ${conv.id}');
               return conv.id;
             }
           }
         }
       } catch (e) {
-        print('⚠️ Error checking existing conversations: $e');
+        print('Error checking existing conversations: $e');
       }
 
-      // ✅ 3. ایجاد گفتگو
+      // 3. ایجاد گفتگو
       final now = DateTime.now().toIso8601String();
 
       final conversationData = <String, dynamic>{
@@ -303,7 +303,7 @@ class ChatService {
         'last_message_at': now,
       };
 
-      print('📤 Inserting conversation: $conversationData');
+      print('Inserting conversation: $conversationData');
 
       final conversationResponse = await _client
           .from('conversations')
@@ -312,9 +312,9 @@ class ChatService {
           .single();
 
       final conversationId = conversationResponse['id'];
-      print('✅ Conversation created: $conversationId');
+      print('Conversation created: $conversationId');
 
-      // ✅ 4. افزودن اعضا
+      // 4. افزودن اعضا
       final List<Map<String, dynamic>> membersToInsert = [];
       for (var userId in memberIds) {
         if (userId.isNotEmpty) {
@@ -332,27 +332,27 @@ class ChatService {
         throw Exception('No valid members');
       }
 
-      print('📤 Inserting members: $membersToInsert');
+      print('Inserting members: $membersToInsert');
 
       try {
         await _client.from('conversation_members').insert(membersToInsert);
-        print('✅ Members added successfully');
+        print('Members added successfully');
       } catch (e) {
-        print('❌ Error adding members: $e');
+        print('Error adding members: $e');
         await _client.from('conversations').delete().eq('id', conversationId);
         rethrow;
       }
 
-      print('✅ ===== CREATE CONVERSATION SUCCESS =====');
+      print('===== CREATE CONVERSATION SUCCESS =====');
       return conversationId;
     } catch (e) {
-      print('❌ ===== CREATE CONVERSATION ERROR =====');
-      print('❌ Error: $e');
+      print('===== CREATE CONVERSATION ERROR =====');
+      print('Error: $e');
       rethrow;
     }
   }
 
-// ✅ متد کمکی برای refresh اجباری session
+// متد کمکی برای refresh اجباری session
   Future<void> _forceRefreshSession() async {
     final session = _client.auth.currentSession;
 
@@ -361,7 +361,7 @@ class ChatService {
     }
 
     if (session.isExpired) {
-      print('⚠️ Session expired, forcing refresh...');
+      print('Session expired, forcing refresh...');
       try {
         await _client.auth.refreshSession();
         await Future.delayed(const Duration(milliseconds: 300));
@@ -370,9 +370,9 @@ class ChatService {
         if (newSession == null || newSession.isExpired) {
           throw Exception('نشست شما منقضی شده. لطفاً دوباره وارد شوید.');
         }
-        print('✅ Session refreshed successfully');
+        print('Session refreshed successfully');
       } catch (e) {
-        print('❌ Session refresh failed: $e');
+        print('Session refresh failed: $e');
         // خروج کاربر و هدایت به صفحه ورود
         await _client.auth.signOut();
         throw Exception('لطفاً دوباره وارد حساب کاربری شوید.');
@@ -400,55 +400,55 @@ class ChatService {
         'type': type,
         'metadata': metadata ?? {},
         'reply_to_id': replyToId,
-        'status': 'sent', // ✅ وضعیت اولیه sent
+        'status': 'sent', // وضعیت اولیه sent
         'created_at': DateTime.now().toIso8601String(),
       };
 
-      print('📤 [CHAT_SERVICE] Sending message...');
+      print('[CHAT_SERVICE] Sending message...');
       print('   - type: $type');
       print('   - status: sent');
 
       final response = await _client.from('messages').insert(data).select();
-      print('✅ [CHAT_SERVICE] Message inserted successfully!');
+      print('[CHAT_SERVICE] Message inserted successfully!');
 
       await _client
           .from('conversations')
           .update({'last_message_at': DateTime.now().toIso8601String()}).eq(
               'id', conversationId);
     } catch (e) {
-      print('🔴 [CHAT_SERVICE] Error inserting message: $e');
+      print('[CHAT_SERVICE] Error inserting message: $e');
       rethrow;
     }
   }
 
-  // ✅ پین کردن پیام
+  // پین کردن پیام
   Future<void> pinMessage({
     required String messageId,
     required String userId,
   }) async {
     try {
-      // ✅ ابتدا پین قبلی را بردارید (فقط یک پیام می‌تواند پین شود)
+      // ابتدا پین قبلی را بردارید (فقط یک پیام می‌تواند پین شود)
       await _client
           .from('messages')
           .update({'is_pinned': false, 'pinned_at': null, 'pinned_by': null})
           .eq('conversation_id', await _getConversationIdByMessage(messageId))
           .eq('is_pinned', true);
 
-      // ✅ پین کردن پیام جدید
+      // پین کردن پیام جدید
       await _client.from('messages').update({
         'is_pinned': true,
         'pinned_at': DateTime.now().toIso8601String(),
         'pinned_by': userId,
       }).eq('id', messageId);
 
-      print('📌 Message pinned: $messageId');
+      print('Message pinned: $messageId');
     } catch (e) {
-      print('❌ Error pinning message: $e');
+      print('Error pinning message: $e');
       rethrow;
     }
   }
 
-  // ✅ لغو پین پیام
+  // لغو پین پیام
   Future<void> unpinMessage({required String messageId}) async {
     try {
       await _client.from('messages').update({
@@ -457,14 +457,14 @@ class ChatService {
         'pinned_by': null
       }).eq('id', messageId);
 
-      print('📌 Message unpinned: $messageId');
+      print('Message unpinned: $messageId');
     } catch (e) {
-      print('❌ Error unpinning message: $e');
+      print('Error unpinning message: $e');
       rethrow;
     }
   }
 
-  // ✅ دریافت conversationId از messageId
+  // دریافت conversationId از messageId
   Future<String> _getConversationIdByMessage(String messageId) async {
     try {
       final response = await _client
@@ -479,7 +479,7 @@ class ChatService {
     }
   }
 
-  // ✅ دریافت پیام پین شده یک گفتگو
+  // دریافت پیام پین شده یک گفتگو
   Future<ChatMessage?> getPinnedMessage(String conversationId) async {
     try {
       final response = await _client
@@ -492,7 +492,7 @@ class ChatService {
       if (response == null) return null;
       return ChatMessage.fromMap(response);
     } catch (e) {
-      print('❌ Error getting pinned message: $e');
+      print('Error getting pinned message: $e');
       return null;
     }
   }
@@ -507,19 +507,19 @@ class ChatService {
           .from('messages')
           .select()
           .eq('conversation_id', conversationId)
-          .eq('is_deleted', false) // ✅ فقط پیام‌های حذف نشده
+          .eq('is_deleted', false) // فقط پیام‌های حذف نشده
           .order('created_at', ascending: false)
           .limit(limit);
 
       final messages = response.map((item) {
         final msg = ChatMessage.fromMap(item);
-        // ✅ تنظیم وضعیت از دیتابیس
+        // تنظیم وضعیت از دیتابیس
         final statusStr = item['status'] as String? ?? 'sent';
         final status = MessageStatus.values.firstWhere(
           (e) => e.toString().split('.').last == statusStr,
           orElse: () => MessageStatus.sent,
         );
-        // ✅ استفاده از setter (چون status دیگر final نیست)
+        // استفاده از setter (چون status دیگر final نیست)
         msg.status = status;
         return msg;
       }).toList();
@@ -532,7 +532,7 @@ class ChatService {
 
       return messages;
     } catch (e) {
-      print('❌ Error getting messages history: $e');
+      print('Error getting messages history: $e');
       return [];
     }
   }
@@ -543,7 +543,7 @@ class ChatService {
   }) {
     try {
       return _client.from('messages').stream(primaryKey: ['id']).map((data) {
-        print('📊 [STREAM] Received ${data.length} messages from Realtime');
+        print('[STREAM] Received ${data.length} messages from Realtime');
 
         final List<ChatMessage> messages = [];
         for (var item in data) {
@@ -553,7 +553,7 @@ class ChatService {
             if (userId == null || !msg.hiddenFor.contains(userId)) {
               messages.add(msg);
               print(
-                '📊 [STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
+                '[STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
               );
             }
           }
@@ -561,16 +561,16 @@ class ChatService {
         messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         return _populateReplyTo(messages);
       }).handleError((error) {
-        print('⚠️ Realtime stream error: $error');
+        print('Realtime stream error: $error');
         return <ChatMessage>[];
       });
     } catch (e) {
-      print('❌ Error getting messages stream: $e');
+      print('Error getting messages stream: $e');
       return Stream.value([]);
     }
   }
 
-  // ✅ متد کمکی برای پر کردن replyTo - نسخه کامل
+  // متد کمکی برای پر کردن replyTo - نسخه کامل
   List<ChatMessage> _populateReplyTo(List<ChatMessage> messages) {
     // ایجاد Map برای دسترسی سریع به پیام‌ها با id
     final Map<String, ChatMessage> messageMap = {};
@@ -615,14 +615,14 @@ class ChatService {
 
   // lib/services/chat_service.dart
 
-  // ✅ واکنش به پیام (Reaction) - با استفاده از upsert
+  // واکنش به پیام (Reaction) - با استفاده از upsert
   Future<void> toggleReaction({
     required String messageId,
     required String userId,
     required String emoji,
   }) async {
     try {
-      // ✅ 1. بررسی واکنش قبلی کاربر برای این پیام
+      // 1. بررسی واکنش قبلی کاربر برای این پیام
       final existingReaction = await _client
           .from('message_reactions')
           .select()
@@ -631,43 +631,43 @@ class ChatService {
           .maybeSingle();
 
       if (existingReaction != null) {
-        // ✅ 2. اگر کاربر قبلاً واکنش داده بود
+        // 2. اگر کاربر قبلاً واکنش داده بود
         final existingEmoji = existingReaction['emoji'] as String;
 
         if (existingEmoji == emoji) {
-          // ✅ اگر همان ایموجی بود → حذف کن (لغو واکنش)
+          // اگر همان ایموجی بود حذف کن (لغو واکنش)
           await _client
               .from('message_reactions')
               .delete()
               .eq('id', existingReaction['id']);
-          print('🗑️ Reaction removed: $emoji by user $userId');
+          print('Reaction removed: $emoji by user $userId');
         } else {
-          // ✅ اگر ایموجی متفاوت بود → آپدیت کن (به‌جای حذف+ایجاد)
+          // اگر ایموجی متفاوت بود آپدیت کن (به‌جای حذف+ایجاد)
           await _client.from('message_reactions').update({
             'emoji': emoji,
             'created_at': DateTime.now().toIso8601String(),
           }).eq('id', existingReaction['id']);
-          print('🔄 Reaction updated: $existingEmoji → $emoji by user $userId');
+          print('Reaction updated: $existingEmoji $emoji by user $userId');
         }
       } else {
-        // ✅ 3. اگر کاربر قبلاً واکنش نداده بود → اضافه کن
+        // 3. اگر کاربر قبلاً واکنش نداده بود اضافه کن
         await _client.from('message_reactions').insert({
           'message_id': messageId,
           'user_id': userId,
           'emoji': emoji,
           'created_at': DateTime.now().toIso8601String(),
         });
-        print('✅ Reaction added: $emoji by user $userId');
+        print('Reaction added: $emoji by user $userId');
       }
     } catch (e) {
-      print('❌ Error toggling reaction: $e');
+      print('Error toggling reaction: $e');
       rethrow;
     }
   }
 
   // lib/services/chat_service.dart
 
-  // ✅ اضافه کردن متد به ChatService - با زمان UTC
+  // اضافه کردن متد به ChatService - با زمان UTC
   Future<void> updateLastSeen(String userId) async {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
@@ -679,7 +679,7 @@ class ChatService {
     }
   }
 
-  // ✅ حذف پیام فقط برای خود کاربر (soft delete)
+  // حذف پیام فقط برای خود کاربر (soft delete)
   Future<void> deleteMessageForMe(String messageId, String userId) async {
     try {
       // فقط برای خود کاربر مخفی میشه (با اضافه کردن کاربر به لیست hidden_for)
@@ -699,14 +699,14 @@ class ChatService {
           .from('messages')
           .update({'hidden_for': hiddenFor}).eq('id', messageId);
 
-      print('🗑️ Message hidden for user: $userId');
+      print('Message hidden for user: $userId');
     } catch (e) {
-      print('❌ Error hiding message: $e');
+      print('Error hiding message: $e');
       rethrow;
     }
   }
 
-  // ✅ حذف پیام برای همه (hard delete)
+  // حذف پیام برای همه (hard delete)
   Future<void> deleteMessageForEveryone(String messageId, String userId) async {
     try {
       // فقط فرستنده پیام میتواند برای همه حذف کند
@@ -717,14 +717,14 @@ class ChatService {
           .eq('id', messageId)
           .eq('sender_id', userId);
 
-      print('🗑️ Message deleted for everyone: $messageId');
+      print('Message deleted for everyone: $messageId');
     } catch (e) {
-      print('❌ Error deleting message for everyone: $e');
+      print('Error deleting message for everyone: $e');
       rethrow;
     }
   }
 
-  // ✅ دریافت واکنش‌های یک پیام (بدون join)
+  // دریافت واکنش‌های یک پیام (بدون join)
   Future<List<MessageReaction>> getMessageReactions(String messageId) async {
     try {
       // 1. دریافت واکنش‌ها
@@ -767,12 +767,12 @@ class ChatService {
         );
       }).toList();
     } catch (e) {
-      print('❌ Error getting message reactions: $e');
+      print('Error getting message reactions: $e');
       return [];
     }
   }
 
-  // ✅ دریافت واکنش‌های همه پیام‌های یک گفتگو (بدون join)
+  // دریافت واکنش‌های همه پیام‌های یک گفتگو (بدون join)
   Future<Map<String, List<MessageReaction>>> getConversationReactions(
     String conversationId,
   ) async {
@@ -839,14 +839,14 @@ class ChatService {
       }
       return result;
     } catch (e) {
-      print('❌ Error getting conversation reactions: $e');
+      print('Error getting conversation reactions: $e');
       return {};
     }
   }
 
   // lib/services/chat_service.dart
 
-  // ✅ حذف کامل پیام (بدون هیچ اثری)
+  // حذف کامل پیام (بدون هیچ اثری)
   Future<void> deleteMessage(String messageId, String userId) async {
     try {
       // حذف کامل پیام از دیتابیس
@@ -856,14 +856,14 @@ class ChatService {
           .eq('id', messageId)
           .eq('sender_id', userId);
 
-      print('🗑️ Message deleted permanently: $messageId');
+      print('Message deleted permanently: $messageId');
     } catch (e) {
-      print('❌ Error deleting message: $e');
+      print('Error deleting message: $e');
       rethrow;
     }
   }
 
-  // ✅ ویرایش پیام
+  // ویرایش پیام
   Future<void> editMessage({
     required String messageId,
     required String userId,
@@ -880,14 +880,14 @@ class ChatService {
           .eq('id', messageId)
           .eq('sender_id', userId);
     } catch (e) {
-      print('❌ Error editing message: $e');
+      print('Error editing message: $e');
       rethrow;
     }
   }
 
   // lib/services/chat_service.dart
 
-  // ✅ اصلاح متد sendTypingStatus
+  // اصلاح متد sendTypingStatus
   Future<void> sendTypingStatus({
     required String conversationId,
     required String userId,
@@ -896,7 +896,7 @@ class ChatService {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
 
-      // ✅ Upsert با استفاده از onConflict
+      // Upsert با استفاده از onConflict
       await _client.from('typing_status').upsert({
         'conversation_id': conversationId,
         'user_id': userId,
@@ -904,15 +904,15 @@ class ChatService {
         'updated_at': now,
       }, onConflict: 'conversation_id, user_id');
 
-      print('📊 Typing status updated: $isTyping for user $userId');
+      print('Typing status updated: $isTyping for user $userId');
     } catch (e) {
-      print('⚠️ Typing status error: $e');
+      print('Typing status error: $e');
     }
   }
 
   // lib/services/chat_service.dart
 
-  // ✅ علامت‌گذاری پیام به عنوان خوانده شده
+  // علامت‌گذاری پیام به عنوان خوانده شده
   Future<void> markMessageAsRead({
     required String messageId,
     required String userId,
@@ -926,15 +926,15 @@ class ChatService {
           .eq('id', messageId)
           .neq('sender_id', userId); // فقط پیام‌هایی که خود کاربر نفرستاده
 
-      print('✅ Message $messageId marked as read by $userId');
+      print('Message $messageId marked as read by $userId');
     } catch (e) {
-      print('❌ Error marking message as read: $e');
+      print('Error marking message as read: $e');
     }
   }
 
   // lib/services/chat_service.dart
 
-  /// ✅ علامت‌گذاری همه پیام‌های یک گفتگو به عنوان خوانده شده - نسخه اصلاح شده
+  /// علامت‌گذاری همه پیام‌های یک گفتگو به عنوان خوانده شده - نسخه اصلاح شده
   Future<void> markAllMessagesAsRead({
     required String conversationId,
     required String userId,
@@ -942,7 +942,7 @@ class ChatService {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
 
-      // ✅ فقط پیام‌هایی که توسط کاربر مقابل ارسال شده و هنوز seen نشده‌اند
+      // فقط پیام‌هایی که توسط کاربر مقابل ارسال شده و هنوز seen نشده‌اند
       final result = await _client
           .from('messages')
           .update({'status': 'seen', 'read_at': now})
@@ -950,17 +950,17 @@ class ChatService {
           .neq('sender_id', userId)
           .neq('status', 'seen');
 
-      // ✅ بررسی اینکه result لیست است یا نه
+      // بررسی اینکه result لیست است یا نه
       if (result != null && result is List) {
-        print('✅ All messages in conversation $conversationId marked as read');
-        print('📊 Updated ${result.length} messages');
+        print('All messages in conversation $conversationId marked as read');
+        print('Updated ${result.length} messages');
       } else {
         // اگر result null بود یا لیست نبود، اما خطایی رخ نداده، یعنی موفق بوده
-        print('✅ All messages in conversation $conversationId marked as read');
-        print('📊 Update completed successfully (no detailed count)');
+        print('All messages in conversation $conversationId marked as read');
+        print('Update completed successfully (no detailed count)');
       }
     } catch (e) {
-      print('❌ Error marking all messages as read: $e');
+      print('Error marking all messages as read: $e');
       // خطا را نادیده بگیر و ادامه بده
       // چون ممکن است جدول messages خالی باشد یا محدودیت‌های RLS مانع شود
     }
@@ -968,7 +968,7 @@ class ChatService {
 
   // lib/services/chat_service.dart
 
-  /// ✅ علامت‌گذاری همه پیام‌ها با RPC (روش مطمئن‌تر)
+  /// علامت‌گذاری همه پیام‌ها با RPC (روش مطمئن‌تر)
   Future<int> markAllMessagesAsReadRPC({
     required String conversationId,
     required String userId,
@@ -987,17 +987,17 @@ class ChatService {
         count = result['count'] ?? 0;
       }
 
-      print('✅ $count messages marked as read via RPC');
+      print('$count messages marked as read via RPC');
       return count;
     } catch (e) {
-      print('❌ Error marking messages as read via RPC: $e');
+      print('Error marking messages as read via RPC: $e');
       return 0;
     }
   }
 
   // lib/services/chat_service.dart
 
-  /// ✅ روش جایگزین بدون RPC - با تعریف متغیر now
+  /// روش جایگزین بدون RPC - با تعریف متغیر now
   Future<void> markAllMessagesAsReadSafe({
     required String conversationId,
     required String userId,
@@ -1005,7 +1005,7 @@ class ChatService {
     try {
       final now = DateTime.now().toUtc().toIso8601String();
 
-      // ✅ به‌روزرسانی مستقیم
+      // به‌روزرسانی مستقیم
       await _client
           .from('messages')
           .update({'status': 'seen', 'read_at': now})
@@ -1013,9 +1013,9 @@ class ChatService {
           .neq('sender_id', userId)
           .neq('status', 'seen');
 
-      print('✅ All messages marked as read (safe method)');
+      print('All messages marked as read (safe method)');
     } catch (e) {
-      print('⚠️ Safe method failed, trying individual updates...');
+      print('Safe method failed, trying individual updates...');
 
       // اگر خطا داد، تک تک پیام‌ها را به‌روزرسانی کن
       try {
@@ -1033,14 +1033,14 @@ class ChatService {
               .from('messages')
               .update({'status': 'seen', 'read_at': now2}).eq('id', msg['id']);
         }
-        print('✅ ${unread.length} messages marked as read individually');
+        print('${unread.length} messages marked as read individually');
       } catch (e2) {
-        print('❌ Error marking messages individually: $e2');
+        print('Error marking messages individually: $e2');
       }
     }
   }
 
-  // ✅ دریافت وضعیت تایپ کاربران دیگر - با مدیریت خطا
+  // دریافت وضعیت تایپ کاربران دیگر - با مدیریت خطا
   Stream<Map<String, bool>> getTypingStatus(String conversationId) {
     try {
       return _client
@@ -1063,12 +1063,12 @@ class ChatService {
         }
         return result;
       }).handleError((error) {
-        // ✅ مدیریت خطا - فقط لاگ کن
-        print('⚠️ Typing status stream error: $error');
+        // مدیریت خطا - فقط لاگ کن
+        print('Typing status stream error: $error');
         return <String, bool>{};
       });
     } catch (e) {
-      print('❌ Error getting typing status: $e');
+      print('Error getting typing status: $e');
       return Stream.value({});
     }
   }
@@ -1094,7 +1094,7 @@ class ChatService {
 
       return response.map((item) => ChatMessage.fromMap(item)).toList();
     } catch (e) {
-      print('❌ Error getting messages before date: $e');
+      print('Error getting messages before date: $e');
       return [];
     }
   }
@@ -1109,7 +1109,7 @@ class ChatService {
         'joined_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      print('❌ Error adding member: $e');
+      print('Error adding member: $e');
       rethrow;
     }
   }
@@ -1122,7 +1122,7 @@ class ChatService {
           .eq('conversation_id', conversationId)
           .eq('user_id', userId);
     } catch (e) {
-      print('❌ Error removing member: $e');
+      print('Error removing member: $e');
       rethrow;
     }
   }
@@ -1143,7 +1143,7 @@ class ChatService {
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
-      print('❌ Error sending buddy request: $e');
+      print('Error sending buddy request: $e');
       rethrow;
     }
   }
@@ -1158,7 +1158,7 @@ class ChatService {
 
       return response;
     } catch (e) {
-      print('❌ Error getting buddy requests: $e');
+      print('Error getting buddy requests: $e');
       return [];
     }
   }
@@ -1185,7 +1185,7 @@ class ChatService {
         );
       }
     } catch (e) {
-      print('❌ Error responding to buddy request: $e');
+      print('Error responding to buddy request: $e');
       rethrow;
     }
   }
@@ -1194,7 +1194,7 @@ class ChatService {
 
   Future<void> deleteConversationForBoth(String conversationId) async {
     try {
-      print('🗑️ Starting deletion for conversation: $conversationId');
+      print('Starting deletion for conversation: $conversationId');
 
       // 1. دریافت اعضای گفتگو
       final membersResponse = await _client
@@ -1205,7 +1205,7 @@ class ChatService {
       final memberIds =
           membersResponse.map((m) => m['user_id'] as String).toList();
 
-      print('📊 Members in conversation: $memberIds');
+      print('Members in conversation: $memberIds');
 
       // 2. حذف درخواست‌های هم‌مسیر
       if (memberIds.length >= 2) {
@@ -1213,9 +1213,9 @@ class ChatService {
           await _client.from('buddy_requests').delete().or(
               'and(from_user_id.eq.${memberIds[0]},to_user_id.eq.${memberIds[1]}),'
               'and(from_user_id.eq.${memberIds[1]},to_user_id.eq.${memberIds[0]})');
-          print('🗑️ Removed buddy requests between members');
+          print('Removed buddy requests between members');
         } catch (e) {
-          print('⚠️ Error removing buddy requests: $e');
+          print('Error removing buddy requests: $e');
         }
       }
 
@@ -1226,7 +1226,7 @@ class ChatService {
             .delete()
             .eq('conversation_id', conversationId);
       } catch (e) {
-        print('⚠️ Error deleting typing status: $e');
+        print('Error deleting typing status: $e');
       }
 
       // 4. حذف واکنش‌ها
@@ -1244,7 +1244,7 @@ class ChatService {
               .inFilter('message_id', messageIds);
         }
       } catch (e) {
-        print('⚠️ Error deleting reactions: $e');
+        print('Error deleting reactions: $e');
       }
 
       // 5. حذف پیام‌ها
@@ -1253,9 +1253,9 @@ class ChatService {
             .from('messages')
             .delete()
             .eq('conversation_id', conversationId);
-        print('🗑️ Messages deleted');
+        print('Messages deleted');
       } catch (e) {
-        print('⚠️ Error deleting messages: $e');
+        print('Error deleting messages: $e');
       }
 
       // 6. حذف خود گفتگو
@@ -1269,12 +1269,12 @@ class ChatService {
 
         if (deleteResult.isNotEmpty) {
           conversationDeleted = true;
-          print('✅ Conversation deleted successfully');
+          print('Conversation deleted successfully');
         } else {
-          print('⚠️ Conversation NOT deleted (RLS issue)');
+          print('Conversation NOT deleted (RLS issue)');
         }
       } catch (e) {
-        print('❌ Error deleting conversation: $e');
+        print('Error deleting conversation: $e');
       }
 
       // 7. اگر حذف نشد، غیرفعال کن
@@ -1283,9 +1283,9 @@ class ChatService {
           await _client
               .from('conversations')
               .update({'is_active': false}).eq('id', conversationId);
-          print('ℹ️ Conversation marked as inactive');
+          print('ℹConversation marked as inactive');
         } catch (e) {
-          print('⚠️ Error marking inactive: $e');
+          print('Error marking inactive: $e');
         }
       }
 
@@ -1295,12 +1295,12 @@ class ChatService {
             .from('conversation_members')
             .delete()
             .eq('conversation_id', conversationId);
-        print('🗑️ Members deleted');
+        print('Members deleted');
       } catch (e) {
-        print('⚠️ Error deleting members: $e');
+        print('Error deleting members: $e');
       }
     } catch (e) {
-      print('❌ Error deleting conversation: $e');
+      print('Error deleting conversation: $e');
       rethrow;
     }
   }
@@ -1322,19 +1322,19 @@ class ChatService {
 
       final session = _client.auth.currentSession;
       if (session == null) {
-        print('❌ No active session');
+        print('No active session');
         return null;
       }
 
       final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
       if (supabaseUrl.isEmpty) {
-        print('❌ SUPABASE_URL not found');
+        print('SUPABASE_URL not found');
         return null;
       }
 
       final uploadUrl = '$supabaseUrl/storage/v1/object/chat/$path';
 
-      // ✅ تبدیل به Uint8List
+      // تبدیل به Uint8List
       final bytes = await imageFile.readAsBytes();
       final uint8List = Uint8List.fromList(bytes);
 
@@ -1353,7 +1353,7 @@ class ChatService {
       }
       return null;
     } catch (e) {
-      print('❌ Error uploading image: $e');
+      print('Error uploading image: $e');
       return null;
     }
   }

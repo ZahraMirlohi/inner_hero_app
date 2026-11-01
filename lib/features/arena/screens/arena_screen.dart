@@ -301,7 +301,7 @@ class _ArenaScreenState extends State<ArenaScreen>
   Widget _buildHorizontalProgressBar(ThemeProvider theme) {
     final Color primaryColor = theme.primaryColor;
     final int percent = (_currentProgress * 100).toInt();
-    // ✅ در تم شب از رنگ روشن‌تر استفاده کن تا متن/آیکون خوانا باشد
+    // در تم شب از رنگ روشن‌تر استفاده کن تا متن/آیکون خوانا باشد
     final Color progressColor =
         theme.isDarkMode ? theme.primaryColor : const Color(0xFF090909);
 

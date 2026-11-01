@@ -73,7 +73,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         }
       }
     } catch (e) {
-      print('❌ Error checking gift status: $e');
+      print('Error checking gift status: $e');
     } finally {
       _isChecking = false;
     }
@@ -101,7 +101,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('🎉 ${widget.amount} XP دریافت شد!'),
+              content: Text('${widget.amount} XP دریافت شد!'),
               backgroundColor: primaryColor,
               duration: const Duration(seconds: 2),
             ),
@@ -109,7 +109,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
         }
       }
     } catch (e) {
-      print('❌ Error receiving gift: $e');
+      print('Error receiving gift: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -129,7 +129,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ رنگ‌های استاندارد
+    // رنگ‌های استاندارد
     final Color bgColor = widget.isMe
         ? ChatColors.myBubble(theme)
         : ChatColors.otherBubble(theme);
@@ -296,7 +296,7 @@ class _XPGiftCardWidgetState extends State<XPGiftCardWidget> {
                         ),
                       )
                     : Text(
-                        'دریافت هدیه 🎁',
+                        'دریافت هدیه ',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,

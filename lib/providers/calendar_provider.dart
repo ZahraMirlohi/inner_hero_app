@@ -49,7 +49,7 @@ class CalendarProvider extends ChangeNotifier {
         type == CalendarType.jalali ? 'jalali' : 'gregorian',
       );
     } catch (e) {
-      debugPrint('❌ Error saving calendar type: $e');
+      debugPrint('Error saving calendar type: $e');
     }
   }
 
@@ -273,7 +273,7 @@ class CalendarProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ محاسبه سال کبیسه شمسی (بدون وابستگی به shamsi_date)
+  /// محاسبه سال کبیسه شمسی (بدون وابستگی به shamsi_date)
   bool _isJalaliLeapYear(int year) {
     // سال‌های کبیسه در چرخه 33 ساله:
     // 1, 5, 9, 13, 17, 22, 26, 30

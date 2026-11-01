@@ -32,7 +32,7 @@ class QuestCard extends StatelessWidget {
     final theme = Provider.of<ThemeProvider>(context);
 
     // ═══════════════════════════════════════════════════════
-    // 🎨 رنگ‌بندی بدنه کارت
+    // رنگ‌بندی بدنه کارت
     // ═══════════════════════════════════════════════════════
     final Color bodyColor;
     final Color borderColor;
@@ -40,7 +40,7 @@ class QuestCard extends StatelessWidget {
     final Color subtleTextColor;
 
     if (isCompleted) {
-      // ✅ کارت تکمیل شده
+      // کارت تکمیل شده
       bodyColor = theme.isDarkMode
           ? const Color(0xFF1B3D2A) // سبز تیره
           : const Color(0xFFF0FDF4);
@@ -50,13 +50,13 @@ class QuestCard extends StatelessWidget {
       subtleTextColor =
           theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
     } else if (isActive) {
-      // ✅ کارت فعال (رنگی)
+      // کارت فعال (رنگی)
       bodyColor = primaryColor;
       borderColor = Colors.transparent;
       borderWidth = 0;
       subtleTextColor = Colors.black.withValues(alpha: 0.65);
     } else {
-      // ✅ کارت جدید (تم‌محور)
+      // کارت جدید (تم‌محور)
       bodyColor = theme.cardColor;
       borderColor = theme.cardColor;
       borderWidth = 2.5;
@@ -220,7 +220,7 @@ class QuestCard extends StatelessWidget {
       iconColor = Colors.white;
       titleColor = theme.textColor;
     } else {
-      // ✅ کارت جدید (تم‌محور)
+      // کارت جدید (تم‌محور)
       headerBg = theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white;
       headerBorder =
           theme.isDarkMode ? const Color(0xFF444444) : const Color(0xFF090909);
@@ -416,7 +416,7 @@ class QuestCard extends StatelessWidget {
       fgColor =
           theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
     } else {
-      // ✅ کارت جدید (تم‌محور)
+      // کارت جدید (تم‌محور)
       bgColor = theme.isDarkMode
           ? const Color(0xFF2A2A2A)
           : const Color(0xFF090909).withValues(alpha: 0.06);

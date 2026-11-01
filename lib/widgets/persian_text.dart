@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 
-/// ✅ ویجت متن برای نمایش صحیح متون فارسی/عربی
+/// ویجت متن برای نمایش صحیح متون فارسی/عربی
 /// این ویجت متن را مجبور می‌کند که همیشه RTL رندر شود
 class PersianText extends StatelessWidget {
   final String text;
@@ -26,7 +26,7 @@ class PersianText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ استفاده از کاراکتر کنترلی RLM (Right-to-Left Mark)
+    // استفاده از کاراکتر کنترلی RLM (Right-to-Left Mark)
     // این کاراکتر نامرئی باعث می‌شود Flutter جهت متن را RTL تشخیص دهد
     // حتی اگر متن با عدد یا حرف انگلیسی شروع شود
     final String processedText = '\u200F$text\u200F';
@@ -43,7 +43,7 @@ class PersianText extends StatelessWidget {
   }
 }
 
-/// ✅ ویجت متن برای اعداد و متون ترکیبی
+/// ویجت متن برای اعداد و متون ترکیبی
 /// اگر فقط می‌خواهید یک تکه متن خاص را اصلاح کنید
 class BidiText extends StatelessWidget {
   final String text;
@@ -63,7 +63,7 @@ class BidiText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ استفاده از کاراکتر کنترلی برای اصلاح جهت
+    // استفاده از کاراکتر کنترلی برای اصلاح جهت
     return Text(
       '\u200F$text',
       style: style,

@@ -364,7 +364,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       _resetTotalItems();
     } catch (e) {
-      print('❌ Error loading data: $e');
+      print('Error loading data: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -498,7 +498,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
       _checkAllCompletedAndShowCongratulation();
     } catch (e) {
-      print('❌ Error in database operations: $e');
+      print('Error in database operations: $e');
       if (mounted) {
         setState(() {
           _habitCompletionStatus[habit.id] = false;
@@ -557,7 +557,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
     } catch (e) {
-      print('⚠️ Challenge completion check error: $e');
+      print('Challenge completion check error: $e');
     }
   }
 
@@ -589,7 +589,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
       }
     } catch (e) {
-      print('⚠️ Quest completion error: $e');
+      print('Quest completion error: $e');
     }
   }
 
@@ -606,7 +606,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           widget.profileRefreshNotifier!.value++;
         }
       } catch (e) {
-        print('⚠️ Profile refresh error: $e');
+        print('Profile refresh error: $e');
       }
     }
   }
@@ -691,7 +691,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           unawaited(_recalculateQuestProgress(_currentUserId!, habit.questId!));
         }
       } catch (e) {
-        print('❌ Error unmarking habit: $e');
+        print('Error unmarking habit: $e');
         if (mounted) {
           setState(() {
             _habitCompletionStatus[habit.id] = true;
@@ -796,7 +796,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           .from('user_quests')
           .update({'progress': completedCount}).eq('id', userQuest.id);
     } catch (e) {
-      print('❌ Error recalculating quest progress: $e');
+      print('Error recalculating quest progress: $e');
     }
   }
 
@@ -1297,14 +1297,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
 
     if (result == true && mounted) {
-      print('🔄 Habit edited, reloading data...');
+      print('Habit edited, reloading data...');
 
       _cacheTime = null;
       _cachedHabits = null;
       _cachedTasks = null;
 
       await _loadData();
-      print('✅ Today tab data reloaded');
+      print('Today tab data reloaded');
     }
 
     _toggleExpanded(habit.id, 'habit');
@@ -1332,28 +1332,28 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ 1. حذف از state محلی
+      // 1. حذف از state محلی
       setState(() {
         _todayHabits.removeWhere((h) => h.id == habit.id);
         _completedHabits.removeWhere((h) => h.id == habit.id);
       });
 
-      // ✅ 2. حذف از LocalStorage
+      // 2. حذف از LocalStorage
       syncProvider.removeHabit(habit.id);
 
       try {
-        // ✅ 3. حذف از Supabase
+        // 3. حذف از Supabase
         if (syncProvider.isOnline) {
           await _supabase.deleteHabit(habit.id);
 
-          // ✅ 4. رفرش
+          // 4. رفرش
           await syncProvider.refreshHabitsAndTasks();
         }
 
-        // ✅ 5. رفرش دیتای صفحه
+        // 5. رفرش دیتای صفحه
         await _loadData();
       } catch (e) {
-        print('❌ Error deleting habit: $e');
+        print('Error deleting habit: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1403,28 +1403,28 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ 1. حذف از state محلی
+      // 1. حذف از state محلی
       setState(() {
         _todayTasks.removeWhere((t) => t.id == task.id);
         _completedTasks.removeWhere((t) => t.id == task.id);
       });
 
-      // ✅ 2. حذف از LocalStorage
+      // 2. حذف از LocalStorage
       await syncProvider.deleteTaskFromLocal(task.id);
 
       try {
-        // ✅ 3. حذف از Supabase
+        // 3. حذف از Supabase
         if (syncProvider.isOnline) {
           await _supabase.deleteTask(task.id);
 
-          // ✅ 4. رفرش
+          // 4. رفرش
           await syncProvider.refreshHabitsAndTasks();
         }
 
-        // ✅ 5. رفرش دیتای صفحه
+        // 5. رفرش دیتای صفحه
         await _loadData();
       } catch (e) {
-        print('❌ Error deleting task: $e');
+        print('Error deleting task: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1490,7 +1490,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         key: ValueKey('habit_card_${habit.id}'),
         habit: habit,
         isCompleted: false,
-        recordedTimeSeconds: _habitRecordedTimes[habit.id], // ✅ پاس دادن زمان
+        recordedTimeSeconds: _habitRecordedTimes[habit.id], // پاس دادن زمان
         onToggle: () => _markHabitCompleted(habit),
         onEdit: isEditable ? () => _editHabit(habit) : () {},
         onDelete: isEditable ? () => _deleteHabit(habit) : () {},
@@ -1730,14 +1730,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                           habit.id, minutes, seconds, isCountdown);
                     },
                     onComplete: () {
-                      // ✅ 1. اول BottomSheet رو ببند
+                      // 1. اول BottomSheet رو ببند
                       Navigator.of(bottomSheetContext).pop();
 
-                      // ✅ 2. بعد از بسته شدن، زمان رو از سرور بخون
+                      // 2. بعد از بسته شدن، زمان رو از سرور بخون
                       Future.microtask(() async {
                         if (!mounted) return;
                         await _reloadHabitTime(habit.id);
-                        // ✅ 3. refresh سبک از سرور برای همگام‌سازی
+                        // 3. refresh سبک از سرور برای همگام‌سازی
                         try {
                           final syncProvider =
                               Provider.of<SyncProvider>(context, listen: false);
@@ -1745,13 +1745,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                             await syncProvider.refreshHabitsAndTasks();
                           }
                         } catch (e) {
-                          print('⚠️ Error refreshing after timer: $e');
+                          print('Error refreshing after timer: $e');
                         }
 
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('✅ زمان با موفقیت ثبت شد!'),
+                              content: Text('زمان با موفقیت ثبت شد!'),
                               backgroundColor: Colors.green,
                               duration: Duration(seconds: 2),
                             ),
@@ -1769,7 +1769,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     );
   }
 
-  /// ✅ خوندن مجدد زمان رکورد شده یک عادت
+  /// خوندن مجدد زمان رکورد شده یک عادت
   Future<void> _reloadHabitTime(String habitId) async {
     if (_currentUserId == null) return;
 
@@ -1790,7 +1790,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         });
       }
     } catch (e) {
-      print('⚠️ Error reloading habit time: $e');
+      print('Error reloading habit time: $e');
     }
   }
 
@@ -1863,7 +1863,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ تنظیمات تایمر ذخیره شد'),
+            content: Text('تنظیمات تایمر ذخیره شد'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -1886,7 +1886,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('🎉 تایمر به پایان رسید!'),
+        title: const Text('تایمر به پایان رسید!'),
         content: Text('آیا عادت "${habit.title}" را انجام دادید؟'),
         actions: [
           TextButton(
@@ -2152,7 +2152,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '⏱️ تایمر عادت',
+            'تایمر عادت',
             style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
           ),
@@ -2198,7 +2198,7 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
             habitId: widget.habit.id,
             habitTitle: widget.habit.title,
             onTimeSaved: () {
-              // ✅ فقط callback رو صدا بزن، Navigator رو خود والد مدیریت می‌کنه
+              // فقط callback رو صدا بزن، Navigator رو خود والد مدیریت می‌کنه
               widget.onComplete();
             },
           ),

@@ -68,7 +68,7 @@ class LocalStorageService {
         Hive.registerAdapter(OfflineOperationAdapter());
       } catch (e) {}
 
-      // ✅ متد کمکی برای باز کردن Box با مدیریت خطا
+      // متد کمکی برای باز کردن Box با مدیریت خطا
       _habitsBox = await _openBoxWithFallback(_habitsBoxName);
       _tasksBox = await _openBoxWithFallback(_tasksBoxName);
       _questsBox = await _openBoxWithFallback(_questsBoxName);
@@ -82,10 +82,10 @@ class LocalStorageService {
       await _runMigrations();
 
       _isInitialized = true;
-      print('✅ LocalStorageService initialized successfully');
+      print('LocalStorageService initialized successfully');
       print('   - Offline operations: ${_offlineBox.length}');
     } catch (e) {
-      print('❌ LocalStorageService init error: $e');
+      print('LocalStorageService init error: $e');
       _isInitialized = true;
       rethrow;
     }
@@ -102,22 +102,22 @@ class LocalStorageService {
         } catch (_) {}
       }
       print(
-        '⚠️ Error opening $boxName box, attempting to delete and recreate...',
+        'Error opening $boxName box, attempting to delete and recreate...',
       );
       try {
-        // ✅ بررسی وجود فایل قبل از حذف
+        // بررسی وجود فایل قبل از حذف
         final path = await _getBoxPath(boxName);
         if (path != null) {
           try {
             await Hive.deleteBoxFromDisk(boxName);
-            print('✅ Deleted $boxName box successfully');
+            print('Deleted $boxName box successfully');
           } catch (deleteError) {
             // اگر فایل وجود نداشت، خطا رو نادیده بگیر
-            print('⚠️ Could not delete $boxName (may not exist): $deleteError');
+            print('Could not delete $boxName (may not exist): $deleteError');
           }
         }
       } catch (e) {
-        print('⚠️ Error checking/deleting $boxName: $e');
+        print('Error checking/deleting $boxName: $e');
       }
       return await Hive.openBox(boxName);
     }
@@ -138,24 +138,24 @@ class LocalStorageService {
 
   // lib/services/local_storage_service.dart
 
-  // ✅ متد کمکی برای تبدیل ایمن تاریخ
+  // متد کمکی برای تبدیل ایمن تاریخ
   DateTime? _safeParseDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return null;
     try {
       return DateTime.parse(dateStr);
     } catch (e) {
-      print('⚠️ Error parsing date: $dateStr');
+      print('Error parsing date: $dateStr');
       return null;
     }
   }
 
-  // ✅ متد کمکی برای تبدیل ایمن تاریخ با مقدار پیش‌فرض
+  // متد کمکی برای تبدیل ایمن تاریخ با مقدار پیش‌فرض
   DateTime _safeParseDateWithDefault(String? dateStr, DateTime defaultValue) {
     if (dateStr == null || dateStr.isEmpty) return defaultValue;
     try {
       return DateTime.parse(dateStr);
     } catch (e) {
-      print('⚠️ Error parsing date: $dateStr, using default');
+      print('Error parsing date: $dateStr, using default');
       return defaultValue;
     }
   }
@@ -166,7 +166,7 @@ class LocalStorageService {
     try {
       await _habitsBox.put('user_habits', habits);
     } catch (e) {
-      print('❌ Error saving habits: $e');
+      print('Error saving habits: $e');
       rethrow;
     }
   }
@@ -178,7 +178,7 @@ class LocalStorageService {
       if (data == null) return [];
       return (data as List).cast<Habit>();
     } catch (e) {
-      print('❌ Error getting habits: $e');
+      print('Error getting habits: $e');
       return [];
     }
   }
@@ -194,7 +194,7 @@ class LocalStorageService {
       }
       await saveHabits(habits);
     } catch (e) {
-      print('❌ Error saving habit: $e');
+      print('Error saving habit: $e');
       rethrow;
     }
   }
@@ -205,7 +205,7 @@ class LocalStorageService {
       habits.removeWhere((h) => h.id == habitId);
       await saveHabits(habits);
     } catch (e) {
-      print('❌ Error deleting habit: $e');
+      print('Error deleting habit: $e');
       rethrow;
     }
   }
@@ -216,7 +216,7 @@ class LocalStorageService {
     try {
       await _tasksBox.put('user_tasks', tasks);
     } catch (e) {
-      print('❌ Error saving tasks: $e');
+      print('Error saving tasks: $e');
       rethrow;
     }
   }
@@ -228,7 +228,7 @@ class LocalStorageService {
       if (data == null) return [];
       return (data as List).cast<Task>();
     } catch (e) {
-      print('❌ Error getting tasks: $e');
+      print('Error getting tasks: $e');
       return [];
     }
   }
@@ -244,7 +244,7 @@ class LocalStorageService {
       }
       await saveTasks(tasks);
     } catch (e) {
-      print('❌ Error saving task: $e');
+      print('Error saving task: $e');
       rethrow;
     }
   }
@@ -255,7 +255,7 @@ class LocalStorageService {
       tasks.removeWhere((t) => t.id == taskId);
       await saveTasks(tasks);
     } catch (e) {
-      print('❌ Error deleting task: $e');
+      print('Error deleting task: $e');
       rethrow;
     }
   }
@@ -266,7 +266,7 @@ class LocalStorageService {
     try {
       await _questsBox.put('available_quests', quests);
     } catch (e) {
-      print('❌ Error saving quests: $e');
+      print('Error saving quests: $e');
       rethrow;
     }
   }
@@ -278,7 +278,7 @@ class LocalStorageService {
       if (data == null) return [];
       return (data as List).cast<Quest>();
     } catch (e) {
-      print('❌ Error getting quests: $e');
+      print('Error getting quests: $e');
       return [];
     }
   }
@@ -289,7 +289,7 @@ class LocalStorageService {
     try {
       await _packagesBox.put('available_packages', packages);
     } catch (e) {
-      print('❌ Error saving packages: $e');
+      print('Error saving packages: $e');
       rethrow;
     }
   }
@@ -301,7 +301,7 @@ class LocalStorageService {
       if (data == null) return [];
       return (data as List).cast<Package>();
     } catch (e) {
-      print('❌ Error getting packages: $e');
+      print('Error getting packages: $e');
       return [];
     }
   }
@@ -312,7 +312,7 @@ class LocalStorageService {
     try {
       await _userProfileBox.put('profile', profile);
     } catch (e) {
-      print('❌ Error saving profile: $e');
+      print('Error saving profile: $e');
       rethrow;
     }
   }
@@ -322,7 +322,7 @@ class LocalStorageService {
       if (!_isInitialized) return null;
       return _userProfileBox.get('profile');
     } catch (e) {
-      print('❌ Error getting profile: $e');
+      print('Error getting profile: $e');
       return null;
     }
   }
@@ -331,7 +331,7 @@ class LocalStorageService {
     try {
       await _userProfileBox.delete('profile');
     } catch (e) {
-      print('❌ Error deleting profile: $e');
+      print('Error deleting profile: $e');
       rethrow;
     }
   }
@@ -342,7 +342,7 @@ class LocalStorageService {
     try {
       await _challengesBox.put('challenges', challenges);
     } catch (e) {
-      print('❌ Error saving challenges: $e');
+      print('Error saving challenges: $e');
       rethrow;
     }
   }
@@ -354,7 +354,7 @@ class LocalStorageService {
       if (data == null) return [];
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('❌ Error getting challenges: $e');
+      print('Error getting challenges: $e');
       return [];
     }
   }
@@ -365,7 +365,7 @@ class LocalStorageService {
     try {
       await _userChallengesBox.put('user_challenges', userChallenges);
     } catch (e) {
-      print('❌ Error saving user challenges: $e');
+      print('Error saving user challenges: $e');
       rethrow;
     }
   }
@@ -377,7 +377,7 @@ class LocalStorageService {
       if (data == null) return [];
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
-      print('❌ Error getting user challenges: $e');
+      print('Error getting user challenges: $e');
       return [];
     }
   }
@@ -391,7 +391,7 @@ class LocalStorageService {
         await saveChallenges(challenges);
       }
     } catch (e) {
-      print('❌ Error updating challenge status: $e');
+      print('Error updating challenge status: $e');
       rethrow;
     }
   }
@@ -404,10 +404,10 @@ class LocalStorageService {
         await init();
       }
       await _offlineBox.add(operation.toMap());
-      print('📝 Offline operation added: ${operation.type} (${operation.id})');
+      print('Offline operation added: ${operation.type} (${operation.id})');
       print('   - Total operations: ${_offlineBox.length}');
     } catch (e) {
-      print('❌ Error adding offline operation: $e');
+      print('Error adding offline operation: $e');
       rethrow;
     }
   }
@@ -422,13 +422,13 @@ class LocalStorageService {
           try {
             operations.add(OfflineOperation.fromMap(data));
           } catch (e) {
-            print('⚠️ Error parsing offline operation: $e');
+            print('Error parsing offline operation: $e');
           }
         }
       }
       return operations;
     } catch (e) {
-      print('❌ Error getting offline operations: $e');
+      print('Error getting offline operations: $e');
       return [];
     }
   }
@@ -439,12 +439,12 @@ class LocalStorageService {
         final data = _offlineBox.get(key);
         if (data != null && data['id'] == id) {
           await _offlineBox.delete(key);
-          print('🗑️ Offline operation removed: $id');
+          print('Offline operation removed: $id');
           break;
         }
       }
     } catch (e) {
-      print('❌ Error removing offline operation: $e');
+      print('Error removing offline operation: $e');
       rethrow;
     }
   }
@@ -452,9 +452,9 @@ class LocalStorageService {
   Future<void> clearOfflineOperations() async {
     try {
       await _offlineBox.clear();
-      print('🗑️ All offline operations cleared');
+      print('All offline operations cleared');
     } catch (e) {
-      print('❌ Error clearing offline operations: $e');
+      print('Error clearing offline operations: $e');
       rethrow;
     }
   }
@@ -471,9 +471,9 @@ class LocalStorageService {
       for (var key in keysToRemove) {
         await _offlineBox.delete(key);
       }
-      print('🗑️ Removed ${keysToRemove.length} operations of type $type');
+      print('Removed ${keysToRemove.length} operations of type $type');
     } catch (e) {
-      print('❌ Error removing operations by type: $e');
+      print('Error removing operations by type: $e');
       rethrow;
     }
   }
@@ -497,7 +497,7 @@ class LocalStorageService {
     try {
       await _settingsBox.put(key, value);
     } catch (e) {
-      print('❌ Error saving setting: $e');
+      print('Error saving setting: $e');
       rethrow;
     }
   }
@@ -507,7 +507,7 @@ class LocalStorageService {
       if (!_isInitialized) return defaultValue;
       return _settingsBox.get(key, defaultValue: defaultValue);
     } catch (e) {
-      print('❌ Error getting setting: $e');
+      print('Error getting setting: $e');
       return defaultValue;
     }
   }
@@ -516,7 +516,7 @@ class LocalStorageService {
     try {
       await _settingsBox.delete(key);
     } catch (e) {
-      print('❌ Error removing setting: $e');
+      print('Error removing setting: $e');
       rethrow;
     }
   }
@@ -534,9 +534,9 @@ class LocalStorageService {
       await _offlineBox.clear();
       await _challengesBox.clear();
       await _userChallengesBox.clear();
-      print('🗑️ All local data cleared');
+      print('All local data cleared');
     } catch (e) {
-      print('❌ Error clearing all data: $e');
+      print('Error clearing all data: $e');
       rethrow;
     }
   }
@@ -570,7 +570,7 @@ class LocalStorageService {
   Future<void> _migrateStep(int from) async {
     switch (from) {
       case 1:
-        // v1 → v2: داده‌های کش‌شده (عادت، کار، ماموریت، بسته، چالش) را پاک می‌کنیم تا
+        // v1 v2: داده‌های کش‌شده (عادت، کار، ماموریت، بسته، چالش) را پاک می‌کنیم تا
         // با ساختار و کدگذاری جدید روزهای هفته از سرور تازه بیایند.
         // صف عملیات آفلاین و پروفایل دست نمی‌خورند تا کار ذخیره‌نشدهٔ کاربر گم نشود.
         await _habitsBox.clear();
@@ -581,7 +581,7 @@ class LocalStorageService {
         await _userChallengesBox.clear();
         break;
       case 2:
-        // v2 → v3: روزهای هفته شنبه=۰ شد و داده‌های سرور با SQL اصلاح می‌شوند؛
+        // v2 v3: روزهای هفته شنبه=۰ شد و داده‌های سرور با SQL اصلاح می‌شوند؛
         // کش دوباره از سرور پر شود (صف آفلاین دست‌نخورده می‌ماند).
         await _habitsBox.clear();
         break;
@@ -616,9 +616,9 @@ class LocalStorageService {
       if (profile != null) {
         await saveUserProfile(profile);
       }
-      print('🗑️ All data except profile cleared');
+      print('All data except profile cleared');
     } catch (e) {
-      print('❌ Error clearing data: $e');
+      print('Error clearing data: $e');
       rethrow;
     }
   }
@@ -634,16 +634,16 @@ class LocalStorageService {
       await Hive.deleteBoxFromDisk(_offlineBoxName);
       await Hive.deleteBoxFromDisk(_challengesBoxName);
       await Hive.deleteBoxFromDisk(_userChallengesBoxName);
-      print('✅ Database reset successfully');
+      print('Database reset successfully');
     } catch (e) {
-      print('❌ Error resetting database: $e');
+      print('Error resetting database: $e');
     }
   }
 
   // ==================== Debug ====================
 
   void printDebugInfo() {
-    print('📊 LocalStorage Debug Info:');
+    print('LocalStorage Debug Info:');
     print('   - Initialized: $_isInitialized');
     print('   - Habits: ${getHabits().length}');
     print('   - Tasks: ${getTasks().length}');
@@ -675,12 +675,12 @@ class HabitAdapter extends TypeAdapter<Habit> {
       }
     }
 
-    // ✅ خواندن timer_setting با تبدیل نوع
+    // خواندن timer_setting با تبدیل نوع
     TimerSetting? timerSetting;
     try {
       final timerSettingMap = reader.readMap();
       if (timerSettingMap.isNotEmpty) {
-        // ✅ تبدیل Map<dynamic, dynamic> به Map<String, dynamic>
+        // تبدیل Map<dynamic, dynamic> به Map<String, dynamic>
         final Map<String, dynamic> convertedMap = {};
         timerSettingMap.forEach((key, value) {
           convertedMap[key.toString()] = value;
@@ -689,7 +689,7 @@ class HabitAdapter extends TypeAdapter<Habit> {
       }
     } catch (e) {
       // اگر timerSetting وجود نداشت، نادیده بگیر
-      print('⚠️ Error reading timer_setting: $e');
+      print('Error reading timer_setting: $e');
     }
 
     return Habit(
@@ -767,7 +767,7 @@ class HabitAdapter extends TypeAdapter<Habit> {
     writer.writeString(obj.halfDescription ?? '');
     writer.writeString(obj.basicDescription ?? '');
 
-    // ✅ نوشتن timer_setting
+    // نوشتن timer_setting
     if (obj.timerSetting != null) {
       writer.writeMap(obj.timerSetting!.toMap());
     } else {

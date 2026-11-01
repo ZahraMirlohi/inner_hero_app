@@ -158,7 +158,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void _sendLocation() {
     if (_selectedPosition == null) return;
 
-    // ✅ فقط اگه این خط نبود اضافه کن
+    // فقط اگه این خط نبود اضافه کن
     final theme = Provider.of<ThemeProvider>(context, listen: false);
 
     final locationText = '''
