@@ -119,6 +119,14 @@ class AppStrings {
     'notif.body3': 'پنج دقیقه وقت داری؟ قهرمان‌ها از همین پنج دقیقه‌ها ساخته می‌شن.',
     'notif.body4': 'امروز هنوز تیکی نخوردی؛ ما که قضاوت نمی‌کنیم ;)',
 
+    // استریک
+    'streak.title': 'استریک روزانه',
+    'streak.record': 'رکورد {n}',
+    'streak.days': 'روز',
+    'streak.start': 'امروز رو شروع کن!',
+    'streak.keep': 'استریکت منتظرته؛ یه تیک بزن.',
+    'streak.today_done': 'امروز رو گرفتی. فردا هم بیا!',
+
     // تم و رنگ
     'color.title': 'رنگ برنامه',
     'color.reset': 'برگردون به حالت اول',
@@ -211,6 +219,13 @@ class AppStrings {
     'notif.body2': 'Your streak needs you. Do not let it down.',
     'notif.body3': 'Got five minutes? Heroes are made of those.',
     'notif.body4': 'No check-ins today yet. No judgment, promise.',
+
+    'streak.title': 'Daily streak',
+    'streak.record': 'Record {n}',
+    'streak.days': 'days',
+    'streak.start': 'Start today!',
+    'streak.keep': 'Your streak is waiting. Tick one off.',
+    'streak.today_done': 'Today is done. See you tomorrow!',
 
     'color.title': 'App color',
     'color.reset': 'Reset to default',
