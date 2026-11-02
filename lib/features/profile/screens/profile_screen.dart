@@ -755,28 +755,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
-            height: 92,
-            padding: const EdgeInsets.all(14),
+            height: 84,
             decoration: BoxDecoration(
               color: _theme.cardColor,
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: _theme.softShadow,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(color: c.bg, shape: BoxShape.circle),
-                  child: Icon(icon, color: c.fg, size: 22),
+                  width: 36,
+                  height: 36,
+                  decoration:
+                      BoxDecoration(color: c.bg, shape: BoxShape.circle),
+                  child: Icon(icon, color: c.fg, size: 20),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: _theme.textColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -786,43 +789,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     }
 
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            tile(Tone.sky, Icons.photo_library_rounded,
-                context.tr('profile.gallery'), _openGallery),
-            const SizedBox(width: 12),
-            tile(Tone.lilac, Icons.psychology_rounded,
-                context.tr('profile.personality'), () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PersonalityScreen()),
-              ).then((_) => _loadProfile());
-            }),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            tile(Tone.butter, Icons.description_rounded,
-                context.tr('profile.terms'), () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const TermsAndConditionsScreen()),
-              );
-            }),
-            const SizedBox(width: 12),
-            tile(Tone.mint, Icons.settings_rounded,
-                context.tr('profile.settings'), () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            }),
-          ],
-        ),
+        tile(Tone.mint, Icons.bar_chart_rounded, context.tr('profile.analytics'),
+            () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AnalyticsDetailScreen(userId: _profile!.userId),
+            ),
+          );
+        }),
+        const SizedBox(width: 10),
+        tile(Tone.lilac, Icons.auto_awesome_rounded,
+            context.tr('profile.personality_short'), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PersonalityScreen()),
+          ).then((_) => _loadProfile());
+        }),
+        const SizedBox(width: 10),
+        tile(Tone.sky, Icons.photo_library_rounded,
+            context.tr('profile.gallery_short'), _openGallery),
+        const SizedBox(width: 10),
+        tile(Tone.rose, Icons.face_retouching_natural_rounded,
+            context.tr('profile.look'), _openAvatarCustomization),
       ],
     );
   }
@@ -862,42 +853,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ==================== محتوای اصلی پروفایل ====================
 
   Widget _buildProfileContent() {
-    print(
-        '🔍 Building profile: userId=${_profile?.userId}, name=${_profile?.name}');
-    final calendar = Provider.of<CalendarProvider>(context, listen: false);
     final weekDays = _cachedWeekDays ?? List.filled(7, false);
 
-    debugPrint('Profile weekDays: $weekDays');
-    debugPrint('Profile weeklyStreak: $_weeklyStreak');
-    debugPrint('_currentStreak: $_currentStreak');
-    debugPrint('_bestStreak: $_bestStreak');
-
-    final int todayIndex = calendar.isJalali
-        ? Jalali.fromDateTime(DateTime.now()).weekDay - 1
-        : DateTime.now().weekday % 7;
-    debugPrint('Today index: $todayIndex');
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 170),
       child: Column(
         children: [
-          _buildAvatarSection(),
-          const SizedBox(height: 24),
-          _buildUserInfoSection(),
-          const SizedBox(height: 24),
+          _buildTopBar(),
+          _buildHeroCard(),
+          const SizedBox(height: 12),
+          _buildStatsGrid(),
+          const SizedBox(height: 12),
           StreakCardWidget(
             currentStreak: _currentStreak,
             bestStreak: _bestStreak,
             weeklyStreak: _weeklyStreak,
-            weekDays: weekDays, // ارسال weekDays واقعی از کش
+            weekDays: weekDays,
           ),
-          const SizedBox(height: 24),
-          XpStatsWidget(
-            totalXp: _profile!.totalXp,
-            level: _profile!.level,
-            xpToNextLevel: _profile!.xpNeededForNextLevel,
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          _buildShortcuts(),
+          const SizedBox(height: 12),
           AnalyticsOverviewWidget(
             key: _analyticsKey,
             userId: _profile!.userId,
@@ -911,10 +887,249 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
-          const SizedBox(height: 24),
-          _buildShortcuts(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          _buildUserInfoSection(),
+          const SizedBox(height: 12),
+          _buildListRow(Tone.butter, Icons.description_rounded,
+              context.tr('profile.terms'), () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const TermsAndConditionsScreen()),
+            );
+          }),
         ],
+      ),
+    );
+  }
+
+  /// عنوان صفحه + دکمهٔ تنظیمات (مثل طراحی)
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 28, 0, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              context.tr('profile.title'),
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: _theme.textColor,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _theme.cardColor,
+                shape: BoxShape.circle,
+                boxShadow: _theme.softShadow,
+              ),
+              child: Icon(Icons.tune_rounded, color: _theme.textColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// کارت قهرمان: عکس، نام، نام کاربری و پیشرفت تا سطح بعدی
+  Widget _buildHeroCard() {
+    final p = _profile!;
+    final progress = p.levelProgress.clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      decoration: BoxDecoration(
+        color: _theme.cardColor,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: _theme.softShadow,
+      ),
+      child: Column(
+        children: [
+          UserAvatar(
+            avatarUrl: p.avatarUrl,
+            name: p.name,
+            size: 84,
+            showBorder: false,
+            showEditBadge: true,
+            onEditTap: _showAvatarEditOptions,
+            onTap: _showAvatarEditOptions,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            p.name,
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+              color: _theme.textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          _buildUsernameDisplay(),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                context.tr('xp.progress', {'n': '${p.level + 1}'}),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _theme.textColor,
+                ),
+              ),
+              Text(
+                '${p.totalXp % 100} / 100 XP',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _theme.textSecondaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: Stack(
+              children: [
+                Container(height: 10, color: _theme.cardSecondaryColor),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, v, _) => FractionallySizedBox(
+                    widthFactor: v,
+                    child: Container(
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: _theme.primaryColor,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// چهار آمار پاستلی دو در دو
+  Widget _buildStatsGrid() {
+    final p = _profile!;
+    Widget cell(Tone tone, IconData icon, String value, String label) {
+      final c = _theme.tone(tone);
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: c.bg,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: c.fg),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: _theme.textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _theme.textColor.withValues(alpha: 0.7),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final days = context.tr('streak.days');
+    return Column(
+      children: [
+        Row(
+          children: [
+            cell(Tone.butter, Icons.schedule_rounded,
+                '${p.avatarAge} $days', context.tr('profile.stat_age')),
+            const SizedBox(width: 10),
+            cell(Tone.lilac, Icons.bolt_rounded, '${p.level}',
+                context.tr('profile.stat_level')),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            cell(Tone.peach, Icons.local_fire_department_rounded,
+                '$_currentStreak $days', context.tr('profile.stat_streak')),
+            const SizedBox(width: 10),
+            cell(Tone.sky, Icons.emoji_events_rounded, '$_bestStreak $days',
+                context.tr('profile.stat_best')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListRow(Tone tone, IconData icon, String label, VoidCallback onTap) {
+    final c = _theme.tone(tone);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: _theme.cardColor,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: _theme.softShadow,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(color: c.bg, shape: BoxShape.circle),
+              child: Icon(icon, color: c.fg, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _theme.textColor,
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_left_rounded, color: _theme.textSecondaryColor),
+          ],
+        ),
       ),
     );
   }
@@ -1044,18 +1259,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: _theme.primaryColor.withValues(alpha: 0.1),
+            color: _theme.cardSecondaryColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: _theme.primaryColor.withValues(alpha: 0.3),
-            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.alternate_email,
-                color: _theme.primaryColor,
+                color: _theme.textColor,
                 size: 18,
               ),
               const SizedBox(width: 8),
@@ -1064,7 +1276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: _theme.primaryColor,
+                  color: _theme.textColor,
                 ),
               ),
             ],
@@ -1079,7 +1291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: _theme.primaryColor.withValues(alpha: 0.1),
+          color: _theme.cardSecondaryColor,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -1090,14 +1302,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: _theme.primaryColor,
+                color: _theme.textColor,
               ),
             ),
             const SizedBox(width: 6),
             Icon(
               Icons.edit,
               size: 14,
-              color: _theme.primaryColor,
+              color: _theme.textColor,
             ),
           ],
         ),
@@ -1532,7 +1744,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       decoration: BoxDecoration(
         color: _theme.cardColor,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: _theme.softShadow,
       ),
       child: Column(
         children: [
@@ -1554,13 +1767,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: _theme.primaryColor.withValues(alpha: 0.1),
+                      color: _theme.tone(Tone.lilac).bg,
                       shape: BoxShape.circle,
                     ),
                     child: Center(
                       child: Icon(
                         Icons.person_outline_rounded,
-                        color: _theme.primaryColor,
+                        color: _theme.tone(Tone.lilac).fg,
                         size: 22,
                       ),
                     ),
