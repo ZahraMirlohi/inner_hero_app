@@ -1,7 +1,7 @@
 // lib/features/onboarding/screens/onboarding_screen.dart
 //
 // اولین ورود: ۲ صفحهٔ معرفی (انیمیشنی) + ۵ سوال کوتاه که همه اختیاری‌اند:
-//   نام کاربری و عکس ← هدف ← اولین کار (ساخته می‌شود) ← شخصیت ← ساعت‌ها
+//   نام کاربری و عکس هدف اولین کار (ساخته می‌شود) شخصیت ساعت‌ها
 // هر صفحه رنگ پاستلی خودش را دارد و بین صفحه‌ها نرم جابه‌جا می‌شویم.
 
 import 'dart:async';
@@ -21,6 +21,7 @@ import '/providers/auth_provider.dart';
 import '/providers/settings_provider.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/services/notification_service.dart';
 import '/services/sound_service.dart';
 import '/services/storage_service.dart';
 import '/services/supabase_service.dart';
@@ -249,6 +250,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       remindTime: _hhmm(_remind),
       language: lang,
     );
+
+    // ساعت یادآوری را به سرویس اعلان بده (اجازه فقط وقتی خواسته می‌شود که کاربر ساعت را انتخاب کرده)
+    unawaited(() async {
+      await NotificationService.instance
+          .setReminderTime(_remind.hour, _remind.minute);
+      await NotificationService.instance.requestPermission();
+      await NotificationService.instance.reschedule();
+    }());
 
     setState(() => _celebrating = true);
     SoundService.instance.play(Sfx.levelUp);

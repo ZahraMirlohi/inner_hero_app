@@ -1,14 +1,14 @@
 // lib/utils/unique_id_generator.dart
 
 class UniqueIdGenerator {
-  // ✅ تولید ID یکتا با فرمت INNER-XXXXXXXX
+  // تولید ID یکتا با فرمت INNER-XXXXXXXX
   static String generate() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final random = (timestamp % 100000000).toString().padLeft(8, '0');
     return 'INNER-${random.toUpperCase()}';
   }
 
-  // ✅ روش مطمئن‌تر با ترکیب timestamp + random
+  // روش مطمئن‌تر با ترکیب timestamp + random
   static String generateSecure() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final random = (timestamp % 100000000).toString().padLeft(8, '0');
@@ -17,7 +17,7 @@ class UniqueIdGenerator {
     return 'INNER-${random.substring(0, 4)}${shortHash.toUpperCase()}';
   }
 
-  // ✅ روش با استفاده از DateTime + Random
+  // روش با استفاده از DateTime + Random
   static String generateWithRandom() {
     final now = DateTime.now();
     final random = (now.millisecondsSinceEpoch % 100000000).toString().padLeft(
@@ -28,7 +28,7 @@ class UniqueIdGenerator {
     return 'INNER-${random.substring(0, 4)}${extra.toUpperCase()}';
   }
 
-  // ✅ اعتبارسنجی ID یکتا
+  // اعتبارسنجی ID یکتا
   static bool isValid(String id) {
     final pattern = RegExp(r'^INNER-[A-Z0-9]{8}$');
     return pattern.hasMatch(id);

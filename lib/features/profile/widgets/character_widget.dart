@@ -170,15 +170,15 @@ class _CharacterWidgetState extends State<CharacterWidget>
             child: Center(
               child: Text(
                 _currentAnimation == 'dance'
-                    ? '💃'
+                    ? ''
                     : _currentAnimation == 'victory'
-                    ? '🏆'
+                    ? ''
                     : _currentAnimation == 'attack'
-                    ? '⚔️'
+                    ? ''
                     : _currentAnimation == 'heal'
-                    ? '💚'
+                    ? ''
                     : _currentAnimation == 'run'
-                    ? '🏃'
+                    ? ''
                     : '💪',
                 style: TextStyle(fontSize: widget.size * 0.15),
               ),

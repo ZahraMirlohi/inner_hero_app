@@ -29,7 +29,7 @@ class SyncProvider extends ChangeNotifier {
   bool get isOnline => _isOnline;
   bool get isSyncing => _isSyncing;
   bool get isInitialized => _isInitialized;
-  bool _isCleared = false; // ✅ جدید
+  bool _isCleared = false; // جدید
 
   StreamSubscription<dynamic>? _authSub;
   StreamSubscription<InternetConnectionStatus>? _connSub;
@@ -37,7 +37,7 @@ class SyncProvider extends ChangeNotifier {
   static const int _maxOpRetries = 5;
   int _opCounter = 0;
 
-  bool get isCleared => _isCleared; // ✅ جدید
+  bool get isCleared => _isCleared; // جدید
 
   SyncProvider() {
     _init();
@@ -46,7 +46,7 @@ class SyncProvider extends ChangeNotifier {
   Future<void> _init() async {
     try {
       await _localStorage.init();
-      print('✅ LocalStorage initialized');
+      print('LocalStorage initialized');
 
       // شناسهٔ کاربر از نشست Supabase (نه فقط یک کلید ذخیره‌شده) خوانده می‌شود
       _currentUserId = Supabase.instance.client.auth.currentSession?.user.id;
@@ -55,7 +55,7 @@ class SyncProvider extends ChangeNotifier {
         _currentUserId = prefs.getString('user_id');
       }
       _listenToAuth();
-      print('👤 Current user: $_currentUserId');
+      print('Current user: $_currentUserId');
 
       _isInitialized = true;
       notifyListeners();
@@ -66,7 +66,7 @@ class SyncProvider extends ChangeNotifier {
         _syncAllData();
       }
     } catch (e) {
-      print('❌ Init error: $e');
+      print('Init error: $e');
       _isInitialized = true;
       notifyListeners();
     }
@@ -113,18 +113,18 @@ class SyncProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  /// ✅ پاک کردن همه چیز (برای logout)
+  /// پاک کردن همه چیز (برای logout)
   void clear() {
-    print('🗑️ SyncProvider clear called');
+    print('SyncProvider clear called');
 
-    _isCleared = true; // ✅ flag
+    _isCleared = true; // flag
     _currentUserId = null;
     _isSyncing = false;
 
     notifyListeners();
   }
 
-  /// ✅ حذف یک عادت خاص از کش
+  /// حذف یک عادت خاص از کش
   void removeHabit(String habitId) {
     try {
       final currentHabits = _localStorage.getHabits();
@@ -133,13 +133,13 @@ class SyncProvider extends ChangeNotifier {
 
       _localStorage.saveHabits(updatedHabits);
       notifyListeners();
-      print('🗑️ Removed habit: $habitId');
+      print('Removed habit: $habitId');
     } catch (e) {
-      print('❌ Error removing habit: $e');
+      print('Error removing habit: $e');
     }
   }
 
-  // ✅ حذف عادت‌های یک چالش از کش
+  // حذف عادت‌های یک چالش از کش
   void removeHabitsByChallengeId(String challengeId) {
     try {
       final currentHabits = _localStorage.getHabits();
@@ -149,14 +149,14 @@ class SyncProvider extends ChangeNotifier {
       _localStorage.saveHabits(updatedHabits);
       notifyListeners();
       print(
-        '🗑️ Removed ${currentHabits.length - updatedHabits.length} habits for challenge: $challengeId',
+        'Removed ${currentHabits.length - updatedHabits.length} habits for challenge: $challengeId',
       );
     } catch (e) {
-      print('❌ Error removing habits by challengeId: $e');
+      print('Error removing habits by challengeId: $e');
     }
   }
 
-  // ✅ حذف یک چالش کاربر از کش
+  // حذف یک چالش کاربر از کش
   void removeUserChallenge(String challengeId) {
     try {
       final currentChallenges = _localStorage.getUserChallenges();
@@ -165,13 +165,13 @@ class SyncProvider extends ChangeNotifier {
           .toList();
       _localStorage.saveUserChallenges(updatedChallenges);
       notifyListeners();
-      print('🗑️ Removed user challenge: $challengeId');
+      print('Removed user challenge: $challengeId');
     } catch (e) {
-      print('❌ Error removing user challenge: $e');
+      print('Error removing user challenge: $e');
     }
   }
 
-  // ✅ حذف عادت‌های یک بسته از کش
+  // حذف عادت‌های یک بسته از کش
   void removePackageHabits(String packageId) {
     try {
       final currentHabits = _localStorage.getHabits();
@@ -185,7 +185,7 @@ class SyncProvider extends ChangeNotifier {
       _localStorage.saveHabits(updatedHabits);
       notifyListeners();
     } catch (e) {
-      print('❌ Error removing package habits: $e');
+      print('Error removing package habits: $e');
     }
   }
 
@@ -212,7 +212,7 @@ class SyncProvider extends ChangeNotifier {
         }
       });
     } catch (e) {
-      print('⚠️ Connectivity check error: $e');
+      print('Connectivity check error: $e');
       _isOnline = true;
       notifyListeners();
       if (_currentUserId != null) {
@@ -221,7 +221,7 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ ریفرش اجباری داده‌ها از دیتابیس
+  /// ریفرش اجباری داده‌ها از دیتابیس
   Future<void> forceRefresh() async {
     if (_currentUserId == null || !_isOnline) {
       // اگر آفلاین هستیم، فقط از LocalStorage بخوان
@@ -233,7 +233,7 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print('🔄 Force refreshing data...');
+      print('Force refreshing data...');
 
       // دریافت مجدد همه داده‌ها از دیتابیس
       // سخت‌گیر: اگر درخواست خطا بدهد، throw می‌شود و کش دست‌نخورده می‌ماند
@@ -265,12 +265,12 @@ class SyncProvider extends ChangeNotifier {
           await _localStorage.saveUserProfile(profile);
         }
       } catch (e) {
-        print('⚠️ Profile sync error: $e');
+        print('Profile sync error: $e');
       }
 
-      print('✅ Force refresh completed');
+      print('Force refresh completed');
     } catch (e) {
-      print('❌ Force refresh error: $e');
+      print('Force refresh error: $e');
     } finally {
       _isSyncing = false;
       notifyListeners();
@@ -279,7 +279,7 @@ class SyncProvider extends ChangeNotifier {
 
 // lib/providers/sync_provider.dart
 
-  /// ✅ حذف عادت‌های یک ماموریت از کش
+  /// حذف عادت‌های یک ماموریت از کش
   void removeQuestHabits(String questId) {
     try {
       // حذف از حافظه
@@ -292,7 +292,7 @@ class SyncProvider extends ChangeNotifier {
       print(
           '🗑️ Removed ${currentHabits.length - updatedHabits.length} quest habits for quest: $questId');
     } catch (e) {
-      print('❌ Error removing quest habits: $e');
+      print('Error removing quest habits: $e');
     }
   }
 
@@ -303,11 +303,11 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print('🔄 Syncing data...');
+      print('Syncing data...');
 
       await _syncOfflineOperations();
 
-      // ✅ دریافت همه عادت‌ها (شامل ماموریت‌ها)
+      // دریافت همه عادت‌ها (شامل ماموریت‌ها)
       // لیست خالیِ موفق یعنی «واقعاً خالیه» (مثلاً آخرین عادت از دستگاه دیگر حذف شده)،
       // ولی خطا throw می‌شود و کش حفظ می‌شود.
       final habits = await _supabase.getHabitsStrict(_currentUserId!);
@@ -336,7 +336,7 @@ class SyncProvider extends ChangeNotifier {
           await _localStorage.saveUserProfile(profile);
         }
       } catch (e) {
-        print('⚠️ Profile sync error: $e');
+        print('Profile sync error: $e');
       }
 
       final challenges = await _supabase.getChallenges();
@@ -349,9 +349,9 @@ class SyncProvider extends ChangeNotifier {
         await _localStorage.saveUserChallenges(userChallenges);
       }
 
-      print('✅ Sync completed');
+      print('Sync completed');
     } catch (e) {
-      print('⚠️ Sync error: $e');
+      print('Sync error: $e');
     } finally {
       _isSyncing = false;
       notifyListeners();
@@ -362,7 +362,7 @@ class SyncProvider extends ChangeNotifier {
     final operations = _localStorage.getOfflineOperations();
     if (operations.isEmpty) return;
 
-    print('🔄 Syncing ${operations.length} offline operations...');
+    print('Syncing ${operations.length} offline operations...');
 
     for (var operation in operations) {
       try {
@@ -370,7 +370,7 @@ class SyncProvider extends ChangeNotifier {
         await _localStorage.removeOfflineOperation(operation.id);
         _opFailures.remove(operation.id);
       } catch (e) {
-        print('⚠️ Failed to sync operation: $e');
+        print('Failed to sync operation: $e');
         final text = e.toString();
         final isNetwork = text.contains('SocketException') ||
             text.contains('ClientException') ||
@@ -384,7 +384,7 @@ class SyncProvider extends ChangeNotifier {
         final fails = (_opFailures[operation.id] ?? 0) + 1;
         _opFailures[operation.id] = fails;
         if (fails >= _maxOpRetries) {
-          print('🗑️ Dropping operation ${operation.id} after $fails failures');
+          print('Dropping operation ${operation.id} after $fails failures');
           await _localStorage.removeOfflineOperation(operation.id);
           _opFailures.remove(operation.id);
         }
@@ -445,7 +445,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.updateTask(task);
         await _supabase.removeXP(operation.userId, data['xpReward']);
         break;
-      // ✅ عملیات‌های چالش
+      // عملیات‌های چالش
       case OperationType.joinChallenge:
         await _supabase.joinChallenge(
           operation.userId,
@@ -499,7 +499,7 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  // ✅ متدهای کمکی برای افزودن عملیات چالش به صف
+  // متدهای کمکی برای افزودن عملیات چالش به صف
   Future<void> addJoinChallengeOperation(String challengeId) async {
     if (_currentUserId == null) return;
 
@@ -636,10 +636,10 @@ class SyncProvider extends ChangeNotifier {
 
   Future<void> saveHabitToLocal(Habit habit) async {
     try {
-      // ✅ گرفتن لیست فعلی
+      // گرفتن لیست فعلی
       final currentHabits = _localStorage.getHabits();
 
-      // ✅ چک کن اگه عادت با همین ID وجود داره، جایگزین کن
+      // چک کن اگه عادت با همین ID وجود داره، جایگزین کن
       final existingIndex = currentHabits.indexWhere((h) => h.id == habit.id);
 
       if (existingIndex != -1) {
@@ -648,12 +648,12 @@ class SyncProvider extends ChangeNotifier {
         currentHabits.add(habit);
       }
 
-      // ✅ ذخیره کل لیست
+      // ذخیره کل لیست
       await _localStorage.saveHabits(currentHabits);
       notifyListeners();
-      print('✅ Habit saved to local: ${habit.title}');
+      print('Habit saved to local: ${habit.title}');
     } catch (e) {
-      print('❌ Error saving habit to local: $e');
+      print('Error saving habit to local: $e');
     }
   }
 
@@ -672,7 +672,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.createHabit(habit);
         return;
       } catch (e) {
-        print('⚠️ createHabit queued: $e');
+        print('createHabit queued: $e');
       }
     }
     await _queueOnly(OperationType.createHabit, data);
@@ -689,7 +689,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.updateHabit(habit);
         return;
       } catch (e) {
-        print('⚠️ updateHabit queued: $e');
+        print('updateHabit queued: $e');
       }
     }
     await _queueOnly(OperationType.updateHabit, data);
@@ -703,7 +703,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.createTask(task);
         return;
       } catch (e) {
-        print('⚠️ createTask queued: $e');
+        print('createTask queued: $e');
       }
     }
     await _queueOnly(OperationType.createTask, data);
@@ -717,7 +717,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.updateTask(task);
         return;
       } catch (e) {
-        print('⚠️ updateTask queued: $e');
+        print('updateTask queued: $e');
       }
     }
     await _queueOnly(OperationType.updateTask, data);
@@ -749,9 +749,9 @@ class SyncProvider extends ChangeNotifier {
 
       await _localStorage.saveTasks(currentTasks);
       notifyListeners();
-      print('✅ Task saved to local: ${task.title}');
+      print('Task saved to local: ${task.title}');
     } catch (e) {
-      print('❌ Error saving task to local: $e');
+      print('Error saving task to local: $e');
     }
   }
 
@@ -761,13 +761,13 @@ class SyncProvider extends ChangeNotifier {
       final updatedTasks = currentTasks.where((t) => t.id != taskId).toList();
       await _localStorage.saveTasks(updatedTasks);
       notifyListeners();
-      print('🗑️ Task removed from local: $taskId');
+      print('Task removed from local: $taskId');
     } catch (e) {
-      print('❌ Error deleting task from local: $e');
+      print('Error deleting task from local: $e');
     }
   }
 
-  /// ✅ ریفرش سریع فقط برای عادت‌ها و تسک‌ها
+  /// ریفرش سریع فقط برای عادت‌ها و تسک‌ها
   Future<void> refreshHabitsAndTasks() async {
     if (_currentUserId == null) {
       notifyListeners();
@@ -775,7 +775,7 @@ class SyncProvider extends ChangeNotifier {
     }
 
     try {
-      print('🔄 Quick refreshing habits and tasks...');
+      print('Quick refreshing habits and tasks...');
 
       if (_isOnline) {
         final habits = await _supabase.getHabits(_currentUserId!);
@@ -790,7 +790,7 @@ class SyncProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      print('❌ Quick refresh error: $e');
+      print('Quick refresh error: $e');
       // حتی اگه خطا داد، notifyListeners بزن تا UI با کش آپدیت شه
       notifyListeners();
     }
@@ -800,9 +800,9 @@ class SyncProvider extends ChangeNotifier {
     try {
       await _localStorage.saveHabits(habits);
       notifyListeners();
-      print('✅ ${habits.length} habits saved to local storage');
+      print('${habits.length} habits saved to local storage');
     } catch (e) {
-      print('❌ Error saving habits: $e');
+      print('Error saving habits: $e');
       rethrow;
     }
   }
@@ -812,7 +812,7 @@ class SyncProvider extends ChangeNotifier {
       await _localStorage.saveUserProfile(profile);
       notifyListeners();
     } catch (e) {
-      print('🔴 [SyncProvider] Error saving profile to local: $e');
+      print('[SyncProvider] Error saving profile to local: $e');
     }
   }
 

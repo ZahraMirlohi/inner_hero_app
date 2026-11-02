@@ -77,14 +77,14 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _onRefreshTriggered() {
-    print('🔄 Refresh triggered from notifier');
+    print('Refresh triggered from notifier');
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
   }
 
   void forceRefresh() {
-    print('🔄 Force refresh called');
+    print('Force refresh called');
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
@@ -94,7 +94,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     if (_isInitialized || _isLoadingInProgress) return;
     if (!mounted) return;
 
-    print('🔄 _loadData: Starting...');
+    print('_loadData: Starting...');
     _isLoadingInProgress = true;
 
     setState(() {
@@ -169,7 +169,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         });
       }
     } catch (e) {
-      print('❌ _loadData: Error - $e');
+      print('_loadData: Error - $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'خطا در خواندن از دیتابیس: ${e.toString()}';
@@ -225,7 +225,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       _completedQuests =
           _quests.where((q) => completedQuestIds.contains(q.id)).toList();
     } catch (e) {
-      print('⚠️ Background sync error: $e');
+      print('Background sync error: $e');
     }
   }
 
@@ -321,7 +321,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ به چالش پیوستید! 🎉'),
+              content: Text('به چالش پیوستید! '),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
@@ -460,7 +460,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           final localStorage = LocalStorageService();
           await localStorage.saveHabits(habits);
         } catch (e2) {
-          print('⚠️ Error updating LocalStorage: $e2');
+          print('Error updating LocalStorage: $e2');
         }
       }
 
@@ -471,14 +471,14 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ماموریت "${quest.title}" شروع شد! 🎉'),
+            content: Text('ماموریت "${quest.title}" شروع شد! '),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      print('❌ Error in _startQuest: $e');
+      print('Error in _startQuest: $e');
       if (mounted) {
         String message = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -512,7 +512,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               habits.where((h) => h.questId != quest.id).toList();
           await localStorage.saveHabits(updatedHabits);
         } catch (e) {
-          print('⚠️ Error updating LocalStorage: $e');
+          print('Error updating LocalStorage: $e');
         }
 
         _isInitialized = false;
@@ -595,7 +595,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       _showChallengeDetailsDialogWithData(challenge, cacheData);
     } catch (e) {
-      print('❌ Error showing challenge details: $e');
+      print('Error showing challenge details: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -785,13 +785,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   ),
                                   child: Text(
                                     isCompleted
-                                        ? '✅ کامل شده'
+                                        ? 'کامل شده'
                                         : isFailed
-                                            ? '❌ ناموفق'
+                                            ? 'ناموفق'
                                             : isExpired
-                                                ? '⛔ پایان ثبت‌نام'
+                                                ? 'پایان ثبت‌نام'
                                                 : isActive
-                                                    ? '⚡ در حال انجام'
+                                                    ? 'در حال انجام'
                                                     : '🔥 جدید',
                                     style: TextStyle(
                                       fontSize: 12,
@@ -854,9 +854,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     Expanded(
                                       child: Text(
                                         isCompleted
-                                            ? '✅ چالش با موفقیت کامل شد!'
+                                            ? 'چالش با موفقیت کامل شد!'
                                             : isFailed
-                                                ? '⛔ چالش ناموفق بود'
+                                                ? 'چالش ناموفق بود'
                                                 : '⏳ در حال انجام...',
                                         style: TextStyle(
                                           fontSize: 14,
@@ -1040,7 +1040,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      '🎉 چالش کامل شد!',
+                                      'چالش کامل شد!',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -1092,7 +1092,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      '⛔ چالش ناموفق بود',
+                                      'چالش ناموفق بود',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -1135,7 +1135,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     const Text(
-                                      '✅ چالش کامل شد!',
+                                      'چالش کامل شد!',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -1166,7 +1166,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     const Text(
-                                      '⛔ چالش ناموفق بود',
+                                      'چالش ناموفق بود',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -1226,7 +1226,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      '⛔ مهلت ثبت‌نام به اتمام رسید',
+                                      'مهلت ثبت‌نام به اتمام رسید',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -1284,7 +1284,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         },
       );
     } catch (e) {
-      print('❌ Error showing challenge details: $e');
+      print('Error showing challenge details: $e');
     }
   }
 
@@ -1568,9 +1568,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   Expanded(
                                     child: Text(
                                       isCompleted
-                                          ? '✅ ماموریت با موفقیت کامل شد!'
+                                          ? 'ماموریت با موفقیت کامل شد!'
                                           : hasStarted
-                                              ? '⏳ در حال انجام...'
+                                              ? 'در حال انجام...'
                                               : '📌 ماموریت جدید - آماده شروع',
                                       style: TextStyle(
                                         fontSize: 14,
@@ -1767,7 +1767,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      '🎉 ماموریت کامل شد!',
+                                      'ماموریت کامل شد!',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -1793,7 +1793,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        '🏅 ${quest.badge}',
+                                        '${quest.badge}',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -1838,7 +1838,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      '🚀 آماده شروع!',
+                                      'آماده شروع!',
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -1912,7 +1912,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                     const SizedBox(width: 8),
                                     const Text(
-                                      '✅ ماموریت کامل شد!',
+                                      'ماموریت کامل شد!',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -2004,7 +2004,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                   ),
                                   child: const Text(
-                                    'شروع ماموریت 🚀',
+                                    'شروع ماموریت ',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -2026,7 +2026,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         },
       );
     } catch (e) {
-      print('❌ Error showing quest details: $e');
+      print('Error showing quest details: $e');
     }
   }
 
@@ -2196,7 +2196,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           child: Container(
             padding: const EdgeInsets.all(5),
             decoration: BoxDecoration(
-              // ✅ در تم شب تیره، در تم روز رنگ primary
+              // در تم شب تیره، در تم روز رنگ primary
               color: theme.isDarkMode
                   ? const Color(0xFF2A2A2A) // خاکستری تیره
                   : primaryColor.withValues(alpha: 0.90),
@@ -2223,7 +2223,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               labelPadding: EdgeInsets.zero,
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
-                // ✅ در تم شب هم سفید باقی بمونه (تب فعال)
+                // در تم شب هم سفید باقی بمونه (تب فعال)
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
                 boxShadow: [
@@ -2235,9 +2235,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ],
               ),
               dividerColor: Colors.transparent,
-              // ✅ متن تب انتخاب شده: مشکی (روی سفید)
+              // متن تب انتخاب شده: مشکی (روی سفید)
               labelColor: const Color(0xFF090909),
-              // ✅ متن تب غیرفعال: سفید روی تیره، سفید روی سبز
+              // متن تب غیرفعال: سفید روی تیره، سفید روی سبز
               unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
               labelStyle: const TextStyle(
                 fontSize: 10,

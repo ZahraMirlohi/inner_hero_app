@@ -54,7 +54,7 @@ class ChallengeInviteService {
 
       return challenge;
     } catch (e) {
-      print('❌ Error creating challenge: $e');
+      print('Error creating challenge: $e');
       return null;
     }
   }
@@ -71,7 +71,7 @@ class ChallengeInviteService {
 
       return response.map((data) => ChallengeInvite.fromMap(data)).toList();
     } catch (e) {
-      print('❌ Error getting user challenges: $e');
+      print('Error getting user challenges: $e');
       return [];
     }
   }
@@ -87,7 +87,7 @@ class ChallengeInviteService {
       if (response == null) return null;
       return ChallengeInvite.fromMap(response);
     } catch (e) {
-      print('❌ Error getting challenge: $e');
+      print('Error getting challenge: $e');
       return null;
     }
   }
@@ -116,7 +116,7 @@ class ChallengeInviteService {
 
       return true;
     } catch (e) {
-      print('❌ Error responding to challenge: $e');
+      print('Error responding to challenge: $e');
       return false;
     }
   }
@@ -192,7 +192,7 @@ class ChallengeInviteService {
 
       return true;
     } catch (e) {
-      print('❌ Error completing habit today: $e');
+      print('Error completing habit today: $e');
       return false;
     }
   }
@@ -258,7 +258,7 @@ class ChallengeInviteService {
 
       return true;
     } catch (e) {
-      print('❌ Error uncompleting habit today: $e');
+      print('Error uncompleting habit today: $e');
       return false;
     }
   }
@@ -302,7 +302,7 @@ class ChallengeInviteService {
         }
       }
     } catch (e) {
-      print('❌ Error checking challenge completion: $e');
+      print('Error checking challenge completion: $e');
     }
   }
 
@@ -331,7 +331,7 @@ class ChallengeInviteService {
 
       return true;
     } catch (e) {
-      print('❌ Error cancelling challenge: $e');
+      print('Error cancelling challenge: $e');
       return false;
     }
   }

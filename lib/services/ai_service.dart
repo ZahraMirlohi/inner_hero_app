@@ -27,17 +27,17 @@ class AIService {
     if (habitCount == 0) {
       welcome +=
           'به نظر می‌رسد هنوز عادتی ایجاد نکرده‌اید. '
-          'بیایید اولین قدم را برداریم! 🚀\n\n'
+          'بیایید اولین قدم را برداریم! \n\n'
           'من می‌توانم به شما کمک کنم تا بهترین عادت‌ها را برای شروع انتخاب کنید. '
           'چه چیزی را می‌خواهید بهبود ببخشید؟';
     } else if (todayHabits > 0) {
       welcome +=
-          'امروز $todayHabits عادت برای انجام دارید! 💪\n\n'
+          'امروز $todayHabits عادت برای انجام دارید! \n\n'
           'من اینجا هستم تا شما را در مسیر قهرمانی همراهی کنم. '
           'اگر سوال، مشکل یا نیاز به انگیزه دارید، با من در میان بگذارید.';
     } else {
       welcome +=
-          'همه عادت‌های امروز را انجام داده‌اید! 🎉\n\n'
+          'همه عادت‌های امروز را انجام داده‌اید! \n\n'
           'چه روز خوبی! اگر برای فردا برنامه خاصی دارید، '
           'می‌توانیم با هم برنامه‌ریزی کنیم.';
     }
@@ -105,11 +105,11 @@ class AIService {
         final data = jsonDecode(response.body);
         return data['choices'][0]['message']['content'] as String;
       } else {
-        debugPrint('❌ AI API Error: ${response.statusCode}');
+        debugPrint('AI API Error: ${response.statusCode}');
         return _getFallbackResponse(message, habits, profile);
       }
     } catch (e) {
-      debugPrint('❌ AI Service Error: $e');
+      debugPrint('AI Service Error: $e');
       return _getFallbackResponse(message, habits, profile);
     }
   }
@@ -146,25 +146,25 @@ class AIService {
 
   String _getMotivationResponse(int streak) {
     if (streak >= 30) {
-      return '🔥 ۳۰ روز پیاپی! شما یک افسانه هستید!\n\n'
+      return '۳۰ روز پیاپی! شما یک افسانه هستید!\n\n'
           'این سطح از تعهد واقعاً الهام‌بخش است. به یاد داشته باشید که '
           'هر روزی که ادامه می‌دهید، به نسخه بهتری از خودتان تبدیل می‌شوید.\n\n'
           'امروز چه کاری می‌توانید انجام دهید که فردای شما را بهتر کند؟';
     }
     if (streak >= 7) {
-      return '💪 یک هفته کامل! این عالی است!\n\n'
+      return 'یک هفته کامل! این عالی است!\n\n'
           'شما ثابت کرده‌اید که می‌توانید به تعهدات خود پایبند باشید. '
           'این انرژی را حفظ کنید و به یاد داشته باشید که هر روز کوچک، '
           'قدمی بزرگ به سوی قهرمانی است.\n\n'
           'آماده‌اید برای هفته دوم؟ 🚀';
     }
     if (streak >= 3) {
-      return '🌟 ۳ روز پیاپی! چه شروع عالی!\n\n'
+      return '۳ روز پیاپی! چه شروع عالی!\n\n'
           'شما در مسیر درستی قرار دارید. این روزها را جشن بگیرید '
           'و به خودتان ثابت کنید که می‌توانید ادامه دهید.\n\n'
           'فردا هم یک روز جدید برای درخشش است! ✨';
     }
-    return '🌱 هر سفر بزرگی با یک قدم شروع می‌شود.\n\n'
+    return 'هر سفر بزرگی با یک قدم شروع می‌شود.\n\n'
         'شما همین الان آن قدم را برداشته‌اید و این فوق‌العاده است! '
         'به خودتان ایمان داشته باشید و یک روز در میان پیش بروید.\n\n'
         'من اینجا هستم تا در این مسیر همراه شما باشم. 💪';
@@ -173,7 +173,7 @@ class AIService {
   String _getPlanningResponse(List<Habit> habits) {
     final activeHabits = habits.where((h) => h.isActive).toList();
     if (activeHabits.isEmpty) {
-      return '📋 بیایید با هم برنامه‌ریزی کنیم!\n\n'
+      return 'بیایید با هم برنامه‌ریزی کنیم!\n\n'
           'به نظر می‌رسد هنوز عادتی انتخاب نکرده‌اید. '
           'پیشنهاد می‌کنم با یک عادت کوچک و ساده شروع کنید مثل:\n'
           '• ۵ دقیقه مدیتیشن صبحگاهی\n'
@@ -182,7 +182,7 @@ class AIService {
           'کدام یک را دوست دارید امتحان کنید؟';
     }
 
-    return '📅 برنامه‌ریزی روزانه کلید موفقیت است.\n\n'
+    return 'برنامه‌ریزی روزانه کلید موفقیت است.\n\n'
         'شما ${activeHabits.length} عادت فعال دارید. '
         'پیشنهاد می‌کنم:\n'
         '• صبح: عادت‌های انرژی‌بخش انجام دهید\n'
@@ -192,7 +192,7 @@ class AIService {
   }
 
   String _getSupportResponse(int streak) {
-    return '💪 می‌دانم که گاهی مسیر سخت می‌شود.\n\n'
+    return 'می‌دانم که گاهی مسیر سخت می‌شود.\n\n'
         'اما به یاد داشته باشید که ${streak > 0 ? '$streak روز' : 'از همین الان'} '
         'تلاش کرده‌اید و این یعنی شما قوی هستید.\n\n'
         'بیایید با هم راه‌حل پیدا کنیم:\n'
@@ -206,7 +206,7 @@ class AIService {
     final activeHabits = habits.where((h) => h.isActive).toList();
     final todayHabits = activeHabits.where((h) => h.shouldDoToday()).toList();
 
-    return '📊 بیایید نگاهی به پیشرفت شما بیندازیم:\n\n'
+    return 'بیایید نگاهی به پیشرفت شما بیندازیم:\n\n'
         '• عادت‌های فعال: ${activeHabits.length}\n'
         '• عادت‌های امروز: ${todayHabits.length}\n'
         '• استریک فعلی: $streak روز\n\n'
@@ -216,7 +216,7 @@ class AIService {
   }
 
   String _getGeneralResponse(String message, int streak) {
-    return '👋 سلام قهرمان!\n\n'
+    return 'سلام قهرمان!\n\n'
         'سوال خوبی پرسیدید. من اینجا هستم تا در هر مرحله از سفر شما همراهتان باشم.\n\n'
         'اگر نیاز به برنامه‌ریزی، انگیزه یا راهنمایی دارید، حتماً بپرسید. '
         'همچنین می‌توانید درباره عادت‌ها، پیشرفت یا چالش‌ها با من صحبت کنید.\n\n'

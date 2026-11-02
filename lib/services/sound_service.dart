@@ -20,12 +20,12 @@ class SoundService {
   static final SoundService instance = SoundService._();
 
   static const Map<Sfx, String> _assets = {
-    Sfx.tap: 'assets/sounds/tap.wav',
-    Sfx.check: 'assets/sounds/check.wav',
-    Sfx.complete: 'assets/sounds/complete.wav',
-    Sfx.levelUp: 'assets/sounds/level_up.wav',
-    Sfx.message: 'assets/sounds/message.wav',
-    Sfx.error: 'assets/sounds/error.wav',
+    Sfx.tap: 'assets/sounds/tap.mp3',
+    Sfx.check: 'assets/sounds/check.mp3',
+    Sfx.complete: 'assets/sounds/complete.mp3',
+    Sfx.levelUp: 'assets/sounds/level_up.mp3',
+    Sfx.message: 'assets/sounds/message.mp3',
+    Sfx.error: 'assets/sounds/error.mp3',
   };
 
   final Map<Sfx, AudioPlayer> _players = {};

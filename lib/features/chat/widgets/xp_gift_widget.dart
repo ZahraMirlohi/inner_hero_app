@@ -58,7 +58,7 @@ class XPGiftWidget extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                '🎁 هدیه XP',
+                'هدیه XP',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

@@ -27,7 +27,7 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 3), // ✅ از ۲ به ۳ ثانیه افزایش
+      duration: const Duration(seconds: 3), // از ۲ به ۳ ثانیه افزایش
       vsync: this,
     );
     _controller.addStatusListener((status) {
@@ -43,10 +43,10 @@ class _LottieAnimationWidgetState extends State<LottieAnimationWidget>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isPlaying != widget.isPlaying) {
       if (widget.isPlaying) {
-        // ✅ از اول پلی کن
+        // از اول پلی کن
         _controller.forward(from: 0.0);
       } else {
-        // ✅ متوقف کن و به فریم اول برگرد
+        // متوقف کن و به فریم اول برگرد
         _controller.value = 0.0;
         _controller.stop();
       }

@@ -29,12 +29,12 @@ class AvatarCustomizationScreen extends StatefulWidget {
 
 class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
   final SupabaseService _supabase = SupabaseService();
-  final StorageService _storage = StorageService(); // ✅ جدید
-  final ImagePicker _picker = ImagePicker(); // ✅ جدید
+  final StorageService _storage = StorageService(); // جدید
+  final ImagePicker _picker = ImagePicker(); // جدید
 
   late UserProfile _profile;
   bool _isLoading = false;
-  bool _isUploadingAvatar = false; // ✅ جدید
+  bool _isUploadingAvatar = false; // جدید
   double _uploadProgress = 0.0;
 
   // گزینه‌های شخصی‌سازی
@@ -81,7 +81,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
     _profile = widget.currentProfile;
   }
 
-  // ✅ کپی کردن profile با یک فیلد تغییر یافته
+  // کپی کردن profile با یک فیلد تغییر یافته
   UserProfile _copyProfileWith({
     String? skinColor,
     String? hairStyle,
@@ -353,7 +353,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-// 📸 انتخاب منبع عکس
+// انتخاب منبع عکس
 // ═══════════════════════════════════════════════════════════
   void _showAvatarSourcePicker() {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -461,7 +461,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 📤 آپلود عکس
+// آپلود عکس
 // ═══════════════════════════════════════════════════════════
   Future<void> _pickAndUploadAvatar(ImageSource source) async {
     try {
@@ -479,7 +479,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
         _uploadProgress = 0.1;
       });
 
-      // ✅ خواندن bytes از XFile
+      // خواندن bytes از XFile
       final bytes = await picked.readAsBytes();
 
       if (mounted) {
@@ -539,7 +539,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('📸 عکس پروفایل با موفقیت آپلود شد'),
+            content: Text('عکس پروفایل با موفقیت آپلود شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -564,7 +564,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
   }
 
 // ═══════════════════════════════════════════════════════════
-// 🗑️ حذف عکس پروفایل
+// حذف عکس پروفایل
 // ═══════════════════════════════════════════════════════════
   Future<void> _removeAvatar() async {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -613,7 +613,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
           name: _profile.name,
           uniqueId: _profile.uniqueId,
           username: _profile.username,
-          avatarUrl: null, // ✅ حذف شد
+          avatarUrl: null, // حذف شد
           usernameUpdatedAt: _profile.usernameUpdatedAt,
           phone: _profile.phone,
           email: _profile.email,
@@ -642,7 +642,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🗑️ عکس پروفایل حذف شد'),
+            content: Text('عکس پروفایل حذف شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -803,7 +803,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('آواتار با موفقیت به‌روزرسانی شد! 🎉'),
+            content: Text('آواتار با موفقیت به‌روزرسانی شد! '),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),

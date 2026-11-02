@@ -121,7 +121,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                         child: Column(
                           children: [
                             const Text(
-                              'تبریک! 🎉',
+                              'تبریک! ',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -234,7 +234,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                                 const SizedBox(height: 16),
                                 if (!_isLoading) ...[
                                   Text(
-                                    '✨ $_dailyQuote ✨',
+                                    '$_dailyQuote ',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 16,
@@ -278,7 +278,7 @@ class _CongratulationScreenState extends State<CongratulationScreen>
                             elevation: 4,
                           ),
                           child: const Text(
-                            'ادامه ماجراجویی 🚀',
+                            'ادامه ماجراجویی ',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

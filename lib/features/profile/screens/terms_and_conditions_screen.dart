@@ -27,13 +27,13 @@ class TermsAndConditionsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSection(
-                '📋 مقدمه',
+                'مقدمه',
                 'به اپلیکیشن قهرمان درون خوش آمدید. این اپلیکیشن با هدف کمک به شما در ایجاد عادت‌های مثبت و دستیابی به اهداف شخصی طراحی شده است. لطفاً قوانین زیر را به دقت مطالعه کنید.',
                 theme,
               ),
               const SizedBox(height: 24),
               _buildSection(
-                '1️⃣ ثبت‌نام و حساب کاربری',
+                '1⃣ ثبت‌نام و حساب کاربری',
                 '• برای استفاده از اپلیکیشن باید یک حساب کاربری ایجاد کنید.\n'
                     '• اطلاعات ثبت‌نامی باید صحیح و کامل باشد.\n'
                     '• شما مسئول حفظ امنیت رمز عبور خود هستید.\n'
@@ -42,7 +42,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '2️⃣ رفتار کاربران',
+                '2⃣ رفتار کاربران',
                 '• با سایر کاربران با احترام رفتار کنید.\n'
                     '• از ارسال پیام‌های توهین‌آمیز یا نامناسب خودداری کنید.\n'
                     '• محتوای ارسالی نباید شامل مطالب غیراخلاقی باشد.\n'
@@ -51,7 +51,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '3️⃣ حریم خصوصی',
+                '3⃣ حریم خصوصی',
                 '• اطلاعات شخصی شما نزد ما محفوظ است.\n'
                     '• از اطلاعات شما برای بهبود تجربه کاربری استفاده می‌شود.\n'
                     '• اطلاعات شما بدون رضایت شما به شخص ثالث داده نمی‌شود.\n'
@@ -60,7 +60,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '4️⃣ امتیازها و پاداش‌ها',
+                '4⃣ امتیازها و پاداش‌ها',
                 '• با انجام عادت‌ها و تسک‌ها امتیاز (XP) دریافت می‌کنید.\n'
                     '• امتیازها قابل تبدیل به پول نقد نیستند.\n'
                     '• در صورت تقلب، امتیازهای شما باطل خواهد شد.\n'
@@ -69,7 +69,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '5️⃣ تعهدات کاربر',
+                '5⃣ تعهدات کاربر',
                 '• تعهد می‌دهید که از اپلیکیشن برای اهداف قانونی استفاده کنید.\n'
                     '• در بهبود و توسعه اپلیکیشن با تیم توسعه همکاری کنید.\n'
                     '• بازخورد خود را برای بهبود اپلیکیشن ارائه دهید.\n'
@@ -78,7 +78,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '6️⃣ تغییرات در قوانین',
+                '6⃣ تغییرات در قوانین',
                 '• تیم توسعه حق تغییر این قوانین را در آینده محفوظ می‌دارد.\n'
                     '• تغییرات از طریق اطلاعیه درون‌برنامه‌ای اعلام می‌شود.\n'
                     '• ادامه استفاده از اپلیکیشن به معنای پذیرش قوانین جدید است.',
@@ -86,7 +86,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _buildSection(
-                '7️⃣ تماس با ما',
+                '7⃣ تماس با ما',
                 'اگر سوال یا پیشنهادی دارید، از طریق پشتیبانی اپلیکیشن با ما در ارتباط باشید.\n'
                     'ما همیشه خوشحال می‌شویم نظرات شما را بشنویم.',
                 theme,

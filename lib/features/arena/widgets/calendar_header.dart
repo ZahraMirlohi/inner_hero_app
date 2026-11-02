@@ -115,7 +115,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
       }
 
       if (targetIndex != -1) {
-        final double itemWidth = 56 + 8;
+        final double itemWidth = 52 + 8;
         final double screenWidth = MediaQuery.of(context).size.width;
         final double targetOffset =
             (targetIndex * itemWidth) - (screenWidth / 2) + (itemWidth / 2);
@@ -191,8 +191,6 @@ class _CalendarHeaderState extends State<CalendarHeader>
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final calendar = Provider.of<CalendarProvider>(context);
-    final Color primaryColor = theme.primaryColor;
-
     if (_lastCalendarType != calendar.calendarType) {
       _lastCalendarType = calendar.calendarType;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -204,223 +202,209 @@ class _CalendarHeaderState extends State<CalendarHeader>
       });
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Column(
-        children: [
-          // ✅ هدر تقویم
-          GestureDetector(
-            onTap: _toggleExpanded,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                top: 8,
-                bottom: 4,
-                left: 4,
-                right: 4,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        _getDayNumber(widget.selectedDate, calendar),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          calendar.getWeekdayName(widget.selectedDate),
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textColor,
-                          ),
-                        ),
-                        Text(
-                          calendar.formatWithMonthName(widget.selectedDate),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: theme.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedRotation(
-                    duration: const Duration(milliseconds: 300),
-                    turns: _isExpanded ? 0.5 : 0.0,
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: theme.textSecondaryColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+
+    Widget circleBtn(IconData icon, VoidCallback onTap,
+        {Color? bg, bool shadow = true}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: bg ?? theme.cardColor,
+            shape: BoxShape.circle,
+            boxShadow: shadow ? theme.softShadow : null,
           ),
+          child: Icon(icon, size: 22, color: theme.textColor),
+        ),
+      );
+    }
 
-          // ✅ کشوی تقویم
-          if (_isExpanded)
-            SizeTransition(
-              sizeFactor: _scaleAnimation,
-              child: Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+    return Column(
+      children: [
+        // هدر: دایرهٔ روز + نام روز و تاریخ + دکمهٔ باز و بسته کردن تقویم
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: theme.primarySoft,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _getDayNumber(widget.selectedDate, calendar),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textColor,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            onPressed: _goToPreviousMonth,
-                            icon: const Icon(Icons.chevron_left),
-                            iconSize: 28,
-                            color: theme.textColor,
-                          ),
-                          Text(
-                            calendar.getMonthYearLabel(_currentMonth),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: theme.textColor,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: _goToNextMonth,
-                            icon: const Icon(Icons.chevron_right),
-                            iconSize: 28,
-                            color: theme.textColor,
-                          ),
-                        ],
+                    Text(
+                      calendar.getWeekdayName(widget.selectedDate),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: theme.textColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 80,
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        child: Row(
-                          children: _monthDates.map((date) {
-                            final isToday = _isToday(date, calendar);
-                            final isSelected = _isSelectedDate(date, calendar);
-
-                            return GestureDetector(
-                              onTap: () {
-                                final cleanDate = DateTime(
-                                  date.year,
-                                  date.month,
-                                  date.day,
-                                );
-                                widget.onDateSelected(cleanDate);
-                                _toggleExpanded();
-                              },
-                              child: MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: Container(
-                                  width: 56,
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? primaryColor
-                                        : isToday
-                                            ? primaryColor.withValues(
-                                                alpha: 0.10,
-                                              )
-                                            : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: isToday && !isSelected
-                                        ? Border.all(
-                                            color: primaryColor.withValues(
-                                              alpha: 0.30,
-                                            ),
-                                            width: 1,
-                                          )
-                                        : null,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        calendar.getWeekdayShort(date),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : theme.textSecondaryColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _getDayNumber(date, calendar),
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : isToday
-                                                  ? primaryColor
-                                                  : theme.textColor,
-                                        ),
-                                      ),
-                                      if (isToday)
-                                        Container(
-                                          width: 4,
-                                          height: 4,
-                                          margin: const EdgeInsets.only(
-                                            top: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : primaryColor,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                    Text(
+                      calendar.formatWithMonthName(widget.selectedDate),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: theme.textSecondaryColor,
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-        ],
-      ),
+              AnimatedRotation(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                turns: _isExpanded ? 0.5 : 0.0,
+                child: circleBtn(
+                    Icons.keyboard_arrow_down_rounded, _toggleExpanded),
+              ),
+            ],
+          ),
+        ),
+
+        // تقویم باز: کارت سفید با ناوبری ماه و نوار روزها
+        AnimatedSize(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: !_isExpanded
+              ? const SizedBox(width: double.infinity)
+              : Container(
+                  margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: theme.softShadow,
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          circleBtn(
+                            rtl
+                                ? Icons.chevron_right_rounded
+                                : Icons.chevron_left_rounded,
+                            _goToPreviousMonth,
+                            bg: theme.cardSecondaryColor,
+                            shadow: false,
+                          ),
+                          Text(
+                            calendar.getMonthYearLabel(_currentMonth),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: theme.textColor,
+                            ),
+                          ),
+                          circleBtn(
+                            rtl
+                                ? Icons.chevron_left_rounded
+                                : Icons.chevron_right_rounded,
+                            _goToNextMonth,
+                            bg: theme.cardSecondaryColor,
+                            shadow: false,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 78,
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          itemCount: _monthDates.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            final date = _monthDates[index];
+                            final isToday = _isToday(date, calendar);
+                            final isSelected = _isSelectedDate(date, calendar);
+                            final fg = isSelected
+                                ? theme.onPrimaryColor
+                                : theme.textColor;
+                            return GestureDetector(
+                              onTap: () {
+                                widget.onDateSelected(
+                                    DateTime(date.year, date.month, date.day));
+                                _toggleExpanded();
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                width: 52,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? theme.primaryColor
+                                      : theme.cardSecondaryColor,
+                                  borderRadius: BorderRadius.circular(26),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      calendar.getWeekdayShort(date),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: isSelected
+                                            ? theme.onPrimaryColor
+                                            : theme.textSecondaryColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _getDayNumber(date, calendar),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                        color: fg,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: isToday
+                                            ? (isSelected
+                                                ? theme.onPrimaryColor
+                                                : theme.textColor)
+                                            : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 

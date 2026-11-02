@@ -38,7 +38,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   String? _userId;
   bool _isInitialized = false;
 
-  // ✅ فلگ برای تشخیص تغییرات (ارسال/لغو/قبول/رد درخواست)
+  // فلگ برای تشخیص تغییرات (ارسال/لغو/قبول/رد درخواست)
   bool _hasChanges = false;
 
   // ==================== فیلترها ====================
@@ -72,7 +72,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🔍 جستجوی کاربر با username یا phone
+  // جستجوی کاربر با username یا phone
   // ═══════════════════════════════════════════════════════════
   Future<void> _performSearch() async {
     final query = _searchController.text.trim();
@@ -131,7 +131,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📤 اشتراک‌گذاری لینک دعوت
+  // اشتراک‌گذاری لینک دعوت
   // ═══════════════════════════════════════════════════════════
   Future<void> _shareInvitationLink() async {
     try {
@@ -214,20 +214,20 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     final user = await _matcherService.getCurrentUser();
     if (user == null) {
       if (mounted) {
-        // ✅ چک mounted
+        // چک mounted
         setState(() => _isLoading = false);
       }
       return;
     }
 
-    if (!mounted) return; // ✅ اینجا هم چک کن
+    if (!mounted) return; // اینجا هم چک کن
 
     setState(() {
       _userId = user.id;
       _isLoading = true;
     });
 
-    // ✅ دریافت username کاربر فعلی
+    // دریافت username کاربر فعلی
     try {
       final myProfile = await _supabaseClient
           .from('profiles')
@@ -241,7 +241,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         });
       }
     } catch (e) {
-      print('⚠️ Error loading my username: $e');
+      print('Error loading my username: $e');
     }
 
     try {
@@ -251,7 +251,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         filterGender: null,
       );
 
-      if (!mounted) return; // ✅ بعد از await دوباره چک کن
+      if (!mounted) return; // بعد از await دوباره چک کن
 
       _categorizeMatches(matches);
 
@@ -262,13 +262,13 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
 
       _applyFilters();
     } catch (e) {
-      print('❌ Error loading data: $e');
-      if (!mounted) return; // ✅ بعد از catch هم چک کن
+      print('Error loading data: $e');
+      if (!mounted) return; // بعد از catch هم چک کن
       setState(() => _isLoading = false);
     }
   }
 
-  // ✅ دسته‌بندی کاربران به سه گروه
+  // دسته‌بندی کاربران به سه گروه
   void _categorizeMatches(List<Map<String, dynamic>> matches) {
     final pending = <Map<String, dynamic>>[];
     final buddies = <Map<String, dynamic>>[];
@@ -293,7 +293,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     _myBuddies = buddies;
   }
 
-  // ✅ اعمال فیلترها روی نتایج جستجو
+  // اعمال فیلترها روی نتایج جستجو
   void _applyFilters() {
     if (!_isInitialized) return;
     if (!mounted) return;
@@ -320,7 +320,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       (a, b) =>
           (b['match_score'] as double).compareTo(a['match_score'] as double),
     );
-    if (!mounted) return; // ✅ قبل از setState چک کن
+    if (!mounted) return; // قبل از setState چک کن
     setState(() {
       _searchResults = filtered;
     });
@@ -336,14 +336,14 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         toUserId,
         message: 'سلام! من از طریق سیستم هم‌مسیر با شما آشنا شدم. '
             'به نظر می‌رسد علاقه‌مندی‌های مشترکی داریم. '
-            'خوشحال می‌شوم با هم هم‌مسیر باشیم! 🤝',
+            'خوشحال می‌شوم با هم هم‌مسیر باشیم! ',
       );
 
       if (!mounted) return;
 
-      // ✅ فقط state لوکال را آپدیت کن (بدون reload کل داده)
+      // فقط state لوکال را آپدیت کن (بدون reload کل داده)
       setState(() {
-        _hasChanges = true; // ✅ علامت‌گذاری تغییر
+        _hasChanges = true; // علامت‌گذاری تغییر
 
         final index = _searchResults.indexWhere(
           (m) => m['user_id'] == toUserId,
@@ -367,7 +367,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('درخواست هم‌مسیر ارسال شد ✅'),
+            content: const Text('درخواست هم‌مسیر ارسال شد '),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -419,7 +419,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (!mounted) return;
 
       setState(() {
-        _hasChanges = true; // ✅ علامت‌گذاری تغییر
+        _hasChanges = true; // علامت‌گذاری تغییر
 
         final index = _pendingRequests.indexWhere(
           (m) => m['user_id'] == toUserId,
@@ -453,7 +453,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('درخواست هم‌مسیر لغو شد 🗑️'),
+            content: const Text('درخواست هم‌مسیر لغو شد '),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -494,7 +494,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (!mounted) return;
 
       if (accept && otherUserId != null) {
-        // ✅ برای accept، فقط state لوکال را آپدیت کن (بدون reload از دیتابیس)
+        // برای accept، فقط state لوکال را آپدیت کن (بدون reload از دیتابیس)
         setState(() {
           _hasChanges = true;
 
@@ -518,10 +518,10 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           }
         });
 
-        // ✅ conversation_id را به صورت جداگانه دریافت کن (بدون setState)
+        // conversation_id را به صورت جداگانه دریافت کن (بدون setState)
         _fetchConversationIdInBackground(otherUserId);
       } else if (otherUserId != null) {
-        // ✅ برای reject، فقط state لوکال
+        // برای reject، فقط state لوکال
         setState(() {
           _hasChanges = true;
 
@@ -558,7 +558,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? 'درخواست پذیرفته شد 🎉' : 'درخواست رد شد'),
+            content: Text(accept ? 'درخواست پذیرفته شد ' : 'درخواست رد شد'),
             backgroundColor: accept ? primaryColor : Colors.grey,
             duration: const Duration(seconds: 2),
           ),
@@ -576,7 +576,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     }
   }
 
-// ✅ دریافت conversation_id در پس‌زمینه (بدون setState)
+// دریافت conversation_id در پس‌زمینه (بدون setState)
   Future<void> _fetchConversationIdInBackground(String otherUserId) async {
     // تأخیر برای اطمینان از ثبت conversation در دیتابیس
     await Future.delayed(const Duration(seconds: 2));
@@ -606,12 +606,12 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         }
       });
     } catch (e) {
-      print('❌ Error fetching conversation ID: $e');
+      print('Error fetching conversation ID: $e');
     }
   }
 
-// ✅ متد قدیمی _reloadOnlyUser را حذف کن
-  // ✅ فقط یک کاربر را reload کن (برای accept)
+// متد قدیمی _reloadOnlyUser را حذف کن
+  // فقط یک کاربر را reload کن (برای accept)
   Future<void> _reloadOnlyUser(String otherUserId) async {
     if (_userId == null) return;
 
@@ -647,7 +647,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         }
       });
     } catch (e) {
-      print('❌ Error reloading user: $e');
+      print('Error reloading user: $e');
     }
   }
 
@@ -658,7 +658,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ PopScope حذف شد - مشکل AnimationController رفع می‌شود
+    // PopScope حذف شد - مشکل AnimationController رفع می‌شود
     return Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
@@ -672,7 +672,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // ✅ چک کن می‌تونه pop کنه
+            // چک کن می‌تونه pop کنه
             if (Navigator.canPop(context)) {
               Navigator.pop(context, _hasChanges);
             } else {
@@ -762,10 +762,10 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   Widget _buildSearchTab(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
-        // ✅ باکس جستجو (جدید)
+        // باکس جستجو (جدید)
         _buildSearchBox(theme, primaryColor),
 
-        // ✅ نمایش نتیجه جستجو (اگر جستجو شده)
+        // نمایش نتیجه جستجو (اگر جستجو شده)
         if (_hasSearched) ...[
           Expanded(
             child: _isSearching
@@ -819,7 +819,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                     : _buildNotFoundState(theme, primaryColor),
           ),
         ] else ...[
-          // ✅ حالت عادی: فیلترها + نتایج
+          // حالت عادی: فیلترها + نتایج
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
@@ -881,7 +881,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🔍 باکس جستجو
+  // باکس جستجو
   // ═══════════════════════════════════════════════════════════
   Widget _buildSearchBox(ThemeProvider theme, Color primaryColor) {
     return Container(
@@ -980,7 +980,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ❌ حالت کاربر پیدا نشد
+  // حالت کاربر پیدا نشد
   // ═══════════════════════════════════════════════════════════
   Widget _buildNotFoundState(ThemeProvider theme, Color primaryColor) {
     return Center(
@@ -1540,17 +1540,17 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       return ElevatedButton.icon(
         onPressed: () {
           if (conversationId != null && _userId != null) {
-            // ✅ memberIds باید شامل هر دو کاربر باشه
+            // memberIds باید شامل هر دو کاربر باشه
             final conv = Conversation(
               id: conversationId,
               type: ConversationType.buddy,
               name: match['name'],
-              memberIds: [_userId!, userId], // ✅ هم خودم هم کاربر مقابل
+              memberIds: [_userId!, userId], // هم خودم هم کاربر مقابل
               lastMessageAt: DateTime.now(),
               createdAt: DateTime.now(),
             );
 
-            print('🚀 Opening chat with members: ${conv.memberIds}');
+            print('Opening chat with members: ${conv.memberIds}');
 
             Navigator.push(
               context,

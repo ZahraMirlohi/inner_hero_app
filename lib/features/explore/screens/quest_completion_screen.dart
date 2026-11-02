@@ -106,7 +106,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                         child: Column(
                           children: [
                             const Text(
-                              '🎉 تبریک! 🎉',
+                              'تبریک! ',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -209,7 +209,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(
-                                            '🏅 ${widget.quest.badge}',
+                                            '${widget.quest.badge}',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
@@ -246,7 +246,7 @@ class _QuestCompletionScreenState extends State<QuestCompletionScreen>
                             elevation: 4,
                           ),
                           child: const Text(
-                            'ادامه ماجراجویی 🚀',
+                            'ادامه ماجراجویی ',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

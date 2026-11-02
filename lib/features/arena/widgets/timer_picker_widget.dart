@@ -38,7 +38,7 @@ class _TimerPickerWidgetState extends State<TimerPickerWidget> {
     final theme = Provider.of<ThemeProvider>(context);
     final Color primaryColor = theme.primaryColor;
 
-    // ✅ رنگ پس‌زمینه باکس‌ها بر اساس تم
+    // رنگ پس‌زمینه باکس‌ها بر اساس تم
     final Color wheelBg =
         theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF7FCEB);
 

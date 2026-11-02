@@ -91,9 +91,9 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      height: isActive ? 68 : 0, // ✅ از 64 به 68
+      height: isActive ? 68 : 0, // از 64 به 68
       child: Container(
-        height: 68, // ✅ از 64 به 68
+        height: 68, // از 64 به 68
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
@@ -109,7 +109,7 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
         ),
         child: Row(
           children: [
-            // ✅ آیکون
+            // آیکون
             Container(
               width: 36,
               height: 36,
@@ -151,7 +151,7 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
             ),
             const SizedBox(width: 10),
 
-            // ✅ اطلاعات آهنگ
+            // اطلاعات آهنگ
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -223,7 +223,7 @@ class _AudioPlayerHeaderState extends State<AudioPlayerHeader> {
               ),
             ),
 
-            // ✅ دکمه‌ها
+            // دکمه‌ها
             IconButton(
               onPressed: () => _audioService.stop(),
               icon: const Icon(Icons.close, color: Colors.white70, size: 18),

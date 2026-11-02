@@ -51,7 +51,7 @@ class _XPGiftDialogState extends State<XPGiftDialog> {
           ),
           const SizedBox(width: 12),
           Text(
-            '🎁 هدیه XP',
+            'هدیه XP',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,

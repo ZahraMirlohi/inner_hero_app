@@ -197,7 +197,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
               style: TextStyle(color: theme.textSecondaryColor, fontSize: 13),
             ),
             Text(
-              'روزهای آینده را از دست نده! 💪',
+              'روزهای آینده را از دست نده! ',
               style: TextStyle(color: theme.textSecondaryColor, fontSize: 11),
             ),
           ],
@@ -210,7 +210,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
     return Row(
       children: [
         Text(
-          '📊 روند پیشرفت ماه جاری',
+          'روند پیشرفت ماه جاری',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
@@ -226,7 +226,7 @@ class _HabitChartWidgetState extends State<HabitChartWidget> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              '🎯 ${widget.targetValue}',
+              '${widget.targetValue}',
               style: TextStyle(
                 fontSize: 11,
                 color: primaryColor,
@@ -485,9 +485,9 @@ class _HabitChartPainter extends CustomPainter {
     double chartWidth,
   ) {
     final levels = [
-      {'label': '🌟 کامل', 'value': 3.0, 'color': const Color(0xFF2ECC71)},
-      {'label': '⭐ نیمه', 'value': 2.0, 'color': const Color(0xFFFFA500)},
-      {'label': '✨ پایه', 'value': 1.0, 'color': const Color(0xFF3498DB)},
+      {'label': 'کامل', 'value': 3.0, 'color': const Color(0xFF2ECC71)},
+      {'label': 'نیمه', 'value': 2.0, 'color': const Color(0xFFFFA500)},
+      {'label': 'پایه', 'value': 1.0, 'color': const Color(0xFF3498DB)},
     ];
     final textStyle = TextStyle(
       fontSize: 12,
@@ -558,7 +558,7 @@ class _HabitChartPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      // ✅ پس‌زمینه لیبل روز با رنگ کارت هماهنگ میشه
+      // پس‌زمینه لیبل روز با رنگ کارت هماهنگ میشه
       final bgPaint = Paint()
         ..color = cardColor
         ..style = PaintingStyle.fill;

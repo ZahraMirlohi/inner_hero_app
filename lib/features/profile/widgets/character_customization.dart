@@ -31,7 +31,7 @@ class _CharacterCustomizationState extends State<CharacterCustomization> {
     _heroClass = HeroClass.getClass(_tempCharacter.heroClass);
   }
 
-  // ✅ کپی کردن کاراکتر با تغییرات
+  // کپی کردن کاراکتر با تغییرات
   Character _copyCharacter({
     String? heroClass,
     String? outfit,

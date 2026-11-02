@@ -22,6 +22,23 @@ end;
 $$;
 
 -- هر کاربر فقط یک پروفایل و یک user_progress
+-- ردیف‌های تکراری (اگر هستند) پاک می‌شوند: برای هر کاربر ردیفی با بیشترین XP می‌ماند
+delete from public.profiles p
+ using (
+   select ctid as rid, row_number() over (
+            partition by user_id order by coalesce(total_xp, 0) desc, ctid) as rn
+     from public.profiles
+ ) d
+ where p.ctid = d.rid and d.rn > 1;
+
+delete from public.user_progress p
+ using (
+   select ctid as rid, row_number() over (
+            partition by user_id order by coalesce(total_xp, 0) desc, ctid) as rn
+     from public.user_progress
+ ) d
+ where p.ctid = d.rid and d.rn > 1;
+
 create unique index if not exists profiles_user_id_key on public.profiles (user_id);
 create unique index if not exists user_progress_user_id_key on public.user_progress (user_id);
 
@@ -34,19 +51,30 @@ security definer
 set search_path = public, auth
 as $$
 begin
-  insert into public.profiles (user_id, email, name, unique_id, total_xp)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
-    public.generate_unique_id(),
-    0
-  )
-  on conflict (user_id) do nothing;
+  -- هر کدام جدا و محافظت‌شده: اگر ساخت پروفایل خطا بدهد، ثبت‌نام خراب نمی‌شود
+  -- (برنامه خودش در صورت نبودن پروفایل آن را می‌سازد).
+  begin
+    if not exists (select 1 from public.profiles where user_id = new.id) then
+      insert into public.profiles (user_id, email, name, unique_id, total_xp)
+      values (
+        new.id,
+        new.email,
+        coalesce(new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', split_part(new.email, '@', 1)),
+        public.generate_unique_id(),
+        0
+      );
+    end if;
+  exception when others then
+    raise warning 'handle_new_user profiles: %', sqlerrm;
+  end;
 
-  insert into public.user_progress (user_id, total_xp, weekly_xp, monthly_xp)
-  values (new.id, 0, 0, 0)
-  on conflict (user_id) do nothing;
+  begin
+    if not exists (select 1 from public.user_progress where user_id = new.id) then
+      insert into public.user_progress (user_id, total_xp) values (new.id, 0);
+    end if;
+  exception when others then
+    raise warning 'handle_new_user user_progress: %', sqlerrm;
+  end;
 
   return new;
 end;

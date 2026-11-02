@@ -46,7 +46,7 @@ class TodayHabitsService {
           .toList();
 
       // ============================================================
-      // ✅ اصلاح: دریافت چالش‌های فعال کاربر (بدون join)
+      // اصلاح: دریافت چالش‌های فعال کاربر (بدون join)
       // ============================================================
       List<TodayChallengeItem> challengeItems = [];
 
@@ -82,12 +82,12 @@ class TodayHabitsService {
           }
         }
       } catch (e) {
-        print('⚠️ Error loading challenges: $e');
+        print('Error loading challenges: $e');
         // ادامه بده، خطا نادیده گرفته بشه
       }
 
       // ============================================================
-      // ✅ اصلاح: دریافت ماموریت‌های فعال کاربر (بدون join)
+      // اصلاح: دریافت ماموریت‌های فعال کاربر (بدون join)
       // ============================================================
       List<TodayQuestItem> questItems = [];
 
@@ -123,7 +123,7 @@ class TodayHabitsService {
           }
         }
       } catch (e) {
-        print('⚠️ Error loading quests: $e');
+        print('Error loading quests: $e');
         // ادامه بده، خطا نادیده گرفته بشه
       }
 
@@ -194,7 +194,7 @@ class TodayHabitsService {
         completedItems: completedItems,
       );
     } catch (e) {
-      print('❌ Error getting today habits: $e');
+      print('Error getting today habits: $e');
       return null;
     }
   }

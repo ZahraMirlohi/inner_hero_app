@@ -35,10 +35,10 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ تشخیص اینکه کاربر فعلی فرستنده است یا گیرنده
+    // تشخیص اینکه کاربر فعلی فرستنده است یا گیرنده
     final bool isMe = widget.challenge.creatorId == widget.currentUserId;
 
-    // ✅ رنگ‌های استاندارد
+    // رنگ‌های استاندارد
     final Color bgColor =
         isMe ? ChatColors.myBubble(theme) : ChatColors.otherBubble(theme);
     final Color textColor = isMe
@@ -220,7 +220,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                 Row(
                   children: [
                     Text(
-                      '📋 امروز',
+                      'امروز',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -239,7 +239,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          '✅ انجام شد',
+                          'انجام شد',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
@@ -258,7 +258,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
-                          '⏳ در انتظار',
+                          'در انتظار',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
@@ -635,7 +635,7 @@ class _ActiveChallengeWidgetState extends State<ActiveChallengeWidget> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text('⏰ یادآوری'),
+        title: const Text('یادآوری'),
         content: const Text(
           'یادآوری برای هم‌مسیر شما ارسال خواهد شد.\n\n'
           'آیا مطمئن هستید؟',

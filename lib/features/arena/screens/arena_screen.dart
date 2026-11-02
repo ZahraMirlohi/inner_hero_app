@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '../widgets/calendar_header.dart';
 import 'today_tab.dart';
 import 'habits_tab.dart';
@@ -190,8 +192,9 @@ class _ArenaScreenState extends State<ArenaScreen>
 
     return Scaffold(
       backgroundColor: themeProvider.backgroundColor,
-      bottomNavigationBar: const SizedBox(height: 150),
-      body: Column(
+      body: Stack(
+        children: [
+      Column(
         children: [
           // هدر تقویم
           CalendarHeader(
@@ -214,302 +217,218 @@ class _ArenaScreenState extends State<ArenaScreen>
           // پروگرس بار
           _buildHorizontalProgressBar(themeProvider),
 
-          const SizedBox(height: 6),
-
           // تب‌بار
-          _CustomTabBar(
-            currentIndex: _selectedIndex,
-            onTap: _onTabChanged,
-            items: List.generate(
-              _tabs.length,
-              (index) => _TabBarItem(
-                icon: _icons[index],
-                label: _tabs[index],
-              ),
-            ),
-            primaryColor: primaryColor,
-            themeProvider: themeProvider,
-            spacing: 8.0,
-            height: 62.0,
-            selectedCircleSize: 46.0,
-          ),
+          _buildPillTabBar(themeProvider),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
 
-          // کادر اصلی
+          // فهرست‌ها مستقیم روی پس‌زمینه (طراحی: بدون کادر بزرگ)
           Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: _horizontalMargin),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    blurRadius: 24,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.20),
-                    blurRadius: 32,
-                    spreadRadius: -4,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-              ),
-              child: ClipPath(
-                clipper: const _BottomNotchClipper(),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: themeProvider.cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: IndexedStack(
-                          index: _selectedIndex,
-                          children: [
-                            TodayTab(
-                              key: _todayTabKey,
-                              selectedDate: _selectedDate,
-                              profileRefreshNotifier:
-                                  widget.profileRefreshNotifier,
-                              onProgressUpdate: updateProgress,
-                            ),
-                            HabitsTab(key: _habitsTabKey),
-                            TasksTab(key: _tasksTabKey),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                TodayTab(
+                  key: _todayTabKey,
+                  selectedDate: _selectedDate,
+                  profileRefreshNotifier: widget.profileRefreshNotifier,
+                  onProgressUpdate: updateProgress,
+                ),
+                HabitsTab(key: _habitsTabKey),
+                TasksTab(key: _tasksTabKey),
+              ],
+            ),
+          ),
+        ],
+      ),
+          // محو شدن پایین لیست زیر نوار ناوبری (مثل طراحی)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 150,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      themeProvider.backgroundColor.withValues(alpha: 0),
+                      themeProvider.backgroundColor,
                     ],
+                    stops: const [0.0, 0.65],
                   ),
                 ),
               ),
             ),
           ),
+          // دکمهٔ افزودن بالای نوار ناوبری
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 98 + MediaQuery.of(context).padding.bottom,
+            child: Center(child: _buildFloatingMenuButton(themeProvider)),
+          ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _buildFloatingMenuButton(themeProvider),
     );
   }
 
   // ==================== پروگرس بار افقی ====================
 
   Widget _buildHorizontalProgressBar(ThemeProvider theme) {
-    final Color primaryColor = theme.primaryColor;
     final int percent = (_currentProgress * 100).toInt();
-    // ✅ در تم شب از رنگ روشن‌تر استفاده کن تا متن/آیکون خوانا باشد
-    final Color progressColor =
-        theme.isDarkMode ? theme.primaryColor : const Color(0xFF090909);
+    final bool done = _currentProgress >= 1.0;
+    final Color fill = theme.primaryColor;
+    final trackColor = theme.cardSecondaryColor;
+    final mint = theme.tone(Tone.mint);
+
+    Widget badge(IconData icon, bool active) => Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: active ? fill : trackColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon,
+              size: 14,
+              color: active ? theme.onPrimaryColor : theme.textSecondaryColor),
+        );
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: _horizontalMargin,
-        vertical: 4,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: theme.softShadow,
       ),
       child: Column(
         children: [
-          Stack(
+          Row(
             children: [
-              Container(
-                height: 24,
-                decoration: BoxDecoration(
-                  color: theme.isDarkMode
-                      ? const Color(0xFF2A2A2A)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOutCubic,
+              badge(Icons.bolt_rounded, _currentProgress > 0),
+              const SizedBox(width: 8),
+              Expanded(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final double progressWidth =
-                          constraints.maxWidth * _currentProgress;
-
-                      return Stack(
-                        children: [
-                          Container(
-                            width: progressWidth,
-                            height: 24,
+                  borderRadius: BorderRadius.circular(7),
+                  child: Stack(
+                    children: [
+                      Container(height: 14, color: trackColor),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: _currentProgress.clamp(0.0, 1.0)),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => FractionallySizedBox(
+                          widthFactor: v,
+                          child: Container(
+                            height: 14,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: theme.isDarkMode
-                                    ? [
-                                        theme.primaryColor
-                                            .withValues(alpha: 0.7),
-                                        theme.primaryColor,
-                                      ]
-                                    : const [
-                                        Color(0xFF2A2A2A),
-                                        Color(0xFF090909),
-                                      ],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
+                              color: fill,
+                              borderRadius: BorderRadius.circular(7),
                             ),
                           ),
-                          if (_currentProgress > 0.05 &&
-                              _currentProgress < 0.98)
-                            Positioned(
-                              left: progressWidth - 20,
-                              top: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: 40,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white.withValues(alpha: 0.0),
-                                      Colors.white.withValues(alpha: 0.4),
-                                      Colors.white.withValues(alpha: 0.0),
-                                    ],
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (_currentProgress > 0.02 &&
-                              _currentProgress < 0.98)
-                            Positioned(
-                              left: progressWidth - 20,
-                              top: 6,
-                              child: Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.6),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: _currentProgress > 0.1
-                              ? Colors.white.withValues(alpha: 0.9)
-                              : (theme.isDarkMode
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade400),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.bolt,
-                          size: 10,
-                          color: _currentProgress > 0.1
-                              ? const Color(0xFF090909)
-                              : (theme.isDarkMode
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600),
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: _currentProgress >= 1.0
-                              ? Colors.white
-                              : (theme.isDarkMode
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade400),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.emoji_events,
-                          size: 10,
-                          color: _currentProgress >= 1.0
-                              ? const Color(0xFF090909)
-                              : (theme.isDarkMode
-                                  ? Colors.grey.shade400
-                                  : Colors.grey.shade600),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              badge(Icons.emoji_events_rounded, done),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(4),
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: _currentProgress >= 1.0
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : progressColor.withValues(alpha: 0.1),
+                  color: done ? mint.bg : theme.primarySoft,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _currentProgress >= 1.0
-                      ? Icons.emoji_events
-                      : Icons.trending_up,
-                  size: 14,
-                  color: _currentProgress >= 1.0 ? Colors.green : progressColor,
+                  done ? Icons.emoji_events_rounded : Icons.trending_up_rounded,
+                  size: 16,
+                  color: done ? mint.fg : theme.textColor,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Text(
                 '$percent%',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: _currentProgress >= 1.0 ? Colors.green : progressColor,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
                 ),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== تب‌بار گرد ====================
+
+  Widget _buildPillTabBar(ThemeProvider theme) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      padding: const EdgeInsets.all(4),
+      height: 56,
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: theme.softShadow,
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < _tabs.length; i++)
+            Expanded(
+              flex: _selectedIndex == i ? 13 : 10,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _onTabChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _selectedIndex == i
+                        ? theme.primaryColor
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _icons[i],
+                        size: 20,
+                        color: _selectedIndex == i
+                            ? theme.onPrimaryColor
+                            : theme.textSecondaryColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _tabs[i],
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: _selectedIndex == i
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: _selectedIndex == i
+                              ? theme.onPrimaryColor
+                              : theme.textSecondaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -694,22 +613,24 @@ class _ArenaScreenState extends State<ArenaScreen>
     final Color primaryColor = theme.primaryColor;
     String statusText;
     IconData statusIcon;
-    Color statusColor = primaryColor;
+    Tone tone;
 
     if (!syncProvider.isOnline) {
-      statusText = '📡 آفلاین - تغییرات در صف ذخیره می‌شوند';
-      statusIcon = Icons.wifi_off;
-      statusColor = primaryColor;
+      statusText = context.tr('arena.offline');
+      statusIcon = Icons.wifi_off_rounded;
+      tone = Tone.peach;
     } else if (syncProvider.hasOfflineOperations) {
-      statusText =
-          '🔄 ${syncProvider.offlineOperationsCount} تغییرات در حال همگام‌سازی...';
-      statusIcon = Icons.sync;
-      statusColor = primaryColor;
+      statusText = context.tr(
+          'arena.syncing', {'n': '${syncProvider.offlineOperationsCount}'});
+      statusIcon = Icons.sync_rounded;
+      tone = Tone.sky;
     } else {
-      statusText = '✅ آنلاین';
-      statusIcon = Icons.wifi;
-      statusColor = primaryColor;
+      statusText = context.tr('arena.online');
+      statusIcon = Icons.wifi_rounded;
+      tone = Tone.mint;
     }
+    final t = theme.tone(tone);
+    final Color statusColor = t.fg;
 
     return Container(
       width: double.infinity,
@@ -719,16 +640,8 @@ class _ArenaScreenState extends State<ArenaScreen>
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: t.bg,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         children: [

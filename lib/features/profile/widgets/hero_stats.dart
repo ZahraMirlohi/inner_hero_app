@@ -50,7 +50,7 @@ class HeroStats extends StatelessWidget {
                   label: 'سن قهرمان',
                   value: '${character.characterAge} روز',
                   color: primaryColor,
-                  theme: theme, // ✅
+                  theme: theme, // 
                 ),
               ),
               Expanded(
@@ -59,7 +59,7 @@ class HeroStats extends StatelessWidget {
                   label: 'لول',
                   value: '${character.level}',
                   color: primaryColor,
-                  theme: theme, // ✅
+                  theme: theme, // 
                 ),
               ),
             ],
@@ -73,7 +73,7 @@ class HeroStats extends StatelessWidget {
                   label: 'استریک جاری',
                   value: '${character.streak} روز',
                   color: primaryColor,
-                  theme: theme, // ✅
+                  theme: theme, // 
                 ),
               ),
               Expanded(
@@ -82,13 +82,13 @@ class HeroStats extends StatelessWidget {
                   label: 'مدال‌ها',
                   value: '${character.badges}',
                   color: primaryColor,
-                  theme: theme, // ✅
+                  theme: theme, // 
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildXpBar(primaryColor, theme), // ✅
+          _buildXpBar(primaryColor, theme), // 
         ],
       ),
     );
@@ -99,7 +99,7 @@ class HeroStats extends StatelessWidget {
     required String label,
     required String value,
     required Color color,
-    required ThemeProvider theme, // ✅
+    required ThemeProvider theme, // 
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -123,7 +123,7 @@ class HeroStats extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: theme.textSecondaryColor, // ✅
+              color: theme.textSecondaryColor, // 
             ),
           ),
         ],
@@ -145,7 +145,7 @@ class HeroStats extends StatelessWidget {
               'پیشرفت به لول بعدی',
               style: TextStyle(
                 fontSize: 12,
-                color: theme.textSecondaryColor, // ✅
+                color: theme.textSecondaryColor, // 
               ),
             ),
             Text(
@@ -153,7 +153,7 @@ class HeroStats extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: theme.textColor, // ✅
+                color: theme.textColor, // 
               ),
             ),
           ],
@@ -165,7 +165,7 @@ class HeroStats extends StatelessWidget {
             value: progress,
             backgroundColor: theme.isDarkMode
                 ? Colors.white.withValues(alpha: 0.1)
-                : Colors.grey.shade200, // ✅
+                : Colors.grey.shade200, // 
             color: primaryColor,
             minHeight: 8,
           ),

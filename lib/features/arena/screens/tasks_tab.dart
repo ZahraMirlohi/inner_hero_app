@@ -73,7 +73,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     );
 
     if (result == true && mounted) {
-      print('🔄 Task edited, syncProvider notifies listeners');
+      print('Task edited, syncProvider notifies listeners');
     }
   }
 
@@ -99,38 +99,38 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     if (confirm == true && mounted) {
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
 
-      // ✅ 1. حذف فوری از LocalStorage
+      // 1. حذف فوری از LocalStorage
       await syncProvider.deleteTaskFromLocal(task.id);
 
       try {
-        // ✅ 2. حذف از Supabase
+        // 2. حذف از Supabase
         if (syncProvider.isOnline) {
           await _supabase.deleteTask(task.id);
 
-          // ✅ 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
+          // 3. رفرش از سرور تا مطمئن بشیم کش هم آپدیت شد
           await syncProvider.refreshHabitsAndTasks();
 
-          print('✅ Task deleted and refreshed');
+          print('Task deleted and refreshed');
         } else {
-          // ✅ حالت آفلاین
+          // حالت آفلاین
           await syncProvider.addOfflineOperation(
             type: OperationType.deleteTask,
             data: {'id': task.id},
           );
-          print('📝 Task deletion saved offline: ${task.title}');
+          print('Task deletion saved offline: ${task.title}');
         }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تسک با موفقیت حذف شد 🗑️'),
+              content: Text('تسک با موفقیت حذف شد '),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
           );
         }
       } catch (e) {
-        print('❌ Error deleting task: $e');
+        print('Error deleting task: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -148,7 +148,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
     final theme = Provider.of<ThemeProvider>(context);
     final Color primaryColor = theme.primaryColor;
 
-    // ✅ Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
+    // Consumer باعث میشه هر بار SyncProvider آپدیت شد، UI رفرش بشه
     return Consumer<SyncProvider>(
       builder: (context, syncProvider, child) {
         final tasks = syncProvider.tasks;
@@ -189,7 +189,7 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                         itemCount: tasks.length,
                         itemBuilder: (context, index) {
                           final task = tasks[index];

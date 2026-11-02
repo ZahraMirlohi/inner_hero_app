@@ -26,24 +26,24 @@ class DownloadService extends ChangeNotifier {
     VoidCallback? onComplete,
     VoidCallback? onError,
   }) async {
-    // ✅ در Web، فقط لینک رو باز کن
+    // در Web، فقط لینک رو باز کن
     if (kIsWeb) {
       _handleWebDownload(url, fileName, onComplete, onError);
       return;
     }
 
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloading) {
-      print('⏳ Already downloading: $fileName');
+      print('Already downloading: $fileName');
       return;
     }
 
     if (_tasks.containsKey(url) && _tasks[url]!.isDownloaded) {
-      print('✅ Already downloaded: $fileName');
+      print('Already downloaded: $fileName');
       onComplete?.call();
       return;
     }
 
-    // ✅ درخواست دسترسی (فقط در موبایل)
+    // درخواست دسترسی (فقط در موبایل)
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
       _tasks[url] = _DownloadTask(
@@ -80,7 +80,7 @@ class DownloadService extends ChangeNotifier {
         task.errorMessage = null;
         notifyListeners();
 
-        print('📁 File saved to: $localPath');
+        print('File saved to: $localPath');
         onComplete?.call();
       } else {
         task.isDownloading = false;
@@ -98,7 +98,7 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  // ✅ Web download: لینک رو در تب جدید باز کن
+  // Web download: لینک رو در تب جدید باز کن
   void _handleWebDownload(
     String url,
     String fileName,
@@ -118,7 +118,7 @@ class DownloadService extends ChangeNotifier {
       notifyListeners();
       onComplete?.call();
     } catch (e) {
-      print('❌ Web download error: $e');
+      print('Web download error: $e');
       onError?.call();
     }
   }
@@ -130,7 +130,7 @@ class DownloadService extends ChangeNotifier {
         final Directory downloadsDir =
             Directory('/storage/emulated/0/Download');
         if (await downloadsDir.exists()) {
-          print('📁 Using downloads path: /storage/emulated/0/Download');
+          print('Using downloads path: /storage/emulated/0/Download');
           return '/storage/emulated/0/Download';
         }
       }
@@ -143,7 +143,7 @@ class DownloadService extends ChangeNotifier {
         if (!await iosDir.exists()) {
           await iosDir.create(recursive: true);
         }
-        print('📁 Using iOS path: $iosPath');
+        print('Using iOS path: $iosPath');
         return iosPath;
       }
 
@@ -155,7 +155,7 @@ class DownloadService extends ChangeNotifier {
         if (!await appDownloadDir.exists()) {
           await appDownloadDir.create(recursive: true);
         }
-        print('📁 Using app download path: $appDownloadPath');
+        print('Using app download path: $appDownloadPath');
         return appDownloadPath;
       }
 
@@ -165,10 +165,10 @@ class DownloadService extends ChangeNotifier {
       if (!await fallbackDir.exists()) {
         await fallbackDir.create(recursive: true);
       }
-      print('📁 Using fallback path: $fallbackPath');
+      print('Using fallback path: $fallbackPath');
       return fallbackPath;
     } catch (e) {
-      print('❌ Error getting downloads path: $e');
+      print('Error getting downloads path: $e');
       final docDir = await getApplicationDocumentsDirectory();
       final String fallbackPath = '${docDir.path}/Downloads';
       final Directory fallbackDir = Directory(fallbackPath);
@@ -180,14 +180,14 @@ class DownloadService extends ChangeNotifier {
   }
 
   Future<bool> _requestStoragePermission() async {
-    // ✅ در Web نیازی نیست
+    // در Web نیازی نیست
     if (kIsWeb) {
       return true;
     }
 
     try {
       if (Platform.isAndroid) {
-        // ✅ در Android، از Permission.storage استفاده کن
+        // در Android، از Permission.storage استفاده کن
         // در Android 13+، برای ذخیره در Downloads نیازی به permission نیست
         final status = await Permission.storage.request();
         return status.isGranted;
@@ -200,7 +200,7 @@ class DownloadService extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      print('❌ Permission error: $e');
+      print('Permission error: $e');
       return true; // اگر خطا داد، اجازه بده ادامه بده
     }
   }

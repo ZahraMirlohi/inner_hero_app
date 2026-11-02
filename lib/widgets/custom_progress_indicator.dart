@@ -111,7 +111,7 @@ class _ProgressPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final double radius = size.width / 2;
 
-    // ✅ ضخامت‌ها
+    // ضخامت‌ها
     final double trackStrokeWidth = radius * 0.18;
     final double progressStrokeWidth = radius * 0.10;
     final double innerRadius = radius - (trackStrokeWidth / 2);
@@ -152,7 +152,7 @@ class _ProgressPainter extends CustomPainter {
     // ============================================================
     // 3. نقطه مرکزی (برای Rive)
     // ============================================================
-    // ✅ یک نقطه کوچک سبز برای نشان دادن مرکز (اختیاری)
+    // یک نقطه کوچک سبز برای نشان دادن مرکز (اختیاری)
     final centerDotPaint = Paint()
       ..color = const Color(0xFFB0CC5D).withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;

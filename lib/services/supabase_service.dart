@@ -32,7 +32,7 @@ class SupabaseService {
   static final RegExp _uuidRe = RegExp(
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
-  /// ✅ Alias برای استفاده در متدهای جدید (سازگاری)
+  /// Alias برای استفاده در متدهای جدید (سازگاری)
   SupabaseClient get _client => client;
 
   Future<bool> isOnline() async {
@@ -49,21 +49,21 @@ class SupabaseService {
 
   Future<bool> ensureValidSession() async {
     try {
-      // ✅ چند بار تلاش کن تا از refresh در پس‌زمینه مطمئن بشی
+      // چند بار تلاش کن تا از refresh در پس‌زمینه مطمئن بشی
       for (int i = 0; i < 5; i++) {
         final session = client.auth.currentSession;
         if (session != null) {
-          print('✅ [SESSION] Valid for user: ${session.user.id}');
+          print('[SESSION] Valid for user: ${session.user.id}');
           return true;
         }
-        print('⏳ [SESSION] Attempt ${i + 1}/5: waiting for auto-refresh...');
+        print('[SESSION] Attempt ${i + 1}/5: waiting for auto-refresh...');
         await Future.delayed(const Duration(milliseconds: 300));
       }
 
-      print('⚠️ [SESSION] No session after 5 retries');
+      print('[SESSION] No session after 5 retries');
       return false;
     } catch (e) {
-      print('❌ [SESSION] Error: $e');
+      print('[SESSION] Error: $e');
       return false;
     }
   }
@@ -104,7 +104,7 @@ class SupabaseService {
     _userCacheTime = null;
   }
 
-  // ✅ متد getCurrentUser را می‌توان ساده‌تر کرد
+  // متد getCurrentUser را می‌توان ساده‌تر کرد
   Future<User?> getCurrentUser() async {
     if (_cachedUser != null &&
         _userCacheTime != null &&
@@ -130,41 +130,41 @@ class SupabaseService {
   // ==================== Profiles ====================
 
   Future<void> createProfile(String userId, String email, String name) async {
-    // ✅ تولید ID یکتا برای پروفایل
+    // تولید ID یکتا برای پروفایل
     final uniqueId = UniqueIdGenerator.generateSecure();
 
     await client.from('profiles').insert({
       'user_id': userId,
       'email': email,
       'name': name,
-      'unique_id': uniqueId, // ✅ ذخیره unique_id
+      'unique_id': uniqueId, // ذخیره unique_id
       'total_xp': 0,
     });
   }
 
   Future<Map<String, dynamic>?> getHabit(String habitId) async {
     try {
-      print('🔍 Getting habit with ID: $habitId');
+      print('Getting habit with ID: $habitId');
 
       final response =
           await client.from('habits').select().eq('id', habitId).maybeSingle();
 
       if (response == null) {
-        print('⚠️ Habit not found: $habitId');
+        print('Habit not found: $habitId');
         return null;
       }
 
-      print('✅ Habit found: ${response['title']}');
+      print('Habit found: ${response['title']}');
       return response;
     } catch (e) {
-      print('❌ Error getting habit: $e');
+      print('Error getting habit: $e');
       return null;
     }
   }
 
   // lib/services/supabase_service.dart
 
-  /// ✅ گرفتن زمان رکورد شده یک عادت در یک تاریخ مشخص
+  /// گرفتن زمان رکورد شده یک عادت در یک تاریخ مشخص
   Future<int?> getHabitTimeOnDate({
     required String habitId,
     required String userId,
@@ -186,7 +186,7 @@ class SupabaseService {
       }
       return null;
     } catch (e) {
-      print('⚠️ Error getting habit time: $e');
+      print('Error getting habit time: $e');
       return null;
     }
   }
@@ -227,7 +227,7 @@ class SupabaseService {
     return refund;
   }
 
-// ✅ اصلاح متد markHabitCompletedWithLevel - حذف onConflict
+// اصلاح متد markHabitCompletedWithLevel - حذف onConflict
   Future<void> markHabitCompletedWithLevel({
     required String habitId,
     required String userId,
@@ -246,7 +246,7 @@ class SupabaseService {
           xpReward = habit['xp_reward'] as int? ?? 10;
         }
       } catch (e) {
-        print('⚠️ Could not get habit, using default XP: $e');
+        print('Could not get habit, using default XP: $e');
       }
 
       final xpEarned = (xpReward * level.xpMultiplier / 100).round();
@@ -297,12 +297,12 @@ class SupabaseService {
       print(
           '✅ Habit completed with level: ${level.displayName} (+$xpEarned XP)');
     } catch (e) {
-      print('❌ Error marking habit with level: $e');
+      print('Error marking habit with level: $e');
       rethrow;
     }
   }
 
-// ✅ متد دریافت تاریخچه تکمیل عادت با سطح (اصلاح شده)
+// متد دریافت تاریخچه تکمیل عادت با سطح (اصلاح شده)
   Future<List<HabitCompletion>> getHabitCompletionsWithLevel({
     required String habitId,
     required String userId,
@@ -310,14 +310,14 @@ class SupabaseService {
     DateTime? endDate,
   }) async {
     try {
-      // ✅ ساخت کوئری با ترتیب صحیح
+      // ساخت کوئری با ترتیب صحیح
       var query = client
           .from('habit_completions')
           .select()
           .eq('habit_id', habitId)
           .eq('user_id', userId);
 
-      // ✅ اضافه کردن فیلترهای تاریخ با استفاده از filter
+      // اضافه کردن فیلترهای تاریخ با استفاده از filter
       if (startDate != null) {
         final startStr = _getDateString(startDate);
         query = query.filter('date', 'gte', startStr);
@@ -327,25 +327,25 @@ class SupabaseService {
         query = query.filter('date', 'lte', endStr);
       }
 
-      // ✅ مرتب‌سازی در انتها
+      // مرتب‌سازی در انتها
       final response = await query.order('date', ascending: true);
 
       return response.map((data) => HabitCompletion.fromMap(data)).toList();
     } catch (e) {
-      print('❌ Error getting habit completions with level: $e');
+      print('Error getting habit completions with level: $e');
       return [];
     }
   }
 
 // lib/services/supabase_service.dart
 
-// ✅ متد دریافت داده‌های نمودار برای یک عادت (نسخه نهایی)
+// متد دریافت داده‌های نمودار برای یک عادت (نسخه نهایی)
   Future<List<Map<String, dynamic>>> getHabitChartData({
     required String habitId,
     required String userId,
   }) async {
     try {
-      // ✅ محاسبه دقیق روزهای ماه جاری
+      // محاسبه دقیق روزهای ماه جاری
       final now = DateTime.now();
       final firstDayOfMonth = DateTime(now.year, now.month, 1);
       final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
@@ -357,7 +357,7 @@ class SupabaseService {
       print(
           '📊 Chart date range: $startDate to $endDate (${daysInMonth} days)');
 
-      // ✅ دریافت تکمیل‌های عادت در بازه ماه جاری
+      // دریافت تکمیل‌های عادت در بازه ماه جاری
       final completions = await getHabitCompletionsWithLevel(
         habitId: habitId,
         userId: userId,
@@ -365,16 +365,16 @@ class SupabaseService {
         endDate: endDate,
       );
 
-      print('📊 Found ${completions.length} completions for this month');
+      print('Found ${completions.length} completions for this month');
 
-      // ✅ ساخت داده‌های نمودار
+      // ساخت داده‌های نمودار
       final List<Map<String, dynamic>> chartData = [];
 
       for (int i = 0; i < daysInMonth; i++) {
         final date = startDate.add(Duration(days: i));
         final dateStr = _getDateString(date);
 
-        // ✅ پیدا کردن تکمیل برای این روز
+        // پیدا کردن تکمیل برای این روز
         final completion = completions.firstWhere(
           (c) =>
               c.date.year == date.year &&
@@ -401,10 +401,10 @@ class SupabaseService {
         });
       }
 
-      print('📊 Chart data built with ${chartData.length} days');
+      print('Chart data built with ${chartData.length} days');
       return chartData;
     } catch (e) {
-      print('❌ Error getting chart data: $e');
+      print('Error getting chart data: $e');
       return [];
     }
   }
@@ -517,6 +517,42 @@ class SupabaseService {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  /// همهٔ عادت‌های تکمیل‌شدهٔ یک روز در «یک» درخواست (به‌جای یک درخواست برای هر عادت).
+  /// در خطا null برمی‌گرداند تا صدا زننده بداند داده معتبر نیست.
+  Future<Set<String>?> getCompletedHabitIdsOnDate(
+      String userId, DateTime date) async {
+    try {
+      final rows = await client
+          .from('habit_completions')
+          .select('habit_id')
+          .eq('user_id', userId)
+          .eq('date', _getDateString(date));
+      return rows.map<String>((r) => r['habit_id'].toString()).toSet();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// زمان ثبت‌شدهٔ همهٔ عادت‌ها در یک روز (habitId -> ثانیه) در یک درخواست
+  Future<Map<String, int>> getHabitTimesOnDate(
+      String userId, DateTime date) async {
+    try {
+      final rows = await client
+          .from('habit_time_tracking')
+          .select('habit_id,total_seconds')
+          .eq('user_id', userId)
+          .eq('date', date.toIso8601String().split('T').first);
+      final out = <String, int>{};
+      for (final r in rows) {
+        final sec = r['total_seconds'];
+        if (sec is int && sec > 0) out[r['habit_id'].toString()] = sec;
+      }
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<bool> isHabitCompletedOnDate(
     String habitId,
     String userId,
@@ -589,12 +625,12 @@ class SupabaseService {
     String challengeId,
   ) async {
     if (!await isOnline()) {
-      print('⚠️ Offline, skipping challenge progress update');
+      print('Offline, skipping challenge progress update');
       return;
     }
 
     try {
-      print('📊 Updating challenge progress for: $challengeId');
+      print('Updating challenge progress for: $challengeId');
 
       // 1. دریافت تعداد روزهای تکمیل شده
       final completions = await client
@@ -603,7 +639,7 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      print('📊 Completions count: ${completions.length}');
+      print('Completions count: ${completions.length}');
 
       // 2. دریافت اطلاعات چالش
       final challenge = await client
@@ -615,7 +651,7 @@ class SupabaseService {
       final completedDays = completions.length;
       final totalDays = challenge?['challenge_duration'] as int? ?? 7;
 
-      print('📊 Completed: $completedDays / $totalDays');
+      print('Completed: $completedDays / $totalDays');
 
       // 3. به‌روزرسانی
       await client
@@ -627,9 +663,9 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      print('✅ Challenge progress updated: $completedDays / $totalDays');
+      print('Challenge progress updated: $completedDays / $totalDays');
     } catch (e) {
-      print('❌ Error updating challenge progress: $e');
+      print('Error updating challenge progress: $e');
     }
   }
 
@@ -754,9 +790,9 @@ class SupabaseService {
   Future<void> removeXP(String userId, int amount) async {
     if (await _adjustXpRpc(userId, -amount)) return;
     try {
-      print('🗑️ Removing $amount XP from user: $userId');
+      print('Removing $amount XP from user: $userId');
 
-      // ✅ 1. به‌روزرسانی در user_progress
+      // 1. به‌روزرسانی در user_progress
       final response = await client
           .from('user_progress')
           .select('id, total_xp')
@@ -766,7 +802,7 @@ class SupabaseService {
         final currentXP = response[0]['total_xp'] ?? 0;
         final newXP = (currentXP - amount).clamp(0, double.infinity).toInt();
 
-        print('📊 Current XP: $currentXP, New XP: $newXP');
+        print('Current XP: $currentXP, New XP: $newXP');
 
         await client
             .from('user_progress')
@@ -778,7 +814,7 @@ class SupabaseService {
         });
       }
 
-      // ✅ 2. به‌روزرسانی در profiles
+      // 2. به‌روزرسانی در profiles
       try {
         final profileResponse = await client
             .from('profiles')
@@ -789,33 +825,33 @@ class SupabaseService {
           final currentXP = profileResponse[0]['total_xp'] ?? 0;
           final newXP = (currentXP - amount).clamp(0, double.infinity).toInt();
 
-          print('📊 Profile XP: $currentXP -> $newXP');
+          print('Profile XP: $currentXP -> $newXP');
 
           await client
               .from('profiles')
               .update({'total_xp': newXP}).eq('user_id', userId);
         }
       } catch (e) {
-        print('⚠️ Error updating profile XP: $e');
+        print('Error updating profile XP: $e');
       }
 
-      print('✅ XP removed successfully');
+      print('XP removed successfully');
     } catch (e) {
-      print('❌ Error removing XP: $e');
+      print('Error removing XP: $e');
       rethrow;
     }
   }
 
   // ==================== Challenges ====================
 
-// ✅ اصلاح متد getChallenges - حذف فیلتر تاریخ
+// اصلاح متد getChallenges - حذف فیلتر تاریخ
   Future<List<Map<String, dynamic>>> getChallenges() async {
     if (!await isOnline()) {
       return [];
     }
 
     try {
-      // ✅ حذف شرط تاریخ - فقط چالش‌های فعال را بگیر
+      // حذف شرط تاریخ - فقط چالش‌های فعال را بگیر
       final response = await client
           .from('challenges')
           .select()
@@ -889,13 +925,13 @@ class SupabaseService {
       // دریافت عادت‌های چالش
       final challengeHabits = await getChallengeHabits(challengeId);
 
-      // ✅ فقط یک عادت برای کل چالش ایجاد کن
+      // فقط یک عادت برای کل چالش ایجاد کن
       List<String> subHabits = [];
       for (var habit in challengeHabits) {
         subHabits.add(habit['title']);
       }
 
-      // ✅ عنوان عادت با شمارش روزهای باقیمانده
+      // عنوان عادت با شمارش روزهای باقیمانده
       final remainingDays = endDate.difference(startDate).inDays + 1;
       final titleSuffix = remainingDays > 0 ? ' (${remainingDays} روز)' : '';
 
@@ -928,7 +964,7 @@ class SupabaseService {
         endDate: endDate,
         challengeId: challengeId,
         questId: null,
-        // ✅ اضافه کردن فیلدهای سطح از challenge
+        // اضافه کردن فیلدهای سطح از challenge
         fullDescription: challenge['full_description'] ?? 'انجام کامل چالش',
         halfDescription: challenge['half_description'] ?? 'انجام نیمی از چالش',
         basicDescription: challenge['basic_description'] ?? 'انجام حداقل چالش',
@@ -936,11 +972,11 @@ class SupabaseService {
       );
 
       await createHabit(newHabit);
-      print('✅ Challenge habit created: ${newHabit.title}');
-      print('📅 Start: ${newHabit.startDate}');
-      print('📅 End: ${newHabit.endDate}');
+      print('Challenge habit created: ${newHabit.title}');
+      print('Start: ${newHabit.startDate}');
+      print('End: ${newHabit.endDate}');
     } catch (e) {
-      print('❌ Error adding challenge habit: $e');
+      print('Error adding challenge habit: $e');
       rethrow;
     }
   }
@@ -955,7 +991,7 @@ class SupabaseService {
     try {
       final dateStr = date.toIso8601String().split('T').first;
 
-      // ✅ 1. بررسی اینکه آیا تاریخ در محدوده چالش است
+      // 1. بررسی اینکه آیا تاریخ در محدوده چالش است
       final userChallenge = await client
           .from('user_challenges')
           .select('challenge_start_date, challenge_end_date')
@@ -971,7 +1007,7 @@ class SupabaseService {
 
         // اگر تاریخ خارج از محدوده است، ثبت نشود
         if (checkDate.isBefore(startDate) || checkDate.isAfter(endDate)) {
-          print('⚠️ Date $dateStr is outside challenge range');
+          print('Date $dateStr is outside challenge range');
           return;
         }
 
@@ -979,7 +1015,7 @@ class SupabaseService {
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         if (checkDate.isAfter(today)) {
-          print('⚠️ Date $dateStr is in the future');
+          print('Date $dateStr is in the future');
           return;
         }
       }
@@ -1000,7 +1036,7 @@ class SupabaseService {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      // 4. ✅ به‌روزرسانی progress در user_challenges با تعداد واقعی
+      // 4. به‌روزرسانی progress در user_challenges با تعداد واقعی
       final completionsCount = await client
           .from('challenge_completions')
           .select('date')
@@ -1044,11 +1080,11 @@ class SupabaseService {
       print(
           '✅ Challenge day recorded: $challengeId - $dateStr (progress: $validCompletions)');
     } catch (e) {
-      print('❌ Error completing challenge day: $e');
+      print('Error completing challenge day: $e');
     }
   }
 
-  // ✅ دریافت چالش‌های فعال یک عادت
+  // دریافت چالش‌های فعال یک عادت
   Future<List<Map<String, dynamic>>> getActiveChallengesForHabit(
     String userId,
     String habitId,
@@ -1058,7 +1094,7 @@ class SupabaseService {
       // بستگی به ساختار دیتابیس شما دارد
       return [];
     } catch (e) {
-      print('❌ Error getting active challenges for habit: $e');
+      print('Error getting active challenges for habit: $e');
       return [];
     }
   }
@@ -1067,7 +1103,7 @@ class SupabaseService {
 
   Future<void> leaveChallenge(String userId, String challengeId) async {
     try {
-      print('🗑️ Leaving challenge: $challengeId for user: $userId');
+      print('Leaving challenge: $challengeId for user: $userId');
 
       // 1. دریافت رکورد user_challenge
       final response = await client
@@ -1083,19 +1119,19 @@ class SupabaseService {
             .delete()
             .eq('id', response[0]['id']);
 
-        print('✅ User challenge removed from database');
+        print('User challenge removed from database');
       }
 
-      // 3. ✅ حذف همه رکوردهای challenge_completions
+      // 3. حذف همه رکوردهای challenge_completions
       await client
           .from('challenge_completions')
           .delete()
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      print('✅ Challenge completions removed from database');
+      print('Challenge completions removed from database');
 
-      // 4. ✅ حذف عادت‌های مرتبط با چالش
+      // 4. حذف عادت‌های مرتبط با چالش
       final habits = await client
           .from('habits')
           .select('id')
@@ -1119,10 +1155,10 @@ class SupabaseService {
             .eq('user_id', userId)
             .inFilter('id', habitIds);
 
-        print('✅ ${habitIds.length} challenge habits removed');
+        print('${habitIds.length} challenge habits removed');
       }
 
-      // 5. ✅ حذف از LocalStorage
+      // 5. حذف از LocalStorage
       try {
         final localStorage = LocalStorageService();
 
@@ -1138,19 +1174,19 @@ class SupabaseService {
             userChallenges.where((c) => c['id'] != challengeId).toList();
         await localStorage.saveUserChallenges(updatedUserChallenges);
 
-        print('✅ Removed from LocalStorage');
+        print('Removed from LocalStorage');
       } catch (e) {
-        print('⚠️ Error removing from LocalStorage: $e');
+        print('Error removing from LocalStorage: $e');
       }
 
-      print('✅ User left challenge completely: $challengeId');
+      print('User left challenge completely: $challengeId');
     } catch (e) {
-      print('❌ Error leaving challenge: $e');
+      print('Error leaving challenge: $e');
       rethrow;
     }
   }
 
-  // ✅ حذف عادت‌های چالش از دیتابیس و localStorage
+  // حذف عادت‌های چالش از دیتابیس و localStorage
   Future<void> removeChallengeHabitByChallengeId(
     String userId,
     String challengeId,
@@ -1181,10 +1217,10 @@ class SupabaseService {
             .eq('user_id', userId)
             .inFilter('id', habitIds);
 
-        print('🗑️ Deleted ${habitIds.length} challenge habits');
+        print('Deleted ${habitIds.length} challenge habits');
       }
     } catch (e) {
-      print('❌ Error removing challenge habits: $e');
+      print('Error removing challenge habits: $e');
       rethrow;
     }
   }
@@ -1204,12 +1240,12 @@ class SupabaseService {
 
   Future<List<Map<String, dynamic>>> getUserChallenges(String userId) async {
     if (!await isOnline()) {
-      print('⚠️ Offline - skipping getUserChallenges');
+      print('Offline - skipping getUserChallenges');
       return [];
     }
 
     try {
-      // ✅ همه چالش‌های کاربر رو بگیر (حتی اونایی که is_active = false)
+      // همه چالش‌های کاربر رو بگیر (حتی اونایی که is_active = false)
       final response =
           await client.from('user_challenges').select().eq('user_id', userId);
 
@@ -1233,10 +1269,10 @@ class SupabaseService {
         }
       }
 
-      print('📊 Found ${result.length} user challenges');
+      print('Found ${result.length} user challenges');
       return result;
     } catch (e) {
-      print('❌ Error getting user challenges: $e');
+      print('Error getting user challenges: $e');
       return [];
     }
   }
@@ -1305,7 +1341,7 @@ class SupabaseService {
       final endDate = DateTime.parse(userChallenge['challenge_end_date']);
       final end = DateTime(endDate.year, endDate.month, endDate.day);
 
-      // ✅ فقط روزهایی که در محدوده چالش هستند و از امروز گذشته نیستند
+      // فقط روزهایی که در محدوده چالش هستند و از امروز گذشته نیستند
       int completedDays = 0;
       final Set<String> uniqueDates = {};
 
@@ -1340,18 +1376,18 @@ class SupabaseService {
         completedDays = totalDays;
       }
 
-      print('📊 Challenge progress: $completedDays / $totalDays days');
+      print('Challenge progress: $completedDays / $totalDays days');
       print(
           '📅 Total completions: ${completions.length}, Unique: ${uniqueDates.length}');
 
       return {'completedDays': completedDays, 'totalDays': totalDays};
     } catch (e) {
-      print('❌ Error getting challenge progress: $e');
+      print('Error getting challenge progress: $e');
       return {'completedDays': 0, 'totalDays': 0};
     }
   }
 
-  // ✅ بررسی چالش‌های منقضی شده
+  // بررسی چالش‌های منقضی شده
   Future<void> checkExpiredChallenges(String userId) async {
     try {
       final now = DateTime.now();
@@ -1398,7 +1434,7 @@ class SupabaseService {
             'updated_at': now.toIso8601String(),
           }).eq('id', userChallenge['id']);
 
-          print('⏰ Challenge expired: ${challenge['title']}');
+          print('Challenge expired: ${challenge['title']}');
         }
 
         // اگر تاریخ پایان چالش گذشته باشد و کامل نشده
@@ -1412,16 +1448,16 @@ class SupabaseService {
             'updated_at': now.toIso8601String(),
           }).eq('id', userChallenge['id']);
 
-          print('⏰ Challenge ended without completion: ${challenge['title']}');
+          print('Challenge ended without completion: ${challenge['title']}');
         }
       }
     } catch (e) {
-      print('❌ Error checking expired challenges: $e');
+      print('Error checking expired challenges: $e');
     }
   }
   // lib/services/supabase_service.dart
 
-  // ✅ حذف تکمیل روزانه چالش
+  // حذف تکمیل روزانه چالش
   Future<void> removeChallengeDay({
     required String userId,
     required String challengeId,
@@ -1439,7 +1475,7 @@ class SupabaseService {
           .maybeSingle();
 
       if (userChallenge == null) {
-        print('⚠️ User is not active in this challenge: $challengeId');
+        print('User is not active in this challenge: $challengeId');
         return;
       }
 
@@ -1466,13 +1502,13 @@ class SupabaseService {
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userChallenge['id']);
 
-      print('✅ Challenge day removed: $challengeId - Now $completedDays days');
+      print('Challenge day removed: $challengeId - Now $completedDays days');
     } catch (e) {
-      print('❌ Error removing challenge day: $e');
+      print('Error removing challenge day: $e');
     }
   }
 
-  // ✅ بررسی و بروزرسانی وضعیت چالش‌های کاربر
+  // بررسی و بروزرسانی وضعیت چالش‌های کاربر
   Future<void> checkAndUpdateUserChallenges(String userId) async {
     try {
       final userChallenges = await client
@@ -1526,11 +1562,11 @@ class SupabaseService {
           );
 
           if (completedDays >= challengeDuration) {
-            // ✅ چالش با موفقیت کامل شده
+            // چالش با موفقیت کامل شده
             await _completeChallenge(userId, userChallengeId, challenge);
             needRefresh = true;
           } else {
-            // ❌ چالش ناموفق (همه روزها رو انجام نداده)
+            // چالش ناموفق (همه روزها رو انجام نداده)
             await _failChallenge(userId, userChallengeId, challenge);
             needRefresh = true;
           }
@@ -1553,7 +1589,7 @@ class SupabaseService {
 
           // اگر بیش از 1 روز از آخرین انجام گذشته باشد
           if (daysGap > 1) {
-            // ❌ استریک شکسته شده، چالش ناموفق
+            // استریک شکسته شده، چالش ناموفق
             await _failChallenge(userId, userChallengeId, challenge);
             needRefresh = true;
           }
@@ -1564,11 +1600,11 @@ class SupabaseService {
         await _refreshUserChallenges(userId);
       }
     } catch (e) {
-      print('❌ Error checking user challenges: $e');
+      print('Error checking user challenges: $e');
     }
   }
 
-  // ✅ دریافت آخرین روز تکمیل شده
+  // دریافت آخرین روز تکمیل شده
   Future<DateTime?> _getLastCompletedDate(
     String userId,
     String challengeId,
@@ -1591,7 +1627,7 @@ class SupabaseService {
     }
   }
 
-  // ✅ دریافت تعداد روزهای تکمیل شده برای یک چالش
+  // دریافت تعداد روزهای تکمیل شده برای یک چالش
   Future<int> _getUserCompletedDaysForChallenge(
     String userId,
     String challengeId,
@@ -1622,14 +1658,14 @@ class SupabaseService {
     // 1. حذف کامل از user_challenges
     await client.from('user_challenges').delete().eq('id', userChallengeId);
 
-    // 2. ✅ حذف رکوردهای challenge_completions
+    // 2. حذف رکوردهای challenge_completions
     await client
         .from('challenge_completions')
         .delete()
         .eq('user_id', userId)
         .eq('challenge_id', challengeId);
 
-    print('✅ Challenge completions cleared after failure');
+    print('Challenge completions cleared after failure');
 
     // 3. حذف عادت‌های چالش
     try {
@@ -1655,7 +1691,7 @@ class SupabaseService {
             .inFilter('id', habitIds);
       }
     } catch (e) {
-      print('⚠️ Error removing challenge habits: $e');
+      print('Error removing challenge habits: $e');
     }
 
     // 4. حذف از LocalStorage
@@ -1672,13 +1708,13 @@ class SupabaseService {
           userChallenges.where((c) => c['id'] != challengeId).toList();
       await localStorage.saveUserChallenges(updatedUserChallenges);
     } catch (e) {
-      print('⚠️ Error removing from local storage: $e');
+      print('Error removing from local storage: $e');
     }
 
-    print('✅ Challenge failed and removed: ${challenge['title']}');
+    print('Challenge failed and removed: ${challenge['title']}');
   }
 
-// ✅ متد جدید برای بررسی روزانه استریک چالش‌ها
+// متد جدید برای بررسی روزانه استریک چالش‌ها
   Future<void> checkUserChallengeStreak(String userId) async {
     try {
       final userChallenges = await client
@@ -1711,22 +1747,22 @@ class SupabaseService {
           );
           final daysGap = today.difference(lastDate).inDays;
 
-          // ✅ اگر بیش از 1 روز از آخرین انجام گذشته باشد → شکست
+          // اگر بیش از 1 روز از آخرین انجام گذشته باشد شکست
           if (daysGap > 1) {
             print(
                 '❌ Streak broken for challenge: $challengeId (gap: $daysGap days)');
             await _failChallenge(userId, userChallenge['id'], challenge);
 
-            // ✅ بعد از شکست، از حلقه خارج شو (چالش غیرفعال شده)
+            // بعد از شکست، از حلقه خارج شو (چالش غیرفعال شده)
             continue;
           }
         }
 
-        // ✅ بررسی تاریخ پایان چالش
+        // بررسی تاریخ پایان چالش
         if (userChallenge['challenge_end_date'] != null) {
           final endDate = DateTime.parse(userChallenge['challenge_end_date']);
           if (endDate.isBefore(now)) {
-            // ✅ اگر تاریخ پایان گذشته، چک کن که کامل شده یا نه
+            // اگر تاریخ پایان گذشته، چک کن که کامل شده یا نه
             final completedDays = await _getUserCompletedDaysForChallenge(
               userId,
               challengeId,
@@ -1734,20 +1770,20 @@ class SupabaseService {
             final totalDays = challenge['challenge_duration'] as int? ?? 7;
 
             if (completedDays < totalDays) {
-              print('❌ Challenge expired without completion: $challengeId');
+              print('Challenge expired without completion: $challengeId');
               await _failChallenge(userId, userChallenge['id'], challenge);
             }
           }
         }
       }
     } catch (e) {
-      print('❌ Error checking user challenge streak: $e');
+      print('Error checking user challenge streak: $e');
     }
   }
 
   // lib/services/supabase_service.dart
 
-// ✅ متد جدید برای بررسی عادت‌های شکست خورده در پایان روز
+// متد جدید برای بررسی عادت‌های شکست خورده در پایان روز
   Future<void> checkFailedHabits(String userId) async {
     try {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
@@ -1769,12 +1805,12 @@ class SupabaseService {
         );
 
         if (!isCompleted) {
-          // ✅ اگر تکمیل نشده، به عنوان شکست خورده ثبت کن
+          // اگر تکمیل نشده، به عنوان شکست خورده ثبت کن
           // اما فقط اگر چالش یا ماموریت نباشد
           if (habit.challengeId == null && habit.questId == null) {
             // ثبت در جدول habit_failures (اگر وجود دارد)
             // یا به‌روزرسانی استریک
-            print('❌ Habit failed: ${habit.title} on $yesterdayStr');
+            print('Habit failed: ${habit.title} on $yesterdayStr');
 
             // به‌روزرسانی استریک کاربر
             await updateUserStreak(userId);
@@ -1782,11 +1818,11 @@ class SupabaseService {
         }
       }
     } catch (e) {
-      print('❌ Error checking failed habits: $e');
+      print('Error checking failed habits: $e');
     }
   }
 
-// ✅ متد برای اجرای بررسی روزانه (در زمان بیدار شدن اپ)
+// متد برای اجرای بررسی روزانه (در زمان بیدار شدن اپ)
   Future<void> runDailyCheck(String userId) async {
     try {
       // 1. بررسی چالش‌ها
@@ -1798,13 +1834,13 @@ class SupabaseService {
       // 3. به‌روزرسانی استریک
       await updateUserStreak(userId);
 
-      print('✅ Daily check completed for user: $userId');
+      print('Daily check completed for user: $userId');
     } catch (e) {
-      print('❌ Error in daily check: $e');
+      print('Error in daily check: $e');
     }
   }
 
-// ✅ اضافه کردن تایمر برای بررسی دوره‌ای
+// اضافه کردن تایمر برای بررسی دوره‌ای
   void startStreakCheckTimer(String userId) {
     // هر 6 ساعت یکبار بررسی کن
     Timer.periodic(const Duration(hours: 6), (timer) {
@@ -1819,7 +1855,7 @@ class SupabaseService {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // ✅ 1. ابتدا همه رکوردهای قبلی را پاک کن (برای شروع تمیز)
+      // 1. ابتدا همه رکوردهای قبلی را پاک کن (برای شروع تمیز)
       try {
         // حذف از user_challenges
         await client
@@ -1835,9 +1871,9 @@ class SupabaseService {
             .eq('user_id', userId)
             .eq('challenge_id', challengeId);
 
-        print('🗑️ Cleaned up previous records for challenge: $challengeId');
+        print('Cleaned up previous records for challenge: $challengeId');
       } catch (e) {
-        print('⚠️ Cleanup error (may not have existing records): $e');
+        print('Cleanup error (may not have existing records): $e');
       }
 
       // دریافت اطلاعات چالش
@@ -1869,7 +1905,7 @@ class SupabaseService {
         'updated_at': now.toIso8601String(),
       });
 
-      // ✅ حذف عادت‌های قبلی چالش (اگر وجود داشته باشند)
+      // حذف عادت‌های قبلی چالش (اگر وجود داشته باشند)
       try {
         final existingHabits = await client
             .from('habits')
@@ -1885,10 +1921,10 @@ class SupabaseService {
               .delete()
               .eq('user_id', userId)
               .inFilter('id', habitIds);
-          print('🗑️ Removed ${habitIds.length} existing challenge habits');
+          print('Removed ${habitIds.length} existing challenge habits');
         }
       } catch (e) {
-        print('⚠️ Error removing existing habits: $e');
+        print('Error removing existing habits: $e');
       }
 
       // اضافه کردن عادت‌های چالش به کاربر
@@ -1899,24 +1935,24 @@ class SupabaseService {
         endDate,
       );
 
-      print('✅ User joined challenge: $challengeId');
-      print('📅 Start date: $today');
-      print('📅 End date: $endDate');
-      print('📅 Duration: $duration days');
+      print('User joined challenge: $challengeId');
+      print('Start date: $today');
+      print('End date: $endDate');
+      print('Duration: $duration days');
     } catch (e) {
-      print('❌ Error joining challenge: $e');
+      print('Error joining challenge: $e');
       rethrow;
     }
   }
 
-// ✅ متد جدید برای ثبت مدال چالش
+// متد جدید برای ثبت مدال چالش
   Future<void> _addChallengeBadge(
       String userId, Map<String, dynamic> challenge) async {
     try {
       final badgeName = '🏆 ${challenge['title']}';
       final badgeIcon = '🏆';
 
-      // ✅ بررسی وجود مدال تکراری
+      // بررسی وجود مدال تکراری
       final existing = await client
           .from('user_badges')
           .select()
@@ -1925,11 +1961,11 @@ class SupabaseService {
           .maybeSingle();
 
       if (existing != null) {
-        print('📊 Badge already exists: $badgeName');
+        print('Badge already exists: $badgeName');
         return;
       }
 
-      // ✅ ثبت مدال جدید
+      // ثبت مدال جدید
       await client.from('user_badges').insert({
         'user_id': userId,
         'badge_name': badgeName,
@@ -1940,9 +1976,9 @@ class SupabaseService {
         'is_active': true,
       });
 
-      print('✅ Challenge badge earned: $badgeName');
+      print('Challenge badge earned: $badgeName');
     } catch (e) {
-      print('⚠️ Error adding challenge badge: $e');
+      print('Error adding challenge badge: $e');
     }
   }
 
@@ -1998,14 +2034,14 @@ class SupabaseService {
             .inFilter('id', habitIds);
       }
 
-      // 5. ✅ حذف رکوردهای challenge_completions بعد از تکمیل
+      // 5. حذف رکوردهای challenge_completions بعد از تکمیل
       await client
           .from('challenge_completions')
           .delete()
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      print('✅ Challenge completions cleared after completion');
+      print('Challenge completions cleared after completion');
 
       // 6. حذف از LocalStorage
       try {
@@ -2020,17 +2056,17 @@ class SupabaseService {
             userChallenges.where((c) => c['id'] != challengeId).toList();
         await localStorage.saveUserChallenges(updatedUserChallenges);
       } catch (e) {
-        print('⚠️ Error removing from local storage: $e');
+        print('Error removing from local storage: $e');
       }
 
-      print('✅ Challenge completed successfully: ${challenge['title']}');
+      print('Challenge completed successfully: ${challenge['title']}');
     } catch (e) {
-      print('❌ Error completing challenge: $e');
+      print('Error completing challenge: $e');
       rethrow;
     }
   }
 
-  // ✅ انصراف کاربر از چالش
+  // انصراف کاربر از چالش
   Future<void> leaveChallengeWithCleanup(
     String userId,
     String challengeId,
@@ -2050,13 +2086,13 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      print('🗑️ User left challenge: $challengeId');
+      print('User left challenge: $challengeId');
     } catch (e) {
-      print('❌ Error leaving challenge: $e');
+      print('Error leaving challenge: $e');
     }
   }
 
-  // ✅ ریفرش داده‌های چالش‌های کاربر
+  // ریفرش داده‌های چالش‌های کاربر
   Future<void> _refreshUserChallenges(String userId) async {
     try {
       final userChallenges = await client
@@ -2064,9 +2100,9 @@ class SupabaseService {
           .select('*')
           .eq('user_id', userId);
 
-      print('🔄 User challenges refreshed: ${userChallenges.length}');
+      print('User challenges refreshed: ${userChallenges.length}');
     } catch (e) {
-      print('❌ Error refreshing user challenges: $e');
+      print('Error refreshing user challenges: $e');
     }
   }
 
@@ -2142,7 +2178,7 @@ class SupabaseService {
         });
       }
 
-      // 3. ✅ ایجاد عادت‌های بسته برای کاربر
+      // 3. ایجاد عادت‌های بسته برای کاربر
       for (var packageHabit in package.habits) {
         final habit = packageHabit.toHabit(userId, packageId);
         await createHabit(habit);
@@ -2151,19 +2187,19 @@ class SupabaseService {
       // 4. اضافه کردن XP پاداش
       await addXP(userId, package.xpReward);
 
-      // 5. ✅ ذخیره در LocalStorage
+      // 5. ذخیره در LocalStorage
       try {
         final localStorage = LocalStorageService();
         final habits = await getHabits(userId);
         await localStorage.saveHabits(habits);
       } catch (e) {
-        print('⚠️ Error saving to local storage: $e');
+        print('Error saving to local storage: $e');
       }
 
-      print('✅ Package activated: $packageId');
-      print('📦 ${package.habits.length} habits created');
+      print('Package activated: $packageId');
+      print('${package.habits.length} habits created');
     } catch (e) {
-      print('❌ Error activating package: $e');
+      print('Error activating package: $e');
       rethrow;
     }
   }
@@ -2186,7 +2222,7 @@ class SupabaseService {
 
       final package = Package.fromMap(packageResponse, packageId);
 
-      // 3. ✅ حذف عادت‌های بسته از دیتابیس
+      // 3. حذف عادت‌های بسته از دیتابیس
       final habits = await getHabits(userId);
       for (var habit in habits) {
         // حذف عادت‌هایی که با بسته مرتبط هستند
@@ -2196,7 +2232,7 @@ class SupabaseService {
         }
       }
 
-      // 4. ✅ حذف از LocalStorage
+      // 4. حذف از LocalStorage
       try {
         final localStorage = LocalStorageService();
         final localHabits = localStorage.getHabits();
@@ -2206,12 +2242,12 @@ class SupabaseService {
             .toList();
         await localStorage.saveHabits(updatedHabits);
       } catch (e) {
-        print('⚠️ Error removing from local storage: $e');
+        print('Error removing from local storage: $e');
       }
 
-      print('✅ Package deactivated: $packageId');
+      print('Package deactivated: $packageId');
     } catch (e) {
-      print('❌ Error deactivating package: $e');
+      print('Error deactivating package: $e');
       rethrow;
     }
   }
@@ -2314,12 +2350,12 @@ class SupabaseService {
 
   Future<List<UserQuest>> getUserQuests(String userId) async {
     try {
-      print('📊 getUserQuests called for userId: $userId');
+      print('getUserQuests called for userId: $userId');
 
       final response =
           await client.from('user_quests').select().eq('user_id', userId);
 
-      print('📊 getUserQuests response count: ${response.length}');
+      print('getUserQuests response count: ${response.length}');
 
       final result =
           response.map((data) => UserQuest.fromMap(data, data['id'])).toList();
@@ -2331,7 +2367,7 @@ class SupabaseService {
 
       return result;
     } catch (e) {
-      print('❌ Error getting user quests: $e');
+      print('Error getting user quests: $e');
       return [];
     }
   }
@@ -2340,7 +2376,7 @@ class SupabaseService {
 
   Future<void> startQuest(String userId, Quest quest) async {
     try {
-      // ✅ 1. بررسی وجود ماموریت قبلی
+      // 1. بررسی وجود ماموریت قبلی
       final existing = await client
           .from('user_quests')
           .select()
@@ -2354,11 +2390,11 @@ class SupabaseService {
         throw Exception('شما قبلاً این ماموریت را شروع کرده‌اید!');
       }
 
-      // ✅ تاریخ امروز (بدون ساعت)
+      // تاریخ امروز (بدون ساعت)
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // ✅ 2. ایجاد عادت ماموریت با فیلدهای سطح
+      // 2. ایجاد عادت ماموریت با فیلدهای سطح
       final habit = Habit(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         userId: userId,
@@ -2385,34 +2421,34 @@ class SupabaseService {
         updatedAt: DateTime.now(),
         groupId: null,
         startDate: today,
-        endDate: null, // ✅ بدون تاریخ پایان (بی‌نهایت)
+        endDate: null, // بدون تاریخ پایان (بی‌نهایت)
         challengeId: null,
         questId: quest.id,
-        // ✅ اضافه کردن فیلدهای سطح از Quest
+        // اضافه کردن فیلدهای سطح از Quest
         fullDescription: quest.fullDescription ?? 'انجام کامل ماموریت',
         halfDescription: quest.halfDescription ?? 'انجام نیمی از ماموریت',
         basicDescription: quest.basicDescription ?? 'انجام حداقل ماموریت',
         targetValue: quest.targetValue ?? '${quest.targetCount} روز',
       );
 
-      // ✅ 3. ذخیره عادت در دیتابیس
+      // 3. ذخیره عادت در دیتابیس
       await createHabit(habit);
-      print('✅ Habit created for quest: ${habit.title}');
-      print('📊 Full: ${habit.fullDescription}');
-      print('📊 Half: ${habit.halfDescription}');
-      print('📊 Basic: ${habit.basicDescription}');
-      print('📊 Target: ${habit.targetValue}');
+      print('Habit created for quest: ${habit.title}');
+      print('Full: ${habit.fullDescription}');
+      print('Half: ${habit.halfDescription}');
+      print('Basic: ${habit.basicDescription}');
+      print('Target: ${habit.targetValue}');
 
-      // ✅ 4. ذخیره در LocalStorage
+      // 4. ذخیره در LocalStorage
       try {
         final localStorage = LocalStorageService();
         await localStorage.saveHabit(habit);
-        print('✅ Habit saved to local storage');
+        print('Habit saved to local storage');
       } catch (e) {
-        print('⚠️ Error saving habit to local storage: $e');
+        print('Error saving habit to local storage: $e');
       }
 
-      // ✅ 5. ثبت در user_quests
+      // 5. ثبت در user_quests
       await client.from('user_quests').insert({
         'user_id': userId,
         'quest_id': quest.id,
@@ -2424,25 +2460,25 @@ class SupabaseService {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      print('✅ User quest started: ${quest.title}');
+      print('User quest started: ${quest.title}');
     } catch (e) {
-      print('❌ Error starting quest: $e');
+      print('Error starting quest: $e');
       rethrow;
     }
   }
 
-  /// ✅ بررسی وضعیت session
+  /// بررسی وضعیت session
   void debugSession() {
     final session = client.auth.currentSession;
     final user = client.auth.currentUser;
 
-    print('🔍 ===== SESSION DEBUG =====');
-    print('🔍 currentUser: ${user?.id}');
-    print('🔍 currentSession: ${session?.accessToken?.substring(0, 20)}...');
-    print('🔍 session.expiresAt: ${session?.expiresAt}');
-    print('🔍 now: ${DateTime.now().millisecondsSinceEpoch ~/ 1000}');
-    print('🔍 isExpired: ${session?.isExpired}');
-    print('🔍 =========================');
+    print('===== SESSION DEBUG =====');
+    print('currentUser: ${user?.id}');
+    print('currentSession: ${session?.accessToken?.substring(0, 20)}...');
+    print('session.expiresAt: ${session?.expiresAt}');
+    print('now: ${DateTime.now().millisecondsSinceEpoch ~/ 1000}');
+    print('isExpired: ${session?.isExpired}');
+    print('=========================');
   }
 
   int _parseColor(String colorStr) {
@@ -2460,11 +2496,11 @@ class SupabaseService {
 
   Future<Quest?> updateQuestProgress(String userId, String habitId) async {
     try {
-      print('📊 ===== updateQuestProgress START =====');
-      print('📊 userId: $userId');
-      print('📊 habitId: $habitId');
+      print('===== updateQuestProgress START =====');
+      print('userId: $userId');
+      print('habitId: $habitId');
 
-      // ✅ 1. دریافت عادت
+      // 1. دریافت عادت
       final habitCheck = await client
           .from('habits')
           .select()
@@ -2473,14 +2509,14 @@ class SupabaseService {
           .maybeSingle();
 
       if (habitCheck == null) {
-        print('⚠️ Habit not found: $habitId');
+        print('Habit not found: $habitId');
         return null;
       }
 
-      print('📊 Habit found: ${habitCheck['title']}');
-      print('📊 Quest ID from habit: ${habitCheck['quest_id']}');
+      print('Habit found: ${habitCheck['title']}');
+      print('Quest ID from habit: ${habitCheck['quest_id']}');
 
-      // ✅ 2. دریافت user_quest
+      // 2. دریافت user_quest
       var userQuestResponse = await client
           .from('user_quests')
           .select()
@@ -2491,11 +2527,11 @@ class SupabaseService {
       if (userQuestResponse.isEmpty) {
         final questId = habitCheck['quest_id'];
         if (questId == null) {
-          print('⚠️ No quest_id found for habit: $habitId');
+          print('No quest_id found for habit: $habitId');
           return null;
         }
 
-        print('📊 Looking for user_quest with quest_id: $questId');
+        print('Looking for user_quest with quest_id: $questId');
         userQuestResponse = await client
             .from('user_quests')
             .select()
@@ -2505,7 +2541,7 @@ class SupabaseService {
       }
 
       if (userQuestResponse.isEmpty) {
-        print('⚠️ No user_quest found');
+        print('No user_quest found');
         return null;
       }
 
@@ -2514,22 +2550,22 @@ class SupabaseService {
       final currentProgress = userQuest['progress'] as int? ?? 0;
       final newProgress = currentProgress + 1;
 
-      print('📊 Current progress: $currentProgress');
-      print('📊 New progress: $newProgress');
+      print('Current progress: $currentProgress');
+      print('New progress: $newProgress');
 
-      // ✅ 3. دریافت اطلاعات ماموریت
+      // 3. دریافت اطلاعات ماموریت
       final questResponse =
           await client.from('quests').select().eq('id', questId).single();
 
       final targetCount = questResponse['target_count'] as int;
-      print('📊 Target count: $targetCount');
+      print('Target count: $targetCount');
 
-      // ✅ 4. به‌روزرسانی عنوان عادت
+      // 4. به‌روزرسانی عنوان عادت
       await _updateQuestHabitTitle(habitId, newProgress, targetCount);
 
-      // ✅ 5. اگر کامل شده
+      // 5. اگر کامل شده
       if (newProgress >= targetCount) {
-        print('🎉 Quest completed!');
+        print('Quest completed!');
         final quest = await _completeQuest(
           userId,
           userQuest['id'],
@@ -2538,14 +2574,14 @@ class SupabaseService {
         );
         return quest;
       } else {
-        // ✅ 6. به‌روزرسانی progress در دیتابیس (بدون updated_at)
-        print('📊 Updating progress to: $newProgress');
+        // 6. به‌روزرسانی progress در دیتابیس (بدون updated_at)
+        print('Updating progress to: $newProgress');
         await client.from('user_quests').update({
           'progress': newProgress,
-          // ❌ حذف updated_at
+          // حذف updated_at
         }).eq('id', userQuest['id']);
 
-        // ✅ 7. به‌روزرسانی LocalStorage
+        // 7. به‌روزرسانی LocalStorage
         try {
           final localStorage = LocalStorageService();
           final habits = localStorage.getHabits();
@@ -2582,17 +2618,17 @@ class SupabaseService {
               questId: habits[index].questId,
             );
             await localStorage.saveHabit(updatedHabit);
-            print('✅ LocalStorage updated');
+            print('LocalStorage updated');
           }
         } catch (e) {
-          print('⚠️ Error updating local habit title: $e');
+          print('Error updating local habit title: $e');
         }
 
-        print('✅ Quest progress updated: $newProgress/$targetCount');
+        print('Quest progress updated: $newProgress/$targetCount');
         return null;
       }
     } catch (e) {
-      print('❌ Error updating quest progress: $e');
+      print('Error updating quest progress: $e');
       return null;
     }
   }
@@ -2606,7 +2642,7 @@ class SupabaseService {
       print(
           '📊 _updateQuestHabitTitle: habitId=$habitId, progress=$progress, target=$target');
 
-      // ✅ 1. دریافت عادت از دیتابیس
+      // 1. دریافت عادت از دیتابیس
       final habit = await client
           .from('habits')
           .select('title')
@@ -2614,28 +2650,28 @@ class SupabaseService {
           .maybeSingle();
 
       if (habit == null) {
-        print('⚠️ Habit not found for title update: $habitId');
+        print('Habit not found for title update: $habitId');
         return;
       }
 
-      // ✅ 2. استخراج عنوان اصلی (بدون اعداد)
+      // 2. استخراج عنوان اصلی (بدون اعداد)
       String originalTitle = habit['title'] ?? 'ماموریت';
       final regex = RegExp(r'\s*\(\d+/\d+\)\s*$');
       originalTitle = originalTitle.replaceAll(regex, '').trim();
 
-      // ✅ 3. ساخت عنوان جدید
+      // 3. ساخت عنوان جدید
       final newTitle = '$originalTitle ($progress/$target)';
-      print('📊 New title: $newTitle');
+      print('New title: $newTitle');
 
-      // ✅ 4. به‌روزرسانی در دیتابیس
+      // 4. به‌روزرسانی در دیتابیس
       await client.from('habits').update({
         'title': newTitle,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', habitId);
 
-      print('✅ Habit title updated: $newTitle');
+      print('Habit title updated: $newTitle');
 
-      // ✅ 5. به‌روزرسانی در LocalStorage
+      // 5. به‌روزرسانی در LocalStorage
       try {
         final localStorage = LocalStorageService();
         final localHabits = localStorage.getHabits();
@@ -2673,13 +2709,13 @@ class SupabaseService {
             questId: localHabits[index].questId,
           );
           await localStorage.saveHabit(updatedHabit);
-          print('✅ Habit title updated in local storage');
+          print('Habit title updated in local storage');
         }
       } catch (e) {
-        print('⚠️ Error updating local habit title: $e');
+        print('Error updating local habit title: $e');
       }
     } catch (e) {
-      print('❌ Error updating quest habit title: $e');
+      print('Error updating quest habit title: $e');
     }
   }
 
@@ -2694,19 +2730,19 @@ class SupabaseService {
     try {
       final now = DateTime.now();
 
-      // ✅ 1. به‌روزرسانی user_quests (بدون updated_at)
+      // 1. به‌روزرسانی user_quests (بدون updated_at)
       await client.from('user_quests').update({
         'progress': questData['target_count'],
         'is_completed': true,
         'completed_at': now.toIso8601String(),
         'is_active': false,
-        // ❌ حذف updated_at
+        // حذف updated_at
       }).eq('id', userQuestId);
 
-      // ✅ 2. حذف عادت ماموریت
+      // 2. حذف عادت ماموریت
       await deleteHabit(habitId);
 
-      // ✅ 3. حذف از LocalStorage
+      // 3. حذف از LocalStorage
       try {
         final localStorage = LocalStorageService();
         await localStorage.deleteHabit(habitId);
@@ -2714,18 +2750,18 @@ class SupabaseService {
         // خطا را نادیده بگیر
       }
 
-      // ✅ 4. افزودن XP پاداش
+      // 4. افزودن XP پاداش
       final xpReward = questData['xp_reward'] as int? ?? 0;
       await addXP(userId, xpReward);
 
-      // ✅ 5. افزودن مدال
+      // 5. افزودن مدال
       final badge = questData['badge'] as String? ?? '🎯';
       await _addBadgeToUser(userId, badge);
 
       final quest = Quest.fromMap(questData, questData['id']);
       return quest;
     } catch (e) {
-      print('❌ Error completing quest: $e');
+      print('Error completing quest: $e');
       rethrow;
     }
   }
@@ -2778,7 +2814,7 @@ class SupabaseService {
 
   Future<void> _addBadgeToUser(String userId, String badge) async {
     try {
-      // ✅ بررسی وجود مدال تکراری
+      // بررسی وجود مدال تکراری
       final existing = await client
           .from('user_badges')
           .select()
@@ -2790,7 +2826,7 @@ class SupabaseService {
         return;
       }
 
-      // ✅ ثبت مدال جدید
+      // ثبت مدال جدید
       await client.from('user_badges').insert({
         'user_id': userId,
         'badge_name': badge,
@@ -2808,9 +2844,9 @@ class SupabaseService {
 
   Future<void> cancelQuest(String userId, String questId) async {
     try {
-      print('🗑️ Cancelling quest: $questId for user: $userId');
+      print('Cancelling quest: $questId for user: $userId');
 
-      // ✅ 1. دریافت user_quest
+      // 1. دریافت user_quest
       final userQuestResponse = await client
           .from('user_quests')
           .select()
@@ -2819,7 +2855,7 @@ class SupabaseService {
           .eq('is_active', true);
 
       if (userQuestResponse.isEmpty) {
-        print('⚠️ No active user_quest found for quest: $questId');
+        print('No active user_quest found for quest: $questId');
         return;
       }
 
@@ -2827,32 +2863,32 @@ class SupabaseService {
       final habitId = userQuest['habit_id'];
       final userQuestId = userQuest['id'];
 
-      // ✅ 2. حذف از user_quests
+      // 2. حذف از user_quests
       await client.from('user_quests').delete().eq('id', userQuestId);
-      print('✅ User quest removed from database');
+      print('User quest removed from database');
 
-      // ✅ 3. حذف عادت ماموریت
+      // 3. حذف عادت ماموریت
       if (habitId != null && habitId.isNotEmpty) {
         await deleteHabit(habitId);
-        print('✅ Habit deleted from database: $habitId');
+        print('Habit deleted from database: $habitId');
       }
 
-      // ✅ 4. حذف همه عادت‌های مرتبط با این ماموریت
+      // 4. حذف همه عادت‌های مرتبط با این ماموریت
       await client
           .from('habits')
           .delete()
           .eq('user_id', userId)
           .eq('quest_id', questId);
-      print('✅ All quest habits removed from database');
+      print('All quest habits removed from database');
 
-      // ✅ 5. حذف از LocalStorage
+      // 5. حذف از LocalStorage
       try {
         final localStorage = LocalStorageService();
 
         // حذف عادت از LocalStorage
         if (habitId != null && habitId.isNotEmpty) {
           await localStorage.deleteHabit(habitId);
-          print('✅ Habit removed from LocalStorage: $habitId');
+          print('Habit removed from LocalStorage: $habitId');
         }
 
         // حذف همه عادت‌های مرتبط با این ماموریت از LocalStorage
@@ -2860,14 +2896,14 @@ class SupabaseService {
         final updatedHabits =
             localHabits.where((h) => h.questId != questId).toList();
         await localStorage.saveHabits(updatedHabits);
-        print('✅ All quest habits removed from LocalStorage');
+        print('All quest habits removed from LocalStorage');
       } catch (e) {
-        print('⚠️ Error removing from LocalStorage: $e');
+        print('Error removing from LocalStorage: $e');
       }
 
-      print('✅ Quest cancelled successfully: $questId');
+      print('Quest cancelled successfully: $questId');
     } catch (e) {
-      print('❌ Error cancelling quest: $e');
+      print('Error cancelling quest: $e');
       rethrow;
     }
   }
@@ -2896,7 +2932,7 @@ class SupabaseService {
     if (!await isOnline()) return null;
 
     try {
-      // ✅ دریافت همزمان اطلاعات
+      // دریافت همزمان اطلاعات
       final challenge = await getChallengeById(challengeId);
       if (challenge == null) return null;
 
@@ -2924,9 +2960,9 @@ class SupabaseService {
 
       if (completedDays < totalDays) return null;
 
-      print('🎉 Challenge completed! $completedDays/$totalDays');
+      print('Challenge completed! $completedDays/$totalDays');
 
-      // ✅ اجرای همزمان به‌روزرسانی‌ها
+      // اجرای همزمان به‌روزرسانی‌ها
       await Future.wait([
         addXP(userId, challenge['xp_reward'] as int? ?? 0),
         client.from('user_challenges').update({
@@ -2938,17 +2974,17 @@ class SupabaseService {
         }).eq('id', userChallenge['id']),
       ]);
 
-      // ✅ حذف عادت‌های چالش (با ignore)
+      // حذف عادت‌های چالش (با ignore)
       unawaited(_removeChallengeHabits(userId, challengeId));
 
       return challenge;
     } catch (e) {
-      print('❌ Error checking challenge: $e');
+      print('Error checking challenge: $e');
       return null;
     }
   }
 
-// ✅ متد کمکی برای حذف عادت‌ها در پس‌زمینه
+// متد کمکی برای حذف عادت‌ها در پس‌زمینه
   Future<void> _removeChallengeHabits(String userId, String challengeId) async {
     try {
       final habits = await client
@@ -2974,16 +3010,16 @@ class SupabaseService {
             .inFilter('id', habitIds),
       ]);
 
-      // ✅ حذف از LocalStorage
+      // حذف از LocalStorage
       final localStorage = LocalStorageService();
       final localHabits = localStorage.getHabits();
       final updatedHabits =
           localHabits.where((h) => h.challengeId != challengeId).toList();
       await localStorage.saveHabits(updatedHabits);
 
-      print('🗑️ Removed ${habitIds.length} challenge habits');
+      print('Removed ${habitIds.length} challenge habits');
     } catch (e) {
-      print('⚠️ Error removing challenge habits: $e');
+      print('Error removing challenge habits: $e');
     }
   }
 
@@ -3002,7 +3038,7 @@ class SupabaseService {
         return Package.fromMap(packageData, packageId);
       }).toList();
     } catch (e) {
-      print('❌ Error getting user active packages: $e');
+      print('Error getting user active packages: $e');
       return [];
     }
   }
@@ -3044,10 +3080,13 @@ class SupabaseService {
 
         if (lastActivity != null) {
           final lastDate = DateTime.parse(lastActivity['activity_date']);
-          final daysDiff = today.difference(lastDate).inDays;
+          final daysDiff = DateTime(today.year, today.month, today.day)
+              .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
+              .inDays;
           if (daysDiff == 1) {
-            currentStreak = 0;
-          } else if (daysDiff > 1) {
+            // امروز هنوز وقت دارد؛ استریک تا دیروز نگه داشته می‌شود
+            currentStreak = await _calculateStreak(userId, lastDate);
+          } else {
             currentStreak = 0;
           }
         }
@@ -3102,30 +3141,27 @@ class SupabaseService {
     }
   }
 
+  /// تعداد روزهای فعالِ پشت‌سرهم تا endDate؛ فقط یک درخواست (قبلاً یک درخواست برای هر روز)
   Future<int> _calculateStreak(String userId, DateTime endDate) async {
+    final rows = await client
+        .from('user_daily_activity')
+        .select('activity_date')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .lte('activity_date', endDate.toIso8601String().split('T').first)
+        .order('activity_date', ascending: false)
+        .limit(800);
+
+    final active = <String>{
+      for (final r in rows) r['activity_date'].toString().split('T').first,
+    };
+
     int streak = 0;
-    DateTime currentDate = endDate;
-
-    while (true) {
-      final dateStr = currentDate.toIso8601String().split('T').first;
-
-      final activity = await client
-          .from('user_daily_activity')
-          .select('is_active')
-          .eq('user_id', userId)
-          .eq('activity_date', dateStr)
-          .maybeSingle();
-
-      final bool isActive = activity != null && activity['is_active'] == true;
-
-      if (isActive) {
-        streak++;
-        currentDate = currentDate.subtract(const Duration(days: 1));
-      } else {
-        break;
-      }
+    var d = DateTime(endDate.year, endDate.month, endDate.day);
+    while (active.contains(d.toIso8601String().split('T').first)) {
+      streak++;
+      d = DateTime(d.year, d.month, d.day - 1);
     }
-
     return streak;
   }
 
@@ -3325,7 +3361,7 @@ class SupabaseService {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 👤 متدهای Username
+  // متدهای Username
   // ═══════════════════════════════════════════════════════════
 
   /// بررسی در دسترس بودن username
@@ -3336,7 +3372,7 @@ class SupabaseService {
       // چک فرمت
       final regex = RegExp(r'^[a-z][a-z0-9_.]{2,29}$');
       if (!regex.hasMatch(normalized)) {
-        print('❌ Username format invalid: $normalized');
+        print('Username format invalid: $normalized');
         return false;
       }
 
@@ -3346,10 +3382,10 @@ class SupabaseService {
         params: {'p_username': normalized},
       );
 
-      print('✅ is_username_available($normalized) = $result');
+      print('is_username_available($normalized) = $result');
       return result as bool;
     } catch (e) {
-      print('❌ Error checking username: $e');
+      print('Error checking username: $e');
       return false;
     }
   }
@@ -3364,9 +3400,9 @@ class SupabaseService {
         'username_updated_at': DateTime.now().toIso8601String(),
       }).eq('user_id', userId);
 
-      print('✅ Username set: $normalized');
+      print('Username set: $normalized');
     } catch (e) {
-      print('❌ Error setting username: $e');
+      print('Error setting username: $e');
       rethrow;
     }
   }
@@ -3390,7 +3426,7 @@ class SupabaseService {
 
       return secondsSince >= 60;
     } catch (e) {
-      print('❌ Error checking username change eligibility: $e');
+      print('Error checking username change eligibility: $e');
       return false;
     }
   }
@@ -3415,13 +3451,13 @@ class SupabaseService {
       if (secondsSince >= 60) return 0;
       return 60 - secondsSince;
     } catch (e) {
-      print('❌ Error getting seconds until change: $e');
+      print('Error getting seconds until change: $e');
       return 0;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 🖼️ متدهای Avatar
+  // متدهای Avatar
   // ═══════════════════════════════════════════════════════════
 
   /// به‌روزرسانی avatar_url در profiles
@@ -3431,15 +3467,15 @@ class SupabaseService {
         'avatar_url': avatarUrl,
       }).eq('user_id', userId);
 
-      print('✅ Avatar URL updated: $avatarUrl');
+      print('Avatar URL updated: $avatarUrl');
     } catch (e) {
-      print('❌ Error updating avatar: $e');
+      print('Error updating avatar: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // 📸 متدهای Gallery
+  // متدهای Gallery
   // ═══════════════════════════════════════════════════════════
 
   /// دریافت همه‌ی عکس‌های گالری یک کاربر
@@ -3460,7 +3496,7 @@ class SupabaseService {
           .map((map) => UserPhoto.fromMap(map, map['id']))
           .toList();
     } catch (e) {
-      print('❌ Error getting user photos: $e');
+      print('Error getting user photos: $e');
       return [];
     }
   }
@@ -3473,7 +3509,7 @@ class SupabaseService {
 
       return (response as List).length;
     } catch (e) {
-      print('❌ Error counting photos: $e');
+      print('Error counting photos: $e');
       return 0;
     }
   }
@@ -3517,10 +3553,10 @@ class SupabaseService {
           .select()
           .single();
 
-      print('✅ Photo added: ${response['id']}');
+      print('Photo added: ${response['id']}');
       return UserPhoto.fromMap(response, response['id']);
     } catch (e) {
-      print('❌ Error adding photo: $e');
+      print('Error adding photo: $e');
       rethrow;
     }
   }
@@ -3538,9 +3574,9 @@ class SupabaseService {
           .eq('id', photoId)
           .eq('user_id', userId);
 
-      print('✅ Photo deleted from DB: $photoId');
+      print('Photo deleted from DB: $photoId');
     } catch (e) {
-      print('❌ Error deleting photo from DB: $e');
+      print('Error deleting photo from DB: $e');
       rethrow;
     }
   }
@@ -3561,15 +3597,15 @@ class SupabaseService {
           .eq('id', photoId)
           .eq('user_id', userId);
 
-      print('✅ Photo caption updated');
+      print('Photo caption updated');
     } catch (e) {
-      print('❌ Error updating caption: $e');
+      print('Error updating caption: $e');
       rethrow;
     }
   }
 
   // ═══════════════════════════════════════════════════════════
-  // ❤️ متدهای Like
+  // متدهای Like
   // ═══════════════════════════════════════════════════════════
 
   /// چک می‌کند آیا کاربر این عکس را لایک کرده
@@ -3587,7 +3623,7 @@ class SupabaseService {
 
       return response != null;
     } catch (e) {
-      print('❌ Error checking like: $e');
+      print('Error checking like: $e');
       return false;
     }
   }
@@ -3611,7 +3647,7 @@ class SupabaseService {
             .eq('photo_id', photoId)
             .eq('user_id', userId);
 
-        print('👎 Unliked photo');
+        print('Unliked photo');
         return false;
       } else {
         // افزودن لایک
@@ -3620,11 +3656,11 @@ class SupabaseService {
           'user_id': userId,
         });
 
-        print('👍 Liked photo');
+        print('Liked photo');
         return true;
       }
     } catch (e) {
-      print('❌ Error toggling like: $e');
+      print('Error toggling like: $e');
       rethrow;
     }
   }

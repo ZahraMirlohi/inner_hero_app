@@ -26,19 +26,19 @@ class CustomAnimatedNavBar extends StatelessWidget {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    // ✅ رنگ پس‌زمینه:
+    // رنگ پس‌زمینه:
     // - در تم شب: سفید
     // - در تم روز: مشکی
     final Color navBarColor =
         theme.isDarkMode ? Colors.white : const Color(0xFF090909);
 
-    // ✅ رنگ آیکون غیرفعال:
+    // رنگ آیکون غیرفعال:
     // - در تم شب: خاکستری (خوانا روی سفید)
     // - در تم روز: خاکستری تیره (خوانا روی مشکی)
     final Color inactiveColor =
         theme.isDarkMode ? Colors.grey.shade400 : const Color(0xFF6A6A6A);
 
-    // ✅ رنگ آیکون فعال (همیشه primaryColor)
+    // رنگ آیکون فعال (همیشه primaryColor)
     final Color activeColor = primaryColor;
 
     return Padding(
@@ -50,7 +50,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
         notchSmoothness: NotchSmoothness.verySmoothEdge,
         leftCornerRadius: 30,
         rightCornerRadius: 30,
-        // ✅ تم‌محور
+        // تم‌محور
         backgroundColor: navBarColor,
         elevation: 0,
         shadow: BoxShadow(
@@ -71,7 +71,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
                 Icon(
                   icons[index],
                   size: 24,
-                  // ✅ تم‌محور
+                  // تم‌محور
                   color: isActive ? activeColor : inactiveColor,
                 ),
                 const SizedBox(height: 4),
@@ -80,7 +80,7 @@ class CustomAnimatedNavBar extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    // ✅ تم‌محور
+                    // تم‌محور
                     color: isActive ? activeColor : inactiveColor,
                   ),
                 ),

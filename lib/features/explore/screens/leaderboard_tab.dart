@@ -203,7 +203,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
 // هدر (طلایی نارنجی) - تم‌محور
 // ═══════════════════════════════════════════════════════════
   Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
-    // ✅ در تم شب از گرادیانت تیره استفاده کن
+    // در تم شب از گرادیانت تیره استفاده کن
     final List<Color> headerGradient = theme.isDarkMode
         ? [
             const Color(0xFF8B5A0F), // طلایی-نارنجی تیره

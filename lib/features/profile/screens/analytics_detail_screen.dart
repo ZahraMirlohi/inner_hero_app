@@ -127,12 +127,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   }
 
   List<DateTime> _getSampleActiveDays() {
-    final now = DateTime.now();
-    final List<DateTime> days = [];
-    for (int i = 0; i < 14; i++) {
-      days.add(now.subtract(Duration(days: i)));
-    }
-    return days;
+    // داده‌ی نمونه نشان نمی‌دهیم؛ بدون فعالیت یعنی خالی
+    return <DateTime>[];
   }
 
   Map<String, List<bool>>? _cachedWeeklyStatus;
@@ -299,6 +295,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         for (var habit in activeHabits) {
           if (!habit.shouldDoOnDate(date)) continue;
+          // روزهای قبل از ساخته شدن عادت شکست حساب نمی‌شوند
+          final created = DateTime(habit.createdAt.year, habit.createdAt.month,
+              habit.createdAt.day);
+          if (DateTime(date.year, date.month, date.day).isBefore(created)) {
+            continue;
+          }
 
           totalItems++;
           final isCompleted = completions[habit.id]?.contains(dateStr) ?? false;
@@ -352,6 +354,12 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         for (var habit in activeHabits) {
           if (!habit.shouldDoOnDate(date)) continue;
+          // روزهای قبل از ساخته شدن عادت شکست حساب نمی‌شوند
+          final created = DateTime(habit.createdAt.year, habit.createdAt.month,
+              habit.createdAt.day);
+          if (DateTime(date.year, date.month, date.day).isBefore(created)) {
+            continue;
+          }
           totalItems++;
 
           final isActiveDay = _activeDays.any(
@@ -374,7 +382,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     });
   }
 
-  // ✅ متدهای کمکی با CalendarProvider
+  // متدهای کمکی با CalendarProvider
   DateTime _getWeekStart(DateTime date, CalendarProvider calendar) {
     if (calendar.isJalali) {
       final jalali = Jalali.fromDateTime(date);
@@ -545,7 +553,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   _slideSubtitles[_currentSlide],
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.textSecondaryColor, // ✅ از theme
+                    color: theme.textSecondaryColor, // از theme
                   ),
                 ),
               ],
@@ -573,7 +581,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          // ✅ تم‌محور
+          // تم‌محور
           color:
               theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
@@ -857,7 +865,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: theme.textSecondaryColor, // ✅
+                    color: theme.textSecondaryColor, // 
                   ),
                 ),
               ),
@@ -920,7 +928,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                         : isToday
                             ? primaryColor
                             : isFuture
-                                // ✅ در تم شب روشن‌تر
+                                // در تم شب روشن‌تر
                                 ? theme.textSecondaryColor
                                     .withValues(alpha: 0.4)
                                 : theme.textColor,
@@ -1874,7 +1882,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 bestDayValue: bestDayValue,
                 worstDayIndex: worstDayIndex,
                 worstDayValue: worstDayValue,
-                theme: theme, // ✅ اضافه کن
+                theme: theme, // اضافه کن
               )
             ] else ...[
               const SizedBox(height: 40),
@@ -1937,7 +1945,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     required double bestDayValue,
     required int worstDayIndex,
     required double worstDayValue,
-    required ThemeProvider theme, // ✅ جدید
+    required ThemeProvider theme, // جدید
   }) {
     final bestPercent = (bestDayValue * 100).toInt();
     final worstPercent = (worstDayValue * 100).toInt();
@@ -1969,7 +1977,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '🌟 روز ${weekDays[bestDayIndex]} با $bestPercent% موفقیت',
+                  'روز ${weekDays[bestDayIndex]} با $bestPercent% موفقیت',
                   style: TextStyle(fontSize: 11, color: Colors.green.shade700),
                 ),
               ),
@@ -1993,7 +2001,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '📉 روز ${weekDays[worstDayIndex]} با $worstPercent% کمترین موفقیت',
+                  'روز ${weekDays[worstDayIndex]} با $worstPercent% کمترین موفقیت',
                   style: TextStyle(fontSize: 11, color: Colors.orange.shade700),
                 ),
               ),
@@ -2012,7 +2020,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '💪 روز ${weekDays[worstDayIndex]} را با برنامه‌ریزی بهتر شروع کنید!',
+                    'روز ${weekDays[worstDayIndex]} را با برنامه‌ریزی بهتر شروع کنید!',
                     style: TextStyle(
                       fontSize: 10,
                       color: primaryColor.withValues(alpha: 0.85),
@@ -2031,7 +2039,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'عملکرد شما در همه روزها یکسان است! 🎯',
+                      'عملکرد شما در همه روزها یکسان است! ',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.blue.shade700,

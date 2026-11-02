@@ -71,7 +71,7 @@ class _ChatScreenState extends State<ChatScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Error loading conversations: $e');
+      print('Error loading conversations: $e');
       if (mounted) {
         setState(() {
           _conversations = [];
@@ -163,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen>
         );
       }
     } catch (e) {
-      print('❌ Error removing buddy: $e');
+      print('Error removing buddy: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -236,7 +236,7 @@ class _ChatScreenState extends State<ChatScreen>
             'and(from_user_id.eq.${currentUser.id},to_user_id.eq.$otherUserId),'
             'and(from_user_id.eq.$otherUserId,to_user_id.eq.${currentUser.id})');
       } catch (e) {
-        print('⚠️ Error removing buddy requests: $e');
+        print('Error removing buddy requests: $e');
       }
 
       await _chatService.deleteConversationForBoth(conv.id);
@@ -259,7 +259,7 @@ class _ChatScreenState extends State<ChatScreen>
         );
       }
     } catch (e) {
-      print('❌ Error blocking user: $e');
+      print('Error blocking user: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -562,7 +562,7 @@ class _ChatScreenState extends State<ChatScreen>
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Center(
-                child: Text('🤖', style: TextStyle(fontSize: 24)),
+                child: Text('', style: TextStyle(fontSize: 24)),
               ),
             ),
             const SizedBox(width: 12),
@@ -1146,15 +1146,15 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _showBuddyFinder() async {
-    // ✅ اول bottom sheet رو ببند
+    // اول bottom sheet رو ببند
     Navigator.pop(context);
 
-    // ✅ کمی صبر کن تا bottom sheet کاملاً بسته بشه
+    // کمی صبر کن تا bottom sheet کاملاً بسته بشه
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
 
-    // ✅ بعد به صفحه هم‌مسیرها برو
+    // بعد به صفحه هم‌مسیرها برو
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const BuddyFinderScreen()),
@@ -1162,9 +1162,9 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (!mounted) return;
 
-    // ✅ اگه تغییری اعمال شد، داده‌ها رو reload کن
+    // اگه تغییری اعمال شد، داده‌ها رو reload کن
     if (result == true) {
-      // ✅ صبر کن تا صفحه قبلی کامل بشه
+      // صبر کن تا صفحه قبلی کامل بشه
       await Future.delayed(const Duration(milliseconds: 100));
 
       if (mounted) {

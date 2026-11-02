@@ -72,7 +72,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       if (!mounted) return;
 
-      // ✅ کراپ (در Web رد می‌شود، در Mobile اجرا می‌شود)
+      // کراپ (در Web رد می‌شود، در Mobile اجرا می‌شود)
       final theme = Provider.of<ThemeProvider>(context, listen: false);
       final cropService = ImageCropService();
       final croppedFile = await cropService.cropGallery(
@@ -87,7 +87,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (!mounted) return;
 
       // ═══════════════════════════════════════════════════════════
-      // ✅ دیالوگ کپشن قبل از آپلود
+      // دیالوگ کپشن قبل از آپلود
       // ═══════════════════════════════════════════════════════════
       final caption = await _showCaptionDialog();
 
@@ -122,7 +122,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         setState(() => _uploadProgress = 0.8);
       }
 
-      // ✅ ذخیره در دیتابیس با کپشن
+      // ذخیره در دیتابیس با کپشن
       await _supabase.addUserPhoto(
         userId: widget.userId,
         photoUrl: result['photo_url'],
@@ -140,7 +140,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('📸 عکس با موفقیت آپلود شد'),
+              content: Text('عکس با موفقیت آپلود شد'),
               backgroundColor: Colors.green,
             ),
           );
@@ -166,14 +166,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-// 📝 دیالوگ نوشتن کپشن قبل از آپلود
+// دیالوگ نوشتن کپشن قبل از آپلود
 // ═══════════════════════════════════════════════════════════
   Future<String?> _showCaptionDialog() async {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     final controller = TextEditingController();
     final wordCountNotifier = ValueNotifier<int>(0);
 
-    // ✅ بررسی طول
+    // بررسی طول
     controller.addListener(() {
       wordCountNotifier.value = controller.text.length;
     });
@@ -305,7 +305,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
           ElevatedButton.icon(
             onPressed: () {
-              // ✅ اگر خالی بود، بدون کپشن ادامه بده
+              // اگر خالی بود، بدون کپشن ادامه بده
               Navigator.pop(dialogContext, controller.text.trim());
             },
             style: ElevatedButton.styleFrom(
@@ -504,7 +504,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           storagePath: photo.storagePath,
         );
       } catch (e) {
-        print('⚠️ Storage delete error (ignored): $e');
+        print('Storage delete error (ignored): $e');
       }
 
       // حذف از DB
@@ -516,7 +516,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('🗑️ عکس حذف شد'),
+            content: Text('عکس حذف شد'),
             backgroundColor: Colors.green,
           ),
         );
@@ -701,10 +701,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
       child: GridView.builder(
         padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, // ✅ از ۳ به ۲ (برای کارت‌های بزرگ‌تر)
-          crossAxisSpacing: 12, // ✅ از ۸ به ۱۲
-          mainAxisSpacing: 12, // ✅ از ۸ به ۱۲
-          childAspectRatio: 0.85, // ✅ نسبت ارتفاع
+          crossAxisCount: 2, // از ۳ به ۲ (برای کارت‌های بزرگ‌تر)
+          crossAxisSpacing: 12, // از ۸ به ۱۲
+          mainAxisSpacing: 12, // از ۸ به ۱۲
+          childAspectRatio: 0.85, // نسبت ارتفاع
         ),
         itemCount: _photos.length,
         itemBuilder: (context, index) {
@@ -737,7 +737,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // ✅ تصویر
+              // تصویر
               CachedNetworkImage(
                 imageUrl: photo.photoUrl,
                 fit: BoxFit.cover,
@@ -768,7 +768,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ),
               ),
 
-              // ✅ گرادیانت برای خوانایی کپشن
+              // گرادیانت برای خوانایی کپشن
               if (photo.caption != null && photo.caption!.isNotEmpty)
                 Positioned(
                   bottom: 0,
@@ -806,7 +806,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                 ),
 
-              // ✅ گرادیانت بالایی (برای خوانایی badge ها)
+              // گرادیانت بالایی (برای خوانایی badge ها)
               Positioned(
                 top: 0,
                 left: 0,
@@ -826,7 +826,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ),
               ),
 
-              // ✅ badge عکس اصلی (ستاره)
+              // badge عکس اصلی (ستاره)
               if (photo.isPrimary)
                 Positioned(
                   top: 6,
@@ -868,7 +868,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   ),
                 ),
 
-              // ✅ badge لایک
+              // badge لایک
               if (photo.likesCount > 0)
                 Positioned(
                   top: 6,
@@ -1086,7 +1086,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 }
 
 // ═══════════════════════════════════════════════════════════
-// 📷 Photo Viewer (نمایش تمام‌صفحه)
+// Photo Viewer (نمایش تمام‌صفحه)
 // ═══════════════════════════════════════════════════════════
 
 class _PhotoViewerScreen extends StatefulWidget {
@@ -1153,10 +1153,10 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
       ),
       body: SafeArea(
         top: false,
-        bottom: true, // ✅ رعایت فضای امن پایین
+        bottom: true, // رعایت فضای امن پایین
         child: Stack(
           children: [
-            // ✅ PhotoViewGallery
+            // PhotoViewGallery
             PhotoViewGallery.builder(
               pageController: _pageController,
               itemCount: widget.photos.length,
@@ -1178,7 +1178,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
               ),
             ),
 
-            // ✅ کپشن با احترام به SafeArea
+            // کپشن با احترام به SafeArea
             if (currentPhoto.caption != null &&
                 currentPhoto.caption!.isNotEmpty)
               Positioned(

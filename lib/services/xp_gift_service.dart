@@ -8,13 +8,13 @@ class XPGiftService {
   final SupabaseClient _client = Supabase.instance.client;
   final SupabaseService _supabase = SupabaseService();
 
-  // ✅ کش ساده برای جلوگیری از درخواست‌های مکرر
+  // کش ساده برای جلوگیری از درخواست‌های مکرر
   final Map<String, _CachedGift> _giftCache = {};
   static const Duration _cacheDuration = Duration(seconds: 5);
 
-  // ✅ دریافت هدیه با ID (با کش)
+  // دریافت هدیه با ID (با کش)
   Future<XPGift?> getGiftById(String giftId) async {
-    // ✅ اگر در کش است و معتبر است
+    // اگر در کش است و معتبر است
     if (_giftCache.containsKey(giftId)) {
       final cached = _giftCache[giftId]!;
       if (DateTime.now().difference(cached.timestamp) < _cacheDuration) {
@@ -33,22 +33,22 @@ class XPGiftService {
 
       final gift = XPGift.fromMap(response);
 
-      // ✅ ذخیره در کش
+      // ذخیره در کش
       _giftCache[giftId] = _CachedGift(gift: gift, timestamp: DateTime.now());
 
       return gift;
     } catch (e) {
-      print('❌ Error getting gift: $e');
+      print('Error getting gift: $e');
       return null;
     }
   }
 
-  // ✅ پاک کردن کش یک هدیه خاص
+  // پاک کردن کش یک هدیه خاص
   void clearGiftCache(String giftId) {
     _giftCache.remove(giftId);
   }
 
-  // ✅ دریافت هدیه (با پاک کردن کش بعد از موفقیت)
+  // دریافت هدیه (با پاک کردن کش بعد از موفقیت)
   Future<bool> receiveGift(String giftId) async {
     try {
       // 1. دریافت اطلاعات هدیه
@@ -83,17 +83,17 @@ class XPGiftService {
           })
           .eq('id', giftId);
 
-      // ✅ پاک کردن کش بعد از موفقیت
+      // پاک کردن کش بعد از موفقیت
       clearGiftCache(giftId);
 
       return true;
     } catch (e) {
-      print('❌ Error receiving gift: $e');
+      print('Error receiving gift: $e');
       return false;
     }
   }
 
-  // ✅ دریافت هدیه‌های دریافتی کاربر
+  // دریافت هدیه‌های دریافتی کاربر
   Future<List<XPGift>> getReceivedGifts(String userId) async {
     try {
       final response = await _client
@@ -104,12 +104,12 @@ class XPGiftService {
 
       return response.map((data) => XPGift.fromMap(data)).toList();
     } catch (e) {
-      print('❌ Error getting received gifts: $e');
+      print('Error getting received gifts: $e');
       return [];
     }
   }
 
-  // ✅ دریافت هدیه‌های ارسالی کاربر
+  // دریافت هدیه‌های ارسالی کاربر
   Future<List<XPGift>> getSentGifts(String userId) async {
     try {
       final response = await _client
@@ -120,13 +120,13 @@ class XPGiftService {
 
       return response.map((data) => XPGift.fromMap(data)).toList();
     } catch (e) {
-      print('❌ Error getting sent gifts: $e');
+      print('Error getting sent gifts: $e');
       return [];
     }
   }
 }
 
-// ✅ کلاس کمکی برای کش
+// کلاس کمکی برای کش
 class _CachedGift {
   final XPGift gift;
   final DateTime timestamp;

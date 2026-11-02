@@ -126,7 +126,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
         'last_updated': DateTime.now().toIso8601String(),
       });
 
-      // ✅ بعد از تاخیر کوچیک callback رو صدا بزن
+      // بعد از تاخیر کوچیک callback رو صدا بزن
       if (mounted) {
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) {
@@ -202,7 +202,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                '✅ زمان ثبت شد',
+                'زمان ثبت شد',
                 style: TextStyle(
                   color: Color(0xFF2ECC71),
                   fontWeight: FontWeight.w600,
@@ -217,7 +217,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                '⏱️ در حال انجام...',
+                'در حال انجام...',
                 style: TextStyle(
                   color: Color(0xFFFFA500),
                   fontWeight: FontWeight.w600,
@@ -232,7 +232,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '⏸️ مکث شده',
+                'مکث شده',
                 style: TextStyle(
                   color: primaryColor,
                   fontWeight: FontWeight.w600,

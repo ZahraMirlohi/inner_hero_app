@@ -507,7 +507,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تسک با موفقیت ایجاد شد! 🎉'),
+              content: Text('تسک با موفقیت ایجاد شد! '),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),

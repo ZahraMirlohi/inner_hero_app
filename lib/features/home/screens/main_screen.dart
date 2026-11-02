@@ -1,7 +1,7 @@
 // lib/features/home/screens/main_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // ✅ اضافه کنید
+import 'package:provider/provider.dart'; // اضافه کنید
 import '../../../services/supabase_service.dart';
 import '../../arena/screens/arena_screen.dart';
 import '../../profile/screens/profile_screen.dart';
@@ -9,7 +9,7 @@ import '../../chat/screens/chat_screen.dart';
 import '../../explore/screens/explore_screen.dart';
 import '../../../widgets/custom_bottom_nav_bar.dart';
 import '../../../config/nav_items.dart';
-import '../../../providers/theme_provider.dart'; // ✅ اضافه کنید
+import '../../../providers/theme_provider.dart'; // اضافه کنید
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -39,11 +39,11 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ دریافت تم از Provider
+    // دریافت تم از Provider
     final theme = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      // ✅ استفاده از رنگ پس‌زمینه تم به جای رنگ هاردکد شده
+      // استفاده از رنگ پس‌زمینه تم به جای رنگ هاردکد شده
       backgroundColor: theme.backgroundColor,
       body: Stack(
         children: [
@@ -100,7 +100,7 @@ class _MainScreenState extends State<MainScreen> {
         await supabase.runDailyCheck(user.id);
       }
     } catch (e) {
-      print('❌ Error in daily check: $e');
+      print('Error in daily check: $e');
     }
   }
 }

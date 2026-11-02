@@ -402,7 +402,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ رنگ با موفقیت تغییر کرد!'),
+            content: Text('رنگ با موفقیت تغییر کرد!'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -467,7 +467,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ رنگ به پیش‌فرض بازگشت!'),
+              content: Text('رنگ به پیش‌فرض بازگشت!'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),

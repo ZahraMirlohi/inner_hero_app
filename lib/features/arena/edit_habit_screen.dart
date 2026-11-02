@@ -215,7 +215,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '🎯 تنظیمات سطوح انجام عادت',
+              'تنظیمات سطوح انجام عادت',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -237,7 +237,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 (value) => _targetValue = value),
             const SizedBox(height: 12),
             _buildLevelField(
-                '🌟 توضیح سطح کامل',
+                'توضیح سطح کامل',
                 'انجام کامل عادت',
                 _fullDescription,
                 primaryColor,
@@ -245,7 +245,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 (value) => _fullDescription = value),
             const SizedBox(height: 12),
             _buildLevelField(
-                '⭐ توضیح سطح نیمه',
+                'توضیح سطح نیمه',
                 'انجام نیمی از عادت',
                 _halfDescription,
                 primaryColor,
@@ -253,7 +253,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
                 (value) => _halfDescription = value),
             const SizedBox(height: 12),
             _buildLevelField(
-                '✨ توضیح سطح پایه',
+                'توضیح سطح پایه',
                 'انجام حداقل عادت',
                 _basicDescription,
                 primaryColor,
@@ -1077,7 +1077,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('عادت با موفقیت ویرایش شد! ✅'),
+            content: Text('عادت با موفقیت ویرایش شد! '),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -1085,7 +1085,7 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      print('❌ Error updating habit: $e');
+      print('Error updating habit: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

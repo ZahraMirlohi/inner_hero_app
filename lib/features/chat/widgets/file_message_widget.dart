@@ -19,7 +19,7 @@ class FileMessageWidget extends StatefulWidget {
   final String fileType;
   final int fileSize;
   final bool isMe;
-  // ✅ کال‌بک برای باز کردن منو
+  // کال‌بک برای باز کردن منو
   final VoidCallback? onBubbleTap;
   final VoidCallback? onBubbleLongPress;
 
@@ -123,7 +123,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('⬇️ شروع دانلود ${widget.fileName}'),
+          content: Text('شروع دانلود ${widget.fileName}'),
           backgroundColor: textColor,
           duration: const Duration(seconds: 1),
         ),
@@ -142,7 +142,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✅ ${widget.fileName} دانلود شد'),
+              content: Text('${widget.fileName} دانلود شد'),
               backgroundColor: textColor,
               duration: const Duration(seconds: 2),
             ),
@@ -154,7 +154,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('❌ خطا در دانلود'),
+              content: Text('خطا در دانلود'),
               backgroundColor: Colors.red,
               duration: Duration(seconds: 2),
             ),
@@ -301,9 +301,9 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         ? ChatColors.myBubbleTextSecondary(theme)
         : ChatColors.otherBubbleTextSecondary(theme);
 
-    // ✅ کل ویجت با GestureDetector پوشانده می‌شود
-    // onTap → باز کردن منو (اگر دانلود شده) یا دانلود (اگر نشده)
-    // onLongPress → انتخاب پیام
+    // کل ویجت با GestureDetector پوشانده می‌شود
+    // onTap باز کردن منو (اگر دانلود شده) یا دانلود (اگر نشده)
+    // onLongPress انتخاب پیام
     Widget content;
 
     if (widget.fileType == 'audio') {
@@ -319,15 +319,15 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     }
 
     return GestureDetector(
-      // ✅ کلیک روی حباب → باز کردن منو
+      // کلیک روی حباب باز کردن منو
       onTap: widget.onBubbleTap,
-      // ✅ نگه داشتن → انتخاب پیام
+      // نگه داشتن انتخاب پیام
       onLongPress: widget.onBubbleLongPress,
       child: content,
     );
   }
 
-  // ✅ کارت فایل
+  // کارت فایل
   Widget _buildFileCard(
     Color bgColor,
     Color textColor,
@@ -353,7 +353,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
       ),
       child: Row(
         children: [
-          // ✅ آیکون فایل - کلیک → باز کردن فایل (اگر دانلود شده)
+          // آیکون فایل - کلیک باز کردن فایل (اگر دانلود شده)
           GestureDetector(
             onTap: isDownloaded ? _openFile : null,
             child: Container(
@@ -410,7 +410,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
               ],
             ),
           ),
-          // ✅ دکمه دانلود
+          // دکمه دانلود
           GestureDetector(
             onTap: isDownloading ? null : _downloadFile,
             child: Container(
@@ -443,7 +443,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ کارت دانلود
+  // کارت دانلود
   Widget _buildDownloadCard(
     Color bgColor,
     Color textColor,
@@ -503,7 +503,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
               ],
             ),
           ),
-          // ✅ دکمه دانلود
+          // دکمه دانلود
           GestureDetector(
             onTap: _downloadFile,
             child: Container(
@@ -533,7 +533,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ کارت در حال دانلود
+  // کارت در حال دانلود
   Widget _buildDownloadingCard(
     Color bgColor,
     Color textColor,
@@ -621,7 +621,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     );
   }
 
-  // ✅ پلیر موزیک
+  // پلیر موزیک
   Widget _buildAudioPlayer(
     Color bgColor,
     Color textColor,
@@ -657,7 +657,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
         children: [
           Row(
             children: [
-              // ✅ آیکون موزیک - کلیک → باز کردن فایل
+              // آیکون موزیک - کلیک باز کردن فایل
               GestureDetector(
                 onTap: _openFile,
                 child: Container(
@@ -710,7 +710,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
                   ],
                 ),
               ),
-              // ✅ دکمه دانلود
+              // دکمه دانلود
               GestureDetector(
                 onTap: _downloadFile,
                 child: Container(
@@ -734,7 +734,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
           const SizedBox(height: 8),
           Row(
             children: [
-              // ✅ دکمه play/pause
+              // دکمه play/pause
               GestureDetector(
                 onTap: showLoading ? null : _togglePlayback,
                 child: Container(

@@ -372,7 +372,7 @@ class HabitDetailScreen extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  '🎯 سطوح انجام عادت',
+                  'سطوح انجام عادت',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -422,7 +422,7 @@ class HabitDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildLevelRow(
-              '🌟 کامل',
+              'کامل',
               habit.fullDescription ?? 'انجام کامل عادت',
               CompletionLevel.full,
               showValue: true,
@@ -436,7 +436,7 @@ class HabitDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildLevelRow(
-              '⭐ نیمه',
+              'نیمه',
               habit.halfDescription ?? 'انجام نیمی از عادت',
               CompletionLevel.half,
               showValue: true,
@@ -450,7 +450,7 @@ class HabitDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildLevelRow(
-              '✨ پایه',
+              'پایه',
               habit.basicDescription ?? 'انجام حداقل عادت',
               CompletionLevel.basic,
               showValue: true,
@@ -677,7 +677,7 @@ class HabitDetailScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '📊 تاریخچه ۳۰ روز اخیر',
+                      'تاریخچه ۳۰ روز اخیر',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

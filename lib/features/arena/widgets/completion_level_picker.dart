@@ -149,7 +149,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                       if (widget.targetValue != null &&
                           widget.targetValue!.isNotEmpty)
                         Text(
-                          '🎯 هدف: ${widget.targetValue}',
+                          'هدف: ${widget.targetValue}',
                           style: TextStyle(
                             fontSize: 11,
                             color: primaryColor,
@@ -192,7 +192,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
 
             const SizedBox(height: 16),
 
-            // ✅ دکمه تایید
+            // دکمه تایید
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -221,7 +221,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               ),
             ),
 
-            // ✅ دکمه انصراف
+            // دکمه انصراف
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -261,7 +261,7 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          // ✅ در تم شب از رنگ‌های تیره‌تر استفاده کن
+          // در تم شب از رنگ‌های تیره‌تر استفاده کن
           color: isSelected
               ? level.color.withOpacity(0.15)
               : (theme.isDarkMode
