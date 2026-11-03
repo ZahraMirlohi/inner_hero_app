@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 
 class TermsAndConditionsScreen extends StatelessWidget {
@@ -9,109 +11,83 @@ class TermsAndConditionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+    final theme = context.watch<ThemeProvider>();
+
+    // هر بخش: شمارهٔ کلید، تن رنگی و تعداد بندها
+    final sections = <_TermsSection>[
+      const _TermsSection(1, Tone.sky, 4),
+      const _TermsSection(2, Tone.lilac, 4),
+      const _TermsSection(3, Tone.butter, 4),
+      const _TermsSection(4, Tone.mint, 4),
+      const _TermsSection(5, Tone.peach, 4),
+      const _TermsSection(6, Tone.rose, 3),
+      const _TermsSection(7, Tone.lime, 2),
+    ];
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('قوانین و مقررات'),
-        backgroundColor: theme.surfaceColor,
-        elevation: 0,
-        foregroundColor: theme.textColor,
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildSection(
-                'مقدمه',
-                'به اپلیکیشن قهرمان درون خوش آمدید. این اپلیکیشن با هدف کمک به شما در ایجاد عادت‌های مثبت و دستیابی به اهداف شخصی طراحی شده است. لطفاً قوانین زیر را به دقت مطالعه کنید.',
-                theme,
-              ),
-              const SizedBox(height: 24),
-              _buildSection(
-                '1⃣ ثبت‌نام و حساب کاربری',
-                '• برای استفاده از اپلیکیشن باید یک حساب کاربری ایجاد کنید.\n'
-                    '• اطلاعات ثبت‌نامی باید صحیح و کامل باشد.\n'
-                    '• شما مسئول حفظ امنیت رمز عبور خود هستید.\n'
-                    '• در صورت مشاهده هرگونه فعالیت مشکوک، مراتب را به پشتیبانی اطلاع دهید.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '2⃣ رفتار کاربران',
-                '• با سایر کاربران با احترام رفتار کنید.\n'
-                    '• از ارسال پیام‌های توهین‌آمیز یا نامناسب خودداری کنید.\n'
-                    '• محتوای ارسالی نباید شامل مطالب غیراخلاقی باشد.\n'
-                    '• تخلف از این قوانین منجر به مسدود شدن حساب کاربری خواهد شد.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '3⃣ حریم خصوصی',
-                '• اطلاعات شخصی شما نزد ما محفوظ است.\n'
-                    '• از اطلاعات شما برای بهبود تجربه کاربری استفاده می‌شود.\n'
-                    '• اطلاعات شما بدون رضایت شما به شخص ثالث داده نمی‌شود.\n'
-                    '• شما می‌توانید در هر زمان حساب خود را حذف کنید.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '4⃣ امتیازها و پاداش‌ها',
-                '• با انجام عادت‌ها و تسک‌ها امتیاز (XP) دریافت می‌کنید.\n'
-                    '• امتیازها قابل تبدیل به پول نقد نیستند.\n'
-                    '• در صورت تقلب، امتیازهای شما باطل خواهد شد.\n'
-                    '• پاداش‌ها فقط برای کاربران فعال در نظر گرفته می‌شوند.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '5⃣ تعهدات کاربر',
-                '• تعهد می‌دهید که از اپلیکیشن برای اهداف قانونی استفاده کنید.\n'
-                    '• در بهبود و توسعه اپلیکیشن با تیم توسعه همکاری کنید.\n'
-                    '• بازخورد خود را برای بهبود اپلیکیشن ارائه دهید.\n'
-                    '• از کپی‌برداری یا مهندسی معکوس اپلیکیشن خودداری کنید.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '6⃣ تغییرات در قوانین',
-                '• تیم توسعه حق تغییر این قوانین را در آینده محفوظ می‌دارد.\n'
-                    '• تغییرات از طریق اطلاعیه درون‌برنامه‌ای اعلام می‌شود.\n'
-                    '• ادامه استفاده از اپلیکیشن به معنای پذیرش قوانین جدید است.',
-                theme,
-              ),
-              const SizedBox(height: 16),
-              _buildSection(
-                '7⃣ تماس با ما',
-                'اگر سوال یا پیشنهادی دارید، از طریق پشتیبانی اپلیکیشن با ما در ارتباط باشید.\n'
-                    'ما همیشه خوشحال می‌شویم نظرات شما را بشنویم.',
-                theme,
-              ),
-              const SizedBox(height: 32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        shape: BoxShape.circle,
+                        boxShadow: theme.softShadow,
+                      ),
+                      child: Icon(Icons.arrow_forward_rounded,
+                          size: 22, color: theme.textColor),
                     ),
                   ),
-                  child: const Text(
-                    'متوجه شدم',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      context.tr('pm.terms.title'),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: theme.textColor,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildIntro(context, theme),
+              for (final s in sections) ...[
+                const SizedBox(height: 12),
+                _buildSection(context, theme, s),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.isDarkMode
+                        ? theme.primaryColor
+                        : const Color(0xFF090909),
+                    foregroundColor: theme.isDarkMode
+                        ? theme.onPrimaryColor
+                        : theme.effectivePrimary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                  ),
+                  child: Text(
+                    context.tr('pm.terms.ok'),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w800),
                   ),
                 ),
               ),
@@ -122,44 +98,124 @@ class TermsAndConditionsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(String title, String content, ThemeProvider theme) {
+  Widget _buildIntro(BuildContext context, ThemeProvider theme) {
+    final dark = theme.isDarkMode ? theme.cardSecondaryColor : const Color(0xFF090909);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: theme.surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: theme.isDarkMode ? 0.3 : 0.05,
-            ),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: dark,
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            title,
+            context.tr('pm.terms.intro.title'),
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: theme.textColor,
+              fontWeight: FontWeight.w800,
+              color: theme.effectivePrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            content,
+            context.tr('pm.terms.intro.body'),
             style: TextStyle(
-              fontSize: 14,
-              height: 1.6,
-              color: theme.textSecondaryColor,
+              fontSize: 13,
+              height: 1.9,
+              color: theme.isDarkMode
+                  ? theme.textSecondaryColor
+                  : const Color(0xFFD5DAC8),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildSection(
+      BuildContext context, ThemeProvider theme, _TermsSection s) {
+    final tone = theme.tone(s.tone);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: theme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: tone.bg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  context.tr('pm.terms.num.${s.index}'),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: tone.fg,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  context.tr('pm.terms.s${s.index}.title'),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: theme.textColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          for (int i = 1; i <= s.count; i++)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    margin: const EdgeInsets.only(top: 10),
+                    decoration: BoxDecoration(
+                      color: theme.effectivePrimary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      context.tr('pm.terms.s${s.index}.b$i'),
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.8,
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TermsSection {
+  final int index;
+  final Tone tone;
+  final int count;
+  const _TermsSection(this.index, this.tone, this.count);
 }

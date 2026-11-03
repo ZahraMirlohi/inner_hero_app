@@ -811,9 +811,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 10),
         tile(Tone.sky, Icons.photo_library_rounded,
             context.tr('profile.gallery_short'), _openGallery),
-        const SizedBox(width: 10),
-        tile(Tone.rose, Icons.face_retouching_natural_rounded,
-            context.tr('profile.look'), _openAvatarCustomization),
       ],
     );
   }
@@ -873,20 +870,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           _buildShortcuts(),
-          const SizedBox(height: 12),
-          AnalyticsOverviewWidget(
-            key: _analyticsKey,
-            userId: _profile!.userId,
-            onTapMore: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      AnalyticsDetailScreen(userId: _profile!.userId),
-                ),
-              );
-            },
-          ),
           const SizedBox(height: 12),
           _buildUserInfoSection(),
           const SizedBox(height: 12),
