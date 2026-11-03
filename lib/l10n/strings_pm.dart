@@ -61,6 +61,8 @@ const Map<String, String> pmFa = {
   'pm.cp.reset_body': 'رنگ سبز پیش‌فرض برمی‌گرده. مطمئنی؟',
   'pm.cp.reset_ok': 'آره، برگرد',
   'pm.cp.reset_done': 'رنگ پیش‌فرض برگشت',
+  'pm.st.general': 'عمومی',
+  'pm.st.display': 'نمایش',
 };
 
 const Map<String, String> pmEn = {
@@ -125,4 +127,6 @@ const Map<String, String> pmEn = {
   'pm.cp.reset_body': 'The default green comes back. Sure?',
   'pm.cp.reset_ok': 'Yes, reset',
   'pm.cp.reset_done': 'Default color restored',
+  'pm.st.general': 'General',
+  'pm.st.display': 'Display',
 };

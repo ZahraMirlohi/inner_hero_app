@@ -15,6 +15,7 @@ import '/services/notification_service.dart';
 import '/services/sound_service.dart';
 import '/services/supabase_service.dart';
 import 'color_picker_screen.dart';
+import 'terms_and_conditions_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -34,26 +35,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        title: Text(context.tr('settings.title')),
-        backgroundColor: theme.backgroundColor,
-      ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
           children: [
-            _section(theme, Tone.lilac, Icons.auto_awesome_rounded,
-                context.tr('settings.section_look'), [
+            _topBar(theme),
+            _section(theme, Tone.lilac, Icons.tune_rounded,
+                context.tr('pm.st.general'), [
               _themeModeRow(theme),
-              _colorTile(theme),
-              _calendarRow(theme),
-            ]),
-            _section(theme, Tone.sky, Icons.translate_rounded,
-                context.tr('settings.section_language'), [
-              _languageRow(theme, settings),
-            ]),
-            _section(theme, Tone.butter, Icons.graphic_eq_rounded,
-                context.tr('settings.section_feedback'), [
+              _switchRow(
+                theme,
+                tone: Tone.peach,
+                icon: Icons.notifications_active_rounded,
+                title: context.tr('settings.notifications'),
+                subtitle: context.tr('settings.notifications_hint'),
+                value: settings.notificationsEnabled,
+                onChanged: settings.setNotifications,
+              ),
               _switchRow(
                 theme,
                 tone: Tone.butter,
@@ -78,18 +76,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (v) SoundService.instance.play(Sfx.tap);
                 },
               ),
+              _colorTile(theme),
+            ]),
+            _section(theme, Tone.sky, Icons.translate_rounded,
+                context.tr('pm.st.display'), [
+              _calendarRow(theme),
+              _languageRow(theme, settings),
             ]),
             _section(theme, Tone.peach, Icons.notifications_rounded,
                 context.tr('settings.section_notifications'), [
-              _switchRow(
-                theme,
-                tone: Tone.peach,
-                icon: Icons.notifications_active_rounded,
-                title: context.tr('settings.notifications'),
-                subtitle: context.tr('settings.notifications_hint'),
-                value: settings.notificationsEnabled,
-                onChanged: settings.setNotifications,
-              ),
               _switchRow(
                 theme,
                 tone: Tone.mint,
@@ -171,16 +166,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setPrivateProfile,
                 badge: context.tr('common.soon'),
               ),
-            ]),
-            _section(theme, Tone.rose, Icons.person_rounded,
-                context.tr('settings.section_account'), [
-              _row(
-                theme,
-                tone: Tone.sky,
-                icon: Icons.logout_rounded,
-                title: context.tr('settings.logout'),
-                onTap: _logout,
-              ),
               _row(
                 theme,
                 tone: Tone.rose,
@@ -212,66 +197,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: context.tr('settings.team'),
                 onTap: _showTeamDialog,
               ),
+              _row(
+                theme,
+                tone: Tone.sky,
+                icon: Icons.description_rounded,
+                title: context.tr('profile.terms'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const TermsAndConditionsScreen()),
+                ),
+              ),
             ]),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _logout,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.isDarkMode
+                      ? theme.cardSecondaryColor
+                      : const Color(0xFF090909),
+                  foregroundColor:
+                      theme.isDarkMode ? theme.textColor : Colors.white,
+                  elevation: 0,
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(context.tr('settings.logout'),
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _topBar(ThemeProvider theme) {
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              shape: BoxShape.circle,
+              boxShadow: theme.softShadow,
+            ),
+            child: Icon(Icons.arrow_forward_rounded,
+                size: 22, color: theme.textColor),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(context.tr('settings.title'),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor)),
+        ),
+      ],
+    );
+  }
+
   // ─────────────────────────── ساختار ───────────────────────────
 
-  /// کارت یک بخش: سرتیتر کوچک رنگی + سطرهای فشرده
+  /// بخش: برچسب خاکستری بالای کارت سفید گرد (مثل artboard)
   Widget _section(ThemeProvider theme, Tone tone, IconData icon, String title,
       List<Widget> children) {
-    final t = theme.tone(tone);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(26),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: t.bg,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(icon, size: 15, color: t.fg),
-                        const SizedBox(width: 6),
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: t.fg,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              color: theme.textSecondaryColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
             ),
-            ...children,
-            const SizedBox(height: 4),
-          ],
+          ),
         ),
-      ),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: theme.softShadow,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              ...children,
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -279,13 +306,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       {bool danger = false}) {
     final t = theme.tone(tone);
     return Container(
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         color: t.bg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: danger ? _danger : t.fg, size: 19),
+      child: Icon(icon, color: danger ? _danger : const Color(0xFF090909).withValues(alpha: theme.isDarkMode ? 0 : 1), size: 20),
     );
   }
 
@@ -308,7 +335,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               _iconBox(theme, tone, icon, danger: danger),
@@ -368,10 +395,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (trailing != null) trailing,
               if (showChevron)
                 Icon(
-                  Icons.chevron_right_rounded,
+                  Icons.chevron_left_rounded,
                   size: 20,
                   color: theme.textSecondaryColor,
-                  textDirection: TextDirection.ltr,
                 ),
             ],
           ),
@@ -400,12 +426,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       badge: badge,
       enabled: enabled,
       onTap: () => onChanged(!value),
-      trailing: Transform.scale(
-        scale: 0.8,
-        child: Switch(
-          value: value,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          onChanged: enabled ? (v) => onChanged(v) : null,
+      trailing: GestureDetector(
+        onTap: enabled ? () => onChanged(!value) : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 50,
+          height: 30,
+          padding: const EdgeInsets.all(3),
+          alignment:
+              value ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+          decoration: BoxDecoration(
+            color: value ? theme.primaryColor : const Color(0xFFD9DCCF),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Container(
+            width: 24,
+            height: 24,
+            decoration: const BoxDecoration(
+                color: Colors.white, shape: BoxShape.circle),
+          ),
         ),
       ),
     );
