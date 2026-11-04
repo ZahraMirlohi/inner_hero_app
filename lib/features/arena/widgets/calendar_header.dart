@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 import '/providers/calendar_provider.dart';
 
@@ -232,8 +233,25 @@ class _CalendarHeaderState extends State<CalendarHeader>
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: theme.primarySoft,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.primarySoft,
+                      Color.alphaBlend(
+                        theme.primaryColor.withValues(alpha: 0.35),
+                        theme.primarySoft,
+                      ),
+                    ],
+                  ),
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withValues(alpha: 0.18),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -250,6 +268,18 @@ class _CalendarHeaderState extends State<CalendarHeader>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isToday(widget.selectedDate, calendar))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          context.tr(_greetingKey()),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: theme.textSecondaryColor,
+                          ),
+                        ),
+                      ),
                     Text(
                       calendar.getWeekdayName(widget.selectedDate),
                       style: TextStyle(
@@ -406,6 +436,14 @@ class _CalendarHeaderState extends State<CalendarHeader>
         ),
       ],
     );
+  }
+
+  String _greetingKey() {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 12) return 'ah.greet.morning';
+    if (h >= 12 && h < 17) return 'ah.greet.noon';
+    if (h >= 17 && h < 21) return 'ah.greet.evening';
+    return 'ah.greet.night';
   }
 
   String _getDayNumber(DateTime date, CalendarProvider calendar) {

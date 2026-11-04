@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/habit_model.dart';
 import '../screens/habit_detail_screen.dart';
 import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 import 'animated_check_overlay.dart';
 
@@ -137,7 +138,10 @@ class _HabitCardState extends State<HabitCard>
               padding: EdgeInsets.all(widget.isCompleted ? 10 : 14),
               decoration: BoxDecoration(
                 color: widget.isCompleted ? theme.cardColor : cardColor,
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.vertical(
+                  top: const Radius.circular(28),
+                  bottom: Radius.circular(_isExpanded ? 12 : 28),
+                ),
                 boxShadow: widget.isCompleted ? theme.softShadow : null,
               ),
               child: Row(
@@ -181,7 +185,9 @@ class _HabitCardState extends State<HabitCard>
                                 icon: isChallenge
                                     ? Icons.emoji_events_rounded
                                     : Icons.flag_rounded,
-                                label: isChallenge ? 'چالش' : 'ماموریت',
+                                label: isChallenge
+                                    ? context.tr('ah.card.challenge')
+                                    : context.tr('ah.card.quest'),
                                 bg: const Color(0xFF090909),
                                 fg: Colors.white,
                                 height: 24,
@@ -209,6 +215,16 @@ class _HabitCardState extends State<HabitCard>
                             ),
                           ],
                         ),
+                        if (widget.isCompleted) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            context.tr('ah.card.completed'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
                         if (!widget.isCompleted) ...[
                           const SizedBox(height: 8),
                           Wrap(
@@ -243,6 +259,10 @@ class _HabitCardState extends State<HabitCard>
                                 ),
                             ],
                           ),
+                          if (widget.habit.subHabits.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            _buildSubProgress(),
+                          ],
                         ],
                       ],
                     ),
@@ -258,37 +278,49 @@ class _HabitCardState extends State<HabitCard>
           SizeTransition(
             sizeFactor: _expansionAnimation,
             child: Container(
-              margin: const EdgeInsets.only(top: 6),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              margin: const EdgeInsets.fromLTRB(14, 3, 14, 0),
+              padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
               decoration: BoxDecoration(
                 color: theme.cardColor,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(26),
+                  bottomRight: Radius.circular(26),
+                ),
                 boxShadow: theme.softShadow,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ─── دکمه‌های عملیات ───
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: (isChallenge || isQuest)
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.spaceAround,
                     children: [
                       _buildActionButton(
                         icon: widget.isCompleted
-                            ? Icons.refresh
-                            : Icons.check_circle_outline,
-                        label: widget.isCompleted ? 'برگردان' : 'انجام',
-                        color:
-                            widget.isCompleted ? Colors.orange : primaryColor,
+                            ? Icons.refresh_rounded
+                            : Icons.check_circle_outline_rounded,
+                        label: widget.isCompleted
+                            ? context.tr('ah.card.undo')
+                            : context.tr('ah.card.done'),
+                        bg: widget.isCompleted
+                            ? theme.tone(Tone.peach).bg
+                            : theme.primarySoft,
+                        fg: widget.isCompleted
+                            ? theme.tone(Tone.peach).fg
+                            : theme.textColor,
                         onTap: widget.onToggle,
-                        isCompleted: widget.isCompleted,
+                        theme: theme,
                       ),
+                      if (isChallenge || isQuest) const SizedBox(width: 36),
                       _buildActionButton(
-                        icon: Icons.info_outline,
-                        label: 'جزئیات',
-                        color: const Color(0xFF3B82F6),
+                        icon: Icons.info_outline_rounded,
+                        label: context.tr('ah.card.details'),
+                        bg: theme.tone(Tone.sky).bg,
+                        fg: theme.tone(Tone.sky).fg,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -298,78 +330,75 @@ class _HabitCardState extends State<HabitCard>
                             ),
                           );
                         },
-                        isCompleted: widget.isCompleted,
+                        theme: theme,
                       ),
                       if (!isChallenge && !isQuest && widget.onTimer != null)
                         _buildActionButton(
                           icon: Icons.timer_outlined,
-                          label: 'تایمر',
-                          color: const Color(0xFF8B5CF6),
+                          label: context.tr('ah.card.timer'),
+                          bg: theme.tone(Tone.lilac).bg,
+                          fg: theme.tone(Tone.lilac).fg,
                           onTap: widget.onTimer!,
-                          isCompleted: widget.isCompleted,
+                          theme: theme,
                         ),
                       if (!isChallenge && !isQuest)
                         _buildActionButton(
                           icon: Icons.edit_outlined,
-                          label: 'ویرایش',
-                          color: const Color(0xFFF59E0B),
+                          label: context.tr('ah.card.edit'),
+                          bg: theme.tone(Tone.peach).bg,
+                          fg: theme.tone(Tone.peach).fg,
                           onTap: widget.onEdit,
-                          isCompleted: widget.isCompleted,
+                          theme: theme,
                         ),
                       if (!isChallenge && !isQuest)
                         _buildActionButton(
-                          icon: Icons.delete_outline,
-                          label: 'حذف',
-                          color: const Color(0xFFEF4444),
+                          icon: Icons.delete_outline_rounded,
+                          label: context.tr('ah.card.delete'),
+                          bg: theme.tone(Tone.rose).bg,
+                          fg: theme.tone(Tone.rose).fg,
                           onTap: widget.onDelete,
-                          isCompleted: widget.isCompleted,
+                          theme: theme,
                         ),
                     ],
                   ),
 
                   // لیست زیرعادت‌ها
                   if (widget.habit.subHabits.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Divider(height: 1, color: theme.borderColor),
                     const SizedBox(height: 8),
                     ...widget.habit.subHabits.map((subHabit) {
                       final isChecked =
                           widget.habit.completedSubHabits.contains(subHabit);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: InkWell(
-                          onTap: widget.isCompleted
-                              ? null
-                              : () => widget.onToggleSubHabit?.call(subHabit),
-                          borderRadius: BorderRadius.circular(8),
+                      return InkWell(
+                        onTap: widget.isCompleted
+                            ? null
+                            : () => widget.onToggleSubHabit?.call(subHabit),
+                        borderRadius: BorderRadius.circular(14),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 40),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 6,
+                              horizontal: 6,
+                              vertical: 4,
                             ),
                             child: Row(
                               children: [
                                 AnimatedContainer(
                                   duration: const Duration(milliseconds: 200),
-                                  width: 22,
-                                  height: 22,
+                                  width: 28,
+                                  height: 28,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isChecked
                                         ? primaryColor
-                                        : Colors.transparent,
-                                    border: Border.all(
-                                      color: isChecked
-                                          ? primaryColor
-                                          : theme.textSecondaryColor,
-                                      width: 1.8,
-                                    ),
+                                        : theme.cardSecondaryColor,
                                   ),
                                   child: isChecked
-                                      ? const Icon(
-                                          Icons.check,
-                                          size: 14,
-                                          color: Colors.white,
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 16,
+                                          color: theme.onPrimaryColor,
                                         )
                                       : null,
                                 ),
@@ -378,7 +407,7 @@ class _HabitCardState extends State<HabitCard>
                                   child: Text(
                                     subHabit,
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       color: isChecked
                                           ? theme.textSecondaryColor
                                           : theme.textColor,
@@ -404,6 +433,51 @@ class _HabitCardState extends State<HabitCard>
     );
   }
 
+  /// نوار پیشرفت زیرعادت‌ها روی کارت رنگی
+  Widget _buildSubProgress() {
+    final int total = widget.habit.subHabits.length;
+    final int done = widget.habit.subHabits
+        .where((s) => widget.habit.completedSubHabits.contains(s))
+        .length;
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: Stack(
+              children: [
+                Container(
+                  height: 6,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+                FractionallySizedBox(
+                  alignment: AlignmentDirectional.centerStart,
+                  widthFactor: total == 0 ? 0 : done / total,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF090909),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          context.tr('ah.card.progress', {'a': '$done', 'b': '$total'}),
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF090909),
+          ),
+        ),
+      ],
+    );
+  }
+
   /// فرمت زمان به صورت خوانا
   /// - کمتر از 1 دقیقه: "45s"
   /// - بین 1 تا 60 دقیقه: "5m"
@@ -422,55 +496,6 @@ class _HabitCardState extends State<HabitCard>
       return '${hours}h';
     }
     return '${hours}h ${remainingMinutes}m';
-  }
-
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    bool isCompleted = false,
-    required ThemeProvider theme,
-  }) {
-    // روی کارت رنگی (فعال)، چیپ همیشه روشن با متن مشکی
-    // روی کارت تکمیل‌شده، چیپ با تم هماهنگ میشه
-    final bool isOnColoredCard = !widget.isCompleted;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: isOnColoredCard
-            ? Colors.white.withOpacity(0.6)
-            : (theme.isDarkMode
-                ? Colors.white.withOpacity(0.15)
-                : Colors.white.withOpacity(0.6)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: isOnColoredCard
-                  ? const Color(0xFF090909)
-                  : (theme.isDarkMode ? Colors.white : const Color(0xFF090909)),
-            ),
-          ),
-          const SizedBox(width: 2),
-          Icon(
-            icon,
-            size: 11,
-            color: (isOnColoredCard
-                    ? const Color(0xFF090909)
-                    : (theme.isDarkMode
-                        ? Colors.white
-                        : const Color(0xFF090909)))
-                .withOpacity(0.6),
-          ),
-        ],
-      ),
-    );
   }
 
   /// چیپ کوچک گرد؛ پیش‌فرض سفید نیمه‌شفاف روی کارت رنگی
@@ -512,39 +537,29 @@ class _HabitCardState extends State<HabitCard>
   Widget _buildActionButton({
     required IconData icon,
     required String label,
-    required Color color,
+    required Color bg,
+    required Color fg,
     required VoidCallback onTap,
-    bool isCompleted = false,
+    required ThemeProvider theme,
   }) {
-    final Color finalColor = isCompleted ? Colors.grey.shade500 : color;
-
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: finalColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: finalColor.withOpacity(0.25),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(icon, size: 16, color: Colors.white),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+            child: Icon(icon, size: 22, color: fg),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
-              fontSize: 9,
-              color: finalColor,
+              fontSize: 12,
+              color: theme.textColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -582,16 +597,15 @@ class _HabitCardState extends State<HabitCard>
 
   String _getTimeOfDayText(String timeOfDay) {
     switch (timeOfDay) {
-      case 'morning':
-        return 'صبح';
       case 'noon':
-        return 'ظهر';
+        return context.tr('ah.tod.noon');
       case 'afternoon':
-        return 'بعدازظهر';
+        return context.tr('ah.tod.afternoon');
       case 'night':
-        return 'شب';
+        return context.tr('ah.tod.night');
+      case 'morning':
       default:
-        return 'صبح';
+        return context.tr('ah.tod.morning');
     }
   }
 }

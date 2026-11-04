@@ -40,11 +40,15 @@ class _ArenaScreenState extends State<ArenaScreen>
   double _currentProgress = 0.0;
   double _targetProgress = 0.0;
 
-  final List<String> _tabs = ['امروز', 'عادت‌ها', 'وظیفه‌ها'];
-  final List<IconData> _icons = [
-    Icons.today_outlined,
-    Icons.fitness_center_outlined,
-    Icons.assignment_outlined,
+  static const List<String> _tabKeys = [
+    'ah.tab.today',
+    'ah.tab.habits',
+    'ah.tab.tasks',
+  ];
+  static const List<IconData> _icons = [
+    Icons.today_rounded,
+    Icons.fitness_center_rounded,
+    Icons.assignment_rounded,
   ];
 
   bool _isMenuOpen = false;
@@ -81,7 +85,7 @@ class _ArenaScreenState extends State<ArenaScreen>
   }
 
   Future<void> _loadProgress() async {
-    _updateProgressAnimated(0.65);
+    _updateProgressAnimated(0.0);
   }
 
   void _updateProgressAnimated(double newProgress) {
@@ -188,58 +192,59 @@ class _ArenaScreenState extends State<ArenaScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = themeProvider.primaryColor;
+    final double bottomInset = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       backgroundColor: themeProvider.backgroundColor,
       body: Stack(
         children: [
-      Column(
-        children: [
-          // هدر تقویم
-          CalendarHeader(
-            onDateSelected: _onDateSelected,
-            selectedDate: _selectedDate,
-          ),
+          Column(
+            children: [
+              // هدر تقویم
+              CalendarHeader(
+                onDateSelected: _onDateSelected,
+                selectedDate: _selectedDate,
+              ),
 
-          const SizedBox(height: 4),
+              const SizedBox(height: 4),
 
-          // نوار وضعیت
-          Consumer<SyncProvider>(
-            builder: (context, syncProvider, child) {
-              if (!syncProvider.isOnline || syncProvider.hasOfflineOperations) {
-                return _buildOfflineStatusBar(syncProvider, themeProvider);
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+              // نوار وضعیت
+              Consumer<SyncProvider>(
+                builder: (context, syncProvider, child) {
+                  if (!syncProvider.isOnline ||
+                      syncProvider.hasOfflineOperations) {
+                    return _buildOfflineStatusBar(syncProvider, themeProvider);
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
 
-          // پروگرس بار
-          _buildHorizontalProgressBar(themeProvider),
+              // کارت پیشرفت
+              _buildHeroProgressCard(themeProvider),
 
-          // تب‌بار
-          _buildPillTabBar(themeProvider),
+              // تب‌بار
+              _buildPillTabBar(themeProvider),
 
-          const SizedBox(height: 4),
+              const SizedBox(height: 4),
 
-          // فهرست‌ها مستقیم روی پس‌زمینه (طراحی: بدون کادر بزرگ)
-          Expanded(
-            child: IndexedStack(
-              index: _selectedIndex,
-              children: [
-                TodayTab(
-                  key: _todayTabKey,
-                  selectedDate: _selectedDate,
-                  profileRefreshNotifier: widget.profileRefreshNotifier,
-                  onProgressUpdate: updateProgress,
+              // فهرست‌ها مستقیم روی پس‌زمینه (طراحی: بدون کادر بزرگ)
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    TodayTab(
+                      key: _todayTabKey,
+                      selectedDate: _selectedDate,
+                      profileRefreshNotifier: widget.profileRefreshNotifier,
+                      onProgressUpdate: updateProgress,
+                    ),
+                    HabitsTab(key: _habitsTabKey),
+                    TasksTab(key: _tasksTabKey),
+                  ],
                 ),
-                HabitsTab(key: _habitsTabKey),
-                TasksTab(key: _tasksTabKey),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
           // محو شدن پایین لیست زیر نوار ناوبری (مثل طراحی)
           Positioned(
             left: 0,
@@ -262,11 +267,36 @@ class _ArenaScreenState extends State<ArenaScreen>
               ),
             ),
           ),
+          // پردهٔ تیره پشت منوی افزودن
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !_isMenuOpen,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleMenu,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  opacity: _isMenuOpen ? 1.0 : 0.0,
+                  child: Container(
+                    color: const Color(0xFF090909).withValues(alpha: 0.42),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // گزینه‌های منوی افزودن (بالای دکمه)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 72 + bottomInset + 98,
+            child: _buildFabOptions(themeProvider),
+          ),
           // دکمهٔ افزودن بالای نوار ناوبری
           Positioned(
             left: 0,
             right: 0,
-            bottom: 98 + MediaQuery.of(context).padding.bottom,
+            bottom: 98 + bottomInset,
             child: Center(child: _buildFloatingMenuButton(themeProvider)),
           ),
         ],
@@ -274,13 +304,21 @@ class _ArenaScreenState extends State<ArenaScreen>
     );
   }
 
-  // ==================== پروگرس بار افقی ====================
+  // ==================== کارت پیشرفت ====================
 
-  Widget _buildHorizontalProgressBar(ThemeProvider theme) {
-    final int percent = (_currentProgress * 100).toInt();
-    final bool done = _currentProgress >= 1.0;
+  String _motivationKey(double p) {
+    if (p >= 1.0) return 'ah.hero.t3';
+    if (p >= 0.5) return 'ah.hero.t2';
+    if (p > 0) return 'ah.hero.t1';
+    return 'ah.hero.t0';
+  }
+
+  Widget _buildHeroProgressCard(ThemeProvider theme) {
+    final double p = _currentProgress.clamp(0.0, 1.0);
+    final int percent = (p * 100).round();
+    final bool done = p >= 1.0;
     final Color fill = theme.primaryColor;
-    final trackColor = theme.cardSecondaryColor;
+    final Color trackColor = theme.cardSecondaryColor;
     final mint = theme.tone(Tone.mint);
 
     Widget badge(IconData icon, bool active) => Container(
@@ -297,9 +335,16 @@ class _ArenaScreenState extends State<ArenaScreen>
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [
+            Color.alphaBlend(fill.withValues(alpha: 0.16), theme.cardColor),
+            theme.cardColor,
+          ],
+        ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: theme.softShadow,
       ),
@@ -307,7 +352,64 @@ class _ArenaScreenState extends State<ArenaScreen>
         children: [
           Row(
             children: [
-              badge(Icons.bolt_rounded, _currentProgress > 0),
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: CustomPaint(
+                  painter: _ProgressRingPainter(
+                    progress: p,
+                    color: done ? mint.fg : fill,
+                    track: trackColor,
+                    strokeWidth: 8,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$percent%',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: theme.textColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr('ah.hero.sub'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Text(
+                        context.tr(_motivationKey(p)),
+                        key: ValueKey(_motivationKey(p)),
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.5,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              badge(Icons.bolt_rounded, p > 0),
               const SizedBox(width: 8),
               Expanded(
                 child: ClipRRect(
@@ -316,10 +418,11 @@ class _ArenaScreenState extends State<ArenaScreen>
                     children: [
                       Container(height: 14, color: trackColor),
                       TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: _currentProgress.clamp(0.0, 1.0)),
+                        tween: Tween(begin: 0, end: p),
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeOutCubic,
                         builder: (context, v, _) => FractionallySizedBox(
+                          alignment: AlignmentDirectional.centerStart,
                           widthFactor: v,
                           child: Container(
                             height: 14,
@@ -338,34 +441,6 @@ class _ArenaScreenState extends State<ArenaScreen>
               badge(Icons.emoji_events_rounded, done),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: done ? mint.bg : theme.primarySoft,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  done ? Icons.emoji_events_rounded : Icons.trending_up_rounded,
-                  size: 16,
-                  color: done ? mint.fg : theme.textColor,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$percent%',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: theme.textColor,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -374,6 +449,7 @@ class _ArenaScreenState extends State<ArenaScreen>
   // ==================== تب‌بار گرد ====================
 
   Widget _buildPillTabBar(ThemeProvider theme) {
+    final int n = _tabKeys.length;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       padding: const EdgeInsets.all(4),
@@ -383,224 +459,198 @@ class _ArenaScreenState extends State<ArenaScreen>
         borderRadius: BorderRadius.circular(30),
         boxShadow: theme.softShadow,
       ),
-      child: Row(
+      child: Stack(
         children: [
-          for (var i = 0; i < _tabs.length; i++)
-            Expanded(
-              flex: _selectedIndex == i ? 13 : 10,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _onTabChanged(i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _selectedIndex == i
-                        ? theme.primaryColor
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(26),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _icons[i],
-                        size: 20,
-                        color: _selectedIndex == i
+          // نشانگر متحرک
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            alignment: AlignmentDirectional(
+                -1.0 + (2.0 * _selectedIndex / (n - 1)), 0),
+            child: FractionallySizedBox(
+              widthFactor: 1 / n,
+              heightFactor: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.primaryColor,
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.primaryColor.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              for (var i = 0; i < n; i++)
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _onTabChanged(i),
+                    child: TweenAnimationBuilder<Color?>(
+                      tween: ColorTween(
+                        end: _selectedIndex == i
                             ? theme.onPrimaryColor
                             : theme.textSecondaryColor,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _tabs[i],
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: _selectedIndex == i
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                          color: _selectedIndex == i
-                              ? theme.onPrimaryColor
-                              : theme.textSecondaryColor,
-                        ),
+                      duration: const Duration(milliseconds: 260),
+                      builder: (context, color, _) => Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_icons[i], size: 20, color: color),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              context.tr(_tabKeys[i]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: _selectedIndex == i
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: color,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ==================== Floating Menu Button ====================
+  // ==================== منوی افزودن (FAB) ====================
+
+  Widget _buildFabOptions(ThemeProvider theme) {
+    Widget option({
+      required int order,
+      required IconData icon,
+      required String label,
+      required Color bg,
+      required Color fg,
+      required VoidCallback onTap,
+    }) {
+      return AnimatedSlide(
+        duration: Duration(milliseconds: 240 + order * 60),
+        curve: Curves.easeOutBack,
+        offset: _isMenuOpen ? Offset.zero : const Offset(0, 0.6),
+        child: AnimatedOpacity(
+          duration: Duration(milliseconds: 180 + order * 60),
+          opacity: _isMenuOpen ? 1.0 : 0.0,
+          child: IgnorePointer(
+            ignoring: !_isMenuOpen,
+            child: GestureDetector(
+              onTap: onTap,
+              child: Container(
+                height: 60,
+                padding: const EdgeInsetsDirectional.only(start: 22, end: 10),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF090909).withValues(alpha: 0.2),
+                      blurRadius: 30,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: theme.textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+                      child: Icon(icon, size: 22, color: fg),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final taskTone = theme.tone(Tone.peach);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        option(
+          order: 1,
+          icon: Icons.fitness_center_rounded,
+          label: context.tr('ah.fab.habit'),
+          bg: theme.primarySoft,
+          fg: theme.textColor,
+          onTap: _openAddHabit,
+        ),
+        const SizedBox(height: 12),
+        option(
+          order: 0,
+          icon: Icons.assignment_turned_in_rounded,
+          label: context.tr('ah.fab.task'),
+          bg: taskTone.bg,
+          fg: taskTone.fg,
+          onTap: _openAddTask,
+        ),
+      ],
+    );
+  }
 
   Widget _buildFloatingMenuButton(ThemeProvider theme) {
     final Color primaryColor = theme.primaryColor;
-    final double totalWidth = 320;
-    final double buttonSize = 56;
-
-    return SizedBox(
-      width: totalWidth,
-      height: 50,
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          AnimatedPositioned(
+    return Semantics(
+      button: true,
+      label: context.tr('ah.fab.add'),
+      child: GestureDetector(
+        onTap: _toggleMenu,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: primaryColor,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withValues(alpha: 0.4),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: AnimatedRotation(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            left: _isMenuOpen ? 0 : (totalWidth / 2) - 40,
-            bottom: _isMenuOpen ? 0 : -30,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: _isMenuOpen ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: !_isMenuOpen,
-                child: _buildSideMenuItem(
-                  icon: Icons.fitness_center,
-                  label: 'عادت جدید',
-                  color: primaryColor,
-                  theme: theme,
-                  onTap: _openAddHabit,
-                ),
-              ),
+            curve: Curves.easeOutBack,
+            turns: _isMenuOpen ? 0.125 : 0.0,
+            child: Icon(
+              Icons.add_rounded,
+              color: theme.onPrimaryColor,
+              size: 32,
             ),
           ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            right: _isMenuOpen ? 0 : (totalWidth / 2) - 40,
-            bottom: _isMenuOpen ? 0 : -30,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 200),
-              opacity: _isMenuOpen ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: !_isMenuOpen,
-                child: _buildSideMenuItem(
-                  icon: Icons.assignment,
-                  label: 'وظیفه جدید',
-                  color: primaryColor,
-                  theme: theme,
-                  onTap: _openAddTask,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: GestureDetector(
-                onTap: _toggleMenu,
-                child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOutCubic,
-                  turns: _isMenuOpen ? 0.125 : 0.0,
-                  child: Container(
-                    width: buttonSize,
-                    height: buttonSize,
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withValues(alpha: 0.4),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) {
-                        return ScaleTransition(
-                          scale: animation,
-                          child: FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: Icon(
-                        _isMenuOpen ? Icons.close : Icons.add,
-                        key: ValueKey(_isMenuOpen),
-                        color: theme.isDarkMode
-                            ? const Color(0xFF090909)
-                            : const Color(0xFF090909),
-                        size: 32,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== ویجت دکمه‌های کناری ====================
-
-  Widget _buildSideMenuItem({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required ThemeProvider theme,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: color.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: theme.textColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -658,12 +708,12 @@ class _ArenaScreenState extends State<ArenaScreen>
             ),
           ),
           if (syncProvider.hasOfflineOperations && syncProvider.isOnline)
-            const SizedBox(
+            SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Color(0xFFB0CC5D),
+                color: statusColor,
               ),
             ),
           if (syncProvider.isOnline)
@@ -681,303 +731,44 @@ class _ArenaScreenState extends State<ArenaScreen>
   }
 }
 
-// ==================== ویجت‌های کمکی تب‌بار ====================
+// ==================== حلقهٔ پیشرفت ====================
 
-class _TabBarItem {
-  final IconData icon;
-  final String label;
+class _ProgressRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  final Color track;
+  final double strokeWidth;
 
-  const _TabBarItem({
-    required this.icon,
-    required this.label,
-  });
-}
-
-class _CustomTabBar extends StatefulWidget {
-  final int currentIndex;
-  final Function(int) onTap;
-  final List<_TabBarItem> items;
-  final Color primaryColor;
-  final ThemeProvider themeProvider;
-
-  final double spacing;
-  final double height;
-  final double selectedCircleSize;
-
-  const _CustomTabBar({
-    required this.currentIndex,
-    required this.onTap,
-    required this.items,
-    required this.primaryColor,
-    required this.themeProvider,
-    this.spacing = 8.0,
-    this.height = 62.0,
-    this.selectedCircleSize = 46.0,
+  const _ProgressRingPainter({
+    required this.progress,
+    required this.color,
+    required this.track,
+    required this.strokeWidth,
   });
 
   @override
-  State<_CustomTabBar> createState() => _CustomTabBarState();
-}
-
-class _CustomTabBarState extends State<_CustomTabBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-
-  static const double _horizontalPadding = 8;
-  static const double _iconSize = 20;
-  static const double _selectedIconSize = 20;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 280),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(
-      begin: widget.currentIndex.toDouble(),
-      end: widget.currentIndex.toDouble(),
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOutCubic,
-      ),
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.6,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutBack,
-      ),
-    );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _animationController.forward();
-      }
-    });
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = (size.shortestSide - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..color = track;
+    canvas.drawCircle(center, radius, trackPaint);
+    if (progress <= 0) return;
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+    canvas.drawArc(rect, -1.5707963, 6.2831853 * progress, false, arcPaint);
   }
 
   @override
-  void didUpdateWidget(_CustomTabBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      _slideAnimation = Tween<double>(
-        begin: oldWidget.currentIndex.toDouble(),
-        end: widget.currentIndex.toDouble(),
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Curves.easeInOutCubic,
-        ),
-      );
-      _scaleAnimation = Tween<double>(
-        begin: 0.6,
-        end: 1.0,
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Curves.easeOutBack,
-        ),
-      );
-      _animationController.forward(from: 0.0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = widget.themeProvider;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: LayoutBuilder(
-          builder: (context, outerConstraints) {
-            final double availableWidth =
-                outerConstraints.maxWidth - (_horizontalPadding * 2);
-
-            final double totalSpacing =
-                widget.spacing * (widget.items.length - 1);
-            final double itemWidth =
-                (availableWidth - totalSpacing) / widget.items.length;
-
-            return Container(
-              height: widget.height,
-              padding: EdgeInsets.symmetric(horizontal: _horizontalPadding),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: BorderRadius.circular(widget.height / 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: theme.isDarkMode ? 0.3 : 0.06,
-                    ),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: theme.isDarkMode ? 0.4 : 0.10,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: theme.isDarkMode ? 0.3 : 0.08,
-                    ),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  AnimatedBuilder(
-                    animation: _slideAnimation,
-                    builder: (context, child) {
-                      final double progress = _slideAnimation.value;
-                      final double leftPosition =
-                          progress * (itemWidth + widget.spacing);
-
-                      return Positioned(
-                        left: leftPosition,
-                        top: (widget.height - widget.selectedCircleSize) / 2,
-                        child: AnimatedBuilder(
-                          animation: _scaleAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _scaleAnimation.value,
-                              child: Container(
-                                width: itemWidth,
-                                height: widget.selectedCircleSize,
-                                decoration: BoxDecoration(
-                                  color: widget.primaryColor,
-                                  borderRadius: BorderRadius.circular(
-                                    widget.selectedCircleSize / 2,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      widget.items[widget.currentIndex].icon,
-                                      color: const Color(0xFF090909),
-                                      size: _selectedIconSize,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Directionality(
-                                      textDirection: TextDirection.rtl,
-                                      child: Text(
-                                        widget.items[widget.currentIndex].label,
-                                        style: const TextStyle(
-                                          color: Color(0xFF090909),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: List.generate(widget.items.length, (index) {
-                      final isActive = index == widget.currentIndex;
-
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          right: index < widget.items.length - 1
-                              ? widget.spacing
-                              : 0,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            if (widget.currentIndex != index) {
-                              widget.onTap(index);
-                            }
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: SizedBox(
-                            width: itemWidth,
-                            height: widget.height,
-                            child: isActive
-                                ? const SizedBox()
-                                : Center(
-                                    child: Icon(
-                                      widget.items[index].icon,
-                                      color: theme.textSecondaryColor,
-                                      size: _iconSize,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomNotchClipper extends CustomClipper<Path> {
-  const _BottomNotchClipper();
-
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    final double notchRadius = 40;
-    final double notchCenterX = size.width / 2;
-
-    path.moveTo(0, 0);
-    path.lineTo(size.width, 0);
-    path.quadraticBezierTo(size.width, 0, size.width, 16);
-    path.lineTo(size.width, size.height - 16);
-    path.quadraticBezierTo(
-        size.width, size.height, size.width - 16, size.height);
-    path.lineTo(notchCenterX + notchRadius + 8, size.height);
-    path.arcToPoint(
-      Offset(notchCenterX - notchRadius - 8, size.height),
-      radius: Radius.circular(notchRadius + 8),
-      clockwise: false,
-    );
-    path.lineTo(16, size.height);
-    path.quadraticBezierTo(0, size.height, 0, size.height - 16);
-    path.lineTo(0, 16);
-    path.quadraticBezierTo(0, 0, 0, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
-    return true;
-  }
+  bool shouldRepaint(covariant _ProgressRingPainter old) =>
+      old.progress != progress ||
+      old.color != color ||
+      old.track != track ||
+      old.strokeWidth != strokeWidth;
 }
