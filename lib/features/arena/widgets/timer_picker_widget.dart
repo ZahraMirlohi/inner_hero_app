@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 
 class TimerPickerWidget extends StatefulWidget {
@@ -25,131 +26,144 @@ class TimerPickerWidget extends StatefulWidget {
 class _TimerPickerWidgetState extends State<TimerPickerWidget> {
   late int _minutes;
   late int _seconds;
+  late FixedExtentScrollController _minutesController;
+  late FixedExtentScrollController _secondsController;
 
   @override
   void initState() {
     super.initState();
-    _minutes = widget.initialMinutes;
-    _seconds = widget.initialSeconds;
+    _minutes = widget.initialMinutes.clamp(0, 60).toInt();
+    _seconds = widget.initialSeconds.clamp(0, 59).toInt();
+    _minutesController = FixedExtentScrollController(initialItem: _minutes);
+    _secondsController = FixedExtentScrollController(initialItem: _seconds);
+  }
+
+  @override
+  void dispose() {
+    _minutesController.dispose();
+    _secondsController.dispose();
+    super.dispose();
+  }
+
+  Widget _wheel({
+    required ThemeProvider theme,
+    required String title,
+    required FixedExtentScrollController controller,
+    required int count,
+    required int selected,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Column(
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: theme.textSecondaryColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          width: 88,
+          height: 160,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: theme.cardSecondaryColor,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              IgnorePointer(
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: theme.primarySoft,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+              ),
+              ListWheelScrollView.useDelegate(
+                controller: controller,
+                itemExtent: 40,
+                diameterRatio: 100,
+                perspective: 0.0001,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (index) {
+                  setState(() {
+                    if (identical(controller, _minutesController)) {
+                      _minutes = index;
+                    } else {
+                      _seconds = index;
+                    }
+                  });
+                  onChanged(index);
+                },
+                childDelegate: ListWheelChildBuilderDelegate(
+                  childCount: count,
+                  builder: (context, index) {
+                    final dist = (index - selected).abs();
+                    return Center(
+                      child: Opacity(
+                        opacity: dist == 0 ? 1 : (dist == 1 ? 0.5 : 0.22),
+                        child: Text(
+                          index.toString().padLeft(2, '0'),
+                          style: TextStyle(
+                            fontSize: dist == 0 ? 20 : 16,
+                            fontWeight:
+                                dist == 0 ? FontWeight.w800 : FontWeight.w600,
+                            color: theme.textColor,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = theme.primaryColor;
-
-    // رنگ پس‌زمینه باکس‌ها بر اساس تم
-    final Color wheelBg =
-        theme.isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFF7FCEB);
+    final theme = context.watch<ThemeProvider>();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // انتخاب دقیقه
-        Column(
-          children: [
-            Text(
-              'دقیقه',
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 80,
-              height: 120,
-              decoration: BoxDecoration(
-                color: wheelBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.borderColor),
-              ),
-              child: ListWheelScrollView(
-                itemExtent: 40,
-                diameterRatio: 1.5,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _minutes = index;
-                  });
-                  widget.onMinutesChanged(index);
-                },
-                children: List.generate(61, (index) {
-                  final isSelected = index == _minutes;
-                  return Center(
-                    child: Text(
-                      index.toString().padLeft(2, '0'),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected
-                            ? primaryColor
-                            : theme.textSecondaryColor,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ],
+        _wheel(
+          theme: theme,
+          title: context.tr('af.timer.minutes'),
+          controller: _minutesController,
+          count: 61,
+          selected: _minutes,
+          onChanged: widget.onMinutesChanged,
         ),
-        const SizedBox(width: 16),
-        Text(
-          ':',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: theme.textColor,
+        const SizedBox(width: 14),
+        Padding(
+          padding: const EdgeInsets.only(top: 22),
+          child: Text(
+            ':',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: theme.textColor,
+            ),
           ),
         ),
-        const SizedBox(width: 16),
-        // انتخاب ثانیه
-        Column(
-          children: [
-            Text(
-              'ثانیه',
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 80,
-              height: 120,
-              decoration: BoxDecoration(
-                color: wheelBg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.borderColor),
-              ),
-              child: ListWheelScrollView(
-                itemExtent: 40,
-                diameterRatio: 1.5,
-                onSelectedItemChanged: (index) {
-                  setState(() {
-                    _seconds = index;
-                  });
-                  widget.onSecondsChanged(index);
-                },
-                children: List.generate(60, (index) {
-                  final isSelected = index == _seconds;
-                  return Center(
-                    child: Text(
-                      index.toString().padLeft(2, '0'),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected
-                            ? primaryColor
-                            : theme.textSecondaryColor,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ],
+        const SizedBox(width: 14),
+        _wheel(
+          theme: theme,
+          title: context.tr('af.timer.seconds'),
+          controller: _secondsController,
+          count: 60,
+          selected: _seconds,
+          onChanged: widget.onSecondsChanged,
         ),
       ],
     );
