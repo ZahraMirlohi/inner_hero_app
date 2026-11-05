@@ -1,5 +1,6 @@
 // lib/features/profile/screens/analytics_detail_screen.dart
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
@@ -35,6 +36,9 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
   // آمار امروز (کارت مشکی بالای صفحه)
   final ValueNotifier<int> _tick = ValueNotifier<int>(0);
+  Map<String, double> _habitRates = {};
+  int _maxXpInDay = 0;
+  int _maxItemsInDay = 0;
   int _tHabitsDone = 0, _tHabitsTotal = 0;
   int _tTasksDone = 0, _tTasksTotal = 0;
   int _tChDone = 0, _tChTotal = 0;
@@ -159,11 +163,16 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           .order('date', ascending: false);
 
       final Map<String, List<DateTime>> habitCompletions = {};
+      final Map<String, int> perDay = {};
       for (var item in response) {
         final habitId = item['habit_id'] as String;
         final date = DateTime.parse(item['date'] as String);
         habitCompletions.putIfAbsent(habitId, () => []).add(date);
+        final key = (item['date'] as String).split('T').first;
+        perDay[key] = (perDay[key] ?? 0) + 1;
       }
+      _maxItemsInDay =
+          perDay.values.fold<int>(0, (m, v) => v > m ? v : m);
 
       for (var habit in _habits) {
         final completions = habitCompletions[habit.id] ?? [];
@@ -1045,7 +1054,6 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
         child: Container(
           width: 40,
           height: 40,
-          semanticLabel: label,
           decoration: BoxDecoration(
             color: theme.cardSecondaryColor,
             shape: BoxShape.circle,
