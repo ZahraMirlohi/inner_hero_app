@@ -2415,7 +2415,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showEditDialog(String label, String currentValue) {
     final controller = TextEditingController(text: currentValue);
-    final Color ink = _piInk;
+    const Color ink = Color(0xFF090909);
 
     showDialog(
       context: context,

@@ -9,6 +9,8 @@ import '/features/arena/models/habit_model.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/providers/calendar_provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 
 class AnalyticsDetailScreen extends StatefulWidget {
   final String userId;
@@ -30,6 +32,13 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
   int _bestStreak = 0;
   Habit? _bestStreakHabit;
   bool _isLoading = true;
+
+  // آمار امروز (کارت مشکی بالای صفحه)
+  final ValueNotifier<int> _tick = ValueNotifier<int>(0);
+  int _tHabitsDone = 0, _tHabitsTotal = 0;
+  int _tTasksDone = 0, _tTasksTotal = 0;
+  int _tChDone = 0, _tChTotal = 0;
+  int _tQuDone = 0, _tQuTotal = 0;
 
   List<double> _successData = [0.2, 0.5, 0.3, 0.7, 0.4, 0.6, 0.1];
 
