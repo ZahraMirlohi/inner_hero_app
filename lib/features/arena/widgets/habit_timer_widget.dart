@@ -371,3 +371,112 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
     );
   }
 }
+
+/// دیالوگ پایان تایمر (ArenaTimerEnd). اگر کاربر «بله، انجام شد» را بزند true برمی‌گرداند.
+Future<bool?> showHabitTimerEndDialog(BuildContext context, String habitTitle) {
+  return showDialog<bool>(
+    context: context,
+    barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
+    builder: (ctx) {
+      final theme = Provider.of<ThemeProvider>(ctx);
+      final bool dark = theme.isDarkMode;
+      final Color accent = theme.effectivePrimary;
+      final Color ink = dark ? theme.textColor : const Color(0xFF090909);
+      return Dialog(
+        backgroundColor: theme.cardColor,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 28, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.celebration_rounded, size: 36, color: ink),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                ctx.tr('ad.tmr.endTitle'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                ctx.tr('ad.tmr.endQuestion', {'t': habitTitle}),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.8,
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 10,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Container(
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: theme.cardSecondaryColor,
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: Text(
+                          ctx.tr('ad.tmr.notYet'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: theme.textColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 13,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: Container(
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: dark ? accent : const Color(0xFF090909),
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: Text(
+                          ctx.tr('ad.tmr.yesDone'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: dark ? theme.onPrimaryColor : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}

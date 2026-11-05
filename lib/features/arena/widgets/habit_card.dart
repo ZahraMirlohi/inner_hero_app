@@ -122,10 +122,171 @@ class _HabitCardState extends State<HabitCard>
             ? const Color(0xFF090909) // روی کارت رنگی، آیکون مشکی
             : cardColor); // روی کارت مشکی، آیکون هم‌رنگ کارت
 
+    // کشو زیر کارت قرار می‌گیرد و ۱۴ پیکسل زیر آن می‌رود (طبق ArenaDrawer)؛
+    // با verticalDirection.up کارت بالای کشو رسم می‌شود.
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
+        verticalDirection: VerticalDirection.up,
         children: [
+          // ============================================================
+          // EXPANDED DRAWER
+          // ============================================================
+          Transform.translate(
+            offset: const Offset(0, -14),
+            child: SizeTransition(
+            sizeFactor: _expansionAnimation,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+              padding: const EdgeInsets.fromLTRB(10, 28, 10, 14),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(26),
+                  bottomRight: Radius.circular(26),
+                ),
+                boxShadow: theme.softShadow,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ─── دکمه‌های عملیات ───
+                  Row(
+                    mainAxisAlignment: (isChallenge || isQuest)
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildActionButton(
+                        icon: widget.isCompleted
+                            ? Icons.refresh_rounded
+                            : Icons.check_circle_outline_rounded,
+                        label: widget.isCompleted
+                            ? context.tr('ah.card.undo')
+                            : context.tr('ah.card.done'),
+                        bg: widget.isCompleted
+                            ? theme.tone(Tone.peach).bg
+                            : theme.primarySoft,
+                        fg: widget.isCompleted
+                            ? theme.tone(Tone.peach).fg
+                            : theme.textColor,
+                        onTap: widget.onToggle,
+                        theme: theme,
+                      ),
+                      if (isChallenge || isQuest) const SizedBox(width: 36),
+                      _buildActionButton(
+                        icon: Icons.info_outline_rounded,
+                        label: context.tr('ah.card.details'),
+                        bg: theme.tone(Tone.sky).bg,
+                        fg: theme.tone(Tone.sky).fg,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  HabitDetailScreen(habit: widget.habit),
+                            ),
+                          );
+                        },
+                        theme: theme,
+                      ),
+                      if (!isChallenge && !isQuest && widget.onTimer != null)
+                        _buildActionButton(
+                          icon: Icons.timer_outlined,
+                          label: context.tr('ah.card.timer'),
+                          bg: theme.tone(Tone.lilac).bg,
+                          fg: theme.tone(Tone.lilac).fg,
+                          onTap: widget.onTimer!,
+                          theme: theme,
+                        ),
+                      if (!isChallenge && !isQuest)
+                        _buildActionButton(
+                          icon: Icons.edit_outlined,
+                          label: context.tr('ah.card.edit'),
+                          bg: theme.tone(Tone.apricot).bg,
+                          fg: theme.tone(Tone.apricot).fg,
+                          onTap: widget.onEdit,
+                          theme: theme,
+                        ),
+                      if (!isChallenge && !isQuest)
+                        _buildActionButton(
+                          icon: Icons.delete_outline_rounded,
+                          label: context.tr('ah.card.delete'),
+                          bg: theme.tone(Tone.rose).bg,
+                          fg: theme.tone(Tone.rose).fg,
+                          onTap: widget.onDelete,
+                          theme: theme,
+                        ),
+                    ],
+                  ),
+
+                  // لیست زیرعادت‌ها
+                  if (widget.habit.subHabits.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: theme.cardSecondaryColor),
+                    const SizedBox(height: 8),
+                    ...widget.habit.subHabits.map((subHabit) {
+                      final isChecked =
+                          widget.habit.completedSubHabits.contains(subHabit);
+                      return InkWell(
+                        onTap: widget.isCompleted
+                            ? null
+                            : () => widget.onToggleSubHabit?.call(subHabit),
+                        borderRadius: BorderRadius.circular(14),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 40),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isChecked
+                                        ? primaryColor
+                                        : theme.cardSecondaryColor,
+                                  ),
+                                  child: isChecked
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 16,
+                                          color: theme.onPrimaryColor,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    subHabit,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isChecked
+                                          ? theme.textSecondaryColor
+                                          : theme.textColor,
+                                      decoration: isChecked
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          ),
+
           // ============================================================
           // HEADER
           // ============================================================
@@ -140,7 +301,7 @@ class _HabitCardState extends State<HabitCard>
                 color: widget.isCompleted ? theme.cardColor : cardColor,
                 borderRadius: BorderRadius.vertical(
                   top: const Radius.circular(28),
-                  bottom: Radius.circular(_isExpanded ? 12 : 28),
+                  bottom: Radius.circular(28),
                 ),
                 boxShadow: widget.isCompleted ? theme.softShadow : null,
               ),
@@ -267,163 +428,6 @@ class _HabitCardState extends State<HabitCard>
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // ============================================================
-          // EXPANDED DRAWER
-          // ============================================================
-          SizeTransition(
-            sizeFactor: _expansionAnimation,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(14, 3, 14, 0),
-              padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(26),
-                  bottomRight: Radius.circular(26),
-                ),
-                boxShadow: theme.softShadow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ─── دکمه‌های عملیات ───
-                  Row(
-                    mainAxisAlignment: (isChallenge || isQuest)
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildActionButton(
-                        icon: widget.isCompleted
-                            ? Icons.refresh_rounded
-                            : Icons.check_circle_outline_rounded,
-                        label: widget.isCompleted
-                            ? context.tr('ah.card.undo')
-                            : context.tr('ah.card.done'),
-                        bg: widget.isCompleted
-                            ? theme.tone(Tone.peach).bg
-                            : theme.primarySoft,
-                        fg: widget.isCompleted
-                            ? theme.tone(Tone.peach).fg
-                            : theme.textColor,
-                        onTap: widget.onToggle,
-                        theme: theme,
-                      ),
-                      if (isChallenge || isQuest) const SizedBox(width: 36),
-                      _buildActionButton(
-                        icon: Icons.info_outline_rounded,
-                        label: context.tr('ah.card.details'),
-                        bg: theme.tone(Tone.sky).bg,
-                        fg: theme.tone(Tone.sky).fg,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  HabitDetailScreen(habit: widget.habit),
-                            ),
-                          );
-                        },
-                        theme: theme,
-                      ),
-                      if (!isChallenge && !isQuest && widget.onTimer != null)
-                        _buildActionButton(
-                          icon: Icons.timer_outlined,
-                          label: context.tr('ah.card.timer'),
-                          bg: theme.tone(Tone.lilac).bg,
-                          fg: theme.tone(Tone.lilac).fg,
-                          onTap: widget.onTimer!,
-                          theme: theme,
-                        ),
-                      if (!isChallenge && !isQuest)
-                        _buildActionButton(
-                          icon: Icons.edit_outlined,
-                          label: context.tr('ah.card.edit'),
-                          bg: theme.tone(Tone.peach).bg,
-                          fg: theme.tone(Tone.peach).fg,
-                          onTap: widget.onEdit,
-                          theme: theme,
-                        ),
-                      if (!isChallenge && !isQuest)
-                        _buildActionButton(
-                          icon: Icons.delete_outline_rounded,
-                          label: context.tr('ah.card.delete'),
-                          bg: theme.tone(Tone.rose).bg,
-                          fg: theme.tone(Tone.rose).fg,
-                          onTap: widget.onDelete,
-                          theme: theme,
-                        ),
-                    ],
-                  ),
-
-                  // لیست زیرعادت‌ها
-                  if (widget.habit.subHabits.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Divider(height: 1, color: theme.borderColor),
-                    const SizedBox(height: 8),
-                    ...widget.habit.subHabits.map((subHabit) {
-                      final isChecked =
-                          widget.habit.completedSubHabits.contains(subHabit);
-                      return InkWell(
-                        onTap: widget.isCompleted
-                            ? null
-                            : () => widget.onToggleSubHabit?.call(subHabit),
-                        borderRadius: BorderRadius.circular(14),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 40),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
-                            ),
-                            child: Row(
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isChecked
-                                        ? primaryColor
-                                        : theme.cardSecondaryColor,
-                                  ),
-                                  child: isChecked
-                                      ? Icon(
-                                          Icons.check_rounded,
-                                          size: 16,
-                                          color: theme.onPrimaryColor,
-                                        )
-                                      : null,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    subHabit,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isChecked
-                                          ? theme.textSecondaryColor
-                                          : theme.textColor,
-                                      decoration: isChecked
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
                 ],
               ),
             ),

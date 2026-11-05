@@ -13,7 +13,7 @@ import '/providers/calendar_provider.dart';
 // ابزارهای مشترک میدان: اسنک‌بار و دیالوگ حذف (طبق ArenaStates)
 // ============================================================
 
-enum ArenaSnackKind { success, warning, error, dark }
+enum ArenaSnackKind { success, warning, error, dark, info }
 
 /// پیام کوتاه گرد و شناور؛ بالای نوار ناوبری نمایش داده می‌شود.
 void showArenaSnack(
@@ -47,6 +47,11 @@ void showArenaSnack(
       bg = theme.errorColor;
       fg = Colors.white;
       actionColor = Colors.white;
+      break;
+    case ArenaSnackKind.info:
+      bg = theme.primarySoft;
+      fg = theme.textColor;
+      actionColor = theme.textColor;
       break;
     case ArenaSnackKind.dark:
       bg = theme.isDarkMode
@@ -212,6 +217,147 @@ Future<bool?> showArenaDeleteDialog(
   );
 }
 
+/// حالت خالی یا آفلاین؛ دایرهٔ ۷۲ با آیکون، عنوان، توضیح و دکمهٔ اختیاری.
+class ArenaStateView extends StatelessWidget {
+  final IconData icon;
+  final Tone tone;
+  final String title;
+  final String? subtitle;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final VoidCallback? onAction;
+
+  const ArenaStateView({
+    super.key,
+    required this.icon,
+    this.tone = Tone.lime,
+    required this.title,
+    this.subtitle,
+    this.actionLabel,
+    this.actionIcon,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    final t = theme.tone(tone);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: theme.softShadow,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: tone == Tone.lime ? theme.cardSecondaryColor : t.bg,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon,
+                size: 32,
+                color: tone == Tone.lime ? theme.textColor : t.fg),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: theme.textColor,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              subtitle!,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: theme.textSecondaryColor),
+            ),
+          ],
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: onAction,
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (actionIcon != null) ...[
+                      Icon(actionIcon, size: 20, color: theme.onPrimaryColor),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      actionLabel!,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: theme.onPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// حالت بارگذاری: حلقهٔ ۵۶ داخل کارت سفید.
+class ArenaLoadingView extends StatelessWidget {
+  final String? message;
+  const ArenaLoadingView({super.key, this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Provider.of<ThemeProvider>(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: theme.softShadow,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: CircularProgressIndicator(
+              strokeWidth: 6,
+              color: theme.primaryColor,
+              backgroundColor: theme.cardSecondaryColor,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            message ?? context.tr('ah.state.loading'),
+            style: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ============================================================
 // کارت وظیفه
 // ============================================================
@@ -293,10 +439,149 @@ class _TaskCardState extends State<TaskCard>
         ? (theme.isDarkMode ? Colors.grey.shade400 : Colors.white)
         : cardColor;
 
+    // کشو زیر کارت قرار می‌گیرد و ۱۴ پیکسل زیر آن می‌رود (طبق ArenaDrawer)؛
+    // با verticalDirection.up کارت بالای کشو رسم می‌شود.
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Column(
+        verticalDirection: VerticalDirection.up,
         children: [
+          // ============================================================
+          // EXPANDED DRAWER
+          // ============================================================
+          Transform.translate(
+            offset: const Offset(0, -14),
+            child: SizeTransition(
+            sizeFactor: _expansionAnimation,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
+              padding: const EdgeInsets.fromLTRB(10, 28, 10, 14),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(26),
+                  bottomRight: Radius.circular(26),
+                ),
+                boxShadow: theme.softShadow,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildActionButton(
+                        icon: widget.isCompleted
+                            ? Icons.refresh_rounded
+                            : Icons.check_circle_outline_rounded,
+                        label: widget.isCompleted
+                            ? context.tr('ah.card.undo')
+                            : context.tr('ah.card.done'),
+                        bg: widget.isCompleted
+                            ? theme.tone(Tone.peach).bg
+                            : theme.primarySoft,
+                        fg: widget.isCompleted
+                            ? theme.tone(Tone.peach).fg
+                            : theme.textColor,
+                        onTap: widget.onToggle,
+                        theme: theme,
+                      ),
+                      if (widget.onDetails != null)
+                        _buildActionButton(
+                          icon: Icons.info_outline_rounded,
+                          label: context.tr('ah.card.details'),
+                          bg: theme.tone(Tone.sky).bg,
+                          fg: theme.tone(Tone.sky).fg,
+                          onTap: widget.onDetails!,
+                          theme: theme,
+                        ),
+                      _buildActionButton(
+                        icon: Icons.edit_outlined,
+                        label: context.tr('ah.card.edit'),
+                        bg: theme.tone(Tone.apricot).bg,
+                        fg: theme.tone(Tone.apricot).fg,
+                        onTap: widget.onEdit,
+                        theme: theme,
+                      ),
+                      _buildActionButton(
+                        icon: Icons.delete_outline_rounded,
+                        label: context.tr('ah.card.delete'),
+                        bg: theme.tone(Tone.rose).bg,
+                        fg: theme.tone(Tone.rose).fg,
+                        onTap: widget.onDelete,
+                        theme: theme,
+                      ),
+                    ],
+                  ),
+
+                  // لیست زیرتسک‌ها
+                  if (widget.task.subTasks.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: theme.cardSecondaryColor),
+                    const SizedBox(height: 8),
+                    ...widget.task.subTasks.map((subTask) {
+                      final isChecked =
+                          widget.task.completedSubTasks.contains(subTask);
+                      return InkWell(
+                        onTap: widget.isCompleted
+                            ? null
+                            : () => widget.onToggleSubTask?.call(subTask),
+                        borderRadius: BorderRadius.circular(14),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 40),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isChecked
+                                        ? theme.primaryColor
+                                        : theme.cardSecondaryColor,
+                                  ),
+                                  child: isChecked
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 16,
+                                          color: theme.onPrimaryColor,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    subTask,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isChecked
+                                          ? theme.textSecondaryColor
+                                          : theme.textColor,
+                                      decoration: isChecked
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          ),
+
           // ============================================================
           // HEADER
           // ============================================================
@@ -311,7 +596,7 @@ class _TaskCardState extends State<TaskCard>
                 color: widget.isCompleted ? theme.cardColor : cardColor,
                 borderRadius: BorderRadius.vertical(
                   top: const Radius.circular(28),
-                  bottom: Radius.circular(_isExpanded ? 12 : 28),
+                  bottom: Radius.circular(28),
                 ),
                 boxShadow: widget.isCompleted ? theme.softShadow : null,
               ),
@@ -387,141 +672,6 @@ class _TaskCardState extends State<TaskCard>
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          // ============================================================
-          // EXPANDED DRAWER
-          // ============================================================
-          SizeTransition(
-            sizeFactor: _expansionAnimation,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(14, 3, 14, 0),
-              padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(26),
-                  bottomRight: Radius.circular(26),
-                ),
-                boxShadow: theme.softShadow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildActionButton(
-                        icon: widget.isCompleted
-                            ? Icons.refresh_rounded
-                            : Icons.check_circle_outline_rounded,
-                        label: widget.isCompleted
-                            ? context.tr('ah.card.undo')
-                            : context.tr('ah.card.done'),
-                        bg: widget.isCompleted
-                            ? theme.tone(Tone.peach).bg
-                            : theme.primarySoft,
-                        fg: widget.isCompleted
-                            ? theme.tone(Tone.peach).fg
-                            : theme.textColor,
-                        onTap: widget.onToggle,
-                        theme: theme,
-                      ),
-                      if (widget.onDetails != null)
-                        _buildActionButton(
-                          icon: Icons.info_outline_rounded,
-                          label: context.tr('ah.card.details'),
-                          bg: theme.tone(Tone.sky).bg,
-                          fg: theme.tone(Tone.sky).fg,
-                          onTap: widget.onDetails!,
-                          theme: theme,
-                        ),
-                      _buildActionButton(
-                        icon: Icons.edit_outlined,
-                        label: context.tr('ah.card.edit'),
-                        bg: theme.tone(Tone.apricot).bg,
-                        fg: theme.tone(Tone.apricot).fg,
-                        onTap: widget.onEdit,
-                        theme: theme,
-                      ),
-                      _buildActionButton(
-                        icon: Icons.delete_outline_rounded,
-                        label: context.tr('ah.card.delete'),
-                        bg: theme.tone(Tone.rose).bg,
-                        fg: theme.tone(Tone.rose).fg,
-                        onTap: widget.onDelete,
-                        theme: theme,
-                      ),
-                    ],
-                  ),
-
-                  // لیست زیرتسک‌ها
-                  if (widget.task.subTasks.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Divider(height: 1, color: theme.borderColor),
-                    const SizedBox(height: 8),
-                    ...widget.task.subTasks.map((subTask) {
-                      final isChecked =
-                          widget.task.completedSubTasks.contains(subTask);
-                      return InkWell(
-                        onTap: widget.isCompleted
-                            ? null
-                            : () => widget.onToggleSubTask?.call(subTask),
-                        borderRadius: BorderRadius.circular(14),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(minHeight: 40),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 4,
-                            ),
-                            child: Row(
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isChecked
-                                        ? theme.primaryColor
-                                        : theme.cardSecondaryColor,
-                                  ),
-                                  child: isChecked
-                                      ? Icon(
-                                          Icons.check_rounded,
-                                          size: 16,
-                                          color: theme.onPrimaryColor,
-                                        )
-                                      : null,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    subTask,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isChecked
-                                          ? theme.textSecondaryColor
-                                          : theme.textColor,
-                                      decoration: isChecked
-                                          ? TextDecoration.lineThrough
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
                 ],
               ),
             ),

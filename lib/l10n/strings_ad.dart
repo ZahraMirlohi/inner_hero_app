@@ -103,6 +103,10 @@ const Map<String, String> adFa = {
   'ad.tmr.saved': 'زمان ثبت شد',
   'ad.tmr.minSeconds': 'حداقل ۵ ثانیه زمان را ثبت کنید',
   'ad.tmr.error': 'خطا: {e}',
+  'ad.tmr.endTitle': 'تایمر به پایان رسید!',
+  'ad.tmr.endQuestion': 'آیا عادت «{t}» را انجام دادید؟',
+  'ad.tmr.notYet': 'هنوز نه',
+  'ad.tmr.yesDone': 'بله، انجام شد',
 };
 
 const Map<String, String> adEn = {
@@ -200,4 +204,8 @@ const Map<String, String> adEn = {
   'ad.tmr.saved': 'Time saved',
   'ad.tmr.minSeconds': 'Record at least 5 seconds',
   'ad.tmr.error': 'Error: {e}',
+  'ad.tmr.endTitle': 'Timer finished!',
+  'ad.tmr.endQuestion': 'Did you complete the habit "{t}"?',
+  'ad.tmr.notYet': 'Not yet',
+  'ad.tmr.yesDone': 'Yes, done',
 };

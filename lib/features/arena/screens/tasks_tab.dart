@@ -10,6 +10,7 @@ import '../edit_task_screen.dart';
 import '/../providers/sync_provider.dart';
 import '/models/offline_operation.dart';
 import '../widgets/task_card.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 
 class TasksTab extends StatefulWidget {
@@ -78,22 +79,10 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
   }
 
   Future<void> _deleteTask(Task task) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('حذف تسک'),
-        content: const Text('آیا از حذف این تسک مطمئن هستید؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirm = await showArenaDeleteDialog(
+      context,
+      title: context.tr('ah.tasks.delTitle'),
+      message: context.tr('ah.tasks.delMsg'),
     );
 
     if (confirm == true && mounted) {
@@ -121,23 +110,15 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
         }
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تسک با موفقیت حذف شد '),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          showArenaSnack(context, context.tr('ah.tasks.deleted'),
+              kind: ArenaSnackKind.dark);
         }
       } catch (e) {
         print('Error deleting task: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا در حذف تسک: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          showArenaSnack(context,
+              context.tr('ah.tasks.delError', {'e': e.toString()}),
+              kind: ArenaSnackKind.error);
         }
       }
     }
@@ -159,36 +140,25 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
             onRefresh: _loadTasks,
             color: primaryColor,
             child: _isLoading && tasks.isEmpty
-                ? Center(
-                    child: CircularProgressIndicator(color: primaryColor),
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+                    children: const [ArenaLoadingView()],
                   )
                 : tasks.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.assignment_outlined,
-                              size: 64,
-                              color: theme.textSecondaryColor,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'هیچ وظیفه‌ای ندارید',
-                              style: TextStyle(color: theme.textSecondaryColor),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'روی دکمه + در پایین صفحه کلیک کنید',
-                              style: TextStyle(
-                                color: theme.textSecondaryColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+                        children: [
+                          ArenaStateView(
+                            icon: Icons.assignment_outlined,
+                            title: context.tr('ah.tasks.emptyTitle'),
+                            subtitle: context.tr('ah.empty.sub'),
+                          ),
+                        ],
                       )
                     : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
                         itemCount: tasks.length,
                         itemBuilder: (context, index) {
@@ -198,13 +168,10 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                             task: task,
                             isCompleted: false,
                             onToggle: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'برای انجام تسک به تب "امروز" بروید'),
-                                  duration: Duration(seconds: 1),
-                                ),
-                              );
+                              showArenaSnack(context, context.tr('ah.tasks.toastToday'),
+                                  kind: ArenaSnackKind.info,
+                                  duration: const Duration(seconds: 1),
+                                  clearPrevious: true);
                             },
                             onEdit: () => _editTask(task),
                             onDelete: () => _deleteTask(task),
