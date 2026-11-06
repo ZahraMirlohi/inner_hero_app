@@ -124,6 +124,7 @@ class PackageHabit {
       endDate: null,
       challengeId: null,
       questId: null,
+      packageId: packageId,
       // ✅ اضافه کردن فیلدهای سطح
       fullDescription: fullDescription ?? 'انجام کامل عادت',
       halfDescription: halfDescription ?? 'انجام نیمی از عادت',

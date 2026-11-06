@@ -47,10 +47,10 @@ class _ExploreScreenState extends State<ExploreScreen>
   final Map<String, _CachedChallengeDetails> _challengeDetailsCache = {};
 
   final List<Map<String, dynamic>> _tabs = [
-    {'icon': Icons.flag, 'label': 'چالش‌ها'},
-    {'icon': Icons.inventory_2, 'label': 'بسته‌ها'},
-    {'icon': Icons.stars, 'label': 'ماموریت‌ها'},
-    {'icon': Icons.emoji_events, 'label': 'افتخارات'},
+    {'icon': Icons.flag_rounded, 'label': 'چالش‌ها'},
+    {'icon': Icons.inventory_2_rounded, 'label': 'بسته‌ها'},
+    {'icon': Icons.stars_rounded, 'label': 'ماموریت‌ها'},
+    {'icon': Icons.emoji_events_rounded, 'label': 'افتخارات'},
   ];
 
   @override
@@ -2188,86 +2188,46 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   Widget _buildTabBar(Color primaryColor, ThemeProvider theme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              // در تم شب تیره، در تم روز رنگ primary
-              color: theme.isDarkMode
-                  ? const Color(0xFF2A2A2A) // خاکستری تیره
-                  : primaryColor.withValues(alpha: 0.90),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: theme.isDarkMode
-                      ? Colors.black.withValues(alpha: 0.5)
-                      : primaryColor.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: theme.isDarkMode
-                    ? const Color(0xFF444444) // bordr تیره
-                    : Colors.white.withValues(alpha: 0.4),
-                width: 1,
-              ),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: false,
-              labelPadding: EdgeInsets.zero,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                // در تم شب هم سفید باقی بمونه (تب فعال)
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Container(
+        height: 64,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: theme.softShadow,
+        ),
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: false,
+          labelPadding: EdgeInsets.zero,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            color: theme.effectivePrimary,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          dividerColor: Colors.transparent,
+          splashFactory: NoSplash.splashFactory,
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
+          labelColor: theme.onPrimaryColor,
+          unselectedLabelColor: theme.textSecondaryColor,
+          labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          unselectedLabelStyle:
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          tabs: _tabs.map((tab) {
+            return Tab(
+              height: 56,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(tab['icon'], size: 20),
+                  const SizedBox(height: 2),
+                  Text(tab['label'], maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
-              dividerColor: Colors.transparent,
-              // متن تب انتخاب شده: مشکی (روی سفید)
-              labelColor: const Color(0xFF090909),
-              // متن تب غیرفعال: سفید روی تیره، سفید روی سبز
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
-              labelStyle: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-              tabs: _tabs.map((tab) {
-                return Tab(
-                  height: 58,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(tab['icon'], size: 20),
-                      const SizedBox(height: 3),
-                      Text(
-                        tab['label'],
-                        style: const TextStyle(fontSize: 10),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+            );
+          }).toList(),
         ),
       ),
     );

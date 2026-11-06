@@ -35,6 +35,7 @@ class Habit {
   DateTime? endDate;
   String? challengeId;
   String? questId;
+  String? packageId;
 
   TimerSetting? timerSetting;
   String? fullDescription;
@@ -71,6 +72,7 @@ class Habit {
     this.endDate,
     this.challengeId,
     this.questId,
+    this.packageId,
     this.timerSetting,
     this.fullDescription,
     this.halfDescription,
@@ -234,6 +236,8 @@ class Habit {
       'end_date': endDate?.toIso8601String(),
       'challenge_id': challengeId,
       'quest_id': questId,
+      // فقط وقتی مقدار دارد تا بدون اجرای SQL فایل ۰۵ هم عادت‌های عادی ذخیره شوند
+      if (packageId != null) 'package_id': packageId,
       // ✅ اضافه کردن timer_setting
       'timer_setting': timerSetting?.toMap(),
       'target_value': targetValue,
@@ -318,6 +322,7 @@ class Habit {
       endDate: map['endDate'] != null ? parseDate(map['endDate']) : null,
       challengeId: map['challengeId'],
       questId: map['questId'],
+      packageId: map['packageId'] ?? map['package_id'],
       timerSetting: timerSetting,
       targetValue: map['targetValue'] ?? map['target_value'],
       fullDescription: map['fullDescription'] ?? map['full_description'],
