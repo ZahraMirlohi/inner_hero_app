@@ -1995,15 +1995,21 @@ class SupabaseService {
       final xpReward = challenge['xp_reward'] as int? ?? 50;
       final challengeDuration = challenge['challenge_duration'] as int? ?? 7;
 
-      // 1. به‌روزرسانی وضعیت چالش
-      await client.from('user_challenges').update({
-        'is_completed': true,
-        'is_active': false,
-        'status': 'completed',
-        'progress': challengeDuration,
-        'completed_at': now.toIso8601String(),
-        'updated_at': now.toIso8601String(),
-      }).eq('id', userChallengeId);
+      // 1. به‌روزرسانی وضعیت چالش (فقط اگر هنوز کامل نشده؛ مانع XP دوباره)
+      final updated = await client
+          .from('user_challenges')
+          .update({
+            'is_completed': true,
+            'is_active': false,
+            'status': 'completed',
+            'progress': challengeDuration,
+            'completed_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          })
+          .eq('id', userChallengeId)
+          .eq('is_completed', false)
+          .select('id');
+      if (updated.isEmpty) return; // قبلاً کامل شده؛ XP دوباره داده نمی‌شود
 
       // 2. افزودن مدال چالش
       await _addChallengeBadge(userId, challenge);
@@ -2184,8 +2190,10 @@ class SupabaseService {
         await createHabit(habit);
       }
 
-      // 4. اضافه کردن XP پاداش
-      await addXP(userId, package.xpReward);
+      // 4. XP پاداش فقط در اولین فعال‌سازی
+      if (existing.isEmpty) {
+        await addXP(userId, package.xpReward);
+      }
 
       // 5. ذخیره در LocalStorage
       try {
@@ -2202,6 +2210,13 @@ class SupabaseService {
       print('Error activating package: $e');
       rethrow;
     }
+  }
+
+  /// عادتِ این بسته؟ اول با package_id؛ برای عادت‌های قدیمی (بدون package_id) با عنوان.
+  bool _isHabitOfPackage(Habit habit, String packageId, Package package) {
+    if (habit.packageId != null) return habit.packageId == packageId;
+    return habit.title.startsWith('📦') &&
+        package.habits.any((ph) => habit.title.contains(ph.title));
   }
 
   Future<void> deactivatePackage(String userId, String packageId) async {
@@ -2225,9 +2240,7 @@ class SupabaseService {
       // 3. حذف عادت‌های بسته از دیتابیس
       final habits = await getHabits(userId);
       for (var habit in habits) {
-        // حذف عادت‌هایی که با بسته مرتبط هستند
-        if (habit.title.startsWith('📦') &&
-            package.habits.any((ph) => habit.title.contains(ph.title))) {
+        if (_isHabitOfPackage(habit, packageId, package)) {
           await deleteHabit(habit.id);
         }
       }
@@ -2237,8 +2250,7 @@ class SupabaseService {
         final localStorage = LocalStorageService();
         final localHabits = localStorage.getHabits();
         final updatedHabits = localHabits
-            .where(
-                (h) => !package.habits.any((ph) => h.title.contains(ph.title)))
+            .where((h) => !_isHabitOfPackage(h, packageId, package))
             .toList();
         await localStorage.saveHabits(updatedHabits);
       } catch (e) {
@@ -2548,7 +2560,22 @@ class SupabaseService {
       final userQuest = userQuestResponse.first;
       final questId = userQuest['quest_id'];
       final currentProgress = userQuest['progress'] as int? ?? 0;
-      final newProgress = currentProgress + 1;
+
+      // پیشرفت = تعداد روزهای متمایز انجام‌شده (انجام چندباره در یک روز حساب نمی‌شود)
+      final doneRows = await client
+          .from('habit_completions')
+          .select('date')
+          .eq('habit_id', habitId);
+      final doneDays = <String>{
+        for (final r in doneRows) (r['date'] as String).split('T').first,
+      };
+      final nowD = DateTime.now();
+      doneDays.add(
+          '${nowD.year.toString().padLeft(4, '0')}-${nowD.month.toString().padLeft(2, '0')}-${nowD.day.toString().padLeft(2, '0')}');
+      final newProgress = doneDays.length;
+      if (newProgress <= currentProgress) {
+        return null; // همان روز، پیشرفت جدیدی ثبت نمی‌شود
+      }
 
       print('Current progress: $currentProgress');
       print('New progress: $newProgress');
