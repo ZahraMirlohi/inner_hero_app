@@ -811,9 +811,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(width: 10),
         tile(Tone.sky, Icons.photo_library_rounded,
             context.tr('profile.gallery_short'), _openGallery),
-        const SizedBox(width: 10),
-        tile(Tone.rose, Icons.face_retouching_natural_rounded,
-            context.tr('profile.look'), _openAvatarCustomization),
       ],
     );
   }
@@ -873,20 +870,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           _buildShortcuts(),
-          const SizedBox(height: 12),
-          AnalyticsOverviewWidget(
-            key: _analyticsKey,
-            userId: _profile!.userId,
-            onTapMore: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      AnalyticsDetailScreen(userId: _profile!.userId),
-                ),
-              );
-            },
-          ),
           const SizedBox(height: 12),
           _buildUserInfoSection(),
           const SizedBox(height: 12),
@@ -2409,10 +2392,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('اطلاعات با موفقیت به‌روزرسانی شد '),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(context.tr('pm.pi.updated')),
+            backgroundColor: _theme.successColor,
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -2432,39 +2415,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showEditDialog(String label, String currentValue) {
     final controller = TextEditingController(text: currentValue);
+    const Color ink = Color(0xFF090909);
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('ویرایش $label'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            filled: true,
-            fillColor: Colors.grey.shade50,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: _theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.tr('pm.pi.edit_field', {'label': label}),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: _theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _buildEditField(
+                label: label,
+                controller: controller,
+                icon: Icons.edit_outlined,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(dialogContext),
+                      child: Container(
+                        height: 54,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _theme.cardSecondaryColor,
+                          borderRadius: BorderRadius.circular(27),
+                        ),
+                        child: Text(
+                          context.tr('pm.pi.cancel'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: _theme.textColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(dialogContext);
+                        await _updateField(label, controller.text);
+                      },
+                      child: Container(
+                        height: 54,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: ink,
+                          borderRadius: BorderRadius.circular(27),
+                        ),
+                        child: Text(
+                          context.tr('pm.pi.save_short'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: _theme.effectivePrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _updateField(label, controller.text);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _theme.primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('ذخیره'),
-          ),
-        ],
       ),
     );
   }

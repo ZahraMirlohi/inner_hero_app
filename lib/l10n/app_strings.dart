@@ -10,7 +10,13 @@
 
 import 'package:flutter/material.dart';
 
+import 'strings_ad.dart';
+import 'strings_af.dart';
+import 'strings_ah.dart';
+import 'strings_an.dart';
+import 'strings_at.dart';
 import 'strings_auth.dart';
+import 'strings_pm.dart';
 
 class AppStrings {
   AppStrings._();
@@ -34,6 +40,12 @@ class AppStrings {
   // ───────────────────────── فارسی (طنز) ─────────────────────────
   static const Map<String, String> _fa = {
     ...authFa,
+    ...anFa,
+    ...pmFa,
+    ...afFa,
+    ...adFa,
+    ...atFa,
+    ...ahFa,
     // عمومی
     'app.name': 'قهرمان درون',
     'common.cancel': 'بی‌خیال',
@@ -159,6 +171,12 @@ class AppStrings {
   // ───────────────────────── English ─────────────────────────
   static const Map<String, String> _en = {
     ...authEn,
+    ...anEn,
+    ...pmEn,
+    ...afEn,
+    ...adEn,
+    ...atEn,
+    ...ahEn,
     'app.name': 'Inner Hero',
     'common.cancel': 'Cancel',
     'common.ok': 'OK',

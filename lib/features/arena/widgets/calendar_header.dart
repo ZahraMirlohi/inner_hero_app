@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 import '/providers/calendar_provider.dart';
 
@@ -10,10 +11,14 @@ class CalendarHeader extends StatefulWidget {
   final Function(DateTime) onDateSelected;
   final DateTime selectedDate;
 
+  /// ویجت اضافه زیر دکمهٔ تقویم (دکمهٔ افزودن)
+  final Widget? action;
+
   const CalendarHeader({
     super.key,
     required this.onDateSelected,
     required this.selectedDate,
+    this.action,
   });
 
   @override
@@ -205,7 +210,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
     final rtl = Directionality.of(context) == TextDirection.rtl;
 
     Widget circleBtn(IconData icon, VoidCallback onTap,
-        {Color? bg, bool shadow = true}) {
+        {Color? bg, bool shadow = true, Color? iconColor}) {
       return GestureDetector(
         onTap: onTap,
         child: Container(
@@ -216,10 +221,12 @@ class _CalendarHeaderState extends State<CalendarHeader>
             shape: BoxShape.circle,
             boxShadow: shadow ? theme.softShadow : null,
           ),
-          child: Icon(icon, size: 22, color: theme.textColor),
+          child: Icon(icon, size: 22, color: iconColor ?? theme.textColor),
         ),
       );
     }
+
+    final Color onBg = theme.onPrimaryColor;
 
     return Column(
       children: [
@@ -227,53 +234,75 @@ class _CalendarHeaderState extends State<CalendarHeader>
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
-                  color: theme.primarySoft,
+                  color: theme.cardColor,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   _getDayNumber(widget.selectedDate, calendar),
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                     color: theme.textColor,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isToday(widget.selectedDate, calendar))
+                      Text(
+                        context.tr(_greetingKey()),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.onPrimaryColor.withValues(alpha: 0.75),
+                        ),
+                      ),
                     Text(
                       calendar.getWeekdayName(widget.selectedDate),
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
+                        height: 1.3,
                         fontWeight: FontWeight.w800,
-                        color: theme.textColor,
+                        color: theme.onPrimaryColor,
                       ),
                     ),
                     Text(
                       calendar.formatWithMonthName(widget.selectedDate),
                       style: TextStyle(
-                        fontSize: 13,
-                        color: theme.textSecondaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.onPrimaryColor.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
                 ),
               ),
-              AnimatedRotation(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                turns: _isExpanded ? 0.5 : 0.0,
-                child: circleBtn(
-                    Icons.keyboard_arrow_down_rounded, _toggleExpanded),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    turns: _isExpanded ? 0.5 : 0.0,
+                    child: circleBtn(
+                        Icons.keyboard_arrow_down_rounded, _toggleExpanded,
+                        shadow: false),
+                  ),
+                  if (widget.action != null && !_isExpanded) ...[
+                    const SizedBox(height: 10),
+                    widget.action!,
+                  ],
+                ],
               ),
             ],
           ),
@@ -287,13 +316,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
           child: !_isExpanded
               ? const SizedBox(width: double.infinity)
               : Container(
-                  margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: theme.softShadow,
-                  ),
+                  margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Column(
                     children: [
                       Row(
@@ -304,15 +328,16 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 ? Icons.chevron_right_rounded
                                 : Icons.chevron_left_rounded,
                             _goToPreviousMonth,
-                            bg: theme.cardSecondaryColor,
+                            bg: onBg.withValues(alpha: 0.16),
                             shadow: false,
+                            iconColor: onBg,
                           ),
                           Text(
                             calendar.getMonthYearLabel(_currentMonth),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: theme.textColor,
+                              color: onBg,
                             ),
                           ),
                           circleBtn(
@@ -320,8 +345,9 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 ? Icons.chevron_left_rounded
                                 : Icons.chevron_right_rounded,
                             _goToNextMonth,
-                            bg: theme.cardSecondaryColor,
+                            bg: onBg.withValues(alpha: 0.16),
                             shadow: false,
+                            iconColor: onBg,
                           ),
                         ],
                       ),
@@ -340,9 +366,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                             final date = _monthDates[index];
                             final isToday = _isToday(date, calendar);
                             final isSelected = _isSelectedDate(date, calendar);
-                            final fg = isSelected
-                                ? theme.onPrimaryColor
-                                : theme.textColor;
+                            final fg =
+                                isSelected ? theme.textColor : onBg;
                             return GestureDetector(
                               onTap: () {
                                 widget.onDateSelected(
@@ -354,8 +379,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 width: 52,
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? theme.primaryColor
-                                      : theme.cardSecondaryColor,
+                                      ? theme.cardColor
+                                      : onBg.withValues(alpha: 0.13),
                                   borderRadius: BorderRadius.circular(26),
                                 ),
                                 child: Column(
@@ -367,8 +392,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: isSelected
-                                            ? theme.onPrimaryColor
-                                            : theme.textSecondaryColor,
+                                            ? theme.textSecondaryColor
+                                            : onBg.withValues(alpha: 0.75),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -387,8 +412,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                       decoration: BoxDecoration(
                                         color: isToday
                                             ? (isSelected
-                                                ? theme.onPrimaryColor
-                                                : theme.textColor)
+                                                ? theme.textColor
+                                                : onBg)
                                             : Colors.transparent,
                                         shape: BoxShape.circle,
                                       ),
@@ -404,8 +429,25 @@ class _CalendarHeaderState extends State<CalendarHeader>
                   ),
                 ),
         ),
+        // وقتی تقویم باز است، دکمهٔ افزودن زیر تقویم می‌آید
+        if (widget.action != null && _isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: widget.action!,
+            ),
+          ),
       ],
     );
+  }
+
+  String _greetingKey() {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 12) return 'ah.greet.morning';
+    if (h >= 12 && h < 17) return 'ah.greet.noon';
+    if (h >= 17 && h < 21) return 'ah.greet.evening';
+    return 'ah.greet.night';
   }
 
   String _getDayNumber(DateTime date, CalendarProvider calendar) {

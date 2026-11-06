@@ -1,10 +1,10 @@
-// lib/features/arena/widgets/habit_timer_widget.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 
 class HabitTimerWidget extends StatefulWidget {
   final String habitId;
@@ -29,6 +29,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
   bool _isPaused = false;
   bool _isSaved = false;
   final SupabaseService _supabase = SupabaseService();
+  static const Color _ink = Color(0xFF090909);
 
   @override
   void dispose() {
@@ -86,15 +87,31 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
 
 // lib/features/arena/widgets/habit_timer_widget.dart
 
+  void _showSnack(String text, Color bg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: bg,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF090909),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveTime() async {
     if (_elapsedSeconds < 5) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('حداقل ۵ ثانیه زمان را ثبت کنید'),
-            backgroundColor: Color(0xFFFFA500),
-          ),
-        );
+        _showSnack(context.tr('ad.tmr.minSeconds'), const Color(0xFFFFA500));
       }
       return;
     }
@@ -102,6 +119,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
     setState(() {
       _isSaved = true;
       _isRunning = false;
+      _isPaused = false;
     });
     _timer?.cancel();
 
@@ -139,11 +157,9 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
         setState(() {
           _isSaved = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnack(
+          context.tr('ad.tmr.error', {'e': e.toString()}),
+          Provider.of<ThemeProvider>(context, listen: false).errorColor,
         );
       }
     }
@@ -158,167 +174,195 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = theme.primaryColor;
+    final Color accent = theme.effectivePrimary;
+    final bool dark = theme.isDarkMode;
+    final Color onTone = dark ? theme.textColor : _ink;
+    final sky = theme.tone(Tone.sky);
+    final apricot = theme.tone(Tone.apricot);
+    final mint = theme.tone(Tone.mint);
 
-    final timeString = _formatTime(_elapsedSeconds);
+    final bool canSave = !_isSaved && _elapsedSeconds > 0;
+    final bool canReset = !_isSaved && (_isRunning || _isPaused || _elapsedSeconds > 0);
+
+    Widget? status;
+    if (_isSaved) {
+      status = _statusPill(context.tr('ad.tmr.saved'), Icons.check_circle_rounded,
+          mint.bg, onTone);
+    } else if (_isRunning) {
+      status = _statusPill(context.tr('ad.tmr.running'), Icons.timer_outlined,
+          sky.bg, onTone);
+    } else if (_isPaused) {
+      status = _statusPill(context.tr('ad.tmr.paused'),
+          Icons.pause_circle_outline_rounded, apricot.bg, onTone);
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.isDarkMode
-            ? const Color(0xFF2A2A2A)
-            : const Color(0xFFF7FCEB),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.borderColor),
+        color: theme.backgroundColor,
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             widget.habitTitle,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: theme.textColor,
+              color: theme.textSecondaryColor,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
-            timeString,
+            _formatTime(_elapsedSeconds),
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 42,
-              fontWeight: FontWeight.bold,
-              color: _isSaved ? const Color(0xFF2ECC71) : primaryColor,
-              fontFamily: 'monospace',
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+              letterSpacing: 2,
+              color: _isSaved
+                  ? (dark ? mint.fg : theme.textColor)
+                  : theme.textColor,
             ),
           ),
-          const SizedBox(height: 12),
-          if (_isSaved)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2ECC71).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'زمان ثبت شد',
-                style: TextStyle(
-                  color: Color(0xFF2ECC71),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
-          else if (_isRunning)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFA500).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'در حال انجام...',
-                style: TextStyle(
-                  color: Color(0xFFFFA500),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            )
-          else if (_isPaused)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'مکث شده',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 30,
+            child: Center(child: status ?? const SizedBox.shrink()),
+          ),
+          const SizedBox(height: 10),
+          if (!_isSaved)
+            Row(
+              children: [
+                if (!_isRunning && !_isPaused)
+                  Expanded(
+                    child: _actionButton(
+                      icon: Icons.play_arrow_rounded,
+                      label: context.tr('ad.tmr.start'),
+                      bg: accent,
+                      fg: theme.onPrimaryColor,
+                      onTap: _startTimer,
+                    ),
+                  ),
+                if (_isRunning)
+                  Expanded(
+                    child: _actionButton(
+                      icon: Icons.pause_rounded,
+                      label: context.tr('ad.tmr.pause'),
+                      bg: apricot.bg,
+                      fg: onTone,
+                      onTap: _pauseTimer,
+                    ),
+                  ),
+                if (_isPaused)
+                  Expanded(
+                    child: _actionButton(
+                      icon: Icons.play_arrow_rounded,
+                      label: context.tr('ad.tmr.resume'),
+                      bg: accent,
+                      fg: theme.onPrimaryColor,
+                      onTap: _resumeTimer,
+                    ),
+                  ),
+                if (canReset) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _actionButton(
+                      icon: Icons.refresh_rounded,
+                      label: context.tr('ad.tmr.reset'),
+                      bg: theme.cardColor,
+                      fg: theme.textColor,
+                      onTap: _resetTimer,
+                    ),
+                  ),
+                ],
+                if (canSave) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _actionButton(
+                      icon: Icons.save_rounded,
+                      label: context.tr('ad.tmr.save'),
+                      bg: dark ? accent : _ink,
+                      fg: dark ? theme.onPrimaryColor : Colors.white,
+                      onTap: _saveTime,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          const SizedBox(height: 12),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              if (!_isRunning && !_isPaused && !_isSaved)
-                _buildControlButton(
-                  icon: Icons.play_arrow,
-                  label: 'شروع',
-                  color: const Color(0xFF2ECC71),
-                  onTap: _startTimer,
-                  theme: theme,
-                ),
-              if (_isRunning)
-                _buildControlButton(
-                  icon: Icons.pause,
-                  label: 'مکث',
-                  color: const Color(0xFFFFA500),
-                  onTap: _pauseTimer,
-                  theme: theme,
-                ),
-              if (_isPaused)
-                _buildControlButton(
-                  icon: Icons.play_arrow,
-                  label: 'ادامه',
-                  color: const Color(0xFF2ECC71),
-                  onTap: _resumeTimer,
-                  theme: theme,
-                ),
-              if (!_isSaved && (_isRunning || _isPaused || _elapsedSeconds > 0))
-                _buildControlButton(
-                  icon: Icons.refresh,
-                  label: 'بازنشانی',
-                  color: theme.textSecondaryColor,
-                  onTap: _resetTimer,
-                  theme: theme,
-                ),
-              if (!_isSaved && _elapsedSeconds > 0 && !_isRunning)
-                _buildControlButton(
-                  icon: Icons.save,
-                  label: 'ذخیره زمان',
-                  color: primaryColor,
-                  onTap: _saveTime,
-                  theme: theme,
-                ),
-            ],
+          const SizedBox(height: 10),
+          Text(
+            context.tr('ad.tmr.minSeconds'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: theme.textSecondaryColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildControlButton({
+  Widget _statusPill(String text, IconData icon, Color bg, Color fg) {
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: fg),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
     required IconData icon,
     required String label,
-    required Color color,
+    required Color bg,
+    required Color fg,
     required VoidCallback onTap,
-    required ThemeProvider theme,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.3)),
+          color: bg,
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: color,
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: fg,
+                ),
               ),
             ),
           ],
@@ -326,4 +370,113 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       ),
     );
   }
+}
+
+/// دیالوگ پایان تایمر (ArenaTimerEnd). اگر کاربر «بله، انجام شد» را بزند true برمی‌گرداند.
+Future<bool?> showHabitTimerEndDialog(BuildContext context, String habitTitle) {
+  return showDialog<bool>(
+    context: context,
+    barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
+    builder: (ctx) {
+      final theme = Provider.of<ThemeProvider>(ctx);
+      final bool dark = theme.isDarkMode;
+      final Color accent = theme.effectivePrimary;
+      final Color ink = dark ? theme.textColor : const Color(0xFF090909);
+      return Dialog(
+        backgroundColor: theme.cardColor,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 30),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 28, 22, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.celebration_rounded, size: 36, color: ink),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                ctx.tr('ad.tmr.endTitle'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                ctx.tr('ad.tmr.endQuestion', {'t': habitTitle}),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 1.8,
+                  color: theme.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 10,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Container(
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: theme.cardSecondaryColor,
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: Text(
+                          ctx.tr('ad.tmr.notYet'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: theme.textColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 13,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: Container(
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: dark ? accent : const Color(0xFF090909),
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: Text(
+                          ctx.tr('ad.tmr.yesDone'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: dark ? theme.onPrimaryColor : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

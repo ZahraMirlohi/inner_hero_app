@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'add_habit_screen.dart';
+import 'widgets/arena_form_widgets.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 
 class CategorySelectionScreen extends StatelessWidget {
@@ -10,174 +13,159 @@ class CategorySelectionScreen extends StatelessWidget {
 
   final categories = const [
     {
-      'name': 'ورزش و تناسب اندام',
-      'icon': Icons.fitness_center,
+      'id': 'sport',
+      'name': 'af.cat.sport',
+      'icon': Icons.fitness_center_rounded,
       'color': 0xFF4A90E2,
+      'tone': Tone.peach,
       'habits': [
-        {'name': 'تمرین ورزشی', 'icon': 'fitness_center', 'color': 0xFF4A90E2},
-        {'name': 'دویدن', 'icon': 'directions_walk', 'color': 0xFF4A90E2},
-        {'name': 'یوگا', 'icon': 'self_improvement', 'color': 0xFF9B59B6},
-        {'name': 'شنا', 'icon': 'pool', 'color': 0xFF3498DB},
-        {'name': 'پیاده‌روی', 'icon': 'directions_walk', 'color': 0xFF2ECC71},
+        {'name': 'af.cat.sport.workout', 'icon': 'fitness_center', 'color': 0xFF4A90E2},
+        {'name': 'af.cat.sport.run', 'icon': 'directions_walk', 'color': 0xFF4A90E2},
+        {'name': 'af.cat.sport.yoga', 'icon': 'self_improvement', 'color': 0xFF9B59B6},
+        {'name': 'af.cat.sport.swim', 'icon': 'pool', 'color': 0xFF3498DB},
+        {'name': 'af.cat.sport.walk', 'icon': 'directions_walk', 'color': 0xFF2ECC71},
       ],
     },
     {
-      'name': 'سلامت و تندرستی',
-      'icon': Icons.health_and_safety,
+      'id': 'health',
+      'name': 'af.cat.health',
+      'icon': Icons.health_and_safety_rounded,
       'color': 0xFF2ECC71,
+      'tone': Tone.sky,
       'habits': [
-        {'name': 'نوشیدن آب', 'icon': 'water_drop', 'color': 0xFF3498DB},
-        {'name': 'مدیتیشن', 'icon': 'self_improvement', 'color': 0xFF9B59B6},
-        {'name': 'خواب کافی', 'icon': 'bedtime', 'color': 0xFF5D6D7E},
-        {'name': 'تنفس عمیق', 'icon': 'air', 'color': 0xFF1ABC9C},
-        {
-          'name': 'چکاپ سلامت',
-          'icon': 'health_and_safety',
-          'color': 0xFFE74C3C,
-        },
+        {'name': 'af.cat.health.water', 'icon': 'water_drop', 'color': 0xFF3498DB},
+        {'name': 'af.cat.health.meditate', 'icon': 'self_improvement', 'color': 0xFF9B59B6},
+        {'name': 'af.cat.health.sleep', 'icon': 'bedtime', 'color': 0xFF5D6D7E},
+        {'name': 'af.cat.health.breath', 'icon': 'air', 'color': 0xFF1ABC9C},
+        {'name': 'af.cat.health.checkup', 'icon': 'health_and_safety', 'color': 0xFFE74C3C},
       ],
     },
     {
-      'name': 'مطالعه و یادگیری',
-      'icon': Icons.book,
+      'id': 'study',
+      'name': 'af.cat.study',
+      'icon': Icons.menu_book_rounded,
       'color': 0xFFF39C12,
+      'tone': Tone.lilac,
       'habits': [
-        {'name': 'مطالعه کتاب', 'icon': 'book', 'color': 0xFFF39C12},
-        {'name': 'یادگیری زبان', 'icon': 'language', 'color': 0xFFE67E22},
-        {'name': 'حل مسئله', 'icon': 'science', 'color': 0xFF9B59B6},
-        {'name': 'یادداشت روزانه', 'icon': 'edit_note', 'color': 0xFF3498DB},
-        {'name': 'مطالعه مقاله', 'icon': 'article', 'color': 0xFF1ABC9C},
+        {'name': 'af.cat.study.book', 'icon': 'book', 'color': 0xFFF39C12},
+        {'name': 'af.cat.study.lang', 'icon': 'language', 'color': 0xFFE67E22},
+        {'name': 'af.cat.study.solve', 'icon': 'science', 'color': 0xFF9B59B6},
+        {'name': 'af.cat.study.journal', 'icon': 'edit_note', 'color': 0xFF3498DB},
+        {'name': 'af.cat.study.article', 'icon': 'article', 'color': 0xFF1ABC9C},
       ],
     },
     {
-      'name': 'تغذیه سالم',
-      'icon': Icons.restaurant,
+      'id': 'food',
+      'name': 'af.cat.food',
+      'icon': Icons.restaurant_rounded,
       'color': 0xFFE74C3C,
+      'tone': Tone.mint,
       'habits': [
-        {
-          'name': 'صبحانه سالم',
-          'icon': 'breakfast_dining',
-          'color': 0xFFF39C12,
-        },
-        {'name': 'غذای خانگی', 'icon': 'restaurant', 'color': 0xFFE74C3C},
-        {'name': 'میوه و سبزیجات', 'icon': 'apple', 'color': 0xFF2ECC71},
-        {'name': 'کاهش قند', 'icon': 'no_food', 'color': 0xFFE74C3C},
-        {'name': 'آشپزی سالم', 'icon': 'kitchen', 'color': 0xFF3498DB},
+        {'name': 'af.cat.food.breakfast', 'icon': 'breakfast_dining', 'color': 0xFFF39C12},
+        {'name': 'af.cat.food.home', 'icon': 'restaurant', 'color': 0xFFE74C3C},
+        {'name': 'af.cat.food.fruit', 'icon': 'apple', 'color': 0xFF2ECC71},
+        {'name': 'af.cat.food.sugar', 'icon': 'no_food', 'color': 0xFFE74C3C},
+        {'name': 'af.cat.food.cook', 'icon': 'kitchen', 'color': 0xFF3498DB},
       ],
     },
     {
-      'name': 'بهره‌وری',
-      'icon': Icons.timer,
+      'id': 'prod',
+      'name': 'af.cat.prod',
+      'icon': Icons.timer_rounded,
       'color': 0xFF1ABC9C,
+      'tone': Tone.butter,
       'habits': [
-        {
-          'name': 'برنامه ریزی روزانه',
-          'icon': 'calendar_today',
-          'color': 0xFF3498DB,
-        },
-        {'name': 'مدیریت زمان', 'icon': 'timer', 'color': 0xFF1ABC9C},
-        {'name': 'لیست کارها', 'icon': 'checklist', 'color': 0xFFF39C12},
-        {'name': 'تمرکز عمیق', 'icon': 'tune', 'color': 0xFF9B59B6},
-        {'name': 'اولویت بندی', 'icon': 'sort', 'color': 0xFFE74C3C},
+        {'name': 'af.cat.prod.plan', 'icon': 'calendar_today', 'color': 0xFF3498DB},
+        {'name': 'af.cat.prod.time', 'icon': 'timer', 'color': 0xFF1ABC9C},
+        {'name': 'af.cat.prod.todo', 'icon': 'checklist', 'color': 0xFFF39C12},
+        {'name': 'af.cat.prod.focus', 'icon': 'tune', 'color': 0xFF9B59B6},
+        {'name': 'af.cat.prod.priority', 'icon': 'sort', 'color': 0xFFE74C3C},
       ],
     },
     {
-      'name': 'رشد شخصی',
-      'icon': Icons.emoji_events,
+      'id': 'growth',
+      'name': 'af.cat.growth',
+      'icon': Icons.emoji_events_rounded,
       'color': 0xFF9B59B6,
+      'tone': Tone.rose,
       'habits': [
-        {'name': 'قدردانی', 'icon': 'favorite', 'color': 0xFFE74C3C},
-        {
-          'name': 'هدف‌گذاری',
-          'icon': 'flag',
-          'color': 0xFFF39C12,
-        },
-        {'name': 'تفکر مثبت', 'icon': 'lightbulb', 'color': 0xFFF1C40F},
-        {'name': 'مدیریت استرس', 'icon': 'spa', 'color': 0xFF2ECC71},
-        {'name': 'مهارت جدید', 'icon': 'school', 'color': 0xFF3498DB},
+        {'name': 'af.cat.growth.grateful', 'icon': 'favorite', 'color': 0xFFE74C3C},
+        {'name': 'af.cat.growth.goal', 'icon': 'flag', 'color': 0xFFF39C12},
+        {'name': 'af.cat.growth.positive', 'icon': 'lightbulb', 'color': 0xFFF1C40F},
+        {'name': 'af.cat.growth.stress', 'icon': 'spa', 'color': 0xFF2ECC71},
+        {'name': 'af.cat.growth.skill', 'icon': 'school', 'color': 0xFF3498DB},
       ],
     },
   ];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = theme.primaryColor;
+    final theme = context.watch<ThemeProvider>();
 
-    return Scaffold(
-      backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        title: const Text('انتخاب عادت جدید'),
-        backgroundColor: theme.surfaceColor,
-        elevation: 0,
-        foregroundColor: theme.textColor,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddHabitScreen()),
-                );
-              },
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'ایجاد عادت جدید',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                minimumSize: const Size(double.infinity, 50),
-              ),
+    return ArenaFormPage(
+      title: context.tr('af.cat.title'),
+      children: [
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddHabitScreen()),
+            );
+          },
+          child: Container(
+            height: 60,
+            decoration: BoxDecoration(
+              color: theme.effectivePrimary,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: theme.isDarkMode
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: theme.effectivePrimary.withValues(alpha: 0.3),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            alignment: Alignment.center,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Icon(Icons.add_rounded, size: 24, color: theme.onPrimaryColor),
+                const SizedBox(width: 10),
                 Text(
-                  'دسته‌بندی‌های پیشنهادی',
+                  context.tr('af.cat.create'),
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: theme.onPrimaryColor,
                   ),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return _buildCategoryCard(
-                  context,
-                  name: category['name'] as String,
-                  icon: category['icon'] as IconData,
-                  color: category['color'] as int,
-                  habits: category['habits'] as List<Map<String, dynamic>>,
-                  primaryColor: primaryColor,
-                  theme: theme,
-                );
-              },
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 10, 6, 0),
+          child: Text(
+            context.tr('af.cat.suggested'),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: theme.textColor,
             ),
           ),
-        ],
-      ),
+        ),
+        for (final category in categories)
+          _buildCategoryCard(
+            context,
+            name: context.tr(category['name'] as String),
+            icon: category['icon'] as IconData,
+            tone: category['tone'] as Tone,
+            habits: category['habits'] as List<Map<String, dynamic>>,
+            theme: theme,
+          ),
+      ],
     );
   }
 
@@ -185,54 +173,65 @@ class CategorySelectionScreen extends StatelessWidget {
     BuildContext context, {
     required String name,
     required IconData icon,
-    required int color,
+    required Tone tone,
     required List<Map<String, dynamic>> habits,
-    required Color primaryColor,
     required ThemeProvider theme,
   }) {
-    final Color categoryColor = Color(color);
+    final toneColors = theme.tone(tone);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 2,
-      child: ExpansionTile(
-        iconColor: theme.textColor,
-        collapsedIconColor: theme.textSecondaryColor,
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: categoryColor.withAlpha(30),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: primaryColor, size: 24),
-        ),
-        title: Text(
-          name,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: theme.textColor,
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: toneColors.bg,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: habits.map((habit) {
-                return _buildHabitChip(
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.isDarkMode
+                      ? const Color(0xFF26262A)
+                      : const Color(0xFF090909),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: theme.isDarkMode ? toneColors.fg : toneColors.bg,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final habit in habits)
+                _buildHabitChip(
                   context,
-                  name: habit['name'] as String,
+                  name: context.tr(habit['name'] as String),
                   iconName: habit['icon'] as String,
                   color: habit['color'] as int,
-                  primaryColor: primaryColor,
                   theme: theme,
-                );
-              }).toList(),
-            ),
+                ),
+            ],
           ),
         ],
       ),
@@ -244,7 +243,6 @@ class CategorySelectionScreen extends StatelessWidget {
     required String name,
     required String iconName,
     required int color,
-    required Color primaryColor,
     required ThemeProvider theme,
   }) {
     return GestureDetector(
@@ -261,23 +259,23 @@ class CategorySelectionScreen extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        height: 38,
+        padding: const EdgeInsetsDirectional.only(start: 12, end: 14),
         decoration: BoxDecoration(
-          color: primaryColor.withAlpha(20),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: primaryColor.withAlpha(60), width: 1),
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(19),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_getIconData(iconName), color: primaryColor, size: 20),
-            const SizedBox(width: 8),
+            Icon(_getIconData(iconName), color: theme.textColor, size: 16),
+            const SizedBox(width: 6),
             Text(
               name,
               style: TextStyle(
-                color: primaryColor,
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
+                color: theme.textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ],
@@ -289,67 +287,67 @@ class CategorySelectionScreen extends StatelessWidget {
   IconData _getIconData(String iconName) {
     switch (iconName) {
       case 'fitness_center':
-        return Icons.fitness_center;
+        return Icons.fitness_center_rounded;
       case 'self_improvement':
-        return Icons.self_improvement;
+        return Icons.self_improvement_rounded;
       case 'book':
-        return Icons.book;
+        return Icons.menu_book_rounded;
       case 'science':
-        return Icons.science;
+        return Icons.science_rounded;
       case 'restaurant':
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case 'bedtime':
-        return Icons.bedtime;
+        return Icons.bedtime_rounded;
       case 'water_drop':
-        return Icons.water_drop;
+        return Icons.water_drop_rounded;
       case 'directions_walk':
-        return Icons.directions_walk;
+        return Icons.directions_walk_rounded;
       case 'run_circle':
-        return Icons.run_circle;
+        return Icons.run_circle_rounded;
       case 'emoji_events':
-        return Icons.emoji_events;
+        return Icons.emoji_events_rounded;
       case 'pool':
-        return Icons.pool;
+        return Icons.pool_rounded;
       case 'health_and_safety':
-        return Icons.health_and_safety;
+        return Icons.health_and_safety_rounded;
       case 'air':
-        return Icons.air;
+        return Icons.air_rounded;
       case 'language':
-        return Icons.language;
+        return Icons.language_rounded;
       case 'edit_note':
-        return Icons.edit_note;
+        return Icons.edit_note_rounded;
       case 'article':
-        return Icons.article;
+        return Icons.article_rounded;
       case 'breakfast_dining':
-        return Icons.breakfast_dining;
+        return Icons.breakfast_dining_rounded;
       case 'apple':
         return Icons.apple;
       case 'no_food':
-        return Icons.no_food;
+        return Icons.no_food_rounded;
       case 'kitchen':
-        return Icons.kitchen;
+        return Icons.kitchen_rounded;
       case 'calendar_today':
-        return Icons.calendar_today;
+        return Icons.calendar_today_rounded;
       case 'timer':
-        return Icons.timer;
+        return Icons.timer_rounded;
       case 'checklist':
-        return Icons.checklist;
+        return Icons.checklist_rounded;
       case 'tune':
-        return Icons.tune;
+        return Icons.tune_rounded;
       case 'sort':
-        return Icons.sort;
+        return Icons.sort_rounded;
       case 'favorite':
-        return Icons.favorite;
+        return Icons.favorite_rounded;
       case 'flag':
-        return Icons.flag;
+        return Icons.flag_rounded;
       case 'lightbulb':
-        return Icons.lightbulb;
+        return Icons.lightbulb_rounded;
       case 'spa':
-        return Icons.spa;
+        return Icons.spa_rounded;
       case 'school':
-        return Icons.school;
+        return Icons.school_rounded;
       default:
-        return Icons.fitness_center;
+        return Icons.fitness_center_rounded;
     }
   }
 }

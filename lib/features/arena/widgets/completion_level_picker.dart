@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/habit_completion.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 
 class CompletionLevelPicker extends StatefulWidget {
   final String habitTitle;
@@ -37,24 +39,44 @@ class CompletionLevelPicker extends StatefulWidget {
 }
 
 class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
+  static const Color _ink = Color(0xFF090909);
   CompletionLevel? _selectedLevel;
+
+  Tone _toneOf(CompletionLevel level) {
+    switch (level) {
+      case CompletionLevel.full:
+        return Tone.mint;
+      case CompletionLevel.half:
+        return Tone.apricot;
+      case CompletionLevel.basic:
+        return Tone.sky;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final Color primaryColor = theme.primaryColor;
 
     final bool isQuest = widget.isQuest ?? false;
     final bool isChallenge = widget.isChallenge ?? false;
+    final String kind = isQuest ? 'quest' : 'habit';
 
-    String defaultFull = isQuest ? 'انجام کامل ماموریت' : 'انجام کامل عادت';
-    String defaultHalf =
+    final String defaultFull = isQuest ? 'انجام کامل ماموریت' : 'انجام کامل عادت';
+    final String defaultHalf =
         isQuest ? 'انجام نیمی از ماموریت' : 'انجام نیمی از عادت';
-    String defaultBasic = isQuest ? 'انجام حداقل ماموریت' : 'انجام حداقل عادت';
+    final String defaultBasic =
+        isQuest ? 'انجام حداقل ماموریت' : 'انجام حداقل عادت';
 
-    final fullDesc = widget.fullDescription ?? defaultFull;
-    final halfDesc = widget.halfDescription ?? defaultHalf;
-    final basicDesc = widget.basicDescription ?? defaultBasic;
+    String descOf(String? value, String def, String key) {
+      if (value == null || value == def) {
+        return context.tr('ad.lvl.def.$key.$kind');
+      }
+      return value;
+    }
+
+    final fullDesc = descOf(widget.fullDescription, defaultFull, 'full');
+    final halfDesc = descOf(widget.halfDescription, defaultHalf, 'half');
+    final basicDesc = descOf(widget.basicDescription, defaultBasic, 'basic');
 
     final bool isCustomFull =
         widget.fullDescription != null && widget.fullDescription != defaultFull;
@@ -63,175 +85,196 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     final bool isCustomBasic = widget.basicDescription != null &&
         widget.basicDescription != defaultBasic;
 
-    String typeLabel = '';
-    if (isQuest) {
-      typeLabel = 'ماموریت';
-    } else if (isChallenge) {
-      typeLabel = 'چالش';
-    }
+    final bool hasTarget =
+        widget.targetValue != null && widget.targetValue!.isNotEmpty;
+    final Color onTone =
+        theme.isDarkMode ? theme.textColor : _ink;
+
+    final bool canConfirm = _selectedLevel != null;
+    final Color btnBg = canConfirm
+        ? (theme.isDarkMode ? theme.effectivePrimary : _ink)
+        : theme.cardSecondaryColor;
+    final Color btnFg = canConfirm
+        ? (theme.isDarkMode ? theme.onPrimaryColor : Colors.white)
+        : theme.textSecondaryColor;
 
     return Dialog(
+      alignment: Alignment.bottomCenter,
+      insetPadding: EdgeInsets.zero,
       backgroundColor: theme.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==================== هدر ====================
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // دستگیره
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
                   decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    Icons.emoji_events,
-                    color: primaryColor,
-                    size: 24,
+                    color: theme.cardSecondaryColor,
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'چگونه انجام دادی؟',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textColor,
-                        ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                context.tr('ad.pick.title'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              // عنوان عادت + نشان ماموریت/چالش
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.habitTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: theme.textSecondaryColor,
                       ),
-                      Row(
+                    ),
+                  ),
+                  if (isQuest || isChallenge) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 24,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: theme
+                            .tone(isQuest ? Tone.lilac : Tone.butter)
+                            .bg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Text(
-                              widget.habitTitle,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: theme.textSecondaryColor,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Icon(
+                            isQuest
+                                ? Icons.track_changes_rounded
+                                : Icons.emoji_events_rounded,
+                            size: 14,
+                            color: onTone,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            context.tr(
+                                isQuest ? 'ad.chip.quest' : 'ad.chip.challenge'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: onTone,
                             ),
                           ),
-                          if (typeLabel.isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.only(left: 6),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isQuest
-                                    ? Colors.purple.withOpacity(0.1)
-                                    : Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                typeLabel,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      isQuest ? Colors.purple : Colors.orange,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
-                      if (widget.targetValue != null &&
-                          widget.targetValue!.isNotEmpty)
+                    ),
+                  ],
+                ],
+              ),
+              if (hasTarget) ...[
+                const SizedBox(height: 14),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: theme.primarySoft,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.track_changes_rounded,
+                            size: 16, color: theme.textColor),
+                        const SizedBox(width: 6),
                         Text(
-                          'هدف: ${widget.targetValue}',
+                          context.tr('ad.pick.goal', {'v': widget.targetValue!}),
                           style: TextStyle(
-                            fontSize: 11,
-                            color: primaryColor,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: theme.textColor,
                           ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-
-            // ==================== گزینه‌ها ====================
-            _buildLevelOption(
-              CompletionLevel.full,
-              fullDesc,
-              isCustom: isCustomFull,
-              primaryColor: primaryColor,
-              theme: theme,
-            ),
-            const SizedBox(height: 10),
-
-            _buildLevelOption(
-              CompletionLevel.half,
-              halfDesc,
-              isCustom: isCustomHalf,
-              primaryColor: primaryColor,
-              theme: theme,
-            ),
-            const SizedBox(height: 10),
-
-            _buildLevelOption(
-              CompletionLevel.basic,
-              basicDesc,
-              isCustom: isCustomBasic,
-              primaryColor: primaryColor,
-              theme: theme,
-            ),
-
-            const SizedBox(height: 16),
-
-            // دکمه تایید
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _selectedLevel == null
-                    ? null
-                    : () {
-                        widget.onSelected(_selectedLevel!);
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+              const SizedBox(height: 14),
+              _buildLevelOption(CompletionLevel.full, fullDesc,
+                  isCustom: isCustomFull, theme: theme, onTone: onTone),
+              const SizedBox(height: 10),
+              _buildLevelOption(CompletionLevel.half, halfDesc,
+                  isCustom: isCustomHalf, theme: theme, onTone: onTone),
+              const SizedBox(height: 10),
+              _buildLevelOption(CompletionLevel.basic, basicDesc,
+                  isCustom: isCustomBasic, theme: theme, onTone: onTone),
+              const SizedBox(height: 14),
+              // دکمه تایید
+              GestureDetector(
+                onTap: canConfirm
+                    ? () => widget.onSelected(_selectedLevel!)
+                    : null,
+                child: Container(
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: btnBg,
+                    borderRadius: BorderRadius.circular(28),
                   ),
-                ),
-                child: Text(
-                  _selectedLevel == null
-                      ? 'یک گزینه را انتخاب کنید'
-                      : 'تایید ${_selectedLevel!.emoji}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  child: Text(
+                    canConfirm
+                        ? context.tr(
+                            'ad.pick.confirm', {'e': _selectedLevel!.emoji})
+                        : context.tr('ad.pick.choose'),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: btnFg,
+                    ),
                   ),
                 ),
               ),
-            ),
-
-            // دکمه انصراف
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text(
-                'انصراف',
-                style: TextStyle(color: theme.textSecondaryColor),
+              const SizedBox(height: 14),
+              // انصراف
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.pop(context),
+                child: SizedBox(
+                  height: 36,
+                  child: Center(
+                    child: Text(
+                      context.tr('ad.pick.cancel'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textSecondaryColor,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -241,10 +284,13 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     CompletionLevel level,
     String description, {
     bool isCustom = false,
-    required Color primaryColor,
     required ThemeProvider theme,
+    required Color onTone,
   }) {
     final isSelected = _selectedLevel == level;
+    final t = theme.tone(_toneOf(level));
+    final apricot = theme.tone(Tone.apricot);
+    final lilac = theme.tone(Tone.lilac);
     final xpEarned = (widget.habitXpReward * level.xpMultiplier / 100).round();
 
     String? levelValue;
@@ -253,129 +299,128 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     }
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedLevel = level;
-        });
-      },
+      onTap: () => setState(() => _selectedLevel = level),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          // در تم شب از رنگ‌های تیره‌تر استفاده کن
-          color: isSelected
-              ? level.color.withOpacity(0.15)
-              : (theme.isDarkMode
-                  ? const Color(0xFF2A2A2A)
-                  : Colors.grey.shade50),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected
-                ? level.color
-                : (theme.isDarkMode
-                    ? const Color(0xFF333333)
-                    : Colors.grey.shade200),
-            width: isSelected ? 2 : 1,
-          ),
+          color: isSelected ? t.bg : theme.backgroundColor,
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              level.emoji,
-              style: const TextStyle(fontSize: 24),
+            Container(
+              width: 26,
+              height: 26,
+              margin: const EdgeInsets.only(top: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? level.color : theme.cardSecondaryColor,
+                shape: BoxShape.circle,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded,
+                      size: 16, color: Colors.white)
+                  : null,
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      Text(level.emoji, style: const TextStyle(fontSize: 20)),
                       Text(
-                        level.displayName,
+                        context.tr('ad.lvl.name.${level.name}'),
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? level.color : theme.textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textColor,
                         ),
                       ),
-                      const SizedBox(width: 6),
                       if (isCustom)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 1,
-                          ),
+                          height: 22,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: level.color.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color: lilac.bg,
+                            borderRadius: BorderRadius.circular(11),
                           ),
                           child: Text(
-                            'سفارشی',
+                            context.tr('ad.pick.custom'),
                             style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w500,
-                              color: level.color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: theme.isDarkMode ? lilac.fg : _ink,
                             ),
                           ),
                         ),
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Text(
                     description,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
+                      height: 1.7,
                       color: theme.textSecondaryColor,
                     ),
                   ),
-                  if (levelValue != null) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: level.color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.flag,
-                            size: 10,
-                            color: level.color,
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      if (levelValue != null)
+                        Container(
+                          height: 26,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(13),
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            'نیاز: $levelValue',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w500,
-                              color: level.color,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.flag_rounded,
+                                  size: 14, color: theme.textColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                context.tr(
+                                    'ad.pick.need', {'v': levelValue}),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textColor,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                      Container(
+                        height: 26,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: apricot.bg,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Text(
+                          '+$xpEarned XP',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: theme.isDarkMode ? apricot.fg : _ink,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: level.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '+$xpEarned XP',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: level.color,
-                ),
               ),
             ),
           ],

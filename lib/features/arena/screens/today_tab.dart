@@ -17,6 +17,8 @@ import '/features/explore/models/user_quest_model.dart';
 import '/features/explore/screens/quest_completion_screen.dart';
 import '/features/explore/screens/challenge_completion_screen.dart';
 import '/providers/sync_provider.dart';
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/providers/theme_provider.dart';
 import 'dart:async';
 import '/models/offline_operation.dart';
@@ -34,12 +36,14 @@ class TodayTab extends StatefulWidget {
   final DateTime selectedDate;
   final ValueNotifier<int>? profileRefreshNotifier;
   final Function(double)? onProgressUpdate;
+  final void Function(int done, int total)? onStatsUpdate;
 
   const TodayTab({
     super.key,
     required this.selectedDate,
     this.profileRefreshNotifier,
     this.onProgressUpdate,
+    this.onStatsUpdate,
   });
 
   @override
@@ -190,6 +194,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     if (widget.onProgressUpdate != null) {
       widget.onProgressUpdate!(progress);
     }
+    widget.onStatsUpdate?.call(_completedItems, _totalTodayItems);
   }
 
   void _resetTotalItems() {
@@ -413,13 +418,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     SoundService.instance
         .play(level == CompletionLevel.full ? Sfx.complete : Sfx.check);
     if (mounted) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${level.emoji} +$xpEarned XP دریافت شد!'),
-          backgroundColor: level.color,
-          duration: const Duration(milliseconds: 800),
-        ),
+      showArenaSnack(
+        context,
+        context.tr('ah.today.xpEarned', {'xp': '$xpEarned'}),
+        kind: ArenaSnackKind.success,
+        duration: const Duration(milliseconds: 1200),
+        clearPrevious: true,
       );
     }
 
@@ -485,13 +489,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           },
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(' انجام شد (آفلاین)'),
-              backgroundColor: Colors.orange,
-              duration: Duration(milliseconds: 600),
-            ),
+          showArenaSnack(
+            context,
+            context.tr('ah.today.doneOffline'),
+            kind: ArenaSnackKind.warning,
+            duration: const Duration(milliseconds: 1200),
+            clearPrevious: true,
           );
         }
       }
@@ -509,13 +512,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           }
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        showArenaSnack(context, context.tr('ad.tmr.error', {'e': e.toString()}),
+            kind: ArenaSnackKind.error);
       }
     }
   }
@@ -698,12 +696,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             _completedHabits.add(habit);
             _todayHabits.remove(habit);
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          showArenaSnack(context, context.tr('ad.tmr.error', {'e': e.toString()}),
+            kind: ArenaSnackKind.error);
         }
       }
     });
@@ -839,16 +833,16 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: syncProvider.isOnline
-                ? Text('+${task.xpReward} XP دریافت کردید!')
-                : Text(' انجام شد (آفلاین) - پس از اتصال همگام‌سازی می‌شود'),
-            backgroundColor:
-                syncProvider.isOnline ? Colors.green : Colors.orange,
-            duration: const Duration(milliseconds: 800),
-          ),
+        showArenaSnack(
+          context,
+          syncProvider.isOnline
+              ? context.tr('ah.today.xpEarned', {'xp': '${task.xpReward}'})
+              : context.tr('ah.today.taskOffline'),
+          kind: syncProvider.isOnline
+              ? ArenaSnackKind.success
+              : ArenaSnackKind.warning,
+          duration: const Duration(milliseconds: 1200),
+          clearPrevious: true,
         );
       }
 
@@ -977,44 +971,6 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     }
   }
 
-  String _getTimeOfDayText(String timeOfDay) {
-    switch (timeOfDay) {
-      case 'morning':
-        return 'صبح';
-      case 'noon':
-        return 'ظهر';
-      case 'afternoon':
-        return 'بعدازظهر';
-      case 'night':
-        return 'شب';
-      default:
-        return 'صبح';
-    }
-  }
-
-  String _getFrequencyText(Habit habit) {
-    switch (habit.frequencyType) {
-      case 'daily':
-        if (habit.dailyIntervalDays != null &&
-            habit.dailyIntervalDays!.isNotEmpty) {
-          return 'هر ${habit.dailyIntervalDays!.first} روز';
-        }
-        return 'روزانه';
-      case 'weekly':
-        if (habit.weeklyDays != null && habit.weeklyDays!.isNotEmpty) {
-          return '${habit.weeklyDays!.length} روز در هفته';
-        }
-        return 'هفتگی';
-      case 'monthly':
-        if (habit.monthlyDays != null && habit.monthlyDays!.isNotEmpty) {
-          return 'ماهانه';
-        }
-        return 'ماهانه';
-      default:
-        return 'روزانه';
-    }
-  }
-
   void _showHabitDetailsDialog(Habit habit) {
     Navigator.push(
       context,
@@ -1035,85 +991,110 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: theme.cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.borderColor,
-                    borderRadius: BorderRadius.circular(2),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: theme.borderColor,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: task.isCompleted
-                          ? Colors.green
-                          : theme.cardSecondaryColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      task.isCompleted ? Icons.check_circle : Icons.assignment,
-                      color: task.isCompleted
-                          ? Colors.white
-                          : theme.textSecondaryColor,
-                      size: 28,
-                    ),
+                const SizedBox(height: 14),
+                Text(
+                  context.tr(task.isCompleted ? 'ah.td.done' : 'ah.td.pending'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: theme.textSecondaryColor,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textColor,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: task.isCompleted
+                            ? theme.successColor
+                            : theme.cardSecondaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        task.isCompleted
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.assignment_outlined,
+                        color: task.isCompleted
+                            ? const Color(0xFF090909)
+                            : theme.textSecondaryColor,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: theme.textColor,
+                            ),
                           ),
-                        ),
-                        Text(
-                          task.description.isEmpty
-                              ? 'بدون توضیحات'
-                              : task.description,
-                          style: TextStyle(color: theme.textSecondaryColor),
-                        ),
-                      ],
+                          const SizedBox(height: 2),
+                          Text(
+                            task.description.isEmpty
+                                ? context.tr('ah.td.noDesc')
+                                : task.description,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: theme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(height: 1, color: theme.cardSecondaryColor),
+                const SizedBox(height: 14),
+                if (task.dueDate != null) ...[
+                  _buildDetailRow(
+                    Icons.calendar_today_rounded,
+                    context.tr('ah.td.due'),
+                    dueDateStr,
+                    theme,
                   ),
+                  const SizedBox(height: 14),
                 ],
-              ),
-              Divider(height: 32, color: theme.borderColor),
-              if (task.dueDate != null) ...[
                 _buildDetailRow(
-                  Icons.calendar_today,
-                  'تاریخ سررسید',
-                  dueDateStr,
+                  Icons.star_outline_rounded,
+                  context.tr('ah.td.xp'),
+                  '${task.xpReward} XP',
                   theme,
                 ),
-                const SizedBox(height: 12),
               ],
-              _buildDetailRow(
-                  Icons.stars, 'امتیاز', '${task.xpReward} XP', theme),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
         );
       },
@@ -1125,19 +1106,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
-            color: theme.primaryColor.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(10),
+            color: theme.primarySoft,
+            shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: theme.primaryColor, size: 18),
+          child: Icon(icon, color: theme.textColor, size: 19),
         ),
         const SizedBox(width: 12),
         Text(
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: theme.textColor,
           ),
         ),
@@ -1311,22 +1293,10 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   }
 
   void _deleteHabit(Habit habit) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('حذف عادت'),
-        content: const Text('آیا از حذف این عادت مطمئن هستید؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirm = await showArenaDeleteDialog(
+      context,
+      title: context.tr('ah.habits.delTitle'),
+      message: context.tr('ah.habits.delMsg'),
     );
 
     if (confirm == true && mounted) {
@@ -1355,12 +1325,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       } catch (e) {
         print('Error deleting habit: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا در حذف عادت: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          showArenaSnack(context,
+              context.tr('ah.habits.delError', {'e': e.toString()}),
+              kind: ArenaSnackKind.error);
         }
       }
 
@@ -1382,22 +1349,10 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
   }
 
   void _deleteTask(Task task) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('حذف تسک'),
-        content: const Text('آیا از حذف این تسک مطمئن هستید؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+    final confirm = await showArenaDeleteDialog(
+      context,
+      title: context.tr('ah.tasks.delTitle'),
+      message: context.tr('ah.tasks.delMsg'),
     );
 
     if (confirm == true && mounted) {
@@ -1426,34 +1381,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       } catch (e) {
         print('Error deleting task: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا در حذف تسک: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          showArenaSnack(context,
+              context.tr('ah.tasks.delError', {'e': e.toString()}),
+              kind: ArenaSnackKind.error);
         }
       }
 
       _toggleExpanded(task.id, 'task');
     }
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        child: Icon(
-          icon,
-          color: onTap == null ? Colors.grey.shade400 : Colors.grey.shade600,
-          size: 24,
-        ),
-      ),
-    );
   }
 
   // ==================== ویجت‌های Swipe ====================
@@ -1473,14 +1408,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       background: _buildSwipeBackground(
         isLeft: true,
         primaryColor: primaryColor,
-        label: 'انجام شد ',
-        icon: Icons.check_circle,
+        label: context.tr('ah.swipe.done'),
+        icon: Icons.check_circle_outline_rounded,
       ),
       secondaryBackground: _buildSwipeBackground(
         isLeft: false,
         primaryColor: primaryColor,
-        label: 'انجام شد ',
-        icon: Icons.check_circle,
+        label: context.tr('ah.swipe.done'),
+        icon: Icons.check_circle_outline_rounded,
       ),
       confirmDismiss: (direction) async {
         _markHabitCompleted(habit);
@@ -1522,15 +1457,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       },
       background: _buildSwipeBackground(
         isLeft: true,
-        primaryColor: Colors.orange,
-        label: 'برگردان ',
-        icon: Icons.refresh,
+        primaryColor: Provider.of<ThemeProvider>(context, listen: false)
+            .accentGold,
+        label: context.tr('ah.swipe.undo'),
+        icon: Icons.refresh_rounded,
       ),
       secondaryBackground: _buildSwipeBackground(
         isLeft: false,
-        primaryColor: Colors.orange,
-        label: 'برگردان ',
-        icon: Icons.refresh,
+        primaryColor: Provider.of<ThemeProvider>(context, listen: false)
+            .accentGold,
+        label: context.tr('ah.swipe.undo'),
+        icon: Icons.refresh_rounded,
       ),
       confirmDismiss: (direction) async {
         _unmarkHabit(habit);
@@ -1568,14 +1505,14 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       background: _buildSwipeBackground(
         isLeft: true,
         primaryColor: primaryColor,
-        label: 'انجام شد ',
-        icon: Icons.check_circle,
+        label: context.tr('ah.swipe.done'),
+        icon: Icons.check_circle_outline_rounded,
       ),
       secondaryBackground: _buildSwipeBackground(
         isLeft: false,
         primaryColor: primaryColor,
-        label: 'انجام شد ',
-        icon: Icons.check_circle,
+        label: context.tr('ah.swipe.done'),
+        icon: Icons.check_circle_outline_rounded,
       ),
       confirmDismiss: (direction) async {
         _markTaskCompleted(task);
@@ -1589,6 +1526,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
         onToggleSubTask: (subTask) => _toggleSubTask(task, subTask),
+        onDetails: () => _showTaskDetailsDialog(task),
       ),
     );
   }
@@ -1603,15 +1541,17 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       },
       background: _buildSwipeBackground(
         isLeft: true,
-        primaryColor: Colors.orange,
-        label: 'برگردان ',
-        icon: Icons.refresh,
+        primaryColor: Provider.of<ThemeProvider>(context, listen: false)
+            .accentGold,
+        label: context.tr('ah.swipe.undo'),
+        icon: Icons.refresh_rounded,
       ),
       secondaryBackground: _buildSwipeBackground(
         isLeft: false,
-        primaryColor: Colors.orange,
-        label: 'برگردان ',
-        icon: Icons.refresh,
+        primaryColor: Provider.of<ThemeProvider>(context, listen: false)
+            .accentGold,
+        label: context.tr('ah.swipe.undo'),
+        icon: Icons.refresh_rounded,
       ),
       confirmDismiss: (direction) async {
         _unmarkTask(task);
@@ -1625,6 +1565,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         onEdit: () => _editTask(task),
         onDelete: () => _deleteTask(task),
         onToggleSubTask: (subTask) => _toggleSubTask(task, subTask),
+        onDetails: () => _showTaskDetailsDialog(task),
       ),
     );
   }
@@ -1634,42 +1575,36 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     required Color primaryColor,
     required String label,
     required IconData icon,
+    Color? foreground,
   }) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final Color fg = foreground ??
+        (primaryColor == theme.accentGold
+            ? Colors.white
+            : theme.onPrimaryColor);
+    final iconWidget = Icon(icon, color: fg, size: 22);
+    final text = Text(
+      label,
+      style: TextStyle(
+        color: fg,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+    );
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: primaryColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(28),
       ),
-      alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      alignment:
+          isLeft ? AlignmentDirectional.centerStart : AlignmentDirectional.centerEnd,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isLeft) ...[
-            Icon(icon, color: Colors.white, size: 24),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ] else ...[
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(icon, color: Colors.white, size: 24),
-          ],
-        ],
+        children: isLeft
+            ? [iconWidget, const SizedBox(width: 8), text]
+            : [text, const SizedBox(width: 8), iconWidget],
       ),
     );
   }
@@ -1710,17 +1645,27 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       context: context,
       isScrollControlled: true,
       backgroundColor: theme.cardColor,
+      barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
       builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return Container(
-              padding: const EdgeInsets.all(20),
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 14, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: theme.borderColor,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
                   _TimerDialogContent(
                     habit: habit,
                     initialMinutes: habit.timerSetting?.minutes ?? 10,
@@ -1749,13 +1694,8 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                         }
 
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('زمان با موفقیت ثبت شد!'),
-                              backgroundColor: Colors.green,
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
+                          showArenaSnack(context, context.tr('at.snack.timeSaved'),
+                              kind: ArenaSnackKind.success);
                         }
                       });
                     },
@@ -1861,49 +1801,20 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           }
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تنظیمات تایمر ذخیره شد'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        showArenaSnack(context, context.tr('at.snack.settingsSaved'),
+            kind: ArenaSnackKind.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showArenaSnack(context, context.tr('ad.tmr.error', {'e': e.toString()}),
+            kind: ArenaSnackKind.error);
       }
     }
   }
 
-  void _showCompleteHabitDialog(Habit habit) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تایمر به پایان رسید!'),
-        content: Text('آیا عادت "${habit.title}" را انجام دادید؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('هنوز نه'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _markHabitCompleted(habit);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('بله، انجام شد '),
-          ),
-        ],
-      ),
-    );
+  Future<void> _showCompleteHabitDialog(Habit habit) async {
+    final yes = await showHabitTimerEndDialog(context, habit.title);
+    if (yes == true && mounted) _markHabitCompleted(habit);
   }
 
   Future<CompletionLevel> _getHabitCompletionLevel(String habitId) async {
@@ -1940,18 +1851,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     return Consumer<SyncProvider>(
       builder: (context, syncProvider, child) {
         if (_isLoading && !syncProvider.hasLocalData) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: primaryColor),
-                const SizedBox(height: 16),
-                Text(
-                  'در حال بارگذاری اطلاعات...',
-                  style: TextStyle(color: theme.textSecondaryColor),
-                ),
-              ],
-            ),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+            children: const [ArenaLoadingView()],
           );
         }
 
@@ -1960,8 +1862,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             onRefresh: _loadData,
             color: primaryColor,
             child: _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(color: primaryColor),
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+                    children: const [ArenaLoadingView()],
                   )
                 : SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -1972,41 +1875,19 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         }
 
         if (!syncProvider.hasLocalData && !syncProvider.isOnline) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.wifi_off, size: 64, color: theme.textSecondaryColor),
-                const SizedBox(height: 16),
-                Text(
-                  'اتصال اینترنت برقرار نیست',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: theme.textSecondaryColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'برای مشاهده اطلاعات به اتصال اینترنت نیاز دارید',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: theme.textSecondaryColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _loadData,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('تلاش مجدد'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+            children: [
+              ArenaStateView(
+                icon: Icons.wifi_off_rounded,
+                tone: Tone.rose,
+                title: context.tr('ah.offline.title'),
+                subtitle: context.tr('ah.offline.sub'),
+                actionLabel: context.tr('ah.offline.retry'),
+                actionIcon: Icons.refresh_rounded,
+                onAction: _loadData,
+              ),
+            ],
           );
         }
 
@@ -2014,8 +1895,9 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
           onRefresh: _loadData,
           color: primaryColor,
           child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(color: primaryColor),
+              ? ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 170),
+                  children: const [ArenaLoadingView()],
                 )
               : SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -2051,7 +1933,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'انجام شده',
+                  context.tr('ah.today.doneHeader'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -2089,34 +1971,10 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             _todayTasks.isEmpty &&
             _completedHabits.isEmpty &&
             _completedTasks.isEmpty)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 80),
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 64,
-                  color: theme.textSecondaryColor,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'هیچ کاری برای این روز ندارید!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: theme.textSecondaryColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'روی دکمه + کلیک کنید',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: theme.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
+          ArenaStateView(
+            icon: Icons.check_circle_outline_rounded,
+            title: context.tr('ah.today.emptyTitle'),
+            subtitle: context.tr('ah.today.emptySub'),
           ),
       ],
     );
@@ -2169,9 +2027,9 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'تایمر عادت',
+            context.tr('ah.timer.title'),
             style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+                fontSize: 18, fontWeight: FontWeight.w800, color: theme.textColor),
           ),
           const SizedBox(height: 8),
           Text(
@@ -2197,15 +2055,15 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: theme.primarySoft,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Text(
               '${_minutes.toString().padLeft(2, '0')}:${_seconds.toString().padLeft(2, '0')}',
               style: TextStyle(
                 fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
+                fontWeight: FontWeight.w800,
+                color: theme.textColor,
                 fontFamily: 'monospace',
               ),
             ),
@@ -2226,13 +2084,15 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
               Navigator.pop(context);
             },
             icon: const Icon(Icons.save, size: 18),
-            label: const Text('ذخیره تنظیمات تایمر'),
+            label: Text(context.tr('ah.timer.save')),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
+              foregroundColor: theme.onPrimaryColor,
+              minimumSize: const Size.fromHeight(56),
+              elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(28),
               ),
             ),
           ),

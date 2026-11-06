@@ -8,6 +8,8 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:provider/provider.dart';
 
+import '/core/app_palette.dart';
+import '/l10n/app_strings.dart';
 import '/services/supabase_service.dart';
 import '/services/storage_service.dart';
 import '/providers/theme_provider.dart';
@@ -39,11 +41,101 @@ class _GalleryScreenState extends State<GalleryScreen> {
   bool _isUploading = false;
   double _uploadProgress = 0.0;
 
+  // ارتفاع کاشی‌ها در دو ستون (مطابق طرح)
+  static const List<double> _colAHeights = [200, 140, 170];
+  static const List<double> _colBHeights = [150, 200, 130];
+  static const List<Tone> _tileTones = [
+    Tone.lilac,
+    Tone.sky,
+    Tone.peach,
+    Tone.butter,
+    Tone.mint,
+    Tone.lime,
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadPhotos();
   }
+
+  // ==================== ابزارهای ظاهری ====================
+
+  Color _ink(ThemeProvider t) =>
+      t.isDarkMode ? t.cardSecondaryColor : const Color(0xFF090909);
+
+  Color _onAccent(Color accent) =>
+      accent.computeLuminance() > 0.5 ? const Color(0xFF090909) : Colors.white;
+
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? theme.errorColor : theme.successColor,
+      ),
+    );
+  }
+
+  Widget _backButton(ThemeProvider t) {
+    return GestureDetector(
+      onTap: () => Navigator.maybePop(context),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: t.cardColor,
+          shape: BoxShape.circle,
+          boxShadow: t.softShadow,
+        ),
+        child: Icon(Icons.arrow_forward_rounded, size: 22, color: t.textColor),
+      ),
+    );
+  }
+
+  Widget _handle(ThemeProvider t) => Center(
+        child: Container(
+          width: 44,
+          height: 5,
+          decoration: BoxDecoration(
+            color: t.cardSecondaryColor,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+      );
+
+  Widget _pillButton(
+    ThemeProvider t, {
+    required String label,
+    required VoidCallback? onTap,
+    bool primary = true,
+    double height = 54,
+    Color? labelColor,
+  }) {
+    final accent = t.effectivePrimary;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: primary ? _ink(t) : t.cardSecondaryColor,
+          borderRadius: BorderRadius.circular(height / 2),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: primary ? FontWeight.w800 : FontWeight.w600,
+            color: labelColor ?? (primary ? accent : t.textColor),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== بارگذاری ====================
 
   Future<void> _loadPhotos() async {
     if (!mounted) return;
@@ -60,7 +152,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
-  Future<void> _pickAndUpload(ImageSource source) async {
+  Future<void> _pickAndUpload(ImageSource source, {String? presetCaption}) async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: source,
@@ -86,10 +178,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
       if (!mounted) return;
 
-      // ═══════════════════════════════════════════════════════════
-      // دیالوگ کپشن قبل از آپلود
-      // ═══════════════════════════════════════════════════════════
-      final caption = await _showCaptionDialog();
+      // کپشن: اگر از برگه‌ی افزودن عکس آمده باشد همان است، وگرنه دیالوگ کپشن
+      final caption = presetCaption ?? await _showCaptionDialog();
 
       if (caption == null) {
         // کاربر لغو کرد (null یعنی انصراف کلی)
@@ -138,22 +228,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
         await _loadPhotos();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('عکس با موفقیت آپلود شد'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          _snack(context.tr('pm.gl.uploaded'));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _snack(context.tr('pm.gl.error', {'n': e.toString()}), error: true);
       }
     } finally {
       if (mounted) {
@@ -166,274 +246,277 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════
-// دیالوگ نوشتن کپشن قبل از آپلود
-// ═══════════════════════════════════════════════════════════
+  // دیالوگ نوشتن کپشن (فقط وقتی کپشن از قبل داده نشده باشد)
+  // ═══════════════════════════════════════════════════════════
   Future<String?> _showCaptionDialog() async {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     final controller = TextEditingController();
-    final wordCountNotifier = ValueNotifier<int>(0);
-
-    // بررسی طول
-    controller.addListener(() {
-      wordCountNotifier.value = controller.text.length;
-    });
 
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: theme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: theme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.edit_note,
-                color: theme.primaryColor,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'نوشتن کپشن',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'می‌توانی یک متن کوتاه زیر عکس بنویسی',
-              style: TextStyle(
-                fontSize: 13,
-                color: theme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              maxLines: 4,
-              minLines: 3,
-              maxLength: 200,
-              style: TextStyle(
-                color: theme.textColor,
-                fontSize: 14,
-                height: 1.5,
-              ),
-              decoration: InputDecoration(
-                hintText: 'امروز یه روز خاص بود...',
-                hintStyle: TextStyle(
-                  color: theme.textSecondaryColor,
-                  fontSize: 13,
-                ),
-                filled: true,
-                fillColor: theme.isDarkMode
-                    ? const Color(0xFF2A2A2A)
-                    : Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: theme.primaryColor.withValues(alpha: 0.5),
-                    width: 2,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    context.tr('pm.gl.caption'),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor,
+                    ),
                   ),
-                ),
-                contentPadding: const EdgeInsets.all(14),
+                  Text(
+                    context.tr('pm.gl.optional'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textSecondaryColor,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            // شمارنده کلمات
-            ValueListenableBuilder<int>(
-              valueListenable: wordCountNotifier,
-              builder: (context, count, _) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'اختیاری',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.textSecondaryColor,
-                      ),
+              const SizedBox(height: 12),
+              _captionField(theme, controller, autofocus: true),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _pillButton(
+                      theme,
+                      label: context.tr('pm.gl.cancel'),
+                      primary: false,
+                      onTap: () => Navigator.pop(dialogContext, null),
                     ),
-                    Text(
-                      '$count / 200',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: count > 180
-                            ? Colors.orange
-                            : theme.textSecondaryColor,
-                      ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: _pillButton(
+                      theme,
+                      label: context.tr('pm.gl.upload'),
+                      onTap: () =>
+                          Navigator.pop(dialogContext, controller.text.trim()),
                     ),
-                  ],
-                );
-              },
-            ),
-          ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, null), // لغو
-            child: Text(
-              'انصراف',
-              style: TextStyle(color: theme.textSecondaryColor),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              // اگر خالی بود، بدون کپشن ادامه بده
-              Navigator.pop(dialogContext, controller.text.trim());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text(
-              'آپلود عکس',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
 
-    wordCountNotifier.dispose();
     controller.dispose();
 
     return result;
   }
 
+  Widget _captionField(
+    ThemeProvider theme,
+    TextEditingController controller, {
+    bool autofocus = false,
+    String? hint,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      constraints: const BoxConstraints(minHeight: 84),
+      decoration: BoxDecoration(
+        color: theme.cardSecondaryColor,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: TextField(
+        controller: controller,
+        autofocus: autofocus,
+        minLines: 3,
+        maxLines: 4,
+        maxLength: 200,
+        style: TextStyle(fontSize: 14, height: 1.5, color: theme.textColor),
+        decoration: InputDecoration(
+          hintText: hint ?? context.tr('pm.gl.caption_hint'),
+          hintStyle: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
+          border: InputBorder.none,
+          counterText: '',
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  // ==================== برگه‌ی افزودن عکس (AddPhoto) ====================
+
   void _showSourcePicker() {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final controller = TextEditingController();
+    ImageSource? selected;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
-      backgroundColor: theme.surfaceColor,
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
-      builder: (context) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.borderColor,
-                    borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (ctx, setSheet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _handle(theme),
+                      const SizedBox(height: 16),
+                      Text(
+                        context.tr('pm.gl.add_photo'),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSourceButton(
+                              icon: Icons.photo_camera_outlined,
+                              label: context.tr('pm.gl.camera'),
+                              tone: Tone.sky,
+                              selected: selected == ImageSource.camera,
+                              onTap: () =>
+                                  setSheet(() => selected = ImageSource.camera),
+                              theme: theme,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _buildSourceButton(
+                              icon: Icons.image_outlined,
+                              label: context.tr('pm.gl.phone_gallery'),
+                              tone: Tone.lilac,
+                              selected: selected == ImageSource.gallery,
+                              onTap: () => setSheet(
+                                  () => selected = ImageSource.gallery),
+                              theme: theme,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            context.tr('pm.gl.caption'),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: theme.textColor,
+                            ),
+                          ),
+                          Text(
+                            context.tr('pm.gl.optional'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _captionField(theme, controller),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _pillButton(
+                              theme,
+                              label: context.tr('pm.gl.cancel'),
+                              primary: false,
+                              onTap: () => Navigator.pop(sheetContext),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: Opacity(
+                              opacity: selected == null ? 0.5 : 1,
+                              child: _pillButton(
+                                theme,
+                                label: context.tr('pm.gl.upload'),
+                                onTap: selected == null
+                                    ? null
+                                    : () {
+                                        final src = selected!;
+                                        final caption = controller.text.trim();
+                                        Navigator.pop(sheetContext);
+                                        _pickAndUpload(src,
+                                            presetCaption: caption);
+                                      },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'افزودن عکس',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textColor,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSourceButton(
-                        icon: Icons.camera_alt,
-                        label: 'دوربین',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _pickAndUpload(ImageSource.camera);
-                        },
-                        theme: theme,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSourceButton(
-                        icon: Icons.photo_library,
-                        label: 'گالری',
-                        onTap: () {
-                          Navigator.pop(context);
-                          _pickAndUpload(ImageSource.gallery);
-                        },
-                        theme: theme,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
-    );
+    ).whenComplete(controller.dispose);
   }
 
   Widget _buildSourceButton({
     required IconData icon,
     required String label,
+    required Tone tone,
+    required bool selected,
     required VoidCallback onTap,
     required ThemeProvider theme,
   }) {
+    final tc = theme.tone(tone);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        height: 96,
         decoration: BoxDecoration(
-          color: theme.primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
+          color: tc.bg,
+          borderRadius: BorderRadius.circular(26),
           border: Border.all(
-            color: theme.primaryColor.withValues(alpha: 0.3),
+            color: selected ? _ink(theme) : Colors.transparent,
+            width: 2.5,
           ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: theme.primaryColor, size: 32),
+            Icon(icon, color: theme.textColor, size: 26),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 color: theme.textColor,
               ),
             ),
@@ -444,8 +527,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   void _openPhotoViewer(int index) {
-    final theme = Provider.of<ThemeProvider>(context, listen: false);
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -465,32 +546,66 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'حذف عکس',
-          style: TextStyle(color: theme.textColor),
-        ),
-        content: Text(
-          'آیا از حذف این عکس مطمئن هستید؟',
-          style: TextStyle(color: theme.textSecondaryColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.tr('pm.gl.delete_title'),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                context.tr('pm.gl.delete_body'),
+                style: TextStyle(fontSize: 14, color: theme.textSecondaryColor),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _pillButton(
+                      theme,
+                      label: context.tr('pm.gl.cancel'),
+                      primary: false,
+                      onTap: () => Navigator.pop(dialogContext, false),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(dialogContext, true),
+                      child: Container(
+                        height: 54,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: theme.errorColor,
+                          borderRadius: BorderRadius.circular(27),
+                        ),
+                        child: Text(
+                          context.tr('pm.gl.delete'),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'حذف',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
+        ),
       ),
     );
 
@@ -504,7 +619,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           storagePath: photo.storagePath,
         );
       } catch (e) {
-        print('Storage delete error (ignored): $e');
+        debugPrint('Storage delete error (ignored): $e');
       }
 
       // حذف از DB
@@ -514,112 +629,180 @@ class _GalleryScreenState extends State<GalleryScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('عکس حذف شد'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _snack(context.tr('pm.gl.deleted'));
         await _loadPhotos();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _snack(context.tr('pm.gl.error', {'n': e.toString()}), error: true);
       }
     }
   }
 
+  // ==================== ساخت صفحه ====================
+
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeProvider>(context);
+    final theme = context.watch<ThemeProvider>();
+    final accent = theme.effectivePrimary;
+    final title = widget.userName != null
+        ? context.tr('pm.gl.title_other', {'name': widget.userName!})
+        : context.tr('pm.gl.title');
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          widget.userName != null ? 'گالری ${widget.userName}' : 'گالری من',
-          style: TextStyle(color: theme.textColor),
-        ),
-        backgroundColor: theme.surfaceColor,
-        elevation: 0,
-        foregroundColor: theme.textColor,
-        actions: [
-          IconButton(
-            onPressed: _isUploading ? null : _showSourcePicker,
-            icon: const Icon(Icons.add_a_photo),
-            tooltip: 'افزودن عکس',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: theme.primaryColor),
-            )
-          : Column(
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      _backButton(theme),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: theme.textColor,
+                              ),
+                            ),
+                            if (!_isLoading)
+                              Text(
+                                context.tr('pm.gl.count',
+                                    {'n': _photos.length.toString()}),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.textSecondaryColor,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 if (_isUploading) _buildUploadProgress(theme),
                 Expanded(
-                  child: _photos.isEmpty
-                      ? _buildEmptyState(theme)
-                      : _buildPhotoGrid(theme),
+                  child: _isLoading
+                      ? Center(child: CircularProgressIndicator(color: accent))
+                      : (_photos.isEmpty
+                          ? _buildEmptyState(theme)
+                          : _buildPhotoGrid(theme)),
                 ),
               ],
             ),
-      floatingActionButton: _photos.isNotEmpty && !_isUploading
-          ? FloatingActionButton.extended(
-              onPressed: _showSourcePicker,
-              backgroundColor: theme.primaryColor,
-              icon: const Icon(Icons.add_a_photo, color: Colors.white),
-              label: const Text(
-                'افزودن عکس',
-                style: TextStyle(color: Colors.white),
+            if (_photos.isNotEmpty && !_isUploading && !_isLoading)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: IgnorePointer(
+                  ignoring: false,
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      40,
+                      20,
+                      24 + MediaQuery.of(context).padding.bottom,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          theme.backgroundColor.withValues(alpha: 0),
+                          theme.backgroundColor,
+                        ],
+                        stops: const [0, 0.65],
+                      ),
+                    ),
+                    child: _buildAddButton(theme, accent),
+                  ),
+                ),
               ),
-            )
-          : null,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(ThemeProvider theme, Color accent) {
+    return GestureDetector(
+      onTap: _showSourcePicker,
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: _ink(theme),
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_rounded, size: 22, color: accent),
+            const SizedBox(width: 8),
+            Text(
+              context.tr('pm.gl.add_photo'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: accent,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildUploadProgress(ThemeProvider theme) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      color: theme.surfaceColor,
-      child: Column(
+      margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: theme.softShadow,
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  value: _uploadProgress,
-                  strokeWidth: 2,
-                  color: theme.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'در حال آپلود...',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.textColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${(_uploadProgress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              value: _uploadProgress,
+              strokeWidth: 2.4,
+              color: theme.effectivePrimary,
+              backgroundColor: theme.cardSecondaryColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            context.tr('pm.gl.uploading'),
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.textColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '${(_uploadProgress * 100).toInt()}%',
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.textColor,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -627,6 +810,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Widget _buildEmptyState(ThemeProvider theme) {
+    final tc = theme.tone(Tone.lilac);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -637,27 +821,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: theme.primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+                color: tc.bg,
+                borderRadius: BorderRadius.circular(40),
               ),
               child: Icon(
-                Icons.photo_library_outlined,
-                size: 60,
-                color: theme.primaryColor,
+                Icons.image_outlined,
+                size: 52,
+                color: theme.textColor.withValues(alpha: 0.35),
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'هنوز عکسی نداری',
+              context.tr('pm.gl.empty_title'),
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w800,
                 color: theme.textColor,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
-              'لحظه‌های قهرمانی‌ات رو با دیگران به اشتراک بگذار',
+              context.tr('pm.gl.empty_sub'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -665,241 +849,186 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 height: 1.6,
               ),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: _showSourcePicker,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            const SizedBox(height: 28),
+            if (!_isUploading)
+              GestureDetector(
+                onTap: _showSourcePicker,
+                child: Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  decoration: BoxDecoration(
+                    color: _ink(theme),
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_rounded,
+                          size: 22, color: theme.effectivePrimary),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.tr('pm.gl.add_first'),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: theme.effectivePrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              icon: const Icon(Icons.add_a_photo, color: Colors.white),
-              label: const Text(
-                'افزودن اولین عکس',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
+  // شبکه‌ی دو ستونه (masonry) مطابق طرح
   Widget _buildPhotoGrid(ThemeProvider theme) {
+    final colA = <Widget>[];
+    final colB = <Widget>[];
+    for (int i = 0; i < _photos.length; i++) {
+      final inA = i % 2 == 0;
+      final pos = i ~/ 2;
+      final heights = inA ? _colAHeights : _colBHeights;
+      final h = heights[pos % heights.length];
+      final tile = Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: _buildPhotoCard(_photos[i], i, h, theme),
+      );
+      (inA ? colA : colB).add(tile);
+    }
+
     return RefreshIndicator(
       onRefresh: _loadPhotos,
-      color: theme.primaryColor,
-      child: GridView.builder(
-        padding: const EdgeInsets.all(12),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, // از ۳ به ۲ (برای کارت‌های بزرگ‌تر)
-          crossAxisSpacing: 12, // از ۸ به ۱۲
-          mainAxisSpacing: 12, // از ۸ به ۱۲
-          childAspectRatio: 0.85, // نسبت ارتفاع
+      color: theme.effectivePrimary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Column(children: colA)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(children: colB)),
+          ],
         ),
-        itemCount: _photos.length,
-        itemBuilder: (context, index) {
-          final photo = _photos[index];
-          return _buildPhotoCard(photo, index, theme);
-        },
       ),
     );
   }
 
-  Widget _buildPhotoCard(UserPhoto photo, int index, ThemeProvider theme) {
+  Widget _buildPhotoCard(
+      UserPhoto photo, int index, double height, ThemeProvider theme) {
+    final tc = theme.tone(_tileTones[index % _tileTones.length]);
+    final accent = theme.effectivePrimary;
+    final placeholder = Container(
+      color: tc.bg,
+      child: Center(
+        child: Icon(
+          Icons.image_outlined,
+          size: 34,
+          color: theme.textColor.withValues(alpha: 0.35),
+        ),
+      ),
+    );
+    final hasCaption = photo.caption != null && photo.caption!.isNotEmpty;
+
     return GestureDetector(
       onTap: () => _openPhotoViewer(index),
       onLongPress: () => _showPhotoOptions(photo, theme),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: theme.isDarkMode ? 0.4 : 0.12,
-              ),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+      child: SizedBox(
+        height: height,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(28),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // تصویر
               CachedNetworkImage(
                 imageUrl: photo.photoUrl,
                 fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: theme.isDarkMode
-                      ? const Color(0xFF2A2A2A)
-                      : Colors.grey.shade200,
-                  child: Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: theme.isDarkMode
-                      ? const Color(0xFF2A2A2A)
-                      : Colors.grey.shade200,
-                  child: Icon(
-                    Icons.broken_image,
-                    color: theme.textSecondaryColor,
-                    size: 32,
-                  ),
-                ),
+                placeholder: (context, url) => placeholder,
+                errorWidget: (context, url, error) => placeholder,
               ),
 
-              // گرادیانت برای خوانایی کپشن
-              if (photo.caption != null && photo.caption!.isNotEmpty)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(8, 20, 8, 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.85),
-                        ],
-                      ),
-                    ),
-                    child: Text(
-                      photo.caption!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        height: 1.3,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black54,
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-
-              // گرادیانت بالایی (برای خوانایی badge ها)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 40,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.4),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // badge عکس اصلی (ستاره)
+              // نشان عکس اصلی
               if (photo.isPrimary)
                 Positioned(
-                  top: 6,
-                  left: 6,
+                  top: 10,
+                  right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
+                    height: 26,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: theme.primaryColor,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 4,
-                        ),
-                      ],
+                      color: accent,
+                      borderRadius: BorderRadius.circular(13),
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.star,
-                          color: Colors.white,
-                          size: 10,
-                        ),
-                        SizedBox(width: 2),
-                        Text(
-                          'اصلی',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      context.tr('pm.gl.primary'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _onAccent(accent),
+                      ),
                     ),
                   ),
                 ),
 
-              // badge لایک
+              // نشان لایک
               if (photo.likesCount > 0)
                 Positioned(
-                  top: 6,
-                  right: 6,
+                  top: 10,
+                  left: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
+                    height: 26,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(13),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.favorite,
-                          color: Colors.white,
-                          size: 11,
-                        ),
+                        const Icon(Icons.favorite_rounded,
+                            color: Colors.white, size: 12),
                         const SizedBox(width: 3),
                         Text(
                           '${photo.likesCount}',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+              // کپشن
+              if (hasCaption)
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    alignment: AlignmentDirectional.centerStart,
+                    decoration: BoxDecoration(
+                      color: theme.cardColor.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Text(
+                      photo.caption!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textColor,
+                      ),
                     ),
                   ),
                 ),
@@ -910,66 +1039,95 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  void _showPhotoOptions(UserPhoto photo, ThemeProvider theme) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.surfaceColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  Widget _optionRow(
+    ThemeProvider theme, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final c = color ?? theme.textColor;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 56,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        decoration: BoxDecoration(
+          color: theme.cardSecondaryColor,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: c, size: 22),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: c,
+              ),
+            ),
+          ],
+        ),
       ),
-      builder: (context) {
+    );
+  }
+
+  void _showPhotoOptions(UserPhoto photo, ThemeProvider theme) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.cardColor,
+      barrierColor: Colors.black.withValues(alpha: 0.5),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+      ),
+      builder: (sheetContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.borderColor,
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _handle(theme),
+                const SizedBox(height: 18),
+                _optionRow(
+                  theme,
+                  icon: Icons.edit_outlined,
+                  label: context.tr('pm.gl.edit_caption'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showEditCaptionDialog(photo, theme);
+                  },
                 ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: Icon(Icons.edit, color: theme.primaryColor),
-                title: Text(
-                  'ویرایش کپشن',
-                  style: TextStyle(color: theme.textColor),
+                _optionRow(
+                  theme,
+                  icon: photo.isPrimary
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  label: photo.isPrimary
+                      ? context.tr('pm.gl.unset_primary')
+                      : context.tr('pm.gl.set_primary'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _togglePrimary(photo);
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showEditCaptionDialog(photo, theme);
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  photo.isPrimary ? Icons.star : Icons.star_border,
-                  color: Colors.amber,
+                _optionRow(
+                  theme,
+                  icon: Icons.delete_outline_rounded,
+                  label: context.tr('pm.gl.delete_photo'),
+                  color: theme.errorColor,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _deletePhoto(photo);
+                  },
                 ),
-                title: Text(
-                  photo.isPrimary ? 'حذف از حالت اصلی' : 'تنظیم به عنوان اصلی',
-                  style: TextStyle(color: theme.textColor),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _togglePrimary(photo);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text(
-                  'حذف عکس',
-                  style: TextStyle(color: Colors.red),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _deletePhoto(photo);
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -982,51 +1140,56 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'ویرایش کپشن',
-          style: TextStyle(color: theme.textColor),
-        ),
-        content: TextField(
-          controller: controller,
-          maxLines: 3,
-          maxLength: 200,
-          style: TextStyle(color: theme.textColor),
-          decoration: InputDecoration(
-            hintText: 'یک توضیح کوتاه بنویس...',
-            hintStyle: TextStyle(color: theme.textSecondaryColor),
-            filled: true,
-            fillColor: theme.isDarkMode
-                ? const Color(0xFF2A2A2A)
-                : Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
+      builder: (dialogContext) => Dialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                context.tr('pm.gl.edit_caption'),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: theme.textColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _captionField(theme, controller,
+                  hint: context.tr('pm.gl.edit_hint')),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: _pillButton(
+                      theme,
+                      label: context.tr('pm.gl.cancel'),
+                      primary: false,
+                      onTap: () => Navigator.pop(dialogContext),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: _pillButton(
+                      theme,
+                      label: context.tr('pm.gl.save'),
+                      onTap: () =>
+                          Navigator.pop(dialogContext, controller.text.trim()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primaryColor,
-            ),
-            child: const Text(
-              'ذخیره',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
+
+    controller.dispose();
 
     if (result != null) {
       try {
@@ -1038,12 +1201,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         await _loadPhotos();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('خطا: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
+          _snack(context.tr('pm.gl.error', {'n': e.toString()}), error: true);
         }
       }
     }
@@ -1074,16 +1232,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
       await _loadPhotos();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _snack(context.tr('pm.gl.error', {'n': e.toString()}), error: true);
       }
     }
   }
 }
+
 
 // ═══════════════════════════════════════════════════════════
 // Photo Viewer (نمایش تمام‌صفحه)
@@ -1173,7 +1327,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
               },
               loadingBuilder: (context, event) => Center(
                 child: CircularProgressIndicator(
-                  color: theme.primaryColor,
+                  color: theme.effectivePrimary,
                 ),
               ),
             ),
