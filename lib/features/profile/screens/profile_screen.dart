@@ -650,8 +650,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     _theme = context.watch<ThemeProvider>();
-    return Scaffold(
-      backgroundColor: _theme.backgroundColor,
+    final bool darkBg =
+        ThemeData.estimateBrightnessForColor(_theme.primaryColor) ==
+            Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: darkBg ? Brightness.light : Brightness.dark,
+        statusBarBrightness: darkBg ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
+      backgroundColor: _theme.primaryColor,
       body: Consumer<SyncProvider>(
         builder: (context, syncProvider, child) {
           // حالت بارگذاری
@@ -684,6 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // نمایش محتوا
           return _buildProfileContent();
         },
+      ),
       ),
     );
   }
@@ -898,7 +908,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
-                color: _theme.textColor,
+                color: _theme.onPrimaryColor,
               ),
             ),
           ),

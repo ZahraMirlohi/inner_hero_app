@@ -45,7 +45,9 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       // استفاده از رنگ پس‌زمینه تم به جای رنگ هاردکد شده
       backgroundColor:
-          _currentIndex == 0 ? theme.primaryColor : theme.backgroundColor,
+          (_currentIndex == 0 || _currentIndex == 3)
+              ? theme.primaryColor
+              : theme.backgroundColor,
       body: Stack(
         children: [
           SafeArea(

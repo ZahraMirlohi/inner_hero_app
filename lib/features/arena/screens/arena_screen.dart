@@ -261,32 +261,42 @@ class _ArenaScreenState extends State<ArenaScreen>
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Column(
-                  children: [
-                    _buildTabs(themeProvider),
-                    Expanded(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOutCubic,
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          color: themeProvider.cardColor,
-                          borderRadius: BorderRadiusDirectional.only(
-                            topStart:
-                                Radius.circular(_selectedIndex == 0 ? 0 : 32),
-                            topEnd:
-                                Radius.circular(_selectedIndex == 2 ? 0 : 32),
-                            bottomStart: const Radius.circular(32),
-                            bottomEnd: const Radius.circular(32),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: _selectedIndex.toDouble()),
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, pos, _) {
+                    final bool rtl =
+                        Directionality.of(context) == TextDirection.rtl;
+                    // مقدار نزدیکی به سمت چپ/راست فیزیکی (۰ تا ۱)
+                    final double toStart = pos.clamp(0.0, 1.0);
+                    final double toEnd = (2 - pos).clamp(0.0, 1.0);
+                    final double left = rtl ? toEnd : toStart;
+                    final double right = rtl ? toStart : toEnd;
+                    return Column(
+                      children: [
+                        _buildTabs(themeProvider, pos, left, right),
+                        Expanded(
+                          child: Container(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: themeProvider.cardColor,
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(32 * left),
+                                topRight: Radius.circular(32 * right),
+                                bottomLeft: const Radius.circular(32),
+                                bottomRight: const Radius.circular(32),
+                              ),
+                            ),
+                            child: NotificationListener<ScrollNotification>(
+                              onNotification: _onScroll,
+                              child: _buildAnimatedPages(),
+                            ),
                           ),
                         ),
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: _onScroll,
-                          child: _buildAnimatedPages(),
-                        ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -630,98 +640,134 @@ class _ArenaScreenState extends State<ArenaScreen>
 
   static const double _tabFillerSize = 16;
 
-  Widget _buildTabs(ThemeProvider theme) {
+  /// [pos] موقعیت پیوستهٔ تب انتخاب‌شده (۰..۲)، [left] و [right] میزان وجود
+  /// همسایه در سمت چپ/راست فیزیکی (۰..۱). تب سفید یک نشانگر واحد است که
+  /// روی تب‌ها می‌لغزد؛ پس هیچ لبهٔ تیزی در میانهٔ انیمیشن ساخته نمی‌شود.
+  Widget _buildTabs(ThemeProvider theme, double pos, double left, double right) {
+    final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    const double gap = 8;
     final int n = _tabKeys.length;
+
     return SizedBox(
       height: 56,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < n; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(child: _buildTab(theme, i, n)),
-          ],
-        ],
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final double sw = (box.maxWidth - gap * (n - 1)) / n;
+          double xOf(double i) =>
+              rtl ? box.maxWidth - (i + 1) * sw - i * gap : i * (sw + gap);
+          final double indX = xOf(pos);
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // قرص‌های شفاف تب‌های غیرفعال
+              for (var i = 0; i < n; i++)
+                Positioned(
+                  left: xOf(i.toDouble()),
+                  top: 0,
+                  width: sw,
+                  height: 42,
+                  child: Opacity(
+                    opacity: (pos - i).abs().clamp(0.0, 1.0),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: theme.cardColor.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(21),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // نشانگر سفید متصل به باکس
+              Positioned(
+                left: indX,
+                top: 0,
+                width: sw,
+                height: 56,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(26)),
+                  ),
+                ),
+              ),
+              // گوشه‌های وارونه، همراه نشانگر و محو در لبه‌ها
+              Positioned(
+                left: indX - _tabFillerSize,
+                bottom: 0,
+                child: Opacity(
+                  opacity: left,
+                  child: CustomPaint(
+                    size: const Size(_tabFillerSize, _tabFillerSize),
+                    painter: _InverseCornerPainter(
+                        color: theme.cardColor, circleOnRight: false),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: indX + sw,
+                bottom: 0,
+                child: Opacity(
+                  opacity: right,
+                  child: CustomPaint(
+                    size: const Size(_tabFillerSize, _tabFillerSize),
+                    painter: _InverseCornerPainter(
+                        color: theme.cardColor, circleOnRight: true),
+                  ),
+                ),
+              ),
+
+              // برچسب‌ها و لمس
+              for (var i = 0; i < n; i++)
+                Positioned(
+                  left: xOf(i.toDouble()),
+                  top: 0,
+                  width: sw,
+                  height: 56,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _onTabChanged(i),
+                    child: Center(
+                      child: _tabLabel(
+                        theme,
+                        i,
+                        Color.lerp(
+                          theme.onPrimaryColor,
+                          theme.textColor,
+                          (1 - (pos - i).abs()).clamp(0.0, 1.0),
+                        )!,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _fadeFiller(bool visible, Widget child) => AnimatedOpacity(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOut,
-        opacity: visible ? 1.0 : 0.0,
-        child: child,
-      );
-
-  Widget _buildTab(ThemeProvider theme, int i, int n) {
-    final bool sel = i == _selectedIndex;
-    final bool rtl = Directionality.of(context) == TextDirection.rtl;
-    final Color labelColor = sel ? theme.textColor : theme.onPrimaryColor;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _onTabChanged(i),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        height: sel ? 56 : 42,
-        decoration: BoxDecoration(
-          color: sel
-              ? theme.cardColor
-              : theme.cardColor.withValues(alpha: 0.3),
-          borderRadius: sel
-              ? const BorderRadius.vertical(top: Radius.circular(26))
-              : BorderRadius.circular(21),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            // گوشه‌های وارونه که تب را به باکس می‌چسبانند
-            if (i > 0)
-              PositionedDirectional(
-                start: -_tabFillerSize,
-                bottom: 0,
-                child: _fadeFiller(sel, CustomPaint(
-                  size: const Size(_tabFillerSize, _tabFillerSize),
-                  painter: _InverseCornerPainter(
-                      color: theme.cardColor, circleOnRight: rtl),
-                )),
-              ),
-            if (i < n - 1)
-              PositionedDirectional(
-                end: -_tabFillerSize,
-                bottom: 0,
-                child: _fadeFiller(sel, CustomPaint(
-                  size: const Size(_tabFillerSize, _tabFillerSize),
-                  painter: _InverseCornerPainter(
-                      color: theme.cardColor, circleOnRight: !rtl),
-                )),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_icons[i], size: 19, color: labelColor),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    context.tr(_tabKeys[i]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.0,
-                      fontWeight: FontWeight.w800,
-                      color: labelColor,
-                    ),
-                  ),
-                ),
-              ],
+  Widget _tabLabel(ThemeProvider theme, int i, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(_icons[i], size: 19, color: color),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            context.tr(_tabKeys[i]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.0,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
