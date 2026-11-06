@@ -210,7 +210,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
     final rtl = Directionality.of(context) == TextDirection.rtl;
 
     Widget circleBtn(IconData icon, VoidCallback onTap,
-        {Color? bg, bool shadow = true}) {
+        {Color? bg, bool shadow = true, Color? iconColor}) {
       return GestureDetector(
         onTap: onTap,
         child: Container(
@@ -221,10 +221,12 @@ class _CalendarHeaderState extends State<CalendarHeader>
             shape: BoxShape.circle,
             boxShadow: shadow ? theme.softShadow : null,
           ),
-          child: Icon(icon, size: 22, color: theme.textColor),
+          child: Icon(icon, size: 22, color: iconColor ?? theme.textColor),
         ),
       );
     }
+
+    final Color onBg = theme.onPrimaryColor;
 
     return Column(
       children: [
@@ -296,7 +298,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
                         Icons.keyboard_arrow_down_rounded, _toggleExpanded,
                         shadow: false),
                   ),
-                  if (widget.action != null) ...[
+                  if (widget.action != null && !_isExpanded) ...[
                     const SizedBox(height: 10),
                     widget.action!,
                   ],
@@ -314,13 +316,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
           child: !_isExpanded
               ? const SizedBox(width: double.infinity)
               : Container(
-                  margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: theme.softShadow,
-                  ),
+                  margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Column(
                     children: [
                       Row(
@@ -331,15 +328,16 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 ? Icons.chevron_right_rounded
                                 : Icons.chevron_left_rounded,
                             _goToPreviousMonth,
-                            bg: theme.cardSecondaryColor,
+                            bg: onBg.withValues(alpha: 0.16),
                             shadow: false,
+                            iconColor: onBg,
                           ),
                           Text(
                             calendar.getMonthYearLabel(_currentMonth),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: theme.textColor,
+                              color: onBg,
                             ),
                           ),
                           circleBtn(
@@ -347,8 +345,9 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 ? Icons.chevron_left_rounded
                                 : Icons.chevron_right_rounded,
                             _goToNextMonth,
-                            bg: theme.cardSecondaryColor,
+                            bg: onBg.withValues(alpha: 0.16),
                             shadow: false,
+                            iconColor: onBg,
                           ),
                         ],
                       ),
@@ -367,9 +366,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                             final date = _monthDates[index];
                             final isToday = _isToday(date, calendar);
                             final isSelected = _isSelectedDate(date, calendar);
-                            final fg = isSelected
-                                ? theme.onPrimaryColor
-                                : theme.textColor;
+                            final fg =
+                                isSelected ? theme.textColor : onBg;
                             return GestureDetector(
                               onTap: () {
                                 widget.onDateSelected(
@@ -381,8 +379,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                 width: 52,
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? theme.primaryColor
-                                      : theme.cardSecondaryColor,
+                                      ? theme.cardColor
+                                      : onBg.withValues(alpha: 0.13),
                                   borderRadius: BorderRadius.circular(26),
                                 ),
                                 child: Column(
@@ -394,8 +392,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: isSelected
-                                            ? theme.onPrimaryColor
-                                            : theme.textSecondaryColor,
+                                            ? theme.textSecondaryColor
+                                            : onBg.withValues(alpha: 0.75),
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -414,8 +412,8 @@ class _CalendarHeaderState extends State<CalendarHeader>
                                       decoration: BoxDecoration(
                                         color: isToday
                                             ? (isSelected
-                                                ? theme.onPrimaryColor
-                                                : theme.textColor)
+                                                ? theme.textColor
+                                                : onBg)
                                             : Colors.transparent,
                                         shape: BoxShape.circle,
                                       ),
@@ -431,6 +429,15 @@ class _CalendarHeaderState extends State<CalendarHeader>
                   ),
                 ),
         ),
+        // وقتی تقویم باز است، دکمهٔ افزودن زیر تقویم می‌آید
+        if (widget.action != null && _isExpanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: widget.action!,
+            ),
+          ),
       ],
     );
   }

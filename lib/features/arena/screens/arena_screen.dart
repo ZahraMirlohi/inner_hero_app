@@ -257,44 +257,80 @@ class _ArenaScreenState extends State<ArenaScreen>
 
             const SizedBox(height: 8),
 
-            // تب‌های مستقل که به باکس سفید می‌چسبند
-            _buildTabs(themeProvider),
-
-            // باکس سفید
+            // تب‌های مستقل + باکس سفید (با حاشیهٔ رنگ پس‌زمینه دور تا دور)
             Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: themeProvider.cardColor,
-                  borderRadius: BorderRadiusDirectional.only(
-                    topStart: Radius.circular(_selectedIndex == 0 ? 0 : 32),
-                    topEnd: Radius.circular(_selectedIndex == 2 ? 0 : 32),
-                  ),
-                ),
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: _onScroll,
-                  child: IndexedStack(
-                    index: _selectedIndex,
-                    children: [
-                      TodayTab(
-                        key: _todayTabKey,
-                        selectedDate: _selectedDate,
-                        profileRefreshNotifier: widget.profileRefreshNotifier,
-                        onProgressUpdate: updateProgress,
-                        onStatsUpdate: _onStatsUpdate,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  children: [
+                    _buildTabs(themeProvider),
+                    Expanded(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          color: themeProvider.cardColor,
+                          borderRadius: BorderRadiusDirectional.only(
+                            topStart:
+                                Radius.circular(_selectedIndex == 0 ? 0 : 32),
+                            topEnd:
+                                Radius.circular(_selectedIndex == 2 ? 0 : 32),
+                            bottomStart: const Radius.circular(32),
+                            bottomEnd: const Radius.circular(32),
+                          ),
+                        ),
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _onScroll,
+                          child: _buildAnimatedPages(),
+                        ),
                       ),
-                      HabitsTab(key: _habitsTabKey),
-                      TasksTab(key: _tasksTabKey),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // صفحه‌ها همه زنده می‌مانند؛ جابه‌جایی با لغزش و محو نرم انجام می‌شود
+  Widget _buildAnimatedPages() {
+    final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    final pages = <Widget>[
+      TodayTab(
+        key: _todayTabKey,
+        selectedDate: _selectedDate,
+        profileRefreshNotifier: widget.profileRefreshNotifier,
+        onProgressUpdate: updateProgress,
+        onStatsUpdate: _onStatsUpdate,
+      ),
+      HabitsTab(key: _habitsTabKey),
+      TasksTab(key: _tasksTabKey),
+    ];
+    return Stack(
+      children: [
+        for (var i = 0; i < pages.length; i++)
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: i != _selectedIndex,
+              child: AnimatedSlide(
+                duration: const Duration(milliseconds: 420),
+                curve: Curves.easeOutCubic,
+                offset: Offset(
+                    (i - _selectedIndex) * 0.14 * (rtl ? -1.0 : 1.0), 0),
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOut,
+                  opacity: i == _selectedIndex ? 1.0 : 0.0,
+                  child: pages[i],
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -517,7 +553,7 @@ class _ArenaScreenState extends State<ArenaScreen>
     final int percent = (p * 100).round();
 
     return Padding(
-      padding: const EdgeInsets.only(top: 2, bottom: 2),
+      padding: const EdgeInsets.only(top: 12, bottom: 2),
       child: Column(
         children: [
           SizedBox(
@@ -610,6 +646,13 @@ class _ArenaScreenState extends State<ArenaScreen>
     );
   }
 
+  Widget _fadeFiller(bool visible, Widget child) => AnimatedOpacity(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        opacity: visible ? 1.0 : 0.0,
+        child: child,
+      );
+
   Widget _buildTab(ThemeProvider theme, int i, int n) {
     final bool sel = i == _selectedIndex;
     final bool rtl = Directionality.of(context) == TextDirection.rtl;
@@ -635,25 +678,25 @@ class _ArenaScreenState extends State<ArenaScreen>
           alignment: Alignment.center,
           children: [
             // گوشه‌های وارونه که تب را به باکس می‌چسبانند
-            if (sel && i > 0)
+            if (i > 0)
               PositionedDirectional(
                 start: -_tabFillerSize,
                 bottom: 0,
-                child: CustomPaint(
+                child: _fadeFiller(sel, CustomPaint(
                   size: const Size(_tabFillerSize, _tabFillerSize),
                   painter: _InverseCornerPainter(
                       color: theme.cardColor, circleOnRight: rtl),
-                ),
+                )),
               ),
-            if (sel && i < n - 1)
+            if (i < n - 1)
               PositionedDirectional(
                 end: -_tabFillerSize,
                 bottom: 0,
-                child: CustomPaint(
+                child: _fadeFiller(sel, CustomPaint(
                   size: const Size(_tabFillerSize, _tabFillerSize),
                   painter: _InverseCornerPainter(
                       color: theme.cardColor, circleOnRight: !rtl),
-                ),
+                )),
               ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
