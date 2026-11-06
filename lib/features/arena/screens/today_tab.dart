@@ -36,12 +36,14 @@ class TodayTab extends StatefulWidget {
   final DateTime selectedDate;
   final ValueNotifier<int>? profileRefreshNotifier;
   final Function(double)? onProgressUpdate;
+  final void Function(int done, int total)? onStatsUpdate;
 
   const TodayTab({
     super.key,
     required this.selectedDate,
     this.profileRefreshNotifier,
     this.onProgressUpdate,
+    this.onStatsUpdate,
   });
 
   @override
@@ -192,6 +194,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
     if (widget.onProgressUpdate != null) {
       widget.onProgressUpdate!(progress);
     }
+    widget.onStatsUpdate?.call(_completedItems, _totalTodayItems);
   }
 
   void _resetTotalItems() {

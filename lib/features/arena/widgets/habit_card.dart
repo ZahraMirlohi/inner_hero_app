@@ -125,7 +125,7 @@ class _HabitCardState extends State<HabitCard>
     // کشو زیر کارت قرار می‌گیرد و ۱۴ پیکسل زیر آن می‌رود (طبق ArenaDrawer)؛
     // با verticalDirection.up کارت بالای کشو رسم می‌شود.
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       child: Column(
         verticalDirection: VerticalDirection.up,
         children: [
@@ -296,14 +296,16 @@ class _HabitCardState extends State<HabitCard>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              padding: EdgeInsets.all(widget.isCompleted ? 10 : 14),
+              padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCompleted ? 10 : 12,
+                  vertical: widget.isCompleted ? 8 : 10),
               decoration: BoxDecoration(
-                color: widget.isCompleted ? theme.cardColor : cardColor,
+                color: widget.isCompleted ? theme.cardSecondaryColor : cardColor,
                 borderRadius: BorderRadius.vertical(
                   top: const Radius.circular(28),
                   bottom: Radius.circular(28),
                 ),
-                boxShadow: widget.isCompleted ? theme.softShadow : null,
+                boxShadow: null,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -314,8 +316,8 @@ class _HabitCardState extends State<HabitCard>
                     checkColor: checkIconColor,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      width: widget.isCompleted ? 40 : 48,
-                      height: widget.isCompleted ? 40 : 48,
+                      width: widget.isCompleted ? 38 : 42,
+                      height: widget.isCompleted ? 38 : 42,
                       decoration: BoxDecoration(
                         color: widget.isCompleted
                             ? theme.cardSecondaryColor
@@ -329,7 +331,7 @@ class _HabitCardState extends State<HabitCard>
                         color: widget.isCompleted
                             ? theme.textSecondaryColor
                             : cardColor,
-                        size: widget.isCompleted ? 20 : 22,
+                        size: widget.isCompleted ? 19 : 20,
                       ),
                     ),
                   ),
@@ -359,7 +361,7 @@ class _HabitCardState extends State<HabitCard>
                               child: Text(
                                 widget.habit.title,
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: 14,
                                   fontWeight: widget.isCompleted
                                       ? FontWeight.w600
                                       : FontWeight.w700,
@@ -387,10 +389,10 @@ class _HabitCardState extends State<HabitCard>
                           ),
                         ],
                         if (!widget.isCompleted) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
+                            spacing: 5,
+                            runSpacing: 5,
                             children: [
                               _chip(label: '+${widget.habit.xpReward}'),
                               if (widget.recordedTimeSeconds != null &&
@@ -509,7 +511,7 @@ class _HabitCardState extends State<HabitCard>
     Color? bg,
     Color fg = const Color(0xFF090909),
     Color? iconColor,
-    double height = 26,
+    double height = 22,
   }) {
     return Container(
       height: height,

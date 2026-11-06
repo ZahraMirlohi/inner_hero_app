@@ -11,10 +11,14 @@ class CalendarHeader extends StatefulWidget {
   final Function(DateTime) onDateSelected;
   final DateTime selectedDate;
 
+  /// ویجت اضافه زیر دکمهٔ تقویم (دکمهٔ افزودن)
+  final Widget? action;
+
   const CalendarHeader({
     super.key,
     required this.onDateSelected,
     required this.selectedDate,
+    this.action,
   });
 
   @override
@@ -228,82 +232,75 @@ class _CalendarHeaderState extends State<CalendarHeader>
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.primarySoft,
-                      Color.alphaBlend(
-                        theme.primaryColor.withValues(alpha: 0.35),
-                        theme.primarySoft,
-                      ),
-                    ],
-                  ),
+                  color: theme.cardColor,
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.primaryColor.withValues(alpha: 0.18),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   _getDayNumber(widget.selectedDate, calendar),
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                     color: theme.textColor,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_isToday(widget.selectedDate, calendar))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          context.tr(_greetingKey()),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: theme.textSecondaryColor,
-                          ),
+                      Text(
+                        context.tr(_greetingKey()),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.onPrimaryColor.withValues(alpha: 0.75),
                         ),
                       ),
                     Text(
                       calendar.getWeekdayName(widget.selectedDate),
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 22,
+                        height: 1.3,
                         fontWeight: FontWeight.w800,
-                        color: theme.textColor,
+                        color: theme.onPrimaryColor,
                       ),
                     ),
                     Text(
                       calendar.formatWithMonthName(widget.selectedDate),
                       style: TextStyle(
-                        fontSize: 13,
-                        color: theme.textSecondaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: theme.onPrimaryColor.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
                 ),
               ),
-              AnimatedRotation(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
-                turns: _isExpanded ? 0.5 : 0.0,
-                child: circleBtn(
-                    Icons.keyboard_arrow_down_rounded, _toggleExpanded),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutCubic,
+                    turns: _isExpanded ? 0.5 : 0.0,
+                    child: circleBtn(
+                        Icons.keyboard_arrow_down_rounded, _toggleExpanded,
+                        shadow: false),
+                  ),
+                  if (widget.action != null) ...[
+                    const SizedBox(height: 10),
+                    widget.action!,
+                  ],
+                ],
               ),
             ],
           ),

@@ -442,7 +442,7 @@ class _TaskCardState extends State<TaskCard>
     // کشو زیر کارت قرار می‌گیرد و ۱۴ پیکسل زیر آن می‌رود (طبق ArenaDrawer)؛
     // با verticalDirection.up کارت بالای کشو رسم می‌شود.
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       child: Column(
         verticalDirection: VerticalDirection.up,
         children: [
@@ -591,14 +591,16 @@ class _TaskCardState extends State<TaskCard>
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              padding: EdgeInsets.all(widget.isCompleted ? 10 : 14),
+              padding: EdgeInsets.symmetric(
+                  horizontal: widget.isCompleted ? 10 : 12,
+                  vertical: widget.isCompleted ? 8 : 10),
               decoration: BoxDecoration(
-                color: widget.isCompleted ? theme.cardColor : cardColor,
+                color: widget.isCompleted ? theme.cardSecondaryColor : cardColor,
                 borderRadius: BorderRadius.vertical(
                   top: const Radius.circular(28),
                   bottom: Radius.circular(28),
                 ),
-                boxShadow: widget.isCompleted ? theme.softShadow : null,
+                boxShadow: null,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -608,8 +610,8 @@ class _TaskCardState extends State<TaskCard>
                     checkColor: checkIconColor,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
-                      width: widget.isCompleted ? 40 : 48,
-                      height: widget.isCompleted ? 40 : 48,
+                      width: widget.isCompleted ? 38 : 42,
+                      height: widget.isCompleted ? 38 : 42,
                       decoration: BoxDecoration(
                         color: widget.isCompleted
                             ? theme.cardSecondaryColor
@@ -623,7 +625,7 @@ class _TaskCardState extends State<TaskCard>
                         color: widget.isCompleted
                             ? theme.textSecondaryColor
                             : cardColor,
-                        size: widget.isCompleted ? 20 : 22,
+                        size: widget.isCompleted ? 19 : 20,
                       ),
                     ),
                   ),
@@ -651,10 +653,10 @@ class _TaskCardState extends State<TaskCard>
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (!widget.isCompleted) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
+                            spacing: 5,
+                            runSpacing: 5,
                             children: [
                               _chip('+${widget.task.xpReward}', null),
                               if (widget.task.dueDate != null)
