@@ -40,8 +40,10 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
 
       final users = await _getTopUsers();
 
+      final badgesByUser = await _getBadgesFor(
+          [for (final u in users) u['user_id'] as String]);
       for (var user in users) {
-        final badges = await _getUserBadges(user['user_id']);
+        final badges = badgesByUser[user['user_id']] ?? const [];
         user['badges'] = badges;
         user['badgeCount'] = badges.length;
       }
@@ -85,18 +87,23 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
           .limit(100);
 
       if (response.isNotEmpty) {
-        List<Map<String, dynamic>> users = [];
-        for (var item in response) {
-          final userId = item['user_id'];
-          final profile = await _getUserProfile(userId);
-          users.add({
-            'user_id': userId,
-            'name': profile?['name'] ?? 'کاربر ${userId.substring(0, 6)}',
-            'total_xp': item['total_xp'] ?? 0,
-            'avatar_url': profile?['avatar_url'],
-          });
-        }
-        return users;
+        // یک درخواست برای همه پروفایل‌ها (به‌جای ۱۰۰ درخواست جدا)
+        final ids = [for (final r in response) r['user_id'] as String];
+        final profiles = await _supabase.client
+            .from('profiles')
+            .select('user_id, name, avatar_url')
+            .inFilter('user_id', ids);
+        final byId = {for (final p in profiles) p['user_id'] as String: p};
+        return [
+          for (final item in response)
+            {
+              'user_id': item['user_id'],
+              'name': byId[item['user_id']]?['name'] ??
+                  'کاربر ${(item['user_id'] as String).substring(0, 6)}',
+              'total_xp': item['total_xp'] ?? 0,
+              'avatar_url': byId[item['user_id']]?['avatar_url'],
+            }
+        ];
       }
     } catch (e) {
       print('Error getting from user_progress: $e');
@@ -116,59 +123,25 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       print('Error getting from profiles: $e');
     }
 
-    return _getSampleUsers();
+    return []; // بدون داده‌ی ساختگی؛ حالت خالی نمایش داده می‌شود
   }
 
-  Future<Map<String, dynamic>?> _getUserProfile(String userId) async {
+  /// مدال‌های فعال همه کاربران با یک درخواست
+  Future<Map<String, List<Map<String, dynamic>>>> _getBadgesFor(
+      List<String> ids) async {
+    final out = <String, List<Map<String, dynamic>>>{};
+    if (ids.isEmpty) return out;
     try {
-      final response = await _supabase.client
-          .from('profiles')
-          .select('name, avatar_url')
-          .eq('user_id', userId)
-          .maybeSingle();
-      return response;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getUserBadges(String userId) async {
-    try {
-      final response = await _supabase.client
+      final rows = await _supabase.client
           .from('user_badges')
           .select()
-          .eq('user_id', userId)
+          .inFilter('user_id', ids)
           .eq('is_active', true);
-
-      if (response.isNotEmpty) {
-        return List<Map<String, dynamic>>.from(response);
+      for (final r in rows) {
+        out.putIfAbsent(r['user_id'] as String, () => []).add(r);
       }
-    } catch (e) {}
-    return _getSampleBadges(userId);
-  }
-
-  List<Map<String, dynamic>> _getSampleBadges(String userId) {
-    final count = (userId.hashCode.abs() % 4) + 1;
-    final allBadges = [
-      {'badge_name': '🥇 طلایی', 'badge_icon': '🥇'},
-      {'badge_name': '🔥 آتشین', 'badge_icon': '🔥'},
-      {'badge_name': '⭐ ستاره', 'badge_icon': '⭐'},
-      {'badge_name': '💪 قدرتمند', 'badge_icon': '💪'},
-    ];
-    return allBadges.take(count).toList();
-  }
-
-  List<Map<String, dynamic>> _getSampleUsers() {
-    final sampleUsers = [
-      {'user_id': 'user_1', 'name': 'رضا قهرمان', 'total_xp': 12500},
-      {'user_id': 'user_2', 'name': 'سارا توانا', 'total_xp': 10800},
-      {'user_id': 'user_3', 'name': 'علی پهلوان', 'total_xp': 9200},
-      {'user_id': 'user_4', 'name': 'مریم دانا', 'total_xp': 8500},
-      {'user_id': 'user_5', 'name': 'حسین متین', 'total_xp': 7800},
-    ];
-    return sampleUsers
-        .map((user) => {...user, 'avatar_url': null, 'badgeCount': 0})
-        .toList();
+    } catch (_) {}
+    return out;
   }
 
   @override
