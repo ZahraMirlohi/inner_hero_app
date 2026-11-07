@@ -1173,22 +1173,115 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  void _msg(String m, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(m),
+      backgroundColor: error ? Colors.red : null,
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
   void _showCreateSquadDialog(ThemeProvider theme, Color primaryColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('ساخت گروه به زودی اضافه می‌شود'),
-        backgroundColor: primaryColor,
-        duration: const Duration(seconds: 2),
+    final nameC = TextEditingController();
+    final descC = TextEditingController();
+    bool isPublic = false;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text('ساخت گروه جدید', style: TextStyle(color: theme.textColor)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameC,
+                  maxLength: 40,
+                  decoration: const InputDecoration(labelText: 'نام گروه'),
+                ),
+                TextField(
+                  controller: descC,
+                  maxLength: 200,
+                  maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'توضیحات (اختیاری)'),
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('گروه عمومی'),
+                  subtitle: const Text('همه می‌توانند پیدا کنند و بپیوندند'),
+                  value: isPublic,
+                  onChanged: (v) => setD(() => isPublic = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('انصراف')),
+            TextButton(
+              onPressed: () async {
+                final n = nameC.text.trim();
+                if (n.isEmpty) return;
+                Navigator.pop(ctx);
+                try {
+                  await _chatService.createGroup(
+                    name: n,
+                    description: descC.text.trim().isEmpty ? null : descC.text.trim(),
+                    isPublic: isPublic,
+                  );
+                  _msg('گروه ساخته شد');
+                  _loadData();
+                } catch (e) {
+                  _msg(_chatService.groupErrorText(e), error: true);
+                }
+              },
+              child: const Text('ساخت'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   void _showJoinSquadDialog(Color primaryColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('پیوستن به گروه با کد دعوت به زودی اضافه می‌شود'),
-        backgroundColor: primaryColor,
-        duration: const Duration(seconds: 2),
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final codeC = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text('پیوستن به گروه', style: TextStyle(color: theme.textColor)),
+        content: TextField(
+          controller: codeC,
+          textDirection: TextDirection.ltr,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(labelText: 'کد دعوت'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+          TextButton(
+            onPressed: () async {
+              final c = codeC.text.trim();
+              if (c.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await _chatService.joinGroupByCode(c);
+                _msg('به گروه پیوستید');
+                _loadData();
+              } catch (e) {
+                _msg(_chatService.groupErrorText(e), error: true);
+              }
+            },
+            child: const Text('پیوستن'),
+          ),
+        ],
       ),
     );
   }

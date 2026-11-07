@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
@@ -40,6 +41,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   bool _showStickerPicker = false;
   bool _isAdmin = false;
+  Map<String, dynamic> _settings = {};
+
+  bool get _reactionsEnabled => _settings['reactions_enabled'] != false;
+  bool get _adminsOnlyPosting => _settings['posting_mode'] == 'admins';
+  bool get _canPost => !_adminsOnlyPosting || _isAdmin;
 
   final List<String> _popularStickers = [
     '😊',
@@ -93,8 +99,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         _userId = user.id;
       });
 
-      _squadInfo = await _getSquadInfo(widget.conversation.squadId);
       _members = await _getSquadMembers(widget.conversation.id);
+      try {
+        _settings = await _chatService.getGroupSettings(widget.conversation.id);
+      } catch (e) {
+        print('group settings error: $e');
+      }
+      _squadInfo = await _getSquadInfo(widget.conversation.squadId);
 
       final isAdmin = _members.any(
         (m) => m['user_id'] == _userId && m['role'] == 'admin',
@@ -122,57 +133,55 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Future<Map<String, dynamic>?> _getSquadInfo(String? squadId) async {
     return {
-      'id': squadId,
-      'name': widget.conversation.name,
-      'description': 'گروه ورزش صبحگاهی',
-      'max_members': 10,
-      'current_members': 5,
-      'weekly_challenge': '۲۰ دقیقه ورزش روزانه',
-      'weekly_progress': 0.75,
-      'created_at': DateTime.now(),
+      'id': widget.conversation.id,
+      'name': (_settings['name'] as String?)?.isNotEmpty == true
+          ? _settings['name']
+          : widget.conversation.name,
+      'description': _settings['description'],
+      'current_members': _members.length,
+      'is_public': _settings['is_public'] == true,
     };
   }
 
   Future<List<Map<String, dynamic>>> _getSquadMembers(
     String conversationId,
   ) async {
-    return [
-      {
-        'user_id': 'user1',
-        'name': 'علی',
-        'role': 'admin',
-        'is_online': true,
-        'avatar': null
-      },
-      {
-        'user_id': 'user2',
-        'name': 'سارا',
-        'role': 'member',
-        'is_online': true,
-        'avatar': null
-      },
-      {
-        'user_id': 'user3',
-        'name': 'رضا',
-        'role': 'member',
-        'is_online': false,
-        'avatar': null
-      },
-      {
-        'user_id': 'user4',
-        'name': 'مریم',
-        'role': 'member',
-        'is_online': true,
-        'avatar': null
-      },
-      {
-        'user_id': 'user5',
-        'name': 'حسین',
-        'role': 'member',
-        'is_online': false,
-        'avatar': null
-      },
-    ];
+    try {
+      final rows = await _chatService.client
+          .from('conversation_members')
+          .select('user_id, role, joined_at')
+          .eq('conversation_id', conversationId)
+          .order('joined_at', ascending: true);
+      final ids = [for (final r in rows) r['user_id'] as String];
+      final profiles = ids.isEmpty
+          ? []
+          : await _chatService.client
+              .from('profiles')
+              .select('user_id, name, avatar_url, last_seen_at')
+              .inFilter('user_id', ids);
+      final byId = {for (final p in profiles) p['user_id'] as String: p};
+      final now = DateTime.now();
+      return [
+        for (final r in rows)
+          () {
+            final pr = byId[r['user_id']];
+            final seen = DateTime.tryParse('${pr?['last_seen_at'] ?? ''}');
+            return <String, dynamic>{
+              'user_id': r['user_id'],
+              'name': (pr?['name'] as String?)?.isNotEmpty == true
+                  ? pr!['name']
+                  : 'کاربر',
+              'role': r['role'] ?? 'member',
+              'is_online':
+                  seen != null && now.difference(seen.toLocal()).inMinutes < 5,
+              'avatar': pr?['avatar_url'],
+            };
+          }(),
+      ];
+    } catch (e) {
+      print('members load error: $e');
+      return [];
+    }
   }
 
   void _setupRealtimeSubscription() {
@@ -487,6 +496,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _toggleReaction(ChatMessage message, String emoji) {
+    if (!_reactionsEnabled) {
+      _snack('ادمین واکنش‌ها را غیرفعال کرده است');
+      return;
+    }
     _chatService
         .toggleReaction(messageId: message.id, userId: _userId!, emoji: emoji)
         .then((_) {
@@ -884,6 +897,19 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   Widget _buildInputBar(ThemeProvider theme, Color primaryColor) {
+    if (!_canPost) {
+      return SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          color: theme.surfaceColor,
+          child: Text('فقط ادمین‌های گروه می‌توانند پیام بفرستند',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: theme.textSecondaryColor, fontSize: 13)),
+        ),
+      );
+    }
     return SafeArea(
       top: false,
       child: Column(
@@ -1098,110 +1124,74 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Widget _buildSquadInfoCard(ThemeProvider theme, Color primaryColor) {
     if (_squadInfo == null) return const SizedBox.shrink();
-
     final info = _squadInfo!;
-    final progress = info['weekly_progress'] as double? ?? 0;
+    final desc = (info['description'] as String?) ?? '';
+
+    Widget badge(IconData icon, String t) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 13, color: Colors.white),
+            const SizedBox(width: 4),
+            Text(t,
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white)),
+          ]),
+        );
 
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: primaryColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.group,
-                  color: Colors.white,
-                  size: 20,
-                ),
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      info['name'] ?? 'گروه',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      '${info['current_members'] ?? 0}/${info['max_members'] ?? 10} عضو',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${(progress * 100).toInt()}%',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              color: Colors.white,
-              minHeight: 6,
+              child: const Icon(Icons.group, color: Colors.white, size: 20),
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(Icons.bolt, color: Colors.white, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  info['weekly_challenge'] ?? 'چالش گروهی',
-                  style: TextStyle(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(info['name'] ?? 'گروه',
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white)),
+            ),
+          ]),
+          if (desc.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(desc,
+                style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.9),
-                  ),
-                ),
-              ),
-            ],
-          ),
+                    height: 1.7,
+                    color: Colors.white.withValues(alpha: 0.9))),
+          ],
+          const SizedBox(height: 10),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            badge(Icons.people_alt_rounded, '${info['current_members'] ?? 0} عضو'),
+            badge(
+                info['is_public'] == true
+                    ? Icons.public_rounded
+                    : Icons.lock_rounded,
+                info['is_public'] == true ? 'عمومی' : 'خصوصی'),
+            if (!_reactionsEnabled)
+              badge(Icons.sentiment_dissatisfied_rounded, 'واکنش‌ها خاموش'),
+            if (_adminsOnlyPosting) badge(Icons.campaign_rounded, 'فقط ادمین‌ها'),
+          ]),
         ],
       ),
     );
@@ -1302,7 +1292,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                         ),
                       ),
                     ],
-                    if (isAdmin && !isMe) ...[
+                    if (isAdmin) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1336,7 +1326,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               ],
             ),
           ),
-          if (_isAdmin && !isMe)
+          if (!isMe)
             PopupMenuButton<String>(
               icon: Icon(
                 Icons.more_vert,
@@ -1344,24 +1334,37 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                 color: theme.textSecondaryColor,
               ),
               onSelected: (value) {
+                final id = member['user_id'] as String;
                 if (value == 'make_admin') {
-                  _promoteToAdmin(member['user_id']);
+                  _setRole(id, 'admin');
+                } else if (value == 'remove_admin') {
+                  _setRole(id, 'member');
                 } else if (value == 'remove') {
-                  _removeMember(member['user_id']);
+                  _removeMember(id, ban: false);
+                } else if (value == 'ban') {
+                  _removeMember(id, ban: true);
+                } else if (value == 'report') {
+                  _reportMember(id, member['name'] ?? 'کاربر');
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'make_admin',
-                  child: Text('تبدیل به ادمین'),
-                ),
-                const PopupMenuItem(
-                  value: 'remove',
-                  child: Text(
-                    'حذف از گروه',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
+                if (_isAdmin && !isAdmin)
+                  const PopupMenuItem(
+                      value: 'make_admin', child: Text('تبدیل به ادمین')),
+                if (_isAdmin && isAdmin)
+                  const PopupMenuItem(
+                      value: 'remove_admin', child: Text('برداشتن ادمینی')),
+                if (_isAdmin)
+                  const PopupMenuItem(
+                      value: 'remove',
+                      child: Text('حذف از گروه',
+                          style: TextStyle(color: Colors.red))),
+                if (_isAdmin)
+                  const PopupMenuItem(
+                      value: 'ban',
+                      child: Text('حذف و مسدود کردن',
+                          style: TextStyle(color: Colors.red))),
+                const PopupMenuItem(value: 'report', child: Text('گزارش عضو')),
               ],
             ),
         ],
@@ -1408,108 +1411,224 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: error ? Colors.red : null,
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  Future<void> _reloadGroup() async {
+    final members = await _getSquadMembers(widget.conversation.id);
+    try {
+      _settings = await _chatService.getGroupSettings(widget.conversation.id);
+    } catch (_) {}
+    _members = members;
+    final info = await _getSquadInfo(widget.conversation.squadId);
+    if (!mounted) return;
+    setState(() {
+      _squadInfo = info;
+      _isAdmin =
+          members.any((m) => m['user_id'] == _userId && m['role'] == 'admin');
+    });
+  }
+
+  Future<void> _run(Future<void> Function() action, {String? ok}) async {
+    try {
+      await action();
+      await _reloadGroup();
+      if (ok != null) _snack(ok);
+    } catch (e) {
+      _snack(_chatService.groupErrorText(e), error: true);
+    }
+  }
+
+  Future<bool> _confirm(String title, String body, String yes,
+      {bool danger = false}) async {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(title, style: TextStyle(color: theme.textColor)),
+        content: Text(body,
+            style: TextStyle(color: theme.textSecondaryColor, height: 1.7)),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('انصراف')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child:
+                Text(yes, style: TextStyle(color: danger ? Colors.red : null)),
+          ),
+        ],
+      ),
+    );
+    return r == true;
+  }
+
   void _showSquadTools(ThemeProvider theme, Color primaryColor) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.borderColor,
-                      borderRadius: BorderRadius.circular(2),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Widget switchTile(IconData icon, String title, String sub, bool v,
+              Future<void> Function(bool) onChanged) {
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(icon, color: primaryColor),
+              title: Text(title,
+                  style: TextStyle(
+                      color: theme.textColor, fontWeight: FontWeight.w600)),
+              subtitle: Text(sub,
+                  style: TextStyle(
+                      color: theme.textSecondaryColor, fontSize: 12)),
+              value: v,
+              onChanged: (nv) async {
+                await onChanged(nv);
+                setSheet(() {});
+              },
+            );
+          }
+
+          return SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: theme.borderColor,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'ابزارهای گروه',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: theme.textColor,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (_isAdmin) ...[
+                  const SizedBox(height: 14),
+                  Text('ابزارهای گروه',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textColor)),
+                  const SizedBox(height: 10),
+                  if (_isAdmin) ...[
+                    _buildToolItem(
+                      icon: Icons.edit,
+                      title: 'ویرایش اطلاعات گروه',
+                      subtitle: 'تغییر نام و توضیحات',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _editSquadInfo(theme, primaryColor);
+                      },
+                      primaryColor: primaryColor,
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildToolItem(
+                      icon: Icons.person_add,
+                      title: 'دعوت به گروه',
+                      subtitle: 'کد دعوت',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showInviteDialog(theme, primaryColor);
+                      },
+                      primaryColor: primaryColor,
+                      theme: theme,
+                    ),
+                    const Divider(height: 24),
+                    switchTile(
+                      Icons.public_rounded,
+                      'گروه عمومی',
+                      'همه می‌توانند گروه را پیدا کنند و بپیوندند',
+                      _settings['is_public'] == true,
+                      (v) => _run(() => _chatService
+                          .updateGroup(widget.conversation.id, isPublic: v)),
+                    ),
+                    switchTile(
+                      Icons.emoji_emotions_rounded,
+                      'واکنش با استیکر',
+                      'اعضا بتوانند به پیام‌ها واکنش بدهند',
+                      _reactionsEnabled,
+                      (v) => _run(() => _chatService.updateGroup(
+                          widget.conversation.id,
+                          reactionsEnabled: v)),
+                    ),
+                    switchTile(
+                      Icons.campaign_rounded,
+                      'فقط ادمین‌ها پیام بدهند',
+                      'اعضا فقط می‌خوانند (حالت کانال)',
+                      _adminsOnlyPosting,
+                      (v) => _run(() => _chatService.updateGroup(
+                          widget.conversation.id,
+                          postingMode: v ? 'admins' : 'all')),
+                    ),
+                    const Divider(height: 24),
+                  ],
                   _buildToolItem(
-                    icon: Icons.edit,
-                    title: 'ویرایش اطلاعات گروه',
-                    subtitle: 'تغییر نام و توضیحات',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _editSquadInfo(theme, primaryColor);
+                    icon: Icons.notifications_off,
+                    title: 'بی‌صدا کردن گروه',
+                    subtitle: 'غیرفعال کردن اعلان‌ها',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await _chatService.setGroupMuted(
+                            widget.conversation.id, true);
+                        _snack('گروه بی‌صدا شد');
+                      } catch (e) {
+                        _snack(_chatService.groupErrorText(e), error: true);
+                      }
                     },
                     primaryColor: primaryColor,
                     theme: theme,
                   ),
                   const SizedBox(height: 8),
                   _buildToolItem(
-                    icon: Icons.person_add,
-                    title: 'دعوت به گروه',
-                    subtitle: 'ارسال کد دعوت',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showInviteDialog(theme, primaryColor);
-                    },
-                    primaryColor: primaryColor,
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                _buildToolItem(
-                  icon: Icons.flag,
-                  title: 'چالش گروهی',
-                  subtitle: 'مشاهده پیشرفت چالش',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showChallengeProgress(primaryColor);
-                  },
-                  primaryColor: primaryColor,
-                  theme: theme,
-                ),
-                const SizedBox(height: 8),
-                _buildToolItem(
-                  icon: Icons.notifications_off,
-                  title: 'بی‌صدا کردن گروه',
-                  subtitle: 'غیرفعال کردن اعلان‌ها',
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                  primaryColor: primaryColor,
-                  theme: theme,
-                ),
-                const SizedBox(height: 8),
-                if (_isAdmin)
-                  _buildToolItem(
-                    icon: Icons.delete_forever,
-                    title: 'حذف گروه',
-                    subtitle: 'حذف کامل گروه',
+                    icon: Icons.exit_to_app,
+                    title: 'ترک گروه',
+                    subtitle: 'از این گروه خارج می‌شوید',
                     color: Colors.red,
                     onTap: () {
-                      Navigator.pop(context);
-                      _deleteSquad(primaryColor);
+                      Navigator.pop(ctx);
+                      _leaveSquad();
                     },
                     primaryColor: primaryColor,
                     theme: theme,
                   ),
-                const SizedBox(height: 12),
-              ],
+                  if (_isAdmin) ...[
+                    const SizedBox(height: 8),
+                    _buildToolItem(
+                      icon: Icons.delete_forever,
+                      title: 'حذف گروه',
+                      subtitle: 'حذف کامل گروه برای همه',
+                      color: Colors.red,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _deleteSquad(primaryColor);
+                      },
+                      primaryColor: primaryColor,
+                      theme: theme,
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -1559,219 +1678,257 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
-  void _editSquadInfo(ThemeProvider theme, Color primaryColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('ویرایش گروه به زودی اضافه می‌شود'),
-        backgroundColor: primaryColor,
-        duration: const Duration(seconds: 1),
+  void _showInviteDialog(ThemeProvider theme, Color primaryColor) async {
+    String? code = _settings['invite_code'] as String?;
+    if (code == null || code.isEmpty) {
+      try {
+        code = await _chatService.regenerateInviteCode(widget.conversation.id);
+        _settings['invite_code'] = code;
+      } catch (e) {
+        _snack(_chatService.groupErrorText(e), error: true);
+        return;
+      }
+    }
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title: Text('دعوت به گروه', style: TextStyle(color: theme.textColor)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                  'این کد را برای دوستانت بفرست. با «پیوستن به گروه» وارد می‌شوند.',
+                  textAlign: TextAlign.center,
+                  style:
+                      TextStyle(color: theme.textSecondaryColor, height: 1.7)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: SelectableText(
+                  code!,
+                  textDirection: TextDirection.ltr,
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4,
+                      color: primaryColor),
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () async {
+                try {
+                  final c = await _chatService
+                      .regenerateInviteCode(widget.conversation.id);
+                  _settings['invite_code'] = c;
+                  setD(() => code = c);
+                } catch (e) {
+                  _snack(_chatService.groupErrorText(e), error: true);
+                }
+              },
+              child: const Text('کد جدید'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: code!));
+                if (ctx.mounted) Navigator.pop(ctx);
+                _snack('کد دعوت کپی شد');
+              },
+              icon: const Icon(Icons.copy, size: 18, color: Colors.white),
+              label: const Text('کپی', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showInviteDialog(ThemeProvider theme, Color primaryColor) {
+  void _editSquadInfo(ThemeProvider theme, Color primaryColor) {
+    final nameC = TextEditingController(text: _squadInfo?['name'] ?? '');
+    final descC = TextEditingController(text: _squadInfo?['description'] ?? '');
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.cardColor, // ✅
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'دعوت به گروه',
-          style: TextStyle(color: theme.textColor),
-        ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text('ویرایش گروه', style: TextStyle(color: theme.textColor)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'کد دعوت گروه را با دوستان خود به اشتراک بگذارید',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textSecondaryColor),
+            TextField(
+              controller: nameC,
+              maxLength: 40,
+              decoration: const InputDecoration(labelText: 'نام گروه'),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: primaryColor.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code, size: 32, color: primaryColor),
-                  const SizedBox(width: 12),
-                  Text(
-                    'GRP-${widget.conversation.id.substring(0, 6).toUpperCase()}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: primaryColor,
-                    ),
-                  ),
-                ],
-              ),
+            TextField(
+              controller: descC,
+              maxLength: 200,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'توضیحات'),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('بستن'),
-          ),
-          ElevatedButton.icon(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('انصراف')),
+          TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('کد دعوت کپی شد 📋'),
-                  backgroundColor: primaryColor,
-                  duration: const Duration(seconds: 1),
-                ),
+              final n = nameC.text.trim();
+              if (n.isEmpty) return;
+              Navigator.pop(ctx);
+              _run(
+                () => _chatService.updateGroup(widget.conversation.id,
+                    name: n, description: descC.text.trim()),
+                ok: 'اطلاعات گروه ذخیره شد',
               );
             },
-            icon: const Icon(Icons.copy, size: 18, color: Colors.white),
-            label: const Text(
-              'کپی',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
+            child: const Text('ذخیره'),
           ),
         ],
       ),
     );
   }
 
-  void _promoteToAdmin(String userId) {
-    final theme = Provider.of<ThemeProvider>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'تبدیل به ادمین',
-          style: TextStyle(color: theme.textColor),
-        ),
-        content: Text(
-          'آیا از تبدیل این کاربر به ادمین مطمئن هستید؟',
-          style: TextStyle(color: theme.textSecondaryColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                final index = _members.indexWhere(
-                  (m) => m['user_id'] == userId,
-                );
-                if (index != -1) {
-                  _members[index]['role'] = 'admin';
-                }
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('تأیید'),
-          ),
-        ],
-      ),
+  Future<void> _setRole(String userId, String role) async {
+    final ok = await _confirm(
+      role == 'admin' ? 'تبدیل به ادمین' : 'برداشتن ادمینی',
+      role == 'admin'
+          ? 'این کاربر می‌تواند گروه را مدیریت کند.'
+          : 'این کاربر دیگر ادمین نخواهد بود.',
+      'تأیید',
+    );
+    if (!ok) return;
+    await _run(
+        () => _chatService.setMemberRole(widget.conversation.id, userId, role));
+  }
+
+  Future<void> _removeMember(String userId, {bool ban = false}) async {
+    final ok = await _confirm(
+      ban ? 'حذف و مسدود کردن' : 'حذف از گروه',
+      ban
+          ? 'کاربر حذف می‌شود و دیگر نمی‌تواند دوباره به گروه بپیوندد.'
+          : 'آیا از حذف این کاربر از گروه مطمئن هستید؟',
+      'حذف',
+      danger: true,
+    );
+    if (!ok) return;
+    await _run(
+      () => _chatService.removeGroupMember(widget.conversation.id, userId,
+          ban: ban),
+      ok: 'کاربر حذف شد',
     );
   }
 
-  void _removeMember(String userId) {
+  Future<void> _reportMember(String userId, String name) async {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
-    showDialog(
+    const reasons = [
+      'پیام آزاردهنده',
+      'اسپم یا تبلیغات',
+      'محتوای نامناسب',
+      'سایر'
+    ];
+    String reason = reasons.first;
+    final detailsC = TextEditingController();
+    final send = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'حذف از گروه',
-          style: TextStyle(color: theme.textColor),
-        ),
-        content: Text(
-          'آیا از حذف این کاربر از گروه مطمئن هستید؟',
-          style: TextStyle(color: theme.textSecondaryColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _members.removeWhere((m) => m['user_id'] == userId);
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteSquad(Color primaryColor) {
-    final theme = Provider.of<ThemeProvider>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: theme.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'حذف گروه',
-          style: TextStyle(color: theme.textColor),
-        ),
-        content: Text(
-          'آیا از حذف کامل این گروه مطمئن هستید؟\n\n'
-          'با حذف گروه، تمام پیام‌ها و اعضا حذف خواهند شد.',
-          style: TextStyle(color: theme.textSecondaryColor),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('گروه با موفقیت حذف شد'),
-                  backgroundColor: primaryColor,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          backgroundColor: theme.cardColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          title:
+              Text('گزارش «$name»', style: TextStyle(color: theme.textColor)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final r in reasons)
+                  RadioListTile<String>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(r),
+                    value: r,
+                    groupValue: reason,
+                    onChanged: (v) => setD(() => reason = v ?? reason),
+                  ),
+                TextField(
+                  controller: detailsC,
+                  maxLines: 2,
+                  decoration:
+                      const InputDecoration(labelText: 'توضیح (اختیاری)'),
                 ),
-              );
-            },
-            child: const Text(
-              'حذف گروه',
-              style: TextStyle(color: Colors.red),
+              ],
             ),
           ),
-        ],
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('انصراف')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('ارسال گزارش')),
+          ],
+        ),
       ),
     );
+    if (send != true) return;
+    try {
+      await _chatService.reportMember(widget.conversation.id, userId, reason,
+          details: detailsC.text.trim().isEmpty ? null : detailsC.text.trim());
+      _snack('گزارش ثبت شد، ممنون');
+    } catch (e) {
+      _snack(_chatService.groupErrorText(e), error: true);
+    }
+  }
+
+  Future<void> _leaveSquad() async {
+    final ok = await _confirm(
+        'ترک گروه', 'آیا از خروج از این گروه مطمئن هستید؟', 'ترک گروه',
+        danger: true);
+    if (!ok) return;
+    try {
+      await _chatService.leaveGroup(widget.conversation.id);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      _snack(_chatService.groupErrorText(e), error: true);
+    }
+  }
+
+  Future<void> _deleteSquad(Color primaryColor) async {
+    final ok = await _confirm(
+      'حذف گروه',
+      'با حذف گروه، تمام پیام‌ها و اعضا برای همه حذف می‌شوند و قابل بازگشت نیست.',
+      'حذف گروه',
+      danger: true,
+    );
+    if (!ok) return;
+    try {
+      await _chatService.deleteGroup(widget.conversation.id);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      _snack(_chatService.groupErrorText(e), error: true);
+    }
   }
 
   void _showChallengeProgress(Color primaryColor) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('پیشرفت چالش به زودی اضافه می‌شود'),
-        backgroundColor: primaryColor,
-        duration: const Duration(seconds: 1),
-      ),
-    );
+    _snack('پیشرفت چالش گروهی به‌زودی');
   }
 
   @override

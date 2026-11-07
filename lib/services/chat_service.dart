@@ -1357,4 +1357,130 @@ class ChatService {
       return null;
     }
   }
+
+  // ==================== گروه‌ها (RPC های SQL 07) ====================
+
+  /// پیام خطای قابل‌فهم از PostgrestException
+  String groupErrorText(Object e) {
+    final m = e.toString();
+    if (m.contains('admin only')) return 'فقط ادمین گروه می‌تواند این کار را انجام دهد';
+    if (m.contains('invalid invite code')) return 'کد دعوت معتبر نیست';
+    if (m.contains('banned')) return 'شما از این گروه حذف شده‌اید';
+    if (m.contains('at least one admin')) return 'گروه باید حداقل یک ادمین داشته باشد';
+    if (m.contains('not public')) return 'این گروه عمومی نیست';
+    if (m.contains('only admins can post')) return 'فقط ادمین‌ها می‌توانند در این گروه پیام بدهند';
+    if (m.contains('reactions are disabled')) return 'ادمین واکنش‌ها را غیرفعال کرده است';
+    return m.replaceFirst('Exception: ', '');
+  }
+
+  Future<String> createGroup({
+    required String name,
+    String? description,
+    bool isPublic = false,
+    List<String> memberIds = const [],
+  }) async {
+    final id = await _client.rpc('create_group', params: {
+      'p_name': name,
+      'p_description': description,
+      'p_is_public': isPublic,
+      'p_member_ids': memberIds,
+    });
+    return id as String;
+  }
+
+  Future<String> joinGroupByCode(String code) async {
+    final id = await _client
+        .rpc('join_group_by_code', params: {'p_code': code.trim()});
+    return id as String;
+  }
+
+  Future<String> joinPublicGroup(String conversationId) async {
+    final id = await _client
+        .rpc('join_public_group', params: {'p_conversation_id': conversationId});
+    return id as String;
+  }
+
+  Future<List<Map<String, dynamic>>> searchPublicGroups(String query) async {
+    final res =
+        await _client.rpc('search_public_groups', params: {'p_query': query});
+    return List<Map<String, dynamic>>.from(res as List);
+  }
+
+  /// تنظیمات گروه: name, description, is_public, invite_code, reactions_enabled, posting_mode
+  Future<Map<String, dynamic>> getGroupSettings(String conversationId) async {
+    final res = await _client
+        .from('conversations')
+        .select(
+            'name, description, avatar_url, is_public, invite_code, reactions_enabled, posting_mode')
+        .eq('id', conversationId)
+        .maybeSingle();
+    return res ?? {};
+  }
+
+  Future<void> updateGroup(
+    String conversationId, {
+    String? name,
+    String? description,
+    bool? isPublic,
+    bool? reactionsEnabled,
+    String? postingMode,
+    String? avatarUrl,
+  }) async {
+    await _client.rpc('update_group', params: {
+      'p_conversation_id': conversationId,
+      'p_name': name,
+      'p_description': description,
+      'p_is_public': isPublic,
+      'p_reactions_enabled': reactionsEnabled,
+      'p_posting_mode': postingMode,
+      'p_avatar_url': avatarUrl,
+    });
+  }
+
+  Future<String> regenerateInviteCode(String conversationId) async {
+    final code = await _client.rpc('regenerate_invite_code',
+        params: {'p_conversation_id': conversationId});
+    return code as String;
+  }
+
+  Future<void> setMemberRole(
+      String conversationId, String userId, String role) async {
+    await _client.rpc('set_member_role', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_role': role,
+    });
+  }
+
+  Future<void> removeGroupMember(String conversationId, String userId,
+      {bool ban = false}) async {
+    await _client.rpc('remove_group_member', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_ban': ban,
+    });
+  }
+
+  Future<void> leaveGroup(String conversationId) async {
+    await _client.rpc('leave_group', params: {'p_conversation_id': conversationId});
+  }
+
+  Future<void> deleteGroup(String conversationId) async {
+    await _client.rpc('delete_group', params: {'p_conversation_id': conversationId});
+  }
+
+  Future<void> reportMember(String conversationId, String userId, String reason,
+      {String? details}) async {
+    await _client.rpc('report_member', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_reason': reason,
+      'p_details': details,
+    });
+  }
+
+  Future<void> setGroupMuted(String conversationId, bool muted) async {
+    await _client.rpc('set_group_muted',
+        params: {'p_conversation_id': conversationId, 'p_muted': muted});
+  }
 }
