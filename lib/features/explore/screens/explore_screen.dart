@@ -80,6 +80,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   void _onRefreshTriggered() {
     print('Refresh triggered from notifier');
+    _challengeDetailsCache.clear();
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
@@ -87,6 +88,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   void forceRefresh() {
     print('Force refresh called');
+    _challengeDetailsCache.clear();
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
@@ -568,11 +570,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       final results = await Future.wait([
         _supabase
             .getRealParticipantsCount(challengeId)
-            .timeout(const Duration(seconds: 2), onTimeout: () => 0),
+            .timeout(const Duration(seconds: 8), onTimeout: () => 0),
         _supabase
             .getUserChallengeProgressDetails(_currentUserId, challengeId)
             .timeout(
-              const Duration(seconds: 2),
+              const Duration(seconds: 8),
               onTimeout: () => {'completedDays': 0, 'totalDays': 0},
             ),
       ]);
