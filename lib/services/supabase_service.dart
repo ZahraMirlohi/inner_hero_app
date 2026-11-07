@@ -1082,6 +1082,7 @@ class SupabaseService {
           '✅ Challenge day recorded: $challengeId - $dateStr (progress: $validCompletions)');
     } catch (e) {
       print('Error completing challenge day: $e');
+      rethrow; // تا کاربر/برنامه‌نویس خطای واقعی را ببیند
     }
   }
 

@@ -7,6 +7,7 @@ import '../models/user_quest_model.dart';
 import '../widgets/quest_card.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
+import '/providers/sync_provider.dart';
 import '/core/app_palette.dart';
 
 class QuestsTab extends StatefulWidget {
@@ -261,6 +262,11 @@ class _QuestsTabState extends State<QuestsTab> {
     try {
       await _supabase.startQuest(widget.currentUserId, quest);
       widget.onRefresh();
+      if (mounted) {
+        setState(() {});
+        // عادت ماموریت تازه ساخته شده؛ کش عادت‌های میدان به‌روز شود
+        Provider.of<SyncProvider>(context, listen: false).manualSync();
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
