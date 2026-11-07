@@ -13,6 +13,8 @@ import 'cosmetics_tab.dart';
 import 'leaderboard_tab.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
+import '../widgets/card_image.dart';
 import '/services/local_storage_service.dart';
 import 'dart:async';
 import 'dart:ui';
