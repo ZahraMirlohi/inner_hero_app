@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 import '../../arena/models/habit_model.dart';
 
 // lib/features/explore/models/package_habit_model.dart
@@ -95,7 +96,7 @@ class PackageHabit {
 
   Habit toHabit(String userId, String packageId) {
     return Habit(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       userId: userId,
       title: '📦 $title',
       description: description,

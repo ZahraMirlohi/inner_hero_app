@@ -826,10 +826,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
   @override
   void didUpdateWidget(ChallengesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.challenges != widget.challenges) {
-      _progressCache.clear();
-      _participantsCache.clear();
-    }
+    // هر بازسازی از والد (مثلاً بعد از رفرش کاوش) کش پیشرفت را باطل می‌کند
+    _progressCache.clear();
+    _participantsCache.clear();
   }
 
   Future<void> _checkExpiredChallenges() async {
@@ -838,17 +837,14 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
     await Future.delayed(const Duration(milliseconds: 500));
     await _supabase.checkExpiredChallenges(widget.currentUserId);
-
-    if (mounted) {
-      widget.onRefresh();
-    }
+    // رفرش اینجا حلقه‌ی بازسازی می‌ساخت؛ _loadData خودش وضعیت را به‌روز می‌کند
   }
 
   Future<Map<String, int>> _getCachedProgress(String challengeId) async {
     if (_progressCache.containsKey(challengeId)) {
       final cached = _progressCache[challengeId]!;
       if (DateTime.now().difference(cached.timestamp) <
-          const Duration(seconds: 30)) {
+          const Duration(seconds: 5)) {
         return cached.data;
       }
     }

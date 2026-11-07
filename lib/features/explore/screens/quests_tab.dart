@@ -7,6 +7,8 @@ import '../models/user_quest_model.dart';
 import '../widgets/quest_card.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
+import '/providers/sync_provider.dart';
+import '/core/app_palette.dart';
 
 class QuestsTab extends StatefulWidget {
   final List<Quest> quests;
@@ -87,97 +89,48 @@ class _QuestsTabState extends State<QuestsTab> {
           return _buildEmptyState(theme);
         }
 
+        UserQuest uq(Quest q) => userQuests.firstWhere(
+              (x) => x.questId == q.id,
+              orElse: () => UserQuest(
+                id: '',
+                userId: '',
+                questId: q.id,
+                startedAt: DateTime.now(),
+                createdAt: DateTime.now(),
+              ),
+            );
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 100, 16, 120),
+          padding: const EdgeInsets.fromLTRB(20, 96, 20, 120),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ═══════════════════════════════════════════════
-              // ماموریت‌های در حال انجام (افقی)
-              // ═══════════════════════════════════════════════
               if (activeQuests.isNotEmpty) ...[
                 _buildSectionHeader(
-                  icon: Icons.play_circle,
+                  icon: Icons.play_circle_rounded,
                   title: 'ماموریت‌های در حال انجام',
                   theme: theme,
+                  tone: Tone.sky,
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  height: 240,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    itemCount: activeQuests.length,
-                    itemBuilder: (context, index) {
-                      final quest = activeQuests[index];
-                      final userQuest = userQuests.firstWhere(
-                        (uq) => uq.questId == quest.id,
-                        orElse: () => UserQuest(
-                          id: '',
-                          userId: '',
-                          questId: quest.id,
-                          startedAt: DateTime.now(),
-                          createdAt: DateTime.now(),
-                        ),
-                      );
-
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 12),
-                        child: SizedBox(
-                          width: 260,
-                          child: _buildActiveQuestCard(
-                            quest,
-                            userQuest.progress,
-                            primaryColor,
-                            theme,
-                          ),
-                        ),
-                      );
-                    },
+                ...activeQuests.map(
+                  (quest) => QuestCard(
+                    quest: quest,
+                    isActive: true,
+                    progress: uq(quest).progress,
+                    primaryColor: primaryColor,
+                    onTap: () => widget.showQuestDetail(quest),
+                    onCancel: () => _showCancelQuestDialog(quest, theme),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 6),
               ],
-
-              // ═══════════════════════════════════════════════
-              // ماموریت‌های تکمیل شده (مدال‌های کوچک افقی)
-              // ═══════════════════════════════════════════════
-              if (completedQuests.isNotEmpty) ...[
-                _buildSectionHeader(
-                  icon: Icons.emoji_events,
-                  title: 'ماموریت‌های تکمیل شده',
-                  theme: theme,
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 145,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    itemCount: completedQuests.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 10),
-                        child: _buildMedalCard(
-                          completedQuests[index],
-                          primaryColor,
-                          theme,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-
-              // ═══════════════════════════════════════════════
-              // ماموریت‌های جدید (عمودی)
-              // ═══════════════════════════════════════════════
               if (newQuests.isNotEmpty) ...[
                 _buildSectionHeader(
-                  icon: Icons.flag,
+                  icon: Icons.flag_rounded,
                   title: 'ماموریت‌های جدید',
                   theme: theme,
+                  tone: Tone.lime,
                 ),
                 const SizedBox(height: 12),
                 ...newQuests.map(
@@ -190,7 +143,24 @@ class _QuestsTabState extends State<QuestsTab> {
                     onStart: () => _startQuest(quest),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 6),
+              ],
+              if (completedQuests.isNotEmpty) ...[
+                _buildSectionHeader(
+                  icon: Icons.emoji_events_rounded,
+                  title: 'ماموریت‌های تکمیل شده',
+                  theme: theme,
+                  tone: Tone.mint,
+                ),
+                const SizedBox(height: 12),
+                ...completedQuests.map(
+                  (quest) => QuestCard(
+                    quest: quest,
+                    isCompleted: true,
+                    primaryColor: primaryColor,
+                    onTap: () => widget.showQuestDetail(quest),
+                  ),
+                ),
               ],
             ],
           ),
@@ -292,6 +262,11 @@ class _QuestsTabState extends State<QuestsTab> {
     try {
       await _supabase.startQuest(widget.currentUserId, quest);
       widget.onRefresh();
+      if (mounted) {
+        setState(() {});
+        // عادت ماموریت تازه ساخته شده؛ کش عادت‌های میدان به‌روز شود
+        Provider.of<SyncProvider>(context, listen: false).manualSync();
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -935,34 +910,25 @@ class _QuestsTabState extends State<QuestsTab> {
     required IconData icon,
     required String title,
     required ThemeProvider theme,
+    Tone tone = Tone.lime,
   }) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: theme.textColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: theme.textColor,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration:
+              BoxDecoration(color: theme.tone(tone).bg, shape: BoxShape.circle),
+          child: Icon(icon, size: 18, color: const Color(0xFF090909)),
+        ),
+        const SizedBox(width: 8),
+        Text(title,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: theme.textColor,
-            ),
-          ),
-        ],
-      ),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: theme.textColor)),
+      ],
     );
   }
 }

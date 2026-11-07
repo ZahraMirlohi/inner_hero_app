@@ -1,3 +1,4 @@
+import 'package:uuid/uuid.dart';
 // lib/services/supabase_service.dart
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -936,7 +937,7 @@ class SupabaseService {
       final titleSuffix = remainingDays > 0 ? ' (${remainingDays} روز)' : '';
 
       final newHabit = Habit(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(), // UUID معتبر (ستون uuid در دیتابیس)
         userId: userId,
         title: '🏆 ${challenge['title']}$titleSuffix',
         description: '${challenge['description']} - $duration روز',
@@ -1081,6 +1082,7 @@ class SupabaseService {
           '✅ Challenge day recorded: $challengeId - $dateStr (progress: $validCompletions)');
     } catch (e) {
       print('Error completing challenge day: $e');
+      rethrow; // تا کاربر/برنامه‌نویس خطای واقعی را ببیند
     }
   }
 
@@ -2412,7 +2414,7 @@ class SupabaseService {
 
       // 2. ایجاد عادت ماموریت با فیلدهای سطح
       final habit = Habit(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(), // UUID معتبر (ستون uuid در دیتابیس)
         userId: userId,
         title: '🎯 ${quest.title} (0/${quest.targetCount})',
         description: quest.description,

@@ -456,11 +456,18 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
 
         if (habit.challengeId != null) {
           // ترتیبی (نه همزمان): اول ثبت روز، بعد شمارش پیشرفت
-          await _supabase.completeChallengeDay(
-            userId: _currentUserId!,
-            challengeId: habit.challengeId!,
-            date: widget.selectedDate,
-          );
+          try {
+            await _supabase.completeChallengeDay(
+              userId: _currentUserId!,
+              challengeId: habit.challengeId!,
+              date: widget.selectedDate,
+            );
+          } catch (e) {
+            if (mounted) {
+              showArenaSnack(context, 'ثبت پیشرفت چالش ناموفق بود: $e',
+                  kind: ArenaSnackKind.error);
+            }
+          }
 
           if (widget.profileRefreshNotifier != null) {
             widget.profileRefreshNotifier!.value++;
