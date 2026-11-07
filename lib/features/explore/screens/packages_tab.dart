@@ -4,6 +4,7 @@ import '../models/package_model.dart';
 import '../../../services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import '/providers/sync_provider.dart';
+import '/core/app_palette.dart';
 
 class PackagesTab extends StatefulWidget {
   final List<Package> packages;
@@ -248,54 +249,33 @@ class _PackagesTabState extends State<PackagesTab> {
         .toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 100, 16, 120), // از 12 به 100
+      padding: const EdgeInsets.fromLTRB(20, 96, 20, 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ─── بسته‌های فعال (افقی) ───
           if (activePackages.isNotEmpty) ...[
             _buildSectionHeader(
-              icon: Icons.check_circle,
+              icon: Icons.check_circle_rounded,
+              tone: Tone.mint,
               title: 'بسته‌های فعال من',
               color: primaryColor,
               count: activePackages.length,
             ),
             const SizedBox(height: 12),
-            // اسکرول افقی
-            SizedBox(
-              height: 260, // ارتفاع ثابت برای کارت‌های فعال
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                itemCount: activePackages.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: SizedBox(
-                      width: 260, // عرض ثابت برای هر کارت
-                      child: _PackageCard(
-                        package: activePackages[index],
-                        isActive: true,
-                        primaryColor: primaryColor,
-                        primaryLight: themeProviderLight(context),
-                        onChanged: () {
-                          widget.onRefresh();
-                          _loadActivePackages();
-                        },
-                        onDeactivate: () => _showDeactivateDialog(
-                          activePackages[index],
-                          primaryColor,
-                        ),
-                        // اصلاح شد
-                        onView: () => _showPackageDetailDialog(
-                          // دیالوگ جدید
-                          activePackages[index],
-                          primaryColor,
-                        ),
-                      ),
-                    ),
-                  );
+            ...activePackages.map(
+              (package) => _PackageCard(
+                package: package,
+                isActive: true,
+                primaryColor: primaryColor,
+                primaryLight: themeProviderLight(context),
+                onChanged: () {
+                  widget.onRefresh();
+                  _loadActivePackages();
                 },
+                onDeactivate: () =>
+                    _showDeactivateDialog(package, primaryColor),
+                onView: () => _showPackageDetailDialog(package, primaryColor),
               ),
             ),
             const SizedBox(height: 24),
@@ -304,7 +284,8 @@ class _PackagesTabState extends State<PackagesTab> {
           // ─── بسته‌های موجود (عمودی) ───
           if (inactivePackages.isNotEmpty) ...[
             _buildSectionHeader(
-              icon: Icons.inventory_2,
+              icon: Icons.inventory_2_rounded,
+              tone: Tone.lime,
               title: 'بسته‌های موجود',
               color: primaryColor,
               count: inactivePackages.length,
@@ -744,52 +725,26 @@ class _PackagesTabState extends State<PackagesTab> {
     required String title,
     required Color color,
     required int count,
+    Tone tone = Tone.lime,
   }) {
     final theme = Provider.of<ThemeProvider>(context, listen: false);
-
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: theme.textColor.withValues(alpha: 0.08), // 
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: theme.textColor, // 
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration:
+              BoxDecoration(color: theme.tone(tone).bg, shape: BoxShape.circle),
+          child: Icon(icon, size: 18, color: const Color(0xFF090909)),
+        ),
+        const SizedBox(width: 8),
+        Text(title,
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: theme.textColor, // 
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: theme.textColor.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: theme.textColor, // 
-              ),
-            ),
-          ),
-        ],
-      ),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: theme.textColor)),
+      ],
     );
   }
 
@@ -1585,395 +1540,179 @@ class _PackageCard extends StatelessWidget {
     return darkerColors[index];
   }
 
+  static const _ink = Color(0xFF090909);
+  static const _tones = [Tone.lilac, Tone.butter, Tone.sky, Tone.peach, Tone.rose, Tone.lime];
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-
-    // کارت فعال: صورتی (رنگ ثابت دلخواه) | غیرفعال: theme.cardColor
-    final Color cardColor =
-        isActive ? const Color.fromARGB(255, 216, 124, 159) : theme.cardColor;
-
-    // متن روی کارت فعال مشکی، روی غیرفعال theme.textColor
-    final Color textColor =
-        isActive ? const Color(0xFF090909) : theme.textColor;
-
-    final Color subtleTextColor = isActive
-        ? const Color(0xFF090909).withValues(alpha: 0.7)
-        : theme.textSecondaryColor;
-
-    return Container(
-      margin: isActive ? EdgeInsets.zero : const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: isActive
-                ? primaryColor.withValues(alpha: 0.35)
-                : Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardColor,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          package.title,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          width: 32,
-                          height: 2,
-                          decoration: BoxDecoration(
-                            color: isActive
-                                ? Colors.white.withValues(alpha: 0.5)
-                                : const Color(0xFFC57B97)
-                                    .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  _buildFloatingIcon(),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                package.description,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: subtleTextColor,
-                  height: 1.5,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-              _buildHabitPreview(theme),
-              const SizedBox(height: 12),
-              _buildBottomRow(theme),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // آیکون شناور با پس‌زمینه پاستیلی
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildFloatingIcon() {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        color: _iconBgColor, // پس‌زمینه پاستیلی
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: _iconBgColor.withValues(alpha: 0.5),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          _getIconData(package.icon),
-          color: _iconColor, // آیکون رنگ تیره هم‌خانواده
-          size: 26,
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // پیش‌نمایش عادت‌ها
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildHabitPreview(ThemeProvider theme) {
+    final tone = isActive
+        ? theme.tone(Tone.mint)
+        : theme.tone(_tones[package.id.hashCode.abs() % _tones.length]);
     final habits = package.habits.take(3).toList();
     final remaining = package.habits.length - habits.length;
+    final white70 = Colors.white.withValues(alpha: 0.7);
 
     return Container(
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.isDarkMode
-            ? const Color(0xFF2A2A2A)
-            : const Color.fromARGB(255, 233, 233, 233),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFC57B97).withValues(alpha: 0.10),
-          width: 1,
-        ),
+        color: tone.bg,
+        borderRadius: BorderRadius.circular(30),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ...habits.map((habit) => Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Row(
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration:
+                    const BoxDecoration(color: _ink, shape: BoxShape.circle),
+                child: Icon(_getIconData(package.icon),
+                    size: 26, color: theme.effectivePrimary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFC57B97).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: Icon(
-                        _getIconData(habit.iconName),
-                        size: 11,
-                        color: const Color(0xFFC57B97),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        habit.title,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: theme.textColor, // 
-                        ),
-                        maxLines: 1,
+                    Text(package.title,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: _ink)),
+                    if (package.category.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _chip(package.category, bg: white70),
+                    ],
                   ],
                 ),
-              )),
-          if (remaining > 0)
+              ),
+              if (isActive)
+                _chip('فعال',
+                    icon: Icons.check_circle_rounded,
+                    bg: const Color(0xFF2ECC71),
+                    bold: true),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(package.description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 13, height: 1.8, color: Color(0xFF3C4034))),
+          const SizedBox(height: 12),
+          for (final h in habits)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                '... و $remaining عادت دیگر',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontStyle: FontStyle.italic,
-                  color: theme.textSecondaryColor, // 
-                ),
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration:
+                        BoxDecoration(color: white70, shape: BoxShape.circle),
+                    child: Icon(_getIconData(h.iconName), size: 14, color: _ink),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(h.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _ink)),
+                  ),
+                ],
               ),
             ),
+          if (remaining > 0)
+            Text('... و $remaining عادت دیگر',
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF3C4034))),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _chip('${package.habits.length} عادت',
+                  icon: Icons.checklist_rounded, bg: white70),
+              _chip('+${package.xpReward} XP',
+                  icon: Icons.star_rounded, bg: white70, bold: true),
+              if (package.badge.isNotEmpty && package.badge != '📦')
+                _chip(package.badge, bg: white70),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (isActive && onView != null)
+                _pill('مشاهده', Icons.visibility_outlined, Colors.white, _ink,
+                    onView!),
+              if (isActive && onDeactivate != null) ...[
+                const SizedBox(width: 8),
+                _pill('غیرفعال', Icons.power_settings_new_rounded,
+                    const Color(0xFFFFD3CF), _ink, onDeactivate!),
+              ],
+              if (!isActive && onActivate != null)
+                _pill('فعال‌سازی', Icons.play_arrow_rounded, _ink,
+                    Colors.white, onActivate!),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // ردیف پایین: اطلاعات + دکمه‌ها
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildBottomRow(ThemeProvider theme) {
-    return Row(
-      children: [
-        _buildInfoChip(
-          icon: Icons.checklist,
-          label: '${package.habits.length}',
-          theme: theme,
-        ),
-        const SizedBox(width: 6),
-        _buildInfoChip(
-          icon: Icons.stars,
-          label: '+${package.xpReward}',
-          iconColor: const Color(0xFFFFA500),
-          theme: theme,
-        ),
-        const Spacer(),
-        if (isActive && onDeactivate != null && onView != null) ...[
-          _buildViewButton(onView!),
-          const SizedBox(width: 6),
-          _buildDeactivateButton(onDeactivate!),
-        ] else if (!isActive && onActivate != null) ...[
-          _buildActivateButton(onActivate!),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    Color? iconColor,
-    required ThemeProvider theme,
-  }) {
+  Widget _chip(String text,
+      {IconData? icon, required Color bg, bool bold = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive
-            ? Colors.white.withValues(alpha: 0.25)
-            : theme.isDarkMode
-                ? const Color(0xFF2A2A2A)
-                : theme.textColor.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(13)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 11,
-            color: isActive ? Colors.white : (iconColor ?? theme.textColor),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: isActive ? Colors.white : theme.textColor,
-            ),
-          ),
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: _ink),
+            const SizedBox(width: 4),
+          ],
+          Text(text,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+                  color: _ink)),
         ],
       ),
     );
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // دکمه مشاهده (مشکی)
-  // ═══════════════════════════════════════════════════════════
-  // دکمه مشاهده — روی کارت فعال: سفید با متن مشکی | روی کارت غیرفعال: مشکی
-  Widget _buildViewButton(VoidCallback onView) {
+  Widget _pill(String label, IconData icon, Color bg, Color fg, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onView,
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? const Color.fromARGB(255, 0, 0, 0) // روی سبز: سفید
-              : const Color.fromARGB(255, 255, 255, 255), // روی سفید: مشکی
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration:
+            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(18)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.visibility_outlined,
-              size: 12,
-              color: isActive
-                  ? const Color.fromARGB(255, 255, 255, 255)
-                  : const Color.fromARGB(255, 0, 0, 0),
-            ),
-            const SizedBox(width: 3),
-            Text(
-              'مشاهده',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: isActive
-                    ? const Color.fromARGB(255, 255, 255, 255)
-                    : const Color.fromARGB(255, 0, 0, 0),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // دکمه غیرفعال — روی کارت فعال: سفید با متن مشکی | روی غیرفعال: primaryLight
-  Widget _buildDeactivateButton(VoidCallback onDeactivate) {
-    return GestureDetector(
-      onTap: onDeactivate,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive
-              ? Colors.white.withValues(alpha: 0.95) // روی سبز: سفید
-              : const Color.fromARGB(
-                  255, 209, 180, 255), // روی سفید: primaryLight
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF090909).withValues(alpha: 0.10),
-            width: 1,
-          ),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.delete_outline,
-              size: 12,
-              color: Color(0xFF090909),
-            ),
-            SizedBox(width: 3),
-            Text(
-              'غیرفعال',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF090909),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════
-  // دکمه فعال‌سازی (مشکی)
-  // ═══════════════════════════════════════════════════════════
-  Widget _buildActivateButton(VoidCallback onActivate) {
-    return GestureDetector(
-      onTap: onActivate,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: const Color(0xFF090909), // مشکی
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.20),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.play_arrow_rounded, size: 14, color: Colors.white),
-            SizedBox(width: 4),
-            Text(
-              'فعال‌سازی',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: fg)),
           ],
         ),
       ),
