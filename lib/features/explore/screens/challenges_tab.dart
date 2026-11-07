@@ -837,10 +837,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
 
     await Future.delayed(const Duration(milliseconds: 500));
     await _supabase.checkExpiredChallenges(widget.currentUserId);
-
-    if (mounted) {
-      widget.onRefresh();
-    }
+    // رفرش اینجا حلقه‌ی بازسازی می‌ساخت؛ _loadData خودش وضعیت را به‌روز می‌کند
   }
 
   Future<Map<String, int>> _getCachedProgress(String challengeId) async {

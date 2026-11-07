@@ -40,6 +40,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   List<Quest> _completedQuests = [];
 
   bool _isLoading = true;
+  bool _hasLoadedOnce = false; // رفرش‌های بعدی بی‌صدا؛ اسپینر فقط بار اول
   bool _isInitialized = false;
   bool _isLoadingInProgress = false;
   String _errorMessage = '';
@@ -102,7 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     _isLoadingInProgress = true;
 
     setState(() {
-      _isLoading = true;
+      if (!_hasLoadedOnce) _isLoading = true;
       _errorMessage = '';
     });
 
@@ -168,6 +169,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _hasLoadedOnce = true;
           _isInitialized = true;
           _isLoadingInProgress = false;
         });
