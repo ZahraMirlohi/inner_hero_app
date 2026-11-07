@@ -111,9 +111,6 @@ class _ExploreScreenState extends State<ExploreScreen>
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final currentUser = await _supabase.getCurrentUser();
 
-      if (_currentUserId.isNotEmpty) {
-        await _supabase.checkAndUpdateUserChallenges(_currentUserId);
-      }
 
       if (currentUser == null) {
         if (mounted) {
@@ -148,7 +145,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
 
       if (_currentUserId.isNotEmpty) {
-        await _supabase.checkUserChallengeStreak(_currentUserId);
+        // دو بررسی مستقل همزمان اجرا می‌شوند (قبلاً پشت سر هم، کند)
+        await Future.wait([
+          _supabase.checkAndUpdateUserChallenges(_currentUserId),
+          _supabase.checkUserChallengeStreak(_currentUserId),
+        ]);
       }
 
       if (syncProvider.isOnline) {

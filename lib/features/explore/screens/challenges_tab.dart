@@ -840,6 +840,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
     // رفرش اینجا حلقه‌ی بازسازی می‌ساخت؛ _loadData خودش وضعیت را به‌روز می‌کند
   }
 
+  // آخرین مقدار شناخته‌شده؛ تا رسیدن داده‌ی تازه نوار به صفر نپرد
+  final Map<String, Map<String, int>> _lastProgress = {};
+
   Future<Map<String, int>> _getCachedProgress(String challengeId) async {
     if (_progressCache.containsKey(challengeId)) {
       final cached = _progressCache[challengeId]!;
@@ -862,6 +865,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
         challengeId,
       );
 
+      _lastProgress[challengeId] = result;
       _progressCache[challengeId] = _CachedProgress(
         data: result,
         timestamp: DateTime.now(),
@@ -1223,8 +1227,10 @@ class _ChallengesTabState extends State<ChallengesTab> {
         int completedDays = 0;
         int total = totalDays;
         double progress = 0.0;
-        if (snapshot.hasData) {
-          final progressData = snapshot.data![0] as Map<String, int>;
+        final progressData = snapshot.hasData
+            ? snapshot.data![0] as Map<String, int>
+            : _lastProgress[challengeId];
+        if (progressData != null) {
           completedDays = progressData['completedDays'] ?? 0;
           total = progressData['totalDays'] ?? totalDays;
           progress = total > 0 ? completedDays / total : 0.0;
