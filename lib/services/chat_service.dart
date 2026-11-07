@@ -748,6 +748,11 @@ class ChatService {
     }
   }
 
+  // حذف پیام توسط ادمین گروه (نیاز به policy در sql/08)
+  Future<void> adminDeleteMessage(String messageId) async {
+    await _client.from('messages').delete().eq('id', messageId);
+  }
+
   // دریافت واکنش‌های یک پیام (بدون join)
   Future<List<MessageReaction>> getMessageReactions(String messageId) async {
     try {

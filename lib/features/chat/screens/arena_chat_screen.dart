@@ -41,6 +41,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   bool _isLoading = true;
   bool _isSending = false;
   String? _userId;
+  String _myName = 'کاربر';
+  StreamSubscription<List<ChatMessage>>? _msgSub;
 
   // ==================== وضعیت‌ها ====================
   bool _showPostInput = false;
@@ -122,6 +124,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
 
   @override
   void dispose() {
+    _msgSub?.cancel();
     _tabController.dispose();
     _messageController.dispose();
     _postController.dispose();
@@ -139,6 +142,14 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         _userId = user.id;
       });
 
+      try {
+        final me = await _chatService.client
+            .from('profiles')
+            .select('name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        _myName = (me?['name'] as String?) ?? 'کاربر';
+      } catch (_) {}
       _challengeInfo = await _getChallengeInfo(widget.conversation.challengeId);
       _participants = await _getChallengeParticipants(
         widget.conversation.challengeId,
@@ -251,7 +262,10 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   }
 
   void _setupRealtimeSubscription() {
-    _chatService.getMessages(widget.conversation.id).listen((newMessages) {
+    _msgSub = _chatService
+        .getMessages(widget.conversation.id,
+            userId: _chatService.client.auth.currentUser?.id)
+        .listen((newMessages) {
       if (mounted) {
         setState(() {
           _messages = newMessages.reversed.toList();
@@ -269,12 +283,25 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     final content = text ?? _messageController.text.trim();
     if (content.isEmpty || _userId == null || _isSending) return;
 
+    final temp = ChatMessage(
+      id: 'tmp_${DateTime.now().microsecondsSinceEpoch}',
+      conversationId: widget.conversation.id,
+      senderId: _userId!,
+      senderName: _myName,
+      content: content,
+      type: type,
+      status: MessageStatus.sending,
+      metadata: metadata,
+      createdAt: DateTime.now(),
+      isTemp: true,
+    );
     _messageController.clear();
-    _focusNode.unfocus();
     setState(() {
+      _messages.add(temp); // بلافاصله پایین لیست
       _isSending = true;
       _showStickerPicker = false;
     });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
 
     try {
       await _chatService.sendMessage(
@@ -283,9 +310,11 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         content: content,
         type: type.toString().split('.').last,
         metadata: metadata,
+        senderName: _myName,
       );
     } catch (e) {
       if (mounted) {
+        setState(() => _messages.removeWhere((m) => m.id == temp.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا در ارسال پیام: ${e.toString()}'),

@@ -11,7 +11,9 @@ import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '../models/message_model.dart';
 import '../models/conversation_model.dart';
+import '/services/chat_upload_service.dart';
 import '../widgets/message_actions_menu.dart';
+import '../widgets/file_message_widget.dart';
 
 class SquadChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -42,6 +44,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   bool _showStickerPicker = false;
   bool _isAdmin = false;
   Map<String, dynamic> _settings = {};
+  String _myName = 'کاربر';
+  StreamSubscription<List<ChatMessage>>? _msgSub;
+  final Map<String, GlobalKey> _messageKeys = {};
+  String? _highlightedId;
 
   bool get _reactionsEnabled => _settings['reactions_enabled'] != false;
   bool get _adminsOnlyPosting => _settings['posting_mode'] == 'admins';
@@ -85,6 +91,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   @override
   void dispose() {
+    _msgSub?.cancel();
     _tabController.dispose();
     _messageController.dispose();
     _scrollController.dispose();
@@ -100,6 +107,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       });
 
       _members = await _getSquadMembers(widget.conversation.id);
+      _myName = (_members.firstWhere((m) => m['user_id'] == _userId,
+                  orElse: () => {'name': 'کاربر'})['name'] as String?) ??
+          'کاربر';
       try {
         _settings = await _chatService.getGroupSettings(widget.conversation.id);
       } catch (e) {
@@ -185,12 +195,15 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _setupRealtimeSubscription() {
-    _chatService.getMessages(widget.conversation.id).listen((newMessages) {
+    _msgSub = _chatService
+        .getMessages(widget.conversation.id, userId: _chatService.client.auth.currentUser?.id)
+        .listen((newMessages) {
       if (mounted) {
+        final grew = newMessages.length > _messages.length;
         setState(() {
           _messages = newMessages.reversed.toList();
         });
-        _scrollToBottom();
+        if (grew) _scrollToBottom();
       }
     });
   }
@@ -213,41 +226,216 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     Map<String, dynamic>? metadata,
   }) async {
     final content = text ?? _messageController.text.trim();
-    if (content.isEmpty || _userId == null || _isSending) return;
+    if (content.isEmpty || _userId == null || _isSending || !_canPost) return;
+
+    final replyTo = _replyToMessage;
+    final typeStr = type.toString().split('.').last;
+    // پیام بلافاصله پایین لیست می‌نشیند (تا رسیدن نسخه‌ی سرور)
+    final temp = ChatMessage(
+      id: 'tmp_${DateTime.now().microsecondsSinceEpoch}',
+      conversationId: widget.conversation.id,
+      senderId: _userId!,
+      senderName: _myName,
+      content: content,
+      type: type,
+      status: MessageStatus.sending,
+      metadata: metadata,
+      replyToId: replyTo?.id,
+      replyTo: replyTo,
+      createdAt: DateTime.now(),
+      isTemp: true,
+    );
 
     _messageController.clear();
-    _focusNode.unfocus();
     setState(() {
+      _messages.add(temp);
       _isSending = true;
       _replyToMessage = null;
       _showStickerPicker = false;
     });
+    _scrollToBottom();
 
     try {
       await _chatService.sendMessage(
         conversationId: widget.conversation.id,
         senderId: _userId!,
         content: content,
-        type: type.toString().split('.').last,
-        metadata: {...?metadata, 'reply_to_id': _replyToMessage?.id},
+        type: typeStr,
+        metadata: metadata,
+        replyToId: replyTo?.id,
+        senderName: _myName,
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطا در ارسال پیام: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _messages.removeWhere((m) => m.id == temp.id));
+        _snack(_chatService.groupErrorText(e), error: true);
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSending = false;
-          _replyToMessage = null;
-        });
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  // ==================== پیوست (چندتایی) ====================
+  void _showAttachMenu(ThemeProvider theme, Color primaryColor) {
+    Widget item(IconData icon, String title, AttachKind kind) => ListTile(
+          leading: Icon(icon, color: primaryColor),
+          title: Text(title),
+          onTap: () {
+            Navigator.pop(context);
+            _sendAttachments(kind);
+          },
+        );
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 8),
+          item(Icons.image, 'عکس (چندتایی)', AttachKind.image),
+          item(Icons.attach_file, 'فایل (چندتایی)', AttachKind.file),
+          item(Icons.music_note, 'موزیک (چندتایی)', AttachKind.music),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _sendAttachments(AttachKind kind) async {
+    if (_userId == null || !_canPost) return;
+    final items = await ChatUploadService.pick(kind);
+    if (items.isEmpty) return;
+    setState(() => _isSending = true);
+    var failed = 0;
+    for (final a in items) {
+      try {
+        final url = await ChatUploadService.upload(
+            a, kind == AttachKind.image ? 'chat_images' : 'chat_files');
+        final isImage = kind == AttachKind.image;
+        await _chatService.sendMessage(
+          conversationId: widget.conversation.id,
+          senderId: _userId!,
+          senderName: _myName,
+          content: isImage ? url : '${kind == AttachKind.music ? '🎵' : '📁'} ${a.name}',
+          type: isImage ? 'image' : 'text',
+          metadata: isImage
+              ? {'type': 'image'}
+              : {
+                  'file_url': url,
+                  'file_name': a.name,
+                  'file_size': a.size,
+                  'type': kind == AttachKind.music ? 'music' : 'file',
+                },
+        );
+      } catch (e) {
+        failed++;
+        print('attachment send error: $e');
       }
     }
+    if (mounted) setState(() => _isSending = false);
+    if (failed > 0) _snack('ارسال $failed مورد ناموفق بود', error: true);
+  }
+
+  // ==================== جستجو و پرش دقیق ====================
+  void _showSearch(ThemeProvider theme, Color primaryColor) {
+    final c = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text('جستجو در گفتگو', style: TextStyle(color: theme.textColor)),
+        content: TextField(
+          controller: c,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'متن پیام...'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+          TextButton(
+            onPressed: () {
+              final q = c.text.trim().toLowerCase();
+              Navigator.pop(ctx);
+              if (q.isEmpty) return;
+              final res = _messages
+                  .where((m) => !m.isDeleted && m.content.toLowerCase().contains(q))
+                  .toList()
+                  .reversed
+                  .toList();
+              if (res.isEmpty) {
+                _snack('نتیجه‌ای یافت نشد');
+              } else if (res.length == 1) {
+                _jumpTo(res.first.id);
+              } else {
+                _showSearchResults(res, theme);
+              }
+            },
+            child: const Text('جستجو'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSearchResults(List<ChatMessage> res, ThemeProvider theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(12),
+          itemCount: res.length,
+          separatorBuilder: (_, __) => const Divider(height: 1),
+          itemBuilder: (_, i) => ListTile(
+            title: Text(res[i].content, maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: Text(res[i].senderName ?? ''),
+            onTap: () {
+              Navigator.pop(ctx);
+              _jumpTo(res[i].id);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  // اگر ویجت پیام هنوز ساخته نشده، با تخمین ارتفاع نزدیک می‌شویم و تا ساخته‌شدن تکرار می‌کنیم
+  Future<void> _jumpTo(String id, {int attempt = 0}) async {
+    if (!mounted) return;
+    final idx = _messages.indexWhere((m) => m.id == id);
+    if (idx == -1) {
+      _snack('پیام مورد نظر پیدا نشد');
+      return;
+    }
+    if (attempt == 0) {
+      setState(() => _highlightedId = id);
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted && _highlightedId == id) setState(() => _highlightedId = null);
+      });
+    }
+    final ctx = _messageKeys[id]?.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(ctx,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.5);
+      return;
+    }
+    if (attempt >= 8 || !_scrollController.hasClients) return;
+    final fromBottom = _messages.length - 1 - idx;
+    final step = (attempt + 1) ~/ 2;
+    final nudge = attempt == 0 ? 0.0 : (attempt.isOdd ? 1 : -1) * step * 250.0;
+    final max = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo((fromBottom * 90.0 + nudge).clamp(0.0, max));
+    await Future.delayed(const Duration(milliseconds: 80));
+    _jumpTo(id, attempt: attempt + 1);
   }
 
   void _showMessageActions(
@@ -346,6 +534,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             onPressed: () async {
               final newContent = controller.text.trim();
               if (newContent.isNotEmpty && newContent != message.content) {
+                _chatService
+                    .editMessage(
+                        messageId: message.id,
+                        userId: _userId!,
+                        newContent: newContent)
+                    .catchError((e) => _snack('ویرایش ناموفق بود', error: true));
                 setState(() {
                   final index = _messages.indexWhere((m) => m.id == message.id);
                   if (index != -1) {
@@ -406,11 +600,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           ),
           TextButton(
             onPressed: () {
+              _chatService
+                  .deleteMessageForMe(message.id, _userId!)
+                  .catchError((e) => _snack('حذف ناموفق بود', error: true));
               setState(() {
-                final index = _messages.indexWhere((m) => m.id == message.id);
-                if (index != -1) {
-                  _messages.removeAt(index);
-                }
+                _messages.removeWhere((m) => m.id == message.id);
               });
               Navigator.pop(context);
             },
@@ -450,6 +644,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           ),
           TextButton(
             onPressed: () {
+              final del = message.isFromMe
+                  ? _chatService.deleteMessageForEveryone(message.id, _userId!)
+                  : _chatService.adminDeleteMessage(message.id);
+              del.catchError((e) => _snack('حذف ناموفق بود', error: true));
               setState(() {
                 final index = _messages.indexWhere((m) => m.id == message.id);
                 if (index != -1) {
@@ -487,6 +685,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _copyMessage(ChatMessage message) {
+    Clipboard.setData(ClipboardData(text: message.content));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('متن کپی شد 📋'),
@@ -669,7 +868,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ),
                 ),
               if (message.replyTo != null)
-                Container(
+                GestureDetector(
+                  onTap: () => _jumpTo(message.replyTo!.id),
+                  child: Container(
                   margin: const EdgeInsets.only(bottom: 3),
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -704,33 +905,40 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ],
                   ),
                 ),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 11,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: bubbleColor,
+                  color: _highlightedId == message.id
+                      ? Color.alphaBlend(
+                          const Color(0xFFFF6B00).withValues(alpha: 0.3),
+                          bubbleColor)
+                      : bubbleColor,
                   borderRadius: BorderRadius.circular(18),
+                  border: _highlightedId == message.id
+                      ? Border.all(color: const Color(0xFFFF6B00), width: 3)
+                      : null,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
+                    if (_highlightedId == message.id)
+                      BoxShadow(
+                        color: const Color(0xFFFF6B00).withValues(alpha: 0.6),
+                        blurRadius: 24,
+                        spreadRadius: 5,
+                      ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      message.content,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                    ),
+                    _buildSquadContent(message, isMe, textColor),
                     if (message.showEditedBadge)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
@@ -806,6 +1014,49 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSquadContent(ChatMessage m, bool isMe, Color textColor) {
+    final md = m.metadata;
+    if (md != null && md['file_url'] != null) {
+      var t = md['type'] as String? ?? 'file';
+      if (t == 'music') t = 'audio';
+      return FileMessageWidget(
+        key: ValueKey('f_${m.id}'),
+        fileUrl: md['file_url'] as String,
+        fileName: md['file_name'] as String? ?? 'فایل',
+        fileType: t,
+        fileSize: (md['file_size'] as num?)?.toInt() ?? 0,
+        isMe: isMe,
+      );
+    }
+    if (m.type == MessageType.image) {
+      return GestureDetector(
+        onTap: () => showDialog(
+          context: context,
+          builder: (_) => Dialog(
+            backgroundColor: Colors.black,
+            insetPadding: EdgeInsets.zero,
+            child: InteractiveViewer(child: Image.network(m.content)),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.network(
+            m.content,
+            width: 200,
+            height: 200,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+                const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+    return Text(
+      m.content,
+      style: TextStyle(color: textColor, fontSize: 13, height: 1.4),
     );
   }
 
@@ -952,9 +1203,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                     const SizedBox(width: 4),
                     IconButton(
-                      onPressed: () {
-                        _showSquadTools(theme, primaryColor);
-                      },
+                      onPressed: _isSending
+                          ? null
+                          : () => _showAttachMenu(theme, primaryColor),
                       icon: Icon(
                         Icons.attach_file,
                         color: theme.textSecondaryColor,
@@ -1060,10 +1311,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[_messages.length - 1 - index];
-                        return _buildMessageBubble(
-                          message,
-                          theme,
-                          primaryColor,
+                        return KeyedSubtree(
+                          key: _messageKeys.putIfAbsent(
+                              message.id, () => GlobalKey()),
+                          child: _buildMessageBubble(
+                            message,
+                            theme,
+                            primaryColor,
+                          ),
                         );
                       },
                     ),
@@ -2058,6 +2313,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       elevation: 0,
       foregroundColor: theme.textColor,
       actions: [
+        IconButton(
+          icon: Icon(Icons.search, color: theme.textColor),
+          onPressed: () => _showSearch(theme, primaryColor),
+        ),
         IconButton(
           icon: Icon(Icons.more_vert, color: theme.textColor),
           onPressed: () => _showSquadTools(theme, primaryColor),
