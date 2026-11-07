@@ -2169,6 +2169,10 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('package_id', packageId);
 
+      if (existing.isNotEmpty && existing[0]['is_active'] == true) {
+        return; // قبلاً فعال است؛ عادت تکراری ساخته نشود
+      }
+
       if (existing.isNotEmpty) {
         await client.from('user_packages').update({
           'is_active': true,
