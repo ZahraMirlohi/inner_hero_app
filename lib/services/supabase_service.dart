@@ -2986,24 +2986,29 @@ class SupabaseService {
           .eq('user_id', userId)
           .eq('challenge_id', challengeId);
 
-      final completedDays = completions.length;
+      final completedDays = {
+        for (final c in completions) (c['date'] as String).split('T').first
+      }.length;
       final totalDays = challenge['challenge_duration'] as int? ?? 7;
 
       if (completedDays < totalDays) return null;
 
-      print('Challenge completed! $completedDays/$totalDays');
+      // اتمیک: فقط یک درخواست موفق می‌شود؛ XP فقط برای همان یکی
+      final updated = await client
+          .from('user_challenges')
+          .update({
+            'is_completed': true,
+            'completed_at': DateTime.now().toIso8601String(),
+            'progress': totalDays,
+            'status': 'completed',
+            'is_active': false,
+          })
+          .eq('id', userChallenge['id'])
+          .eq('is_completed', false)
+          .select('id');
+      if (updated.isEmpty) return null;
 
-      // اجرای همزمان به‌روزرسانی‌ها
-      await Future.wait([
-        addXP(userId, challenge['xp_reward'] as int? ?? 0),
-        client.from('user_challenges').update({
-          'is_completed': true,
-          'completed_at': DateTime.now().toIso8601String(),
-          'progress': totalDays,
-          'status': 'completed',
-          'is_active': false,
-        }).eq('id', userChallenge['id']),
-      ]);
+      await addXP(userId, challenge['xp_reward'] as int? ?? 0);
 
       // حذف عادت‌های چالش (با ignore)
       unawaited(_removeChallengeHabits(userId, challengeId));
