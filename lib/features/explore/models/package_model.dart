@@ -12,6 +12,7 @@ class Package {
   final bool isActive;
   final int xpReward;
   final String badge;
+  final String? imageUrl;
   final DateTime createdAt;
 
   Package({
@@ -26,6 +27,7 @@ class Package {
     this.isActive = true,
     this.xpReward = 50,
     this.badge = '📦',
+    this.imageUrl,
     required this.createdAt,
   });
 
@@ -50,6 +52,7 @@ class Package {
       isActive: map['is_active'] ?? true,
       xpReward: map['xp_reward'] ?? 50,
       badge: map['badge']?.toString() ?? '📦',
+      imageUrl: map['image_url']?.toString(),
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'])
           : DateTime.now(),

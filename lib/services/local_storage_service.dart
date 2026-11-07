@@ -675,12 +675,49 @@ class HabitAdapter extends TypeAdapter<Habit> {
       }
     }
 
-    // خواندن timer_setting با تبدیل نوع
+    // ترتیب خواندن باید دقیقاً مثل write باشد (timer_setting آخر نوشته می‌شود)
+    String? optStr() {
+      final v = reader.readString();
+      return v.isEmpty ? null : v;
+    }
+
+    final id = reader.readString();
+    final userId = reader.readString();
+    final title = reader.readString();
+    final description = reader.readString();
+    final subHabits = reader.readList().cast<String>();
+    final completedSubHabits = reader.readList().cast<String>();
+    final iconName = reader.readString();
+    final iconColor = reader.readInt();
+    final backgroundColor = reader.readInt();
+    final frequencyType = reader.readString();
+    final dailyIntervalDays = reader.readList().cast<int>();
+    final weeklyDays = reader.readList().cast<int>();
+    final weeklyIntervalWeeks = reader.readInt();
+    final monthlyDays = reader.readList().cast<int>();
+    final monthlyIntervalMonths = reader.readInt();
+    final timeOfDay = reader.readString();
+    final reminders = reader.readList().cast<Reminder>();
+    final xpReward = reader.readInt();
+    final currentStreak = reader.readInt();
+    final bestStreak = reader.readInt();
+    final isActive = reader.readBool();
+    final createdAt = parseDate(reader.readString());
+    final updatedAt = parseDate(reader.readString());
+    final groupId = optStr();
+    final startStr = optStr();
+    final endStr = optStr();
+    final challengeId = optStr();
+    final questId = optStr();
+    final targetValue = optStr();
+    final fullDescription = optStr();
+    final halfDescription = optStr();
+    final basicDescription = optStr();
+
     TimerSetting? timerSetting;
     try {
       final timerSettingMap = reader.readMap();
       if (timerSettingMap.isNotEmpty) {
-        // تبدیل Map<dynamic, dynamic> به Map<String, dynamic>
         final Map<String, dynamic> convertedMap = {};
         timerSettingMap.forEach((key, value) {
           convertedMap[key.toString()] = value;
@@ -688,47 +725,43 @@ class HabitAdapter extends TypeAdapter<Habit> {
         timerSetting = TimerSetting.fromMap(convertedMap);
       }
     } catch (e) {
-      // اگر timerSetting وجود نداشت، نادیده بگیر
       print('Error reading timer_setting: $e');
     }
 
     return Habit(
-      id: reader.readString(),
-      userId: reader.readString(),
-      title: reader.readString(),
-      description: reader.readString(),
-      subHabits: reader.readList().cast<String>(),
-      completedSubHabits: reader.readList().cast<String>(),
-      iconName: reader.readString(),
-      iconColor: reader.readInt(),
-      backgroundColor: reader.readInt(),
-      frequencyType: reader.readString(),
-      dailyIntervalDays: reader.readList().cast<int>(),
-      weeklyDays: reader.readList().cast<int>(),
-      weeklyIntervalWeeks: reader.readInt(),
-      monthlyDays: reader.readList().cast<int>(),
-      monthlyIntervalMonths: reader.readInt(),
-      timeOfDay: reader.readString(),
-      reminders: reader.readList().cast<Reminder>(),
-      xpReward: reader.readInt(),
-      currentStreak: reader.readInt(),
-      bestStreak: reader.readInt(),
-      isActive: reader.readBool(),
-      createdAt: parseDate(reader.readString()),
-      updatedAt: parseDate(reader.readString()),
-      groupId: reader.readString().isEmpty ? null : reader.readString(),
-      startDate:
-          reader.readString().isEmpty ? null : parseDate(reader.readString()),
-      endDate:
-          reader.readString().isEmpty ? null : parseDate(reader.readString()),
-      challengeId: reader.readString().isEmpty ? null : reader.readString(),
-      questId: reader.readString().isEmpty ? null : reader.readString(),
+      id: id,
+      userId: userId,
+      title: title,
+      description: description,
+      subHabits: subHabits,
+      completedSubHabits: completedSubHabits,
+      iconName: iconName,
+      iconColor: iconColor,
+      backgroundColor: backgroundColor,
+      frequencyType: frequencyType,
+      dailyIntervalDays: dailyIntervalDays,
+      weeklyDays: weeklyDays,
+      weeklyIntervalWeeks: weeklyIntervalWeeks,
+      monthlyDays: monthlyDays,
+      monthlyIntervalMonths: monthlyIntervalMonths,
+      timeOfDay: timeOfDay,
+      reminders: reminders,
+      xpReward: xpReward,
+      currentStreak: currentStreak,
+      bestStreak: bestStreak,
+      isActive: isActive,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      groupId: groupId,
+      startDate: startStr == null ? null : parseDate(startStr),
+      endDate: endStr == null ? null : parseDate(endStr),
+      challengeId: challengeId,
+      questId: questId,
       timerSetting: timerSetting,
-      targetValue: reader.readString().isEmpty ? null : reader.readString(),
-      fullDescription: reader.readString().isEmpty ? null : reader.readString(),
-      halfDescription: reader.readString().isEmpty ? null : reader.readString(),
-      basicDescription:
-          reader.readString().isEmpty ? null : reader.readString(),
+      targetValue: targetValue,
+      fullDescription: fullDescription,
+      halfDescription: halfDescription,
+      basicDescription: basicDescription,
     );
   }
 
@@ -789,9 +822,7 @@ class TaskAdapter extends TypeAdapter<Task> {
       description: reader.readString(),
       subTasks: reader.readList().cast<String>(),
       completedSubTasks: reader.readList().cast<String>(),
-      dueDate: reader.readString().isEmpty
-          ? null
-          : DateTime.parse(reader.readString()),
+      dueDate: _readOptDate(reader),
       isCompleted: reader.readBool(),
       xpReward: reader.readInt(),
       createdAt: DateTime.parse(reader.readString()),
@@ -976,4 +1007,9 @@ class OfflineOperationAdapter extends TypeAdapter<OfflineOperation> {
     writer.writeString(obj.timestamp.toIso8601String());
     writer.writeString(obj.userId);
   }
+}
+
+DateTime? _readOptDate(BinaryReader reader) {
+  final v = reader.readString();
+  return v.isEmpty ? null : DateTime.tryParse(v);
 }

@@ -8,6 +8,7 @@ class Quest {
   final String color;
   final int xpReward;
   final String badge;
+  final String? imageUrl;
   final int targetCount;
   final bool isActive;
   final DateTime createdAt;
@@ -26,6 +27,7 @@ class Quest {
     required this.color,
     required this.xpReward,
     required this.badge,
+    this.imageUrl,
     required this.targetCount,
     this.isActive = true,
     required this.createdAt,
@@ -44,6 +46,7 @@ class Quest {
       color: map['color'] ?? '#FF9F43',
       xpReward: map['xp_reward'] ?? 100,
       badge: map['badge'] ?? '🎯',
+      imageUrl: map['image_url']?.toString(),
       targetCount: map['target_count'] ?? 7,
       isActive: map['is_active'] ?? true,
       createdAt: map['created_at'] != null

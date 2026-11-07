@@ -455,17 +455,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
         ]);
 
         if (habit.challengeId != null) {
-          await Future.wait([
-            _supabase.completeChallengeDay(
-              userId: _currentUserId!,
-              challengeId: habit.challengeId!,
-              date: widget.selectedDate,
-            ),
-            _supabase.updateChallengeProgress(
-              _currentUserId!,
-              habit.challengeId!,
-            ),
-          ]);
+          // ترتیبی (نه همزمان): اول ثبت روز، بعد شمارش پیشرفت
+          await _supabase.completeChallengeDay(
+            userId: _currentUserId!,
+            challengeId: habit.challengeId!,
+            date: widget.selectedDate,
+          );
 
           if (widget.profileRefreshNotifier != null) {
             widget.profileRefreshNotifier!.value++;
