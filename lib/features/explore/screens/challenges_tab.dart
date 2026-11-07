@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import '/core/app_palette.dart';
+import '../widgets/card_image.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // SOFT GLASS DESIGN SYSTEM
@@ -998,7 +999,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 214,
+                height: activeChallenges.any((c) => CardImage.has(c['image_url'] as String?)) ? 300 : 214,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1152,6 +1153,7 @@ class _ChallengesTabState extends State<ChallengesTab> {
             Container(
               width: 62,
               height: 62,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: const Color(0xFFFFC93C),
                 shape: BoxShape.circle,
@@ -1163,8 +1165,13 @@ class _ChallengesTabState extends State<ChallengesTab> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.emoji_events_rounded,
-                  size: 32, color: ink),
+              child: CardImage.has(challenge['image_url'] as String?)
+                  ? CardImage(
+                      url: challenge['image_url'] as String?,
+                      width: 62,
+                      height: 62)
+                  : const Icon(Icons.emoji_events_rounded,
+                      size: 32, color: ink),
             ),
             const SizedBox(height: 8),
             Text(title,
@@ -1231,12 +1238,19 @@ class _ChallengesTabState extends State<ChallengesTab> {
         final pct = (progress.clamp(0.0, 1.0) * 100).toInt();
 
         return Container(
-          padding: const EdgeInsets.all(14),
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: accent,
             borderRadius: BorderRadius.circular(28),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CardImage(url: challenge['image_url'] as String?, height: 84),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1343,6 +1357,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
               ),
             ],
           ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -1373,14 +1390,20 @@ class _ChallengesTabState extends State<ChallengesTab> {
           onTap: () => widget.showChallengeDetails(challenge),
           child: Container(
             constraints: const BoxConstraints(minHeight: 150),
-            padding: const EdgeInsets.all(14),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                CardImage(url: challenge['image_url'] as String?, height: 88),
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1417,6 +1440,9 @@ class _ChallengesTabState extends State<ChallengesTab> {
                     _chip('${snapshot.data ?? 0}',
                         icon: Icons.people_alt_rounded, fg: fg),
                   ],
+                ),
+                    ],
+                  ),
                 ),
               ],
             ),

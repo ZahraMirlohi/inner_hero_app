@@ -5,6 +5,7 @@ import '../../../services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import '/providers/sync_provider.dart';
 import '/core/app_palette.dart';
+import '../widgets/card_image.dart';
 
 class PackagesTab extends StatefulWidget {
   final List<Package> packages;
@@ -954,6 +955,15 @@ class _PackageCard extends StatelessWidget {
                     icon: Icons.check_circle_rounded,
                     bg: const Color(0xFF2ECC71),
                     bold: true),
+              if (CardImage.has(package.imageUrl)) ...[
+                const SizedBox(width: 10),
+                CardImage(
+                  url: package.imageUrl,
+                  width: 72,
+                  height: 72,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
