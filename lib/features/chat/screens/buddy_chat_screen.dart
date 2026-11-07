@@ -86,6 +86,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   String? _userId;
   String? _buddyId;
   String? _highlightedMessageId;
+  bool _isClearingHistory = false;
   String? _buddyName;
   String? _buddyAvatar;
   bool _isBuddyOnline = false;
@@ -348,7 +349,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       _messageSubscription = _chatService
           .getMessages(widget.conversation.id, userId: _userId)
           .listen((newMessages) async {
-        if (!mounted) return;
+        if (!mounted || _isClearingHistory) return;
 
         try {
           final messagesWithReactions = await _loadReactionsForMessages(
@@ -370,7 +371,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             await _markMessagesAsRead();
 
             if (_messages.length > oldMessageCount) {
-              final lastMessage = _messages.first;
+              final lastMessage = _messages.last;
               if (lastMessage.senderId != _userId) {
                 _scrollToBottom();
               }
@@ -989,13 +990,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
     try {
       final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
+        allowMultiple: true,
         type: FileType.any,
       );
 
       if (result == null || result.files.isEmpty) return;
 
-      final file = result.files.first;
+      for (final file in result.files) {
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
@@ -1021,10 +1022,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (fileBytes == null) {
         _showSnackBar('فایل قابل خواندن نیست');
-        return;
+        continue;
       }
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final tempMessageId = '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -1051,7 +1052,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -1072,7 +1073,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود فایل');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -1117,6 +1118,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           ),
         );
       }
+    
+      }
     } catch (e) {
       print('❌ Error in _sendFile: $e');
       setState(() {
@@ -1149,13 +1152,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
     try {
       final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
+        allowMultiple: true,
         type: FileType.audio,
       );
 
       if (result == null || result.files.isEmpty) return;
 
-      final file = result.files.first;
+      for (final file in result.files) {
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
@@ -1183,10 +1186,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (fileBytes == null) {
         _showSnackBar('فایل موزیک قابل خواندن نیست');
-        return;
+        continue;
       }
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final tempMessageId = '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -1213,7 +1216,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -1250,7 +1253,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود موزیک');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -1343,6 +1346,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           }
           _isSending = false;
         });
+      }
       }
     } catch (e) {
       print('❌ Error in _sendMusic: $e');
@@ -2324,57 +2328,7 @@ ${data.completionMessage}
     _showSearchResultsSheet(results, query);
   }
 
-  void _scrollToPinnedMessage(String messageId) {
-    final index = _messages.indexWhere((msg) => msg.id == messageId);
-    if (index == -1) {
-      _showSnackBar('پیام پین شده در لیست موجود نیست');
-      return;
-    }
-
-    _highlightMessage(messageId);
-    _scrollToMessageWithEnsureVisible(messageId);
-  }
-
-  void _scrollToMessageWithEnsureVisible(String messageId) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_messageKeys.containsKey(messageId)) {
-        _messageKeys[messageId] = GlobalKey();
-      }
-
-      final key = _messageKeys[messageId]!;
-      _tryEnsureVisible(key, messageId, attempt: 0);
-    });
-  }
-
-  void _tryEnsureVisible(GlobalKey key, String messageId, {int attempt = 0}) {
-    const maxAttempts = 5;
-    const delay = Duration(milliseconds: 200);
-
-    Future.delayed(delay * (attempt + 1), () {
-      if (!mounted) return;
-
-      try {
-        final context = key.currentContext;
-        if (context != null) {
-          Scrollable.ensureVisible(
-            context,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
-            alignment: 0.5,
-          );
-          return;
-        }
-      } catch (e) {
-        print('⚠️ EnsureVisible attempt ${attempt + 1} failed: $e');
-      }
-
-      if (attempt < maxAttempts - 1) {
-        _tryEnsureVisible(key, messageId, attempt: attempt + 1);
-      } else {
-        _scrollToMessageFallback(messageId);
-      }
-    });
-  }
+  void _scrollToPinnedMessage(String messageId) => _scrollToMessage(messageId);
 
   void _showSearchResultsSheet(List<ChatMessage> results, String query) {
     // ✅ CalendarProvider رو بگیرید
@@ -2552,6 +2506,8 @@ ${data.completionMessage}
 
     if (confirm != true) return;
 
+    // استریم زنده را موقتاً نادیده بگیر تا پیام‌ها یکی‌یکی محو نشوند
+    _isClearingHistory = true;
     setState(() {
       _isLoading = true;
     });
@@ -2565,8 +2521,11 @@ ${data.completionMessage}
       setState(() {
         _messages.clear();
         _messageKeys.clear();
+        _pinnedMessage = null;
         _isLoading = false;
       });
+      Future.delayed(
+          const Duration(seconds: 2), () => _isClearingHistory = false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2578,6 +2537,7 @@ ${data.completionMessage}
         );
       }
     } catch (e) {
+      _isClearingHistory = false;
       setState(() {
         _isLoading = false;
       });
@@ -3609,7 +3569,7 @@ ${data.completionMessage}
     );
 
     setState(() {
-      _messages.insert(0, tempMessage);
+      _messages.add(tempMessage);
       _isSending = true;
       _replyToMessage = null;
       _showStickerPicker = false;
@@ -3714,16 +3674,17 @@ ${data.completionMessage}
       return;
     }
     try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+      final List<XFile> images = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 80,
       );
 
-      if (image == null) return;
+      if (images.isEmpty) return;
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      for (final image in images) {
+      final tempMessageId =
+          '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -3748,7 +3709,7 @@ ${data.completionMessage}
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -3765,7 +3726,7 @@ ${data.completionMessage}
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود عکس');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -3798,6 +3759,8 @@ ${data.completionMessage}
             duration: Duration(seconds: 1),
           ),
         );
+      }
+    
       }
     } catch (e) {
       print('❌ Error in _sendImage: $e');
@@ -4728,19 +4691,40 @@ ${message.content}
                                   vertical: 6,
                                 ),
                           decoration: isWidgetMessage
-                              ? null
+                              ? (isHighlighted
+                                  ? BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: highlightBorderColor,
+                                        width: 3,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: highlightShadowColor,
+                                          blurRadius: 24,
+                                          spreadRadius: 5,
+                                        ),
+                                      ],
+                                    )
+                                  : null)
                               : BoxDecoration(
-                                  color: bubbleColor,
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: message.isPinned
-                                      ? Border.all(
-                                          color: pinnedBorderColor,
-                                          width: 2.5,
+                                  color: isHighlighted
+                                      ? Color.alphaBlend(
+                                          highlightBorderColor.withValues(
+                                              alpha: 0.3),
+                                          bubbleColor,
                                         )
-                                      : isHighlighted
+                                      : bubbleColor,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: isHighlighted
+                                      ? Border.all(
+                                          color: highlightBorderColor,
+                                          width: 3,
+                                        )
+                                      : message.isPinned
                                           ? Border.all(
-                                              color: highlightBorderColor,
-                                              width: 3,
+                                              color: pinnedBorderColor,
+                                              width: 2.5,
                                             )
                                           : null,
                                   boxShadow: [
@@ -5834,7 +5818,10 @@ ${message.content}
       }
     }
 
-    return Container(
+    final hasPhone = phone.isNotEmpty && phone != 'شماره موجود نیست';
+    return GestureDetector(
+      onTap: hasPhone ? () => _showPhoneActions(name, phone) : null,
+      child: Container(
       width: 280,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -5889,15 +5876,75 @@ ${message.content}
             ),
         ],
       ),
+    ),
     );
   }
 
   void _callPhoneNumber(String phone) {
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
     if (cleanPhone.isNotEmpty) {
-      final url = 'tel:$cleanPhone';
-      _launchUrl(url);
+      _launchUrl('tel:$cleanPhone');
     }
+  }
+
+  // با کلیک روی شماره: تماس (شماره آماده در شماره‌گیر)، کپی یا ذخیره در مخاطبین
+  void _showPhoneActions(String name, String phone) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Text(phone,
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor)),
+            ListTile(
+              leading: const Icon(Icons.call),
+              title: const Text('تماس'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _callPhoneNumber(phone);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('کپی شماره'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: phone));
+                _showSnackBar('شماره کپی شد');
+              },
+            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1),
+                title: const Text('ذخیره در مخاطبین'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await FlutterContacts.openExternalInsert(Contact(
+                      displayName: name,
+                      phones: [Phone(phone)],
+                    ));
+                  } catch (e) {
+                    _showSnackBar('باز کردن مخاطبین ممکن نشد');
+                  }
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _loadChallengeInBackground(String challengeId) {
@@ -6160,28 +6207,41 @@ ${message.content}
     );
   }
 
-  void _scrollToMessage(String messageId) {
-    _highlightMessage(messageId);
-
-    final key = _messageKeys[messageId];
-    if (key == null) {
-      _showSnackBar('پیام مورد نظر یافت نشد');
+  // پرش دقیق به پیام: اگر ویجتش هنوز ساخته نشده، با تخمین ارتفاع نزدیکش می‌شویم
+  // و تا ساخته‌شدن آن تلاش مجدد می‌کنیم.
+  Future<void> _scrollToMessage(String messageId, {int attempt = 0}) async {
+    if (!mounted) return;
+    if (_messages.indexWhere((m) => m.id == messageId) == -1) {
+      _showSnackBar('پیام مورد نظر در این گفتگو پیدا نشد');
       return;
     }
+    if (attempt == 0) _highlightMessage(messageId);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        Scrollable.ensureVisible(
-          key.currentContext!,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
-          alignment: 0.5,
-        );
-      } catch (e) {
-        print('❌ Scroll error: $e');
-        _scrollToMessageFallback(messageId);
-      }
-    });
+    final ctx = _messageKeys[messageId]?.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+      return;
+    }
+    if (attempt >= 8 || !_scrollController.hasClients) return;
+
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    double offset = 0;
+    for (int i = _messages.length - 1; i > idx; i--) {
+      offset += _estimateSingleItemHeight(_messages[i]);
+    }
+    // اگر تخمین خطا داشت، یک‌بار بالاتر و یک‌بار پایین‌تر امتحان کن
+    final step = (attempt + 1) ~/ 2;
+    final nudge = (attempt.isOdd ? 1 : -1) * step * 250.0;
+    final max = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo((offset + (attempt == 0 ? 0 : nudge)).clamp(0.0, max));
+
+    await Future.delayed(const Duration(milliseconds: 80));
+    _scrollToMessage(messageId, attempt: attempt + 1);
   }
 
   void _scrollToMessageFallback(String messageId) {
@@ -6792,13 +6852,8 @@ ${message.content}
                                   )
                                 : null,
                           ),
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) {
-                            if (_messageController.text.isNotEmpty ||
-                                _replyToMessage != null) {
-                              _sendMessage();
-                            }
-                          },
+                          textInputAction: TextInputAction.newline,
+                          keyboardType: TextInputType.multiline,
                           maxLines: 4,
                           minLines: 1,
                           maxLength: 500,
@@ -7090,24 +7145,12 @@ ${message.content}
 
   Future<void> _launchUrl(String url) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لینک معتبر نیست'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // canLaunchUrl روی اندروید ۱۱+ برای tel: بدون <queries> همیشه false است
+      final ok = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!ok && mounted) _showSnackBar('لینک باز نشد');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) _showSnackBar('لینک معتبر نیست');
     }
   }
 
@@ -7349,13 +7392,44 @@ ${message.content}
             ),
           );
         } else {
-          return Text(
-            element.text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14,
-            ),
-          );
+          // شماره تلفن داخل متن: قابل کلیک (تماس / کپی / ذخیره)
+          final phoneRe = RegExp(r'\+?[\d۰-۹][\d۰-۹\s\-]{7,}[\d۰-۹]');
+          final matches = phoneRe.allMatches(element.text).toList();
+          if (matches.isEmpty) {
+            return Text(
+              element.text,
+              style: TextStyle(color: textColor, fontSize: 14),
+            );
+          }
+          final parts = <Widget>[];
+          var last = 0;
+          for (final m in matches) {
+            if (m.start > last) {
+              parts.add(Text(element.text.substring(last, m.start),
+                  style: TextStyle(color: textColor, fontSize: 14)));
+            }
+            final raw = m.group(0)!.trim();
+            parts.add(GestureDetector(
+              onTap: () => _showPhoneActions(
+                  '',
+                  raw.replaceAllMapped(RegExp('[۰-۹]'),
+                      (d) => '${d.group(0)!.codeUnitAt(0) - 0x06F0}')),
+              child: Text(raw,
+                  style: TextStyle(
+                    color: linkColor,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                    decorationColor: linkColor,
+                    fontWeight: FontWeight.w500,
+                  )),
+            ));
+            last = m.end;
+          }
+          if (last < element.text.length) {
+            parts.add(Text(element.text.substring(last),
+                style: TextStyle(color: textColor, fontSize: 14)));
+          }
+          return Wrap(children: parts);
         }
       }).toList(),
     );

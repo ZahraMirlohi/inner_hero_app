@@ -98,6 +98,24 @@ class ChatService {
         }
       }
 
+      // پیام‌های خوانده‌نشده (فقط گفتگوی هم‌مسیر؛ status فقط یک مقدار مشترک است)
+      final Map<String, int> unreadByConv = {};
+      try {
+        final unreadRows = await _client
+            .from('messages')
+            .select('conversation_id')
+            .inFilter('conversation_id', activeConversationIds)
+            .neq('sender_id', userId)
+            .neq('status', 'seen')
+            .eq('is_deleted', false);
+        for (final r in unreadRows) {
+          final id = r['conversation_id'] as String;
+          unreadByConv[id] = (unreadByConv[id] ?? 0) + 1;
+        }
+      } catch (e) {
+        print('unread count error: $e');
+      }
+
       // مرحله 6: ساخت لیست نهایی
       final List<Conversation> conversations = [];
 
@@ -106,7 +124,8 @@ class ChatService {
         final memberIds = membersByConv[conversationId] ?? [];
 
         // اگر بعد از همه چک‌ها، عضو کمتر از 2 بود، این گفتگو را رد کن
-        if (memberIds.length < 2) {
+        final isBuddyConv = (convData['type'] ?? 'buddy') == 'buddy';
+        if (isBuddyConv && memberIds.length < 2) {
           print(
               '⚠️ Skipping conversation $conversationId: only ${memberIds.length} members');
           continue;
@@ -181,7 +200,8 @@ class ChatService {
             lastMessageAt: lastMessageAt,
             createdAt: createdAt,
             lastMessage: lastMessage,
-            unreadCount: 0,
+            unreadCount:
+                type == ConversationType.buddy ? (unreadByConv[conversationId] ?? 0) : 0,
             memberIds: memberIds,
             avatarUrl: buddyAvatar,
             buddyLastSeen: buddyLastSeen,
@@ -542,7 +562,11 @@ class ChatService {
     String? userId,
   }) {
     try {
-      return _client.from('messages').stream(primaryKey: ['id']).map((data) {
+      return _client
+          .from('messages')
+          .stream(primaryKey: ['id'])
+          .eq('conversation_id', conversationId)
+          .map((data) {
         print('[STREAM] Received ${data.length} messages from Realtime');
 
         final List<ChatMessage> messages = [];

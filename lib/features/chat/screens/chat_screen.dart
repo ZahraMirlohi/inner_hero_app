@@ -827,6 +827,7 @@ class _ChatScreenState extends State<ChatScreen>
                 _conversations.removeWhere((c) => c.id == conv.id);
               });
             }
+            await _loadData();
           } else if (conv.type == ConversationType.squad) {
             if (!mounted) return;
 
@@ -875,19 +876,64 @@ class _ChatScreenState extends State<ChatScreen>
           ),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    conv.iconEmoji,
-                    style: const TextStyle(fontSize: 22),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.12),
+                      shape: isBuddy ? BoxShape.circle : BoxShape.rectangle,
+                      borderRadius: isBuddy ? null : BorderRadius.circular(14),
+                    ),
+                    child: (isBuddy &&
+                            conv.avatarUrl != null &&
+                            conv.avatarUrl!.isNotEmpty)
+                        ? Image.network(
+                            conv.avatarUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                displayName.isNotEmpty ? displayName[0] : '👤',
+                                style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryColor),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: isBuddy
+                                ? Text(
+                                    displayName.isNotEmpty
+                                        ? displayName[0]
+                                        : '👤',
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryColor),
+                                  )
+                                : Text(conv.iconEmoji,
+                                    style: const TextStyle(fontSize: 22)),
+                          ),
                   ),
-                ),
+                  if (isBuddy && conv.isBuddyOnline)
+                    Positioned(
+                      bottom: -1,
+                      right: -1,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: theme.cardColor, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -902,23 +948,15 @@ class _ChatScreenState extends State<ChatScreen>
                             displayName,
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: conv.unreadCount > 0
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
                               color: theme.textColor,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (isBuddy && conv.isBuddyOnline)
-                          Container(
-                            margin: const EdgeInsets.only(left: 6),
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -926,7 +964,12 @@ class _ChatScreenState extends State<ChatScreen>
                       lastMessage,
                       style: TextStyle(
                         fontSize: 12,
-                        color: theme.textSecondaryColor,
+                        fontWeight: conv.unreadCount > 0
+                            ? FontWeight.w700
+                            : FontWeight.normal,
+                        color: conv.unreadCount > 0
+                            ? theme.textColor
+                            : theme.textSecondaryColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -934,6 +977,16 @@ class _ChatScreenState extends State<ChatScreen>
                   ],
                 ),
               ),
+              if (isBuddy && conv.unreadCount > 0)
+                Container(
+                  margin: const EdgeInsetsDirectional.only(end: 6),
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
               if (isBuddy)
                 IconButton(
                   onPressed: () => _showBuddyOptions(conv, primaryColor),
@@ -1062,7 +1115,10 @@ class _ChatScreenState extends State<ChatScreen>
                   title: 'هم‌مسیر جدید',
                   subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
                   color: primaryColor,
-                  onTap: _showBuddyFinder,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showBuddyFinder();
+                  },
                   primaryColor: primaryColor,
                   theme: theme,
                 ),
@@ -1146,14 +1202,6 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _showBuddyFinder() async {
-    // اول bottom sheet رو ببند
-    Navigator.pop(context);
-
-    // کمی صبر کن تا bottom sheet کاملاً بسته بشه
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    if (!mounted) return;
-
     // بعد به صفحه هم‌مسیرها برو
     final result = await Navigator.push(
       context,
