@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
 
 class LeaderboardTab extends StatefulWidget {
   const LeaderboardTab({super.key});
@@ -172,115 +173,77 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
   // ═══════════════════════════════════════════════════════════
   // هدر (طلایی نارنجی)
   // ═══════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════
-// هدر (طلایی نارنجی) - تم‌محور
-// ═══════════════════════════════════════════════════════════
-  Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
-    // در تم شب از گرادیانت تیره استفاده کن
-    final List<Color> headerGradient = theme.isDarkMode
-        ? [
-            const Color(0xFF8B5A0F), // طلایی-نارنجی تیره
-            const Color(0xFF6B4410), // نارنجی قهوه‌ای
-          ]
-        : [
-            const Color(0xFFFFD966), // روشن
-            const Color(0xFFFFBF35), // طلایی اصلی
-          ];
+  static const _ink = Color(0xFF090909);
 
+  Widget _avatar(dynamic url, double size, ThemeProvider theme) {
+    final has = url is String && url.trim().isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: headerGradient,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.isDarkMode
-                ? Colors.black.withValues(alpha: 0.4)
-                : const Color(0xFFFFBF35).withValues(alpha: 0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
+      width: size,
+      height: size,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
+      child: has
+          ? Image.network(url.trim(),
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => Icon(Icons.person_rounded,
+                  size: size * 0.5, color: theme.effectivePrimary))
+          : Icon(Icons.person_rounded,
+              size: size * 0.5, color: theme.effectivePrimary),
+    );
+  }
+
+  Widget _xpLabel(int xp, {double size = 12}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_rounded, size: size + 2, color: _ink),
+          const SizedBox(width: 3),
+          Text('$xp',
+              style: TextStyle(
+                  fontSize: size, fontWeight: FontWeight.w800, color: _ink)),
         ],
+      );
+
+  Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.tone(Tone.butter).bg,
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
+          Container(
+            width: 56,
+            height: 56,
+            decoration:
+                const BoxDecoration(color: _ink, shape: BoxShape.circle),
+            child: Icon(Icons.emoji_events_rounded,
+                size: 28, color: theme.effectivePrimary),
+          ),
+          const SizedBox(height: 6),
+          const Text('تالار افتخارات',
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.w800, color: _ink)),
+          const SizedBox(height: 4),
+          const Text('بهترین قهرمانان اپلیکیشن',
+              style: TextStyle(fontSize: 13, color: Color(0xFF3C4034))),
+          if (_currentUserRank > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
                   color: Colors.white,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'تالار افتخارات',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                'بهترین قهرمانان اپلیکیشن',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 13,
-                ),
-              ),
-              const Spacer(),
-              if (_currentUserRank > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.stars,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'رتبه شما: $_currentUserRank',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+                  borderRadius: BorderRadius.circular(16)),
+              child: Text('رتبه شما: $_currentUserRank',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _ink)),
+            ),
+          ],
         ],
       ),
     );
@@ -295,14 +258,14 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       color: primaryColor,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 100, bottom: 120),
+        padding: const EdgeInsets.only(top: 16, bottom: 120),
         child: Column(
           children: [
             if (top3.isNotEmpty) _buildPodium(top3, primaryColor, theme),
             if (rest.isNotEmpty) ...[
               const SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildRestHeader(rest.length, theme),
               ),
               const SizedBox(height: 12),
@@ -323,228 +286,81 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     Color primaryColor,
     ThemeProvider theme,
   ) {
-    final first = top3.isNotEmpty ? top3[0] : null;
-    final second = top3.length > 1 ? top3[1] : null;
-    final third = top3.length > 2 ? top3[2] : null;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(
-              alpha: theme.isDarkMode ? 0.3 : 0.06,
-            ),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (second != null)
-            Expanded(
-              child: _buildPodiumItem(
-                user: second,
-                rank: 2,
-                primaryColor: primaryColor,
-                emoji: '🥈',
-                height: 115,
-                isCurrentUser: second['user_id'] == _currentUserId,
-              ),
-            ),
-          const SizedBox(width: 8),
-          if (first != null)
-            Expanded(
-              child: _buildPodiumItem(
-                user: first,
-                rank: 1,
-                primaryColor: primaryColor,
-                emoji: '🥇',
-                height: 145,
-                isCurrentUser: first['user_id'] == _currentUserId,
-              ),
-            ),
-          const SizedBox(width: 8),
-          if (third != null)
-            Expanded(
-              child: _buildPodiumItem(
-                user: third,
-                rank: 3,
-                primaryColor: primaryColor,
-                emoji: '🥉',
-                height: 100,
-                isCurrentUser: third['user_id'] == _currentUserId,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPodiumItem({
-    required Map<String, dynamic> user,
-    required int rank,
-    required Color primaryColor,
-    required String emoji,
-    required double height,
-    required bool isCurrentUser,
-  }) {
-    final xp = (user['total_xp'] ?? 0) as int;
-    final name = user['name'] ?? 'کاربر';
-    final avatarUrl = user['avatar_url'];
-
-    final double opacity;
-    if (rank == 1) {
-      opacity = 1.0;
-    } else if (rank == 2) {
-      opacity = 0.85;
-    } else {
-      opacity = 0.7;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
+    Widget item(int idx, int rank, String medal, double h, Tone tone) {
+      if (top3.length <= idx) return const Expanded(child: SizedBox());
+      final u = top3[idx];
+      final badges = (u['badgeCount'] ?? 0) as int;
+      return Expanded(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: rank == 1 ? 64 : 54,
-              height: rank == 1 ? 64 : 54,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: primaryColor, width: 3),
-                color: primaryColor.withValues(alpha: 0.15),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: avatarUrl != null && avatarUrl.toString().isNotEmpty
-                  ? ClipOval(
-                      child: Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.person,
-                          color: primaryColor,
-                          size: rank == 1 ? 32 : 26,
-                        ),
-                      ),
-                    )
-                  : Icon(
-                      Icons.person,
-                      color: primaryColor,
-                      size: rank == 1 ? 32 : 26,
-                    ),
-            ),
-            Positioned(
-              top: -6,
-              right: -6,
-              child: Container(
-                padding: const EdgeInsets.all(4),
+            Text(medal, style: const TextStyle(fontSize: 28)),
+            const SizedBox(height: 6),
+            _avatar(u['avatar_url'], 56, theme),
+            const SizedBox(height: 6),
+            Text(u['name'] ?? 'کاربر',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: theme.textColor)),
+            if (badges > 0) ...[
+              const SizedBox(height: 4),
+              Container(
+                height: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryColor.withValues(alpha: 0.4),
-                      blurRadius: 6,
-                    ),
-                  ],
+                    color: Colors.white.withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(11)),
+                child: Text('$badges مدال',
+                    style: const TextStyle(fontSize: 11, color: _ink)),
+              ),
+            ],
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              height: h,
+              decoration: BoxDecoration(
+                color: theme.tone(tone).bg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
                 ),
-                child: Text(
-                  emoji,
-                  style: TextStyle(fontSize: rank == 1 ? 18 : 15),
-                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('$rank',
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: _ink)),
+                  _xpLabel((u['total_xp'] ?? 0) as int),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          height: height,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-          decoration: BoxDecoration(
-            color: primaryColor.withValues(alpha: opacity),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: primaryColor.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: isCurrentUser
-                ? Border.all(
-                    color: Color(0xFF090909),
-                    width: 2.5,
-                  )
-                : null,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: Color.fromARGB(255, 0, 0, 0),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.stars, size: 10, color: Colors.white),
-                  const SizedBox(width: 3),
-                  Text(
-                    '$xp',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(26, 16, 26, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          item(1, 2, '🥈', 96, Tone.sky),
+          const SizedBox(width: 8),
+          item(0, 1, '🥇', 128, Tone.butter),
+          const SizedBox(width: 8),
+          item(2, 3, '🥉', 78, Tone.peach),
+        ],
+      ),
     );
   }
 
@@ -552,41 +368,32 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
-            color: theme.textColor.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            Icons.format_list_numbered,
-            color: theme.textColor,
-            size: 16,
-          ),
+              color: theme.primarySoft, shape: BoxShape.circle),
+          child: const Icon(Icons.format_list_numbered_rounded,
+              size: 18, color: _ink),
         ),
         const SizedBox(width: 8),
-        Text(
-          'سایر قهرمانان',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: theme.textColor,
-          ),
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: theme.textColor.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            '$count',
+        Text('سایر قهرمانان',
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: theme.textColor,
-            ),
-          ),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: theme.textColor)),
+        const SizedBox(width: 8),
+        Container(
+          height: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+              color: theme.cardSecondaryColor,
+              borderRadius: BorderRadius.circular(11)),
+          child: Text('$count',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textColor)),
         ),
       ],
     );
@@ -598,165 +405,124 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     ThemeProvider theme,
   ) {
     final rank = user['rank'] ?? 0;
-    final isCurrentUser = user['user_id'] == _currentUserId;
-    final xp = (user['total_xp'] ?? 0) as int;
-    final name = user['name'] ?? 'کاربر';
-    final avatarUrl = user['avatar_url'];
+    final isMe = user['user_id'] == _currentUserId;
+    final badges = (user['badgeCount'] ?? 0) as int;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      constraints: const BoxConstraints(minHeight: 60),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: isCurrentUser ? primaryColor : theme.cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isCurrentUser ? Colors.transparent : theme.cardColor,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isCurrentUser
-                ? primaryColor.withValues(alpha: 0.30)
-                : Colors.black.withValues(
-                    alpha: theme.isDarkMode ? 0.3 : 0.06,
-                  ),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        color: isMe ? theme.primarySoft : theme.cardColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: theme.softShadow,
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text('$rank',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: isMe ? _ink : theme.textColor)),
           ),
+          const SizedBox(width: 12),
+          _avatar(user['avatar_url'], 40, theme),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(user['name'] ?? 'کاربر',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: isMe ? _ink : theme.textColor)),
+                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        height: 22,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                            color: theme.effectivePrimary,
+                            borderRadius: BorderRadius.circular(11)),
+                        child: Text('شما',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: theme.onPrimaryColor)),
+                      ),
+                    ],
+                  ],
+                ),
+                if (badges > 0)
+                  Text('$badges مدال',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: isMe
+                              ? const Color(0xFF3C4034)
+                              : theme.textSecondaryColor)),
+              ],
+            ),
+          ),
+          if (isMe)
+            _xpLabel((user['total_xp'] ?? 0) as int, size: 14)
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star_rounded,
+                    size: 16, color: theme.textColor),
+                const SizedBox(width: 3),
+                Text('${user['total_xp'] ?? 0}',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: theme.textColor)),
+              ],
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _stateView(ThemeProvider theme, IconData icon, Tone tone, String title,
+      String sub, {Widget? action}) {
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
-                color: isCurrentUser
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : theme.textColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(
-                  '$rank',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                    color: isCurrentUser ? Colors.white : theme.textColor,
-                  ),
-                ),
-              ),
+                  color: theme.tone(tone).bg, shape: BoxShape.circle),
+              child: Icon(icon, size: 40, color: _ink),
             ),
-            const SizedBox(width: 10),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isCurrentUser
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : primaryColor.withValues(alpha: 0.1),
-              ),
-              child: avatarUrl != null && avatarUrl.toString().isNotEmpty
-                  ? ClipOval(
-                      child: Image.network(
-                        avatarUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.person,
-                          color: isCurrentUser ? Colors.white : primaryColor,
-                          size: 24,
-                        ),
-                      ),
-                    )
-                  : Icon(
-                      Icons.person,
-                      color: isCurrentUser ? Colors.white : primaryColor,
-                      size: 24,
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          name,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isCurrentUser
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color:
-                                isCurrentUser ? Colors.white : theme.textColor,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isCurrentUser) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'شما',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: primaryColor,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: isCurrentUser
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : const Color(0xFFFFA500).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.stars,
-                    size: 13,
-                    color:
-                        isCurrentUser ? Colors.white : const Color(0xFFFFA500),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$xp',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: isCurrentUser
-                          ? Colors.white
-                          : const Color(0xFFFFA500),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 16),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textColor)),
+            const SizedBox(height: 6),
+            Text(sub,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13, height: 1.7, color: theme.textSecondaryColor)),
+            if (action != null) ...[const SizedBox(height: 18), action],
           ],
         ),
       ),
@@ -768,81 +534,56 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: primaryColor),
+          CircularProgressIndicator(color: theme.effectivePrimary),
           const SizedBox(height: 16),
-          Text(
-            'در حال بارگذاری تالار افتخارات...',
-            style: TextStyle(
-              color: theme.textSecondaryColor,
-              fontSize: 13,
-            ),
-          ),
+          Text('در حال بارگذاری تالار افتخارات...',
+              style:
+                  TextStyle(color: theme.textSecondaryColor, fontSize: 13)),
         ],
       ),
     );
   }
 
   Widget _buildErrorState(Color primaryColor, ThemeProvider theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              _errorMessage,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: theme.textSecondaryColor),
-            ),
+    return _stateView(
+      theme,
+      Icons.cloud_off_rounded,
+      Tone.rose,
+      'مشکلی پیش اومد',
+      _errorMessage,
+      action: GestureDetector(
+        onTap: _loadLeaderboard,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+              color: _ink, borderRadius: BorderRadius.circular(24)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.refresh_rounded,
+                  size: 18, color: theme.effectivePrimary),
+              const SizedBox(width: 6),
+              Text('تلاش مجدد',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: theme.effectivePrimary)),
+            ],
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _loadLeaderboard,
-            icon: const Icon(Icons.refresh),
-            label: const Text('تلاش مجدد'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(Color primaryColor, ThemeProvider theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.emoji_events_outlined,
-            size: 80,
-            color: theme.textSecondaryColor,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'تالار افتخارات خالی است',
-            style: TextStyle(
-              color: theme.textSecondaryColor,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'با انجام عادت‌ها و تسک‌ها XP جمع کنید',
-            style: TextStyle(
-              color: theme.textSecondaryColor,
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
+    return _stateView(
+      theme,
+      Icons.emoji_events_rounded,
+      Tone.butter,
+      'تالار افتخارات خالیه',
+      'با انجام عادت‌ها و کارها XP جمع کن تا اسمت اینجا بیاد',
     );
   }
 }

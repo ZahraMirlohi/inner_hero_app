@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
+import 'card_image.dart';
 
 class QuestCard extends StatelessWidget {
   final Quest quest;
@@ -27,551 +29,183 @@ class QuestCard extends StatelessWidget {
     required this.primaryColor,
   });
 
+  static const _ink = Color(0xFF090909);
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-
-    // ═══════════════════════════════════════════════════════
-    // رنگ‌بندی بدنه کارت
-    // ═══════════════════════════════════════════════════════
-    final Color bodyColor;
-    final Color borderColor;
-    final double borderWidth;
-    final Color subtleTextColor;
-
-    if (isCompleted) {
-      // کارت تکمیل شده
-      bodyColor = theme.isDarkMode
-          ? const Color(0xFF1B3D2A) // سبز تیره
-          : const Color(0xFFF0FDF4);
-      borderColor =
-          theme.isDarkMode ? Colors.green.shade700 : Colors.green.shade200;
-      borderWidth = 2;
-      subtleTextColor =
-          theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
-    } else if (isActive) {
-      // کارت فعال (رنگی)
-      bodyColor = primaryColor;
-      borderColor = Colors.transparent;
-      borderWidth = 0;
-      subtleTextColor = Colors.black.withValues(alpha: 0.65);
-    } else {
-      // کارت جدید (تم‌محور)
-      bodyColor = theme.cardColor;
-      borderColor = theme.cardColor;
-      borderWidth = 2.5;
-      subtleTextColor = theme.textSecondaryColor;
-    }
+    final Color bg = isCompleted
+        ? theme.tone(Tone.mint).bg
+        : isActive
+            ? theme.effectivePrimary
+            : theme.cardColor;
+    final Color textOn = isActive ? theme.onPrimaryColor : _ink;
+    final Color body = isActive ? theme.onPrimaryColor : const Color(0xFF3C4034);
+    final chipBg = isActive ? Colors.white.withValues(alpha: 0.6) : const Color(0x0F090909);
+    final p = (progress ?? 0).clamp(0, quest.targetCount);
+    final ratio = quest.targetCount > 0 ? p / quest.targetCount : 0.0;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 12),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: isActive
-                  ? primaryColor.withValues(alpha: 0.30)
-                  : isCompleted
-                      ? Colors.green.withValues(alpha: 0.15)
-                      : Colors.black.withValues(
-                          alpha: theme.isDarkMode ? 0.30 : 0.08,
-                        ),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: bodyColor,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: borderColor,
-              width: borderWidth,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ─── بخش چپ: اطلاعات ───
-                Expanded(
-                  child: _buildLeftContent(
-                    isActive,
-                    isCompleted,
-                    subtleTextColor,
-                    theme,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                // ─── بخش راست: هدر ───
-                _buildRightHeader(isActive, isCompleted, theme),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLeftContent(
-    bool isActive,
-    bool isCompleted,
-    Color subtleTextColor,
-    ThemeProvider theme,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ─── توضیحات ───
-        Text(
-          quest.description,
-          style: TextStyle(
-            fontSize: 13,
-            color: subtleTextColor,
-            height: 1.5,
-          ),
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        const SizedBox(height: 12),
-
-        // ─── نوار پیشرفت ───
-        if (isActive && progress != null) ...[
-          _buildProgressBar(progress!, theme),
-          const SizedBox(height: 12),
-        ],
-
-        // ─── بج تکمیل ───
-        if (isCompleted) ...[
-          _buildCompletedBanner(theme),
-          const SizedBox(height: 12),
-        ],
-
-        // ─── تگ‌های اطلاعاتی ───
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            _buildInfoChip(
-              icon: Icons.calendar_today,
-              label: '${quest.targetCount} روز',
-              isActive: isActive,
-              isCompleted: isCompleted,
-              theme: theme,
-            ),
-            _buildInfoChip(
-              icon: Icons.stars,
-              label: '+${quest.xpReward} XP',
-              isActive: isActive,
-              isCompleted: isCompleted,
-              iconColor: const Color(0xFFFFA500),
-              theme: theme,
-            ),
-            if (isCompleted)
-              _buildInfoChip(
-                icon: Icons.emoji_events,
-                label: quest.badge,
-                isActive: false,
-                isCompleted: true,
-                iconColor: const Color(0xFF9B59B6),
-                theme: theme,
-              ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        _buildActionButton(isActive, isCompleted, theme),
-      ],
-    );
-  }
-
-  Widget _buildRightHeader(
-    bool isActive,
-    bool isCompleted,
-    ThemeProvider theme,
-  ) {
-    final Color headerBg;
-    final Color headerBorder;
-    final double headerBorderWidth;
-    final Color iconBoxBg;
-    final Color iconColor;
-    final Color titleColor;
-
-    if (isActive) {
-      headerBg = Colors.white;
-      headerBorder = Colors.white;
-      headerBorderWidth = 2;
-      iconBoxBg = const Color(0xFF090909);
-      iconColor = Colors.white;
-      titleColor = const Color(0xFF090909);
-    } else if (isCompleted) {
-      headerBg = theme.isDarkMode ? const Color(0xFF1B3D2A) : Colors.white;
-      headerBorder = Colors.green;
-      headerBorderWidth = 2;
-      iconBoxBg = const Color(0xFF090909);
-      iconColor = Colors.white;
-      titleColor = theme.textColor;
-    } else {
-      // کارت جدید (تم‌محور)
-      headerBg = theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white;
-      headerBorder =
-          theme.isDarkMode ? const Color(0xFF444444) : const Color(0xFF090909);
-      headerBorderWidth = 2;
-      iconBoxBg = primaryColor;
-      iconColor = Colors.white;
-      titleColor = theme.textColor;
-    }
-
-    return SizedBox(
-      width: 90,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        decoration: BoxDecoration(
-          color: headerBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: headerBorder,
-            width: headerBorderWidth,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(
-                alpha: theme.isDarkMode ? 0.3 : 0.06,
-              ),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: bg,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: (!isActive && !isCompleted) ? theme.softShadow : null,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: iconBoxBg,
-                borderRadius: BorderRadius.circular(9),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.20),
-                    blurRadius: 5,
-                    offset: const Offset(0, 2),
+            CardImage(url: quest.imageUrl, height: 110),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                            color: _ink, shape: BoxShape.circle),
+                        child: Icon(_getIconData(quest.icon),
+                            size: 24, color: theme.effectivePrimary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(quest.title,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: isActive || isCompleted
+                                    ? textOn
+                                    : theme.textColor)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(quest.description,
+                      style: TextStyle(fontSize: 13, height: 1.8, color: body)),
+                  if (isActive) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: ratio.toDouble(),
+                        minHeight: 8,
+                        backgroundColor: Colors.white.withValues(alpha: 0.6),
+                        valueColor: const AlwaysStoppedAnimation(_ink),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('$p از ${quest.targetCount} روز',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: textOn)),
+                        Text('${(ratio * 100).round()}٪',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: textOn)),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            _chip('${quest.targetCount} روز',
+                                Icons.calendar_today_rounded, chipBg),
+                            _chip('+${quest.xpReward} XP',
+                                Icons.star_rounded, chipBg,
+                                bold: true),
+                            if (isCompleted && quest.badge.isNotEmpty)
+                              _chip(quest.badge, null,
+                                  Colors.white.withValues(alpha: 0.75)),
+                          ],
+                        ),
+                      ),
+                      if (isCompleted)
+                        _pill('تکمیل شد', Icons.check_circle_rounded,
+                            const Color(0xFF2ECC71), _ink, null)
+                      else if (isActive) ...[
+                        if (onCancel != null) ...[
+                          _pill('لغو', Icons.close_rounded, Colors.white, _ink,
+                              onCancel),
+                          const SizedBox(width: 6),
+                        ],
+                        _pill('مشاهده', Icons.visibility_outlined, _ink,
+                            Colors.white, onTap),
+                      ] else if (quest.isActive)
+                        _pill('شروع', Icons.play_arrow_rounded,
+                            theme.effectivePrimary, theme.onPrimaryColor, onStart)
+                      else
+                        _pill('غیرفعال', Icons.block_rounded,
+                            const Color(0xFFCFD3C4), const Color(0xFF555B4B), null),
+                    ],
                   ),
                 ],
               ),
-              child: Center(
-                child: Icon(
-                  _getIconData(quest.icon),
-                  color: iconColor,
-                  size: 18,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              quest.title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: titleColor,
-                height: 2,
-              ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              softWrap: true,
-            ),
-            if (isCompleted) ...[
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check, color: Colors.white, size: 10),
-                    SizedBox(width: 2),
-                    Text(
-                      'تکمیل',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgressBar(int currentProgress, ThemeProvider theme) {
-    final double value = quest.targetCount > 0
-        ? (currentProgress / quest.targetCount).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: value,
-                  backgroundColor: Colors.black.withValues(alpha: 0.12),
-                  color: const Color(0xFF090909),
-                  minHeight: 8,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$currentProgress/${quest.targetCount}',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF090909),
-              ),
             ),
           ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildCompletedBanner(ThemeProvider theme) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.green.withValues(alpha: 0.25),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.check_circle, size: 14, color: Colors.green),
-          const SizedBox(width: 6),
-          Text(
-            'تکمیل شد',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: theme.isDarkMode
-                  ? Colors.green.shade300
-                  : Colors.green.shade700,
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required bool isCompleted,
-    required ThemeProvider theme,
-    Color? iconColor,
-  }) {
-    final Color bgColor;
-    final Color fgColor;
-
-    if (isActive) {
-      bgColor = Colors.white.withValues(alpha: 0.35);
-      fgColor = const Color(0xFF090909);
-    } else if (isCompleted) {
-      bgColor = Colors.green.withValues(alpha: 0.12);
-      fgColor =
-          theme.isDarkMode ? Colors.green.shade300 : Colors.green.shade700;
-    } else {
-      // کارت جدید (تم‌محور)
-      bgColor = theme.isDarkMode
-          ? const Color(0xFF2A2A2A)
-          : const Color(0xFF090909).withValues(alpha: 0.06);
-      fgColor = theme.textColor;
-    }
-
+  Widget _chip(String text, IconData? icon, Color bg, {bool bold = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      height: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(13)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 11,
-            color: isActive ? const Color(0xFF090909) : (iconColor ?? fgColor),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              color: fgColor,
-            ),
-          ),
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: _ink),
+            const SizedBox(width: 4),
+          ],
+          Text(text,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+                  color: _ink)),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(
-    bool isActive,
-    bool isCompleted,
-    ThemeProvider theme,
-  ) {
-    if (isCompleted) {
-      return _buildCompletedBadge();
-    } else if (isActive && onCancel != null) {
-      return _buildCancelButton();
-    } else if (!isActive && onStart != null) {
-      return _buildStartButton();
-    }
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildStartButton() {
+  Widget _pill(
+      String label, IconData icon, Color bg, Color fg, VoidCallback? onTap) {
     return GestureDetector(
-      onTap: onStart,
+      onTap: onTap,
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF090909),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.20),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration:
+            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(18)),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_arrow_rounded, size: 14, color: Colors.white),
-            SizedBox(width: 4),
-            Text(
-              'شروع',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: fg)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCancelButton() {
-    return GestureDetector(
-      onTap: onCancel,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: const Color(0xFF090909),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'غیرفعال',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompletedBadge() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFFA500).withValues(alpha: 0.3),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.emoji_events, size: 12, color: Colors.white),
-          SizedBox(width: 4),
-          Text(
-            'تکمیل شده',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }

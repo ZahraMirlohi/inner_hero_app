@@ -13,6 +13,8 @@ import 'cosmetics_tab.dart';
 import 'leaderboard_tab.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
+import '../widgets/card_image.dart';
 import '/services/local_storage_service.dart';
 import 'dart:async';
 import 'dart:ui';
@@ -78,6 +80,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   void _onRefreshTriggered() {
     print('Refresh triggered from notifier');
+    _challengeDetailsCache.clear();
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
@@ -85,6 +88,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   void forceRefresh() {
     print('Force refresh called');
+    _challengeDetailsCache.clear();
     _isInitialized = false;
     _isLoadingInProgress = false;
     _loadData();
@@ -566,11 +570,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       final results = await Future.wait([
         _supabase
             .getRealParticipantsCount(challengeId)
-            .timeout(const Duration(seconds: 2), onTimeout: () => 0),
+            .timeout(const Duration(seconds: 8), onTimeout: () => 0),
         _supabase
             .getUserChallengeProgressDetails(_currentUserId, challengeId)
             .timeout(
-              const Duration(seconds: 2),
+              const Duration(seconds: 8),
               onTimeout: () => {'completedDays': 0, 'totalDays': 0},
             ),
       ]);
@@ -648,644 +652,334 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       if (!mounted) return;
 
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: theme.cardColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (context) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.9,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 60,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: theme.borderColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // هدر چالش
-                            Row(
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: isCompleted
-                                        ? Colors.green.withOpacity(0.15)
-                                        : isFailed
-                                            ? Colors.red.withOpacity(0.15)
-                                            : isActive
-                                                ? primaryColor.withOpacity(0.15)
-                                                : isExpired
-                                                    ? Colors.grey
-                                                        .withOpacity(0.15)
-                                                    : Colors.orange
-                                                        .withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Icon(
-                                    isCompleted
-                                        ? Icons.emoji_events
-                                        : isFailed
-                                            ? Icons.cancel
-                                            : challenge['is_boss'] == true
-                                                ? Icons.emoji_events
-                                                : isExpired
-                                                    ? Icons.lock_outline
-                                                    : Icons.flag,
-                                    color: isCompleted
-                                        ? Colors.green
-                                        : isFailed
-                                            ? Colors.red
-                                            : isExpired
-                                                ? theme.textSecondaryColor
-                                                : isActive
-                                                    ? primaryColor
-                                                    : Colors.orange,
-                                    size: 30,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        challenge['title'] ?? 'چالش',
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: isCompleted
-                                              ? Colors.green
-                                              : isFailed
-                                                  ? Colors.red
-                                                  : isExpired
-                                                      ? theme.textSecondaryColor
-                                                      : theme.textColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        challenge['description'] ?? '',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: isCompleted
-                                              ? Colors.green.shade700
-                                              : isFailed
-                                                  ? Colors.red.shade700
-                                                  : isExpired
-                                                      ? theme.textSecondaryColor
-                                                      : theme
-                                                          .textSecondaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isCompleted
-                                        ? Colors.green.withOpacity(0.1)
-                                        : isFailed
-                                            ? Colors.red.withOpacity(0.1)
-                                            : isExpired
-                                                ? Colors.grey.withOpacity(0.1)
-                                                : isActive
-                                                    ? primaryColor
-                                                        .withOpacity(0.1)
-                                                    : Colors.orange
-                                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    isCompleted
-                                        ? 'کامل شده'
-                                        : isFailed
-                                            ? 'ناموفق'
-                                            : isExpired
-                                                ? 'پایان ثبت‌نام'
-                                                : isActive
-                                                    ? 'در حال انجام'
-                                                    : '🔥 جدید',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: isCompleted
-                                          ? Colors.green
-                                          : isFailed
-                                              ? Colors.red
-                                              : isExpired
-                                                  ? theme.textSecondaryColor
-                                                  : isActive
-                                                      ? primaryColor
-                                                      : Colors.orange,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+      final String? img = challenge['image_url'] as String?;
+      final int xp = challenge['xp_reward'] as int? ?? 0;
+      final status = isCompleted
+          ? 'کامل شده'
+          : isFailed
+              ? 'ناموفق'
+              : isExpired
+                  ? 'پایان ثبت‌نام'
+                  : isActive
+                      ? 'در حال انجام'
+                      : 'چالش جدید';
+      final remaining = totalDays - completedDays;
 
-                            // وضعیت چالش
-                            if (isJoined) ...[
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isCompleted
-                                      ? Colors.green.withOpacity(0.1)
-                                      : isFailed
-                                          ? Colors.red.withOpacity(0.1)
-                                          : Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isCompleted
-                                        ? Colors.green
-                                        : isFailed
-                                            ? Colors.red
-                                            : primaryColor,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isCompleted
-                                          ? Icons.check_circle
-                                          : isFailed
-                                              ? Icons.cancel
-                                              : Icons.timer,
-                                      color: isCompleted
-                                          ? Colors.green
-                                          : isFailed
-                                              ? Colors.red
-                                              : primaryColor,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        isCompleted
-                                            ? 'چالش با موفقیت کامل شد!'
-                                            : isFailed
-                                                ? 'چالش ناموفق بود'
-                                                : '⏳ در حال انجام...',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: isCompleted
-                                              ? Colors.green
-                                              : isFailed
-                                                  ? Colors.red
-                                                  : primaryColor,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isActive)
-                                      Text(
-                                        '${(progress * 100).toInt()}%',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
+      Widget banner;
+      if (isActive) {
+        banner = _sheetProgress(theme, completedDays, totalDays, progress,
+            remaining > 0 ? '$remaining روز دیگر تا تکمیل چالش' : null);
+      } else if (isCompleted) {
+        banner = _sheetBanner(theme.tone(Tone.mint).bg, 'چالش کامل شد!',
+            'شما این چالش را با موفقیت به پایان رساندید');
+      } else if (isFailed) {
+        banner = _sheetBanner(theme.tone(Tone.rose).bg, 'چالش ناموفق بود',
+            'شما $completedDays روز از $totalDays روز را انجام دادید');
+      } else if (isExpired) {
+        banner = _sheetBanner(const Color(0xFFE3E6D8), 'مهلت ثبت‌نام تمام شد',
+            'این چالش دیگر قابل شرکت نیست');
+      } else {
+        banner = _sheetBanner(theme.tone(Tone.butter).bg, 'آماده شروع!',
+            'این چالش $duration روزه را شروع کنید');
+      }
 
-                            const SizedBox(height: 24),
-                            Divider(color: theme.borderColor),
-                            const SizedBox(height: 16),
-
-                            _buildDetailRow(
-                              Icons.timer,
-                              'مدت زمان چالش',
-                              '$duration روز',
-                              isExpired
-                                  ? theme.textSecondaryColor
-                                  : primaryColor,
-                              theme,
-                            ),
-                            const SizedBox(height: 12),
-
-                            _buildDetailRow(
-                              Icons.people,
-                              'شرکت‌کنندگان',
-                              '$realParticipants نفر',
-                              isExpired
-                                  ? theme.textSecondaryColor
-                                  : primaryColor,
-                              theme,
-                            ),
-                            const SizedBox(height: 12),
-
-                            _buildDetailRow(
-                              Icons.stars,
-                              'پاداش نهایی',
-                              '+${challenge['xp_reward'] ?? 0} XP',
-                              isCompleted
-                                  ? Colors.green
-                                  : isFailed
-                                      ? Colors.red
-                                      : isExpired
-                                          ? theme.textSecondaryColor
-                                          : primaryColor,
-                              theme,
-                            ),
-                            const SizedBox(height: 12),
-
-                            // نوار پیشرفت
-                            if (isActive) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'پیشرفت شما',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.textColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$completedDays از $totalDays روز',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: primaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: progress,
-                                      backgroundColor: theme.borderColor,
-                                      color: primaryColor,
-                                      minHeight: 10,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${(progress * 100).toInt()}% تکمیل شده',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.textSecondaryColor,
-                                    ),
-                                  ),
-                                  if (completedDays < totalDays) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.orange.withOpacity(0.2),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.lightbulb,
-                                            size: 16,
-                                            color: Colors.orange,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              '${totalDays - completedDays} روز دیگر تا تکمیل چالش',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.orange.shade700,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-
-                            // چالش کامل شده
-                            if (isCompleted) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.green.shade50,
-                                      Colors.green.shade100,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.green,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.emoji_events,
-                                      color: Colors.green,
-                                      size: 40,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'چالش کامل شد!',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'شما این چالش را با موفقیت به پایان رساندید',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.green.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-
-                            // چالش ناموفق
-                            if (isFailed) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.red.shade50,
-                                      Colors.red.shade100,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.red,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.cancel,
-                                      color: Colors.red,
-                                      size: 40,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'چالش ناموفق بود',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'شما $completedDays روز از $totalDays روز را انجام دادید',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.red.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 24),
-
-                            if (isCompleted) ...[
-                              Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border:
-                                      Border.all(color: Colors.green, width: 2),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.emoji_events,
-                                      color: Colors.green,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'چالش کامل شد!',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ] else if (isFailed) ...[
-                              Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border:
-                                      Border.all(color: Colors.red, width: 2),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.cancel,
-                                      color: Colors.red,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'چالش ناموفق بود',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ] else if (isActive) ...[
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _leaveChallenge(challenge);
-                                  },
-                                  icon: const Icon(Icons.exit_to_app, size: 20),
-                                  label: const Text(
-                                    'انصراف از چالش',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFEF4444),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                ),
-                              ),
-                            ] else if (isExpired) ...[
-                              Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  color: theme.isDarkMode
-                                      ? const Color(0xFF2A2A2A)
-                                      : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.lock_outline,
-                                      color: theme.textSecondaryColor,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'مهلت ثبت‌نام به اتمام رسید',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.textSecondaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ] else ...[
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    _joinChallenge(challenge);
-                                  },
-                                  icon: const Icon(
-                                    Icons.play_arrow,
-                                    size: 20,
-                                    color: Colors.white,
-                                  ),
-                                  label: const Text(
-                                    'شرکت در چالش',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 2,
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
+      _showDetailSheet(
+        theme: theme,
+        icon: Icons.flag_rounded,
+        title: challenge['title'] ?? 'چالش',
+        status: status,
+        description: challenge['description']?.toString() ?? '',
+        imageUrl: img,
+        tiles: [
+          _SheetTile(Icons.calendar_today_rounded, 'مدت زمان', '$duration روز',
+              Tone.sky),
+          _SheetTile(Icons.people_alt_rounded, 'شرکت‌کنندگان',
+              '$realParticipants نفر', Tone.butter),
+          _SheetTile(Icons.star_rounded, 'پاداش', '+$xp XP', Tone.peach),
+        ],
+        banner: banner,
+        actionLabel: isActive
+            ? 'انصراف از چالش'
+            : (isCompleted || isFailed)
+                ? 'بستن'
+                : isExpired
+                    ? 'پایان ثبت‌نام'
+                    : 'شرکت در چالش',
+        actionKind: isActive
+            ? _SheetAction.danger
+            : isExpired
+                ? _SheetAction.disabled
+                : (isCompleted || isFailed)
+                    ? _SheetAction.neutral
+                    : _SheetAction.primary,
+        onAction: () {
+          if (isActive) {
+            _leaveChallenge(challenge);
+          } else if (isNew) {
+            _joinChallenge(challenge);
+          }
         },
       );
     } catch (e) {
       print('Error showing challenge details: $e');
     }
+  }
+
+  // ═══════════ شیت جزئیات مشترک (چالش و ماموریت) ═══════════
+  Widget _sheetBanner(Color bg, String title, String sub) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration:
+            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(28)),
+        child: Column(
+          children: [
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF090909))),
+            const SizedBox(height: 4),
+            Text(sub,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF3C4034))),
+          ],
+        ),
+      );
+
+  Widget _sheetProgress(ThemeProvider theme, int done, int total,
+      double ratio, String? remainingText) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: theme.tone(Tone.sky).bg,
+          borderRadius: BorderRadius.circular(28)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('پیشرفت شما',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF090909))),
+              Text('$done از $total روز',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF090909))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: ratio.clamp(0.0, 1.0),
+              minHeight: 8,
+              backgroundColor: Colors.white.withValues(alpha: 0.7),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF090909)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+              '${(ratio * 100).toInt()}٪ تکمیل شده${remainingText != null ? ' - $remainingText' : ''}',
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF3C4034))),
+        ],
+      ),
+    );
+  }
+
+  void _showDetailSheet({
+    required ThemeProvider theme,
+    required IconData icon,
+    required String title,
+    required String status,
+    required String description,
+    required List<_SheetTile> tiles,
+    required Widget banner,
+    required String actionLabel,
+    required _SheetAction actionKind,
+    required FutureOr<void> Function() onAction,
+    String? imageUrl,
+  }) {
+    if (!mounted) return;
+    const ink = Color(0xFF090909);
+    final Color btnBg = actionKind == _SheetAction.primary
+        ? ink
+        : actionKind == _SheetAction.danger
+            ? const Color(0xFFFFD3CF)
+            : actionKind == _SheetAction.neutral
+                ? ink
+                : const Color(0xFFCFD3C4);
+    final Color btnFg = actionKind == _SheetAction.primary
+        ? theme.effectivePrimary
+        : actionKind == _SheetAction.danger
+            ? ink
+            : actionKind == _SheetAction.neutral
+                ? Colors.white
+                : const Color(0xFF555B4B);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: ink.withValues(alpha: 0.42),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.82,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (ctx, scroll) => Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                    color: theme.borderColor,
+                    borderRadius: BorderRadius.circular(3)),
+              ),
+              Expanded(
+                child: ListView(
+                  controller: scroll,
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                  children: [
+                    if (CardImage.has(imageUrl)) ...[
+                      CardImage(
+                          url: imageUrl,
+                          height: 150,
+                          borderRadius: BorderRadius.circular(24)),
+                      const SizedBox(height: 14),
+                    ],
+                    Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                              color: theme.effectivePrimary,
+                              shape: BoxShape.circle),
+                          child: Icon(icon, size: 28, color: ink),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(title,
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: theme.textColor)),
+                              const SizedBox(height: 6),
+                              Container(
+                                height: 28,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                    color: theme.tone(Tone.butter).bg,
+                                    borderRadius: BorderRadius.circular(14)),
+                                child: Text(status,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: ink)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Text(description,
+                          style: TextStyle(
+                              fontSize: 14,
+                              height: 1.9,
+                              color: theme.textSecondaryColor)),
+                    ],
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        for (int i = 0; i < tiles.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 12, horizontal: 6),
+                              decoration: BoxDecoration(
+                                  color: theme.tone(tiles[i].tone).bg,
+                                  borderRadius: BorderRadius.circular(24)),
+                              child: Column(
+                                children: [
+                                  Icon(tiles[i].icon, size: 20, color: ink),
+                                  const SizedBox(height: 4),
+                                  Text(tiles[i].label,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF3C4034))),
+                                  const SizedBox(height: 4),
+                                  Text(tiles[i].value,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: ink)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    banner,
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                    20, 8, 20, MediaQuery.of(ctx).padding.bottom + 16),
+                child: GestureDetector(
+                  onTap: actionKind == _SheetAction.disabled
+                      ? null
+                      : () async {
+                          Navigator.pop(ctx);
+                          await onAction();
+                        },
+                  child: Container(
+                    height: 56,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                        color: btnBg,
+                        borderRadius: BorderRadius.circular(28)),
+                    child: Text(actionLabel,
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: btnFg)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildDetailRow(
@@ -1378,651 +1072,77 @@ class _ExploreScreenState extends State<ExploreScreen>
 
       if (!mounted) return;
 
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: theme.cardColor,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        builder: (context) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.85,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (context, scrollController) {
-              return Container(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 60,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: theme.borderColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // هدر ماموریت
-                            Row(
-                              children: [
-                                Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: isCompleted
-                                        ? Colors.green.withOpacity(0.2)
-                                        : hasStarted
-                                            ? color.withOpacity(0.2)
-                                            : Colors.grey.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Icon(
-                                    isCompleted
-                                        ? Icons.emoji_events
-                                        : hasStarted
-                                            ? _getIconData(quest.icon)
-                                            : Icons.flag_outlined,
-                                    color: isCompleted
-                                        ? Colors.green
-                                        : hasStarted
-                                            ? color
-                                            : theme.textSecondaryColor,
-                                    size: 30,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        quest.title,
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: isCompleted
-                                              ? Colors.green.shade700
-                                              : hasStarted
-                                                  ? theme.textColor
-                                                  : theme.textSecondaryColor,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        quest.badge,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: isCompleted
-                                              ? Colors.green.shade600
-                                              : hasStarted
-                                                  ? theme.textSecondaryColor
-                                                  : theme.textSecondaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isCompleted
-                                        ? Colors.green.withOpacity(0.1)
-                                        : hasStarted
-                                            ? const Color(0xFFFFA500)
-                                                .withOpacity(0.1)
-                                            : Colors.grey.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isCompleted
-                                            ? Icons.check_circle
-                                            : Icons.stars,
-                                        size: 14,
-                                        color: isCompleted
-                                            ? Colors.green
-                                            : hasStarted
-                                                ? const Color(0xFFFFA500)
-                                                : theme.textSecondaryColor,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isCompleted
-                                            ? 'انجام شده'
-                                            : hasStarted
-                                                ? '+${quest.xpReward} XP'
-                                                : 'شروع نشده',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: isCompleted
-                                              ? Colors.green
-                                              : hasStarted
-                                                  ? const Color(0xFFFFA500)
-                                                  : theme.textSecondaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+      final status = isCompleted
+          ? 'انجام شده'
+          : hasStarted
+              ? 'در حال انجام'
+              : 'ماموریت جدید - آماده شروع';
+      final qRemaining = targetCount - progress;
 
-                            const SizedBox(height: 16),
+      Widget banner;
+      if (hasStarted && !isCompleted) {
+        banner = _sheetProgress(theme, progress, targetCount, progressPercent,
+            qRemaining > 0 ? '$qRemaining روز دیگر تا تکمیل ماموریت' : null);
+      } else if (isCompleted) {
+        banner = _sheetBanner(theme.tone(Tone.mint).bg, 'ماموریت کامل شد!',
+            'شما این ماموریت را با موفقیت به پایان رساندید');
+      } else {
+        banner = _sheetBanner(theme.tone(Tone.butter).bg, 'آماده شروع!',
+            'این ماموریت ${quest.targetCount} روزه را شروع کنید');
+      }
 
-                            // وضعیت ماموریت
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isCompleted
-                                    ? Colors.green.withOpacity(0.1)
-                                    : hasStarted
-                                        ? color.withOpacity(0.1)
-                                        : Colors.grey.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isCompleted
-                                      ? Colors.green
-                                      : hasStarted
-                                          ? color
-                                          : theme.borderColor,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    isCompleted
-                                        ? Icons.check_circle
-                                        : hasStarted
-                                            ? Icons.timer
-                                            : Icons.flag_outlined,
-                                    color: isCompleted
-                                        ? Colors.green
-                                        : hasStarted
-                                            ? color
-                                            : theme.textSecondaryColor,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      isCompleted
-                                          ? 'ماموریت با موفقیت کامل شد!'
-                                          : hasStarted
-                                              ? 'در حال انجام...'
-                                              : '📌 ماموریت جدید - آماده شروع',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: isCompleted
-                                            ? Colors.green
-                                            : hasStarted
-                                                ? color
-                                                : theme.textSecondaryColor,
-                                      ),
-                                    ),
-                                  ),
-                                  if (hasStarted)
-                                    Text(
-                                      '$progress/$targetCount',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: color,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-                            Divider(color: theme.borderColor),
-                            const SizedBox(height: 16),
-
-                            // توضیحات
-                            Text(
-                              quest.description,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isCompleted
-                                    ? Colors.green.shade700
-                                    : hasStarted
-                                        ? theme.textSecondaryColor
-                                        : theme.textSecondaryColor,
-                                height: 1.5,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-                            Divider(color: theme.borderColor),
-                            const SizedBox(height: 16),
-
-                            // اطلاعات ماموریت
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildQuestInfoItem(
-                                    icon: Icons.timer,
-                                    label: 'مدت زمان',
-                                    value: '${quest.targetCount} روز',
-                                    isActive: hasStarted || isCompleted,
-                                    theme: theme,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildQuestInfoItem(
-                                    icon: Icons.emoji_events,
-                                    label: 'نشان',
-                                    value: quest.badge,
-                                    isActive: hasStarted || isCompleted,
-                                    theme: theme,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildQuestInfoItem(
-                                    icon: Icons.stars,
-                                    label: 'پاداش',
-                                    value: '+${quest.xpReward} XP',
-                                    isActive: hasStarted || isCompleted,
-                                    theme: theme,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // نوار پیشرفت
-                            if (hasStarted && !isCompleted) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'پیشرفت شما',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: theme.textColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        '$progress از $targetCount روز',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: color,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: progressPercent,
-                                      backgroundColor: theme.borderColor,
-                                      color: color,
-                                      minHeight: 10,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${(progressPercent * 100).toInt()}% تکمیل شده',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.textSecondaryColor,
-                                    ),
-                                  ),
-                                  if (progress < targetCount) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.orange.withOpacity(0.2),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.lightbulb,
-                                            size: 16,
-                                            color: Colors.orange,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              '${targetCount - progress} روز دیگر تا تکمیل ماموریت',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.orange.shade700,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-
-                            // ماموریت کامل شده
-                            if (isCompleted) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.green.shade50,
-                                      Colors.green.shade100,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.green,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.emoji_events,
-                                      color: Colors.green,
-                                      size: 40,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'ماموریت کامل شد!',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'شما این ماموریت را با موفقیت به پایان رساندید',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.green.shade600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        '${quest.badge}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green.shade700,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-
-                            // ماموریت جدید
-                            if (isNew) ...[
-                              const SizedBox(height: 16),
-                              Divider(color: theme.borderColor),
-                              const SizedBox(height: 12),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.blue.shade50,
-                                      Colors.blue.shade100,
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.blue.shade300,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.flag,
-                                      color: Colors.blue,
-                                      size: 40,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'آماده شروع!',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'این ماموریت ${quest.targetCount} روزه را شروع کنید',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.blue.shade600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.stars,
-                                            size: 16,
-                                            color: Colors.blue,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '+${quest.xpReward} XP',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.blue.shade700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-
-                            const SizedBox(height: 24),
-
-                            // دکمه‌ها
-                            if (isCompleted) ...[
-                              Container(
-                                width: double.infinity,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border:
-                                      Border.all(color: Colors.green, width: 2),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.check_circle,
-                                      color: Colors.green,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Text(
-                                      'ماموریت کامل شد!',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ] else if (hasStarted) ...[
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton(
-                                  onPressed: () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        backgroundColor: theme.cardColor,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(16),
-                                        ),
-                                        title: Text(
-                                          'انصراف از ماموریت',
-                                          style:
-                                              TextStyle(color: theme.textColor),
-                                        ),
-                                        content: Text(
-                                          'آیا از انصراف از ماموریت "${quest.title}" مطمئن هستید؟\n\nبا انصراف، تمام پیشرفت شما از دست خواهد رفت.',
-                                          style: TextStyle(
-                                              color: theme.textSecondaryColor),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('انصراف'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text(
-                                              'بله، انصراف',
-                                              style:
-                                                  TextStyle(color: Colors.red),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm == true) {
-                                      if (mounted) Navigator.pop(context);
-                                      await _cancelQuest(quest);
-                                    }
-                                  },
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.red,
-                                    side: const BorderSide(color: Colors.red),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'انصراف از ماموریت',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ] else ...[
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    Navigator.pop(context);
-                                    await _startQuest(quest);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: color,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'شروع ماموریت ',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
+      _showDetailSheet(
+        theme: theme,
+        icon: _getIconData(quest.icon),
+        title: quest.title,
+        status: status,
+        description: quest.description,
+        imageUrl: quest.imageUrl,
+        tiles: [
+          _SheetTile(Icons.calendar_today_rounded, 'مدت زمان',
+              '${quest.targetCount} روز', Tone.sky),
+          _SheetTile(Icons.military_tech_rounded, 'نشان', quest.badge,
+              Tone.butter),
+          _SheetTile(
+              Icons.star_rounded, 'پاداش', '+${quest.xpReward} XP', Tone.peach),
+        ],
+        banner: banner,
+        actionLabel: isCompleted
+            ? 'بستن'
+            : hasStarted
+                ? 'انصراف از ماموریت'
+                : 'شروع ماموریت',
+        actionKind: isCompleted
+            ? _SheetAction.neutral
+            : hasStarted
+                ? _SheetAction.danger
+                : _SheetAction.primary,
+        onAction: () async {
+          if (hasStarted && !isCompleted) {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: theme.cardColor,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28)),
+                title: const Text('انصراف از ماموریت'),
+                content: Text(
+                    'آیا از انصراف از ماموریت "${quest.title}" مطمئن هستید؟\n\nبا انصراف، تمام پیشرفت شما از دست خواهد رفت.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('انصراف')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('بله، انصراف',
+                          style: TextStyle(color: theme.errorColor))),
+                ],
+              ),
+            );
+            if (confirm == true) await _cancelQuest(quest);
+          } else if (isNew) {
+            await _startQuest(quest);
+          }
         },
       );
     } catch (e) {
@@ -2301,4 +1421,14 @@ class _CachedChallengeDetails {
   final DateTime timestamp;
 
   _CachedChallengeDetails({required this.data, required this.timestamp});
+}
+
+enum _SheetAction { primary, danger, neutral, disabled }
+
+class _SheetTile {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Tone tone;
+  const _SheetTile(this.icon, this.label, this.value, this.tone);
 }
