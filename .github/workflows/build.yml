@@ -26,11 +26,11 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'
     
     - name: Clean caches
       run: |
         flutter clean
-        rm -rf ~/.gradle/caches/
         rm -rf android/.gradle
         rm -rf android/app/build
     
@@ -39,9 +39,15 @@ jobs:
     
     - name: Build APK
       run: |
-        flutter build apk --release \
-          --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-          --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        # دانلودهای گرادل گاهی از گیت‌هاب ارور ۵۰۴ می‌دهند؛ تا ۴ بار تلاش مجدد
+        for i in 1 2 3 4; do
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} && exit 0
+          echo "Build attempt $i failed, retrying in 30s..."
+          sleep 30
+        done
+        exit 1
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
