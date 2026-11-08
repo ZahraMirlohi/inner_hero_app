@@ -177,9 +177,14 @@ class ChatService {
             createdAt: createdAt,
             lastMessage: lastMessage,
             unreadCount:
-                type == ConversationType.buddy ? (unreadByConv[conversationId] ?? 0) : 0,
+                (type == ConversationType.buddy || type == ConversationType.squad)
+                    ? (unreadByConv[conversationId] ?? 0)
+                    : 0,
             memberIds: memberIds,
-            avatarUrl: buddyAvatar,
+            avatarUrl: buddyAvatar ??
+                (type == ConversationType.squad
+                    ? convData['avatar_url'] as String?
+                    : null),
             buddyLastSeen: buddyLastSeen,
           ),
         );

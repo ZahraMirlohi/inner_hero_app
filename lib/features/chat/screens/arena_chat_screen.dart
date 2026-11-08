@@ -1,5 +1,6 @@
 // lib/features/chat/screens/arena_chat_screen.dart
 
+import '/services/sound_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -261,15 +262,22 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     ];
   }
 
+  bool _streamReady = false;
+
   void _setupRealtimeSubscription() {
     _msgSub = _chatService
         .getMessages(widget.conversation.id,
             userId: _chatService.client.auth.currentUser?.id)
         .listen((newMessages) {
       if (mounted) {
+        final grew = _streamReady && newMessages.length > _messages.length;
         setState(() {
           _messages = newMessages.reversed.toList();
         });
+        if (grew && !_messages.last.isFromMe) {
+          SoundService.instance.play(Sfx.message);
+        }
+        _streamReady = true;
       }
     });
   }
@@ -282,6 +290,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   }) async {
     final content = text ?? _messageController.text.trim();
     if (content.isEmpty || _userId == null || _isSending) return;
+    SoundService.instance.play(Sfx.tap);
 
     final temp = ChatMessage(
       id: 'tmp_${DateTime.now().microsecondsSinceEpoch}',

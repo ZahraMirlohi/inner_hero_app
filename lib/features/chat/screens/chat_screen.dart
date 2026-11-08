@@ -460,7 +460,8 @@ class _ChatScreenState extends State<ChatScreen>
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      body: SafeArea(
+      body: Stack(children: [
+        Positioned.fill(child: SafeArea(
         bottom: false,
         child: Column(
           children: [
@@ -492,7 +493,13 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ],
         ),
-      ),
+      )),
+        PositionedDirectional(
+          start: 20,
+          bottom: 100,
+          child: _buildAiFab(theme, primaryColor),
+        ),
+      ]),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 90),
@@ -541,70 +548,42 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
-  Widget _buildAIChatCard(ThemeProvider theme, Color primaryColor) {
-    final on = theme.onPrimaryColor;
+  // مربی هوش مصنوعی: دکمهٔ شناور کنار صفحه که به‌صورت پاپ‌آپ باز می‌شود
+  Widget _buildAiFab(ThemeProvider theme, Color primaryColor) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AIChatScreen()),
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.88,
+              child: const AIChatScreen(),
+            ),
+          ),
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(28),
+          color: _ink,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: _cardShadow(theme),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
-              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 26),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'مربی هوش مصنوعی',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w800, color: on),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'برنامه، انگیزه و راهنمایی شخصی',
-                    style: TextStyle(
-                        fontSize: 12, color: on.withValues(alpha: 0.75)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircleAvatar(radius: 4, backgroundColor: Color(0xFF2ECC71)),
-                  SizedBox(width: 4),
-                  Text('آنلاین',
-                      style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.w600, color: _ink)),
-                ],
-              ),
-            ),
+            Icon(Icons.smart_toy_rounded, color: primaryColor, size: 22),
+            const SizedBox(width: 8),
+            const Text('مربی',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white)),
           ],
         ),
       ),
@@ -622,13 +601,7 @@ class _ChatScreenState extends State<ChatScreen>
         _conversations.where((c) => c.type == ConversationType.buddy).toList();
 
     if (buddyConversations.isEmpty) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
-        children: [
-          _buildAIChatCard(theme, primaryColor),
-          SizedBox(
-            height: 380,
-            child: _buildEmptyState(
+      return _buildEmptyState(
         icon: Icons.people_outline,
         title: 'هنوز هم‌مسیری ندارید',
         subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
@@ -636,18 +609,14 @@ class _ChatScreenState extends State<ChatScreen>
         onPressed: _showBuddyFinder,
         theme: theme,
         primaryColor: primaryColor,
-      ),
-          ),
-        ],
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
-      itemCount: buddyConversations.length + 1,
+      itemCount: buddyConversations.length,
       itemBuilder: (context, index) {
-        if (index == 0) return _buildAIChatCard(theme, primaryColor);
-        final conv = buddyConversations[index - 1];
+        final conv = buddyConversations[index];
         return _buildConversationItem(
           conv,
           theme: theme,
@@ -977,7 +946,7 @@ class _ChatScreenState extends State<ChatScreen>
       height: 52,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
-      child: (isBuddy && url != null && url.isNotEmpty)
+      child: (!isArena && url != null && url.isNotEmpty)
           ? Image.network(
               url,
               fit: BoxFit.cover,

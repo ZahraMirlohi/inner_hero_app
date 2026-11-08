@@ -1,5 +1,6 @@
 // lib/features/chat/screens/buddy_chat_screen.dart
 
+import '/services/sound_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -372,6 +373,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
             if (_messages.length > oldMessageCount) {
               final lastMessage = _messages.last;
+              if (oldMessageCount > 0 && lastMessage.senderId != _userId) {
+                SoundService.instance.play(Sfx.message);
+              }
               if (lastMessage.senderId != _userId) {
                 _scrollToBottom();
               }
@@ -3523,6 +3527,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (content.isEmpty && (replyToId != null || _replyToMessage != null)) {
       return;
     }
+    SoundService.instance.play(Sfx.tap);
 
     if (_userId == null || _isSending) return;
 

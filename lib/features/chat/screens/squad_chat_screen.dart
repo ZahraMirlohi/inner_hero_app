@@ -1,5 +1,6 @@
 // lib/features/chat/screens/squad_chat_screen.dart
 
+import '/services/sound_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +57,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   // واکنش‌ها جدا از پیام‌ها نگهداری می‌شوند تا با هر به‌روزرسانی استریم گم نشوند
   Map<String, List<MessageReaction>> _reactions = {};
   RealtimeChannel? _reactionChannel;
+  bool _streamReady = false;
   Timer? _reactionDebounce;
   ChatMessage? _menuMessage;
   Offset? _menuPosition;
@@ -220,9 +222,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           _messages = newMessages.reversed.toList();
         });
         if (grew) {
+          if (_streamReady && _messages.isNotEmpty && !_messages.last.isFromMe) {
+            SoundService.instance.play(Sfx.message);
+          }
           _scrollToBottom();
           _loadReactions();
         }
+        _streamReady = true;
       }
     });
     _loadReactions();
@@ -270,6 +276,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final content = text ?? _messageController.text.trim();
     if (content.isEmpty || _userId == null || _isSending || !_canPost) return;
 
+    SoundService.instance.play(Sfx.tap);
     final replyTo = _replyToMessage;
     final typeStr = type.toString().split('.').last;
     // پیام بلافاصله پایین لیست می‌نشیند (تا رسیدن نسخه‌ی سرور)
@@ -404,6 +411,20 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _changeGroupPhoto() async {
+    try {
+      final picked = await ChatUploadService.pick(AttachKind.image);
+      if (picked.isEmpty) return;
+      _snack('در حال بارگذاری عکس...');
+      final url = await ChatUploadService.upload(picked.first, 'chat_images');
+      await _chatService.updateGroup(widget.conversation.id, avatarUrl: url);
+      if (mounted) setState(() => _settings = {..._settings, 'avatar_url': url});
+      _snack('عکس گروه تغییر کرد');
+    } catch (e) {
+      _snack(_chatService.groupErrorText(e), error: true);
+    }
   }
 
   Future<void> _sendLocation() async {
@@ -2263,6 +2284,18 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   const SizedBox(height: 10),
                   if (_isAdmin) ...[
                     _buildToolItem(
+                      icon: Icons.photo_camera_rounded,
+                      title: 'عکس پروفایل گروه',
+                      subtitle: 'انتخاب یا تغییر عکس گروه',
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _changeGroupPhoto();
+                      },
+                      primaryColor: primaryColor,
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildToolItem(
                       icon: Icons.edit,
                       title: 'ویرایش اطلاعات گروه',
                       subtitle: 'تغییر نام و توضیحات',
@@ -2746,7 +2779,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               width: 44,
               height: 44,
               decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
-              child: Icon(Icons.groups_rounded, color: tone.fg, size: 22),
+              clipBehavior: Clip.antiAlias,
+              child: (_settings['avatar_url'] as String?)?.isNotEmpty == true
+                  ? Image.network(_settings['avatar_url'] as String,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          Icon(Icons.groups_rounded, color: tone.fg, size: 22))
+                  : Icon(Icons.groups_rounded, color: tone.fg, size: 22),
             ),
             const SizedBox(width: 10),
             Flexible(
