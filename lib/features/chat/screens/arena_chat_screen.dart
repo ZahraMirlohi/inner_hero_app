@@ -1840,7 +1840,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -1957,7 +1957,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
             ),
           ),
         );
-      },
+      })),
     );
   }
 

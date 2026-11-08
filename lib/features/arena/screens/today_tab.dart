@@ -995,7 +995,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       context: context,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
           decoration: BoxDecoration(
@@ -1099,7 +1099,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1651,7 +1651,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
-      builder: (bottomSheetContext) {
+      builder: (bottomSheetContext) => SafeArea(top: false, child: Builder(builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
             return Padding(
@@ -1707,7 +1707,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             );
           },
         );
-      },
+      })),
     );
   }
 

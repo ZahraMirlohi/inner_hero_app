@@ -140,7 +140,7 @@ class AppStrings {
     'streak.today_done': 'امروز رو گرفتی. فردا هم بیا!',
 
     'profile.title': 'پروفایل',
-    'profile.stat_age': 'سن قهرمان',
+    'profile.stat_age': 'امتیاز XP',
     'profile.stat_level': 'سطح فعلی',
     'profile.stat_streak': 'استریک جاری',
     'profile.stat_best': 'رکورد استریک',
@@ -270,7 +270,7 @@ class AppStrings {
     'streak.today_done': 'Today is done. See you tomorrow!',
 
     'profile.title': 'Profile',
-    'profile.stat_age': 'Hero age',
+    'profile.stat_age': 'XP',
     'profile.stat_level': 'Current level',
     'profile.stat_streak': 'Current streak',
     'profile.stat_best': 'Best streak',

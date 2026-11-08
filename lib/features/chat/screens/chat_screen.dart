@@ -341,7 +341,7 @@ class _ChatScreenState extends State<ChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -426,7 +426,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1082,7 +1082,7 @@ class _ChatScreenState extends State<ChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       backgroundColor: theme.cardColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
@@ -1144,7 +1144,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ),
         );
-      },
+      })),
     );
   }
 

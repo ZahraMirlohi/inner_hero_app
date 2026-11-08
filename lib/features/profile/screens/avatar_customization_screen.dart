@@ -364,7 +364,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -421,7 +421,7 @@ class _AvatarCustomizationScreenState extends State<AvatarCustomizationScreen> {
             ),
           ),
         );
-      },
+      })),
     );
   }
 

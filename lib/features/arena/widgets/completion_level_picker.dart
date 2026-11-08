@@ -110,7 +110,8 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
       child: SizedBox(
         width: double.infinity,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, 20 + MediaQuery.of(context).viewPadding.bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -220,14 +221,34 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
                 ),
               ],
               const SizedBox(height: 14),
-              _buildLevelOption(CompletionLevel.full, fullDesc,
-                  isCustom: isCustomFull, theme: theme, onTone: onTone),
-              const SizedBox(height: 10),
-              _buildLevelOption(CompletionLevel.half, halfDesc,
-                  isCustom: isCustomHalf, theme: theme, onTone: onTone),
-              const SizedBox(height: 10),
-              _buildLevelOption(CompletionLevel.basic, basicDesc,
-                  isCustom: isCustomBasic, theme: theme, onTone: onTone),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 6, bottom: 8),
+                child: Text(
+                  context.tr('ad.pick.choose'),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textSecondaryColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: theme.backgroundColor,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  children: [
+                    _buildLevelOption(CompletionLevel.full, fullDesc,
+                        isCustom: isCustomFull, theme: theme, onTone: onTone),
+                    _buildLevelOption(CompletionLevel.half, halfDesc,
+                        isCustom: isCustomHalf, theme: theme, onTone: onTone),
+                    _buildLevelOption(CompletionLevel.basic, basicDesc,
+                        isCustom: isCustomBasic, theme: theme, onTone: onTone),
+                  ],
+                ),
+              ),
               const SizedBox(height: 14),
               // دکمه تایید
               GestureDetector(
@@ -290,7 +311,6 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     final isSelected = _selectedLevel == level;
     final t = theme.tone(_toneOf(level));
     final apricot = theme.tone(Tone.apricot);
-    final lilac = theme.tone(Tone.lilac);
     final xpEarned = (widget.habitXpReward * level.xpMultiplier / 100).round();
 
     String? levelValue;
@@ -299,23 +319,27 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
     }
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _selectedLevel = level),
-      child: Container(
-        padding: const EdgeInsets.all(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? t.bg : theme.backgroundColor,
-          borderRadius: BorderRadius.circular(26),
+          color: isSelected ? t.bg : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // دایره انتخاب (رادیو): خالی = انتخاب نشده
             Container(
-              width: 26,
-              height: 26,
-              margin: const EdgeInsets.only(top: 2),
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
-                color: isSelected ? level.color : theme.cardSecondaryColor,
+                color: isSelected ? level.color : Colors.transparent,
                 shape: BoxShape.circle,
+                border: isSelected
+                    ? null
+                    : Border.all(color: theme.textSecondaryColor, width: 1.6),
               ),
               child: isSelected
                   ? const Icon(Icons.check_rounded,
@@ -327,100 +351,63 @@ class _CompletionLevelPickerState extends State<CompletionLevelPicker> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  Row(
                     children: [
-                      Text(level.emoji, style: const TextStyle(fontSize: 20)),
-                      Text(
-                        context.tr('ad.lvl.name.${level.name}'),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: theme.textColor,
+                      Text(level.emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          context.tr('ad.lvl.name.${level.name}'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: theme.textColor,
+                          ),
                         ),
                       ),
-                      if (isCustom)
-                        Container(
-                          height: 22,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: lilac.bg,
-                            borderRadius: BorderRadius.circular(11),
-                          ),
-                          child: Text(
-                            context.tr('ad.pick.custom'),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: theme.isDarkMode ? lilac.fg : _ink,
-                            ),
+                      if (isCustom) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          context.tr('ad.pick.custom'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: theme.textSecondaryColor,
                           ),
                         ),
+                      ],
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
                   Text(
-                    description,
+                    levelValue != null ? '$description  ·  $levelValue' : description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 13,
-                      height: 1.7,
+                      fontSize: 12.5,
+                      height: 1.5,
                       color: theme.textSecondaryColor,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (levelValue != null)
-                        Container(
-                          height: 26,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: theme.cardColor.withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(13),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.flag_rounded,
-                                  size: 14, color: theme.textColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                context.tr(
-                                    'ad.pick.need', {'v': levelValue}),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.textColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      Container(
-                        height: 26,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: apricot.bg,
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: Text(
-                          '+$xpEarned XP',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: theme.isDarkMode ? apricot.fg : _ink,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: apricot.bg,
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Text(
+                '+$xpEarned XP',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: theme.isDarkMode ? apricot.fg : _ink,
+                ),
               ),
             ),
           ],

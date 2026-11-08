@@ -491,7 +491,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return DraggableScrollableSheet(
           initialChildSize: 0.35,
           minChildSize: 0.25,
@@ -550,7 +550,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             );
           },
         );
-      },
+      })),
     );
   }
 
@@ -1600,7 +1600,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return CreateChallengeSheet(
           buddyName: _buddyName ?? 'هم‌مسیر',
           buddyId: _buddyId ?? '',
@@ -1610,7 +1610,7 @@ ${data.completionMessage}
             _sendChallengeInvite(challenge);
           },
         );
-      },
+      })),
     );
   }
 
@@ -2037,7 +2037,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2118,7 +2118,7 @@ ${data.completionMessage}
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -2335,7 +2335,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           minChildSize: 0.3,
@@ -2445,7 +2445,7 @@ ${data.completionMessage}
             );
           },
         );
-      },
+      })),
     );
   }
 
@@ -4988,7 +4988,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -5058,7 +5058,7 @@ ${data.completionMessage}
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -7215,7 +7215,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -7292,7 +7292,7 @@ ${data.completionMessage}
             ),
           ),
         );
-      },
+      })),
     );
   }
 

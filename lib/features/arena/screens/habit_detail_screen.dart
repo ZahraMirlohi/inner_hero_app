@@ -1,5 +1,6 @@
 // lib/features/arena/screens/habit_detail_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/features/arena/models/habit_model.dart';
@@ -241,7 +242,7 @@ class HabitDetailScreen extends StatelessWidget {
       if (habit.reminders.isNotEmpty) _buildRemindersCard(context, theme),
     ];
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       body: SafeArea(
         bottom: false,
@@ -267,7 +268,7 @@ class HabitDetailScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _circleButton(

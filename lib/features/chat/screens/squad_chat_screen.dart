@@ -10,6 +10,7 @@ import '/services/buddy_matcher_service.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/core/app_palette.dart';
+import '/widgets/bottom_safe.dart';
 import '../models/message_model.dart';
 import '../models/conversation_model.dart';
 import '/services/chat_upload_service.dart';
@@ -461,7 +462,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => SizedBox(
+      builder: (ctx) => SafeArea(top: false, child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.6,
         child: ListView.separated(
           padding: const EdgeInsets.all(12),
@@ -476,7 +477,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             },
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -527,7 +528,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: MessageActionsMenu(
             message: message,
@@ -561,7 +562,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             },
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1639,7 +1640,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (ctx) => Scaffold(
+        builder: (ctx) => BottomSafe(child: Scaffold(
           backgroundColor: theme.backgroundColor,
           appBar: AppBar(
             title: const Text('اعضای گروه'),
@@ -1651,7 +1652,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             valueListenable: _membersRev,
             builder: (_, __, ___) => _buildMembersTab(theme, primaryColor),
           ),
-        ),
+        )),
       ),
     );
   }
@@ -2167,7 +2168,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (sheetCtx) => StatefulBuilder(
+      builder: (sheetCtx) => SafeArea(top: false, child: StatefulBuilder(
         builder: (ctx, setSheet) {
           Widget switchTile(IconData icon, String title, String sub, bool v,
               Future<void> Function(bool) onChanged) {
@@ -2316,7 +2317,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             ),
           );
         },
-      ),
+      )),
     );
   }
 

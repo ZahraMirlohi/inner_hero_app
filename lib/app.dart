@@ -1,6 +1,7 @@
 // lib/app.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -37,15 +38,9 @@ class HeroApp extends StatelessWidget {
           theme: AppTheme.build(themeProvider),
           // با ورود/خروج، کل پشتهٔ صفحه‌ها ریست می‌شود؛ تغییرهای دیگر (معرفی، username و ...)
           // داخل همان مسیر با Consumer بازسازی می‌شوند.
-          home: Navigator(
-            key: ValueKey('nav_${authProvider.isLoggedIn}'),
-            onGenerateRoute: (routeSettings) {
-              return MaterialPageRoute(
-                builder: (context) => Consumer<AuthProvider>(
-                  builder: (context, auth, _) => _buildHome(auth),
-                ),
-              );
-            },
+          home: _AppNavigator(
+            loggedIn: authProvider.isLoggedIn,
+            buildHome: _buildHome,
           ),
         );
       },
@@ -88,6 +83,45 @@ class HeroApp extends StatelessWidget {
         }
         return const MainScreen();
       },
+    );
+  }
+}
+
+/// ناوبری داخلی برنامه. چون داخل `home` ساخته می‌شود، دکمهٔ بک سیستم باید صراحتاً به آن برسد
+/// (وگرنه همیشه برنامه بسته می‌شود). اگر صفحه‌ای برای برگشتن نبود، برنامه می‌بندد.
+class _AppNavigator extends StatefulWidget {
+  final bool loggedIn;
+  final Widget Function(AuthProvider auth) buildHome;
+  const _AppNavigator({required this.loggedIn, required this.buildHome});
+
+  @override
+  State<_AppNavigator> createState() => _AppNavigatorState();
+}
+
+class _AppNavigatorState extends State<_AppNavigator> {
+  final _keys = {
+    true: GlobalKey<NavigatorState>(debugLabel: 'nav_in'),
+    false: GlobalKey<NavigatorState>(debugLabel: 'nav_out'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final key = _keys[widget.loggedIn]!;
+    return NavigatorPopHandler(
+      onPop: () async {
+        final handled = await key.currentState?.maybePop() ?? false;
+        if (!handled) SystemNavigator.pop();
+      },
+      child: Navigator(
+        key: key,
+        onGenerateRoute: (routeSettings) {
+          return MaterialPageRoute(
+            builder: (context) => Consumer<AuthProvider>(
+              builder: (context, auth, _) => widget.buildHome(auth),
+            ),
+          );
+        },
+      ),
     );
   }
 }

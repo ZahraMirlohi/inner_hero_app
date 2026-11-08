@@ -549,7 +549,7 @@ class _PackagesTabState extends State<PackagesTab> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
-      builder: (ctx) => DraggableScrollableSheet(
+      builder: (ctx) => SafeArea(top: false, child: DraggableScrollableSheet(
         initialChildSize: 0.88,
         minChildSize: 0.5,
         maxChildSize: 0.95,
@@ -697,7 +697,7 @@ class _PackagesTabState extends State<PackagesTab> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 

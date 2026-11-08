@@ -1,5 +1,6 @@
 // lib/features/profile/screens/analytics_detail_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -737,7 +738,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     final theme = context.watch<ThemeProvider>();
     final showLoading = _isLoading && _habits.isEmpty && _activeDays.isEmpty;
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       body: SafeArea(
         child: Column(
@@ -810,7 +811,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildTodayCard(ThemeProvider theme) {

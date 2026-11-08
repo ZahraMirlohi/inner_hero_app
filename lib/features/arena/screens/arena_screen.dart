@@ -420,7 +420,7 @@ class _ArenaScreenState extends State<ArenaScreen>
       context: context,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0xFF090909).withValues(alpha: 0.5),
-      builder: (ctx) => Container(
+      builder: (ctx) => SafeArea(top: false, child: Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         decoration: BoxDecoration(
           color: theme.cardColor,
@@ -460,7 +460,7 @@ class _ArenaScreenState extends State<ArenaScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 

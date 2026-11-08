@@ -832,7 +832,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: ink.withValues(alpha: 0.42),
-      builder: (ctx) => DraggableScrollableSheet(
+      builder: (ctx) => SafeArea(top: false, child: DraggableScrollableSheet(
         initialChildSize: 0.82,
         minChildSize: 0.5,
         maxChildSize: 0.95,
@@ -981,7 +981,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 

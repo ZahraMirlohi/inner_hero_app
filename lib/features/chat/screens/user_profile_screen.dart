@@ -1,5 +1,6 @@
 // lib/features/chat/screens/user_profile_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -117,7 +118,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
@@ -140,7 +141,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ? _buildErrorState(theme, primaryColor)
                 : _buildProfileContent(theme, primaryColor),
       ),
-    );
+    ));
   }
 
   Widget _buildLoadingState(Color primaryColor) {

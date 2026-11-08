@@ -1069,8 +1069,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Row(
           children: [
-            cell(Tone.butter, Icons.schedule_rounded,
-                '${p.avatarAge} $days', context.tr('profile.stat_age')),
+            cell(Tone.butter, Icons.stars_rounded,
+                '${p.totalXp}', context.tr('profile.stat_age')),
             const SizedBox(width: 10),
             cell(Tone.lilac, Icons.bolt_rounded, '${p.level}',
                 context.tr('profile.stat_level')),
@@ -1325,7 +1325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -1393,7 +1393,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1566,7 +1566,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (dialogContext) {
+      builder: (dialogContext) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1677,7 +1677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         );
-      },
+      })),
     );
   }
 
@@ -2119,7 +2119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
             return Padding(
@@ -2329,7 +2329,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
         );
-      },
+      })),
     );
   }
 
