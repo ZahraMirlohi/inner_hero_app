@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
 import '/features/chat/models/conversation_model.dart';
 import 'ai_chat_screen.dart';
 import 'buddy_finder_screen.dart';
@@ -429,88 +430,68 @@ class _ChatScreenState extends State<ChatScreen>
     );
   }
 
+  static const _ink = Color(0xFF090909);
+  static const _tones = [
+    Tone.sky, Tone.rose, Tone.lilac, Tone.butter, Tone.mint, Tone.peach, Tone.lime, Tone.apricot,
+  ];
+
+  List<BoxShadow> _cardShadow(ThemeProvider theme) => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
+          blurRadius: 16,
+          offset: const Offset(0, 4),
+        ),
+      ];
+
+  String _ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'اکنون';
+    if (d.inMinutes < 60) return '${d.inMinutes} دقیقه پیش';
+    if (d.inHours < 24) return '${d.inHours} ساعت پیش';
+    if (d.inDays == 1) return 'دیروز';
+    if (d.inDays < 7) return '${d.inDays} روز پیش';
+    return '${d.inDays ~/ 7} هفته پیش';
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final primaryColor = theme.primaryColor;
+    final primaryColor = theme.effectivePrimary;
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'گپ و گفتگو',
-          style: TextStyle(color: theme.textColor),
-        ),
-        backgroundColor: theme.surfaceColor,
-        elevation: 0,
-        foregroundColor: theme.textColor,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryColor.withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelPadding: EdgeInsets.zero,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color:
-                    theme.isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  'گپ و گفتگو',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: theme.textColor,
                   ),
+                ),
+              ),
+            ),
+            _buildTabPill(theme, primaryColor),
+            const SizedBox(height: 14),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildBuddyTab(theme, primaryColor),
+                  _buildSquadTab(theme, primaryColor),
+                  _buildArenaTab(theme, primaryColor),
                 ],
               ),
-              dividerColor: Colors.transparent,
-              labelColor: theme.isDarkMode ? Colors.white : primaryColor,
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.85),
-              labelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              tabs: const [
-                Tab(height: 44, text: 'هم‌مسیرها'),
-                Tab(height: 44, text: 'گروه‌ها'),
-                Tab(height: 44, text: 'کانال‌ها'),
-              ],
             ),
-          ),
+          ],
         ),
-      ),
-      body: Column(
-        children: [
-          _buildAIChatCard(theme, primaryColor),
-          const SizedBox(height: 6),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildBuddyTab(theme, primaryColor),
-                _buildSquadTab(theme, primaryColor),
-                _buildArenaTab(theme, primaryColor),
-              ],
-            ),
-          ),
-        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
@@ -520,17 +501,48 @@ class _ChatScreenState extends State<ChatScreen>
           backgroundColor: primaryColor,
           shape: const CircleBorder(),
           elevation: 6,
-          child: const Icon(
-            Icons.add_comment,
-            color: Colors.white,
-            size: 26,
-          ),
+          child: Icon(Icons.add_rounded, color: theme.onPrimaryColor, size: 28),
         ),
       ),
     );
   }
 
+  Widget _buildTabPill(ThemeProvider theme, Color primaryColor) {
+    return Container(
+      height: 56,
+      margin: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: _cardShadow(theme),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelPadding: EdgeInsets.zero,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: primaryColor,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        dividerColor: Colors.transparent,
+        splashBorderRadius: BorderRadius.circular(24),
+        labelColor: theme.onPrimaryColor,
+        unselectedLabelColor: theme.textSecondaryColor,
+        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        tabs: const [
+          Tab(height: 48, text: 'هم‌مسیرها'),
+          Tab(height: 48, text: 'گروه‌ها'),
+          Tab(height: 48, text: 'کانال‌ها'),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAIChatCard(ThemeProvider theme, Color primaryColor) {
+    final on = theme.onPrimaryColor;
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -539,31 +551,19 @@ class _ChatScreenState extends State<ChatScreen>
         );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: primaryColor,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(28),
         ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Center(
-                child: Text('', style: TextStyle(fontSize: 24)),
-              ),
+              width: 52,
+              height: 52,
+              decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
+              child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 26),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -571,40 +571,16 @@ class _ChatScreenState extends State<ChatScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'مربی هوش مصنوعی',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'آنلاین',
-                          style: TextStyle(fontSize: 8, color: Colors.white),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'مربی هوش مصنوعی',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w800, color: on),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     'برنامه، انگیزه و راهنمایی شخصی',
                     style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
+                        fontSize: 12, color: on.withValues(alpha: 0.75)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -612,15 +588,21 @@ class _ChatScreenState extends State<ChatScreen>
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(6),
+              height: 26,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: const Icon(
-                Icons.chevron_right,
-                color: Colors.white,
-                size: 18,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(radius: 4, backgroundColor: Color(0xFF2ECC71)),
+                  SizedBox(width: 4),
+                  Text('آنلاین',
+                      style: TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600, color: _ink)),
+                ],
               ),
             ),
           ],
@@ -640,7 +622,13 @@ class _ChatScreenState extends State<ChatScreen>
         _conversations.where((c) => c.type == ConversationType.buddy).toList();
 
     if (buddyConversations.isEmpty) {
-      return _buildEmptyState(
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
+        children: [
+          _buildAIChatCard(theme, primaryColor),
+          SizedBox(
+            height: 380,
+            child: _buildEmptyState(
         icon: Icons.people_outline,
         title: 'هنوز هم‌مسیری ندارید',
         subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
@@ -648,14 +636,18 @@ class _ChatScreenState extends State<ChatScreen>
         onPressed: _showBuddyFinder,
         theme: theme,
         primaryColor: primaryColor,
+      ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: buddyConversations.length,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
+      itemCount: buddyConversations.length + 1,
       itemBuilder: (context, index) {
-        final conv = buddyConversations[index];
+        if (index == 0) return _buildAIChatCard(theme, primaryColor);
+        final conv = buddyConversations[index - 1];
         return _buildConversationItem(
           conv,
           theme: theme,
@@ -688,7 +680,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
       itemCount: squadConversations.length,
       itemBuilder: (context, index) {
         final conv = squadConversations[index];
@@ -725,7 +717,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 160),
       itemCount: arenaConversations.length,
       itemBuilder: (context, index) {
         final conv = arenaConversations[index];
@@ -863,73 +855,26 @@ class _ChatScreenState extends State<ChatScreen>
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: theme.isDarkMode ? 0.3 : 0.04,
-                ),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: _cardShadow(theme),
           ),
           child: Row(
             children: [
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.12),
-                      shape: isBuddy ? BoxShape.circle : BoxShape.rectangle,
-                      borderRadius: isBuddy ? null : BorderRadius.circular(14),
-                    ),
-                    child: (isBuddy &&
-                            conv.avatarUrl != null &&
-                            conv.avatarUrl!.isNotEmpty)
-                        ? Image.network(
-                            conv.avatarUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text(
-                                displayName.isNotEmpty ? displayName[0] : '👤',
-                                style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: primaryColor),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: isBuddy
-                                ? Text(
-                                    displayName.isNotEmpty
-                                        ? displayName[0]
-                                        : '👤',
-                                    style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: primaryColor),
-                                  )
-                                : Text(conv.iconEmoji,
-                                    style: const TextStyle(fontSize: 22)),
-                          ),
-                  ),
+                  _buildAvatar(conv, displayName, isBuddy, isArena, theme),
                   if (isBuddy && conv.isBuddyOnline)
                     Positioned(
-                      bottom: -1,
-                      right: -1,
+                      bottom: 0,
+                      left: 0,
                       child: Container(
                         width: 13,
                         height: 13,
                         decoration: BoxDecoration(
-                          color: Colors.green,
+                          color: const Color(0xFF2ECC71),
                           shape: BoxShape.circle,
-                          border: Border.all(color: theme.cardColor, width: 2),
+                          border: Border.all(color: theme.cardColor, width: 3),
                         ),
                       ),
                     ),
@@ -943,56 +888,77 @@ class _ChatScreenState extends State<ChatScreen>
                   children: [
                     Row(
                       children: [
-                        Flexible(
+                        Expanded(
                           child: Text(
                             displayName,
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: conv.unreadCount > 0
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: theme.textColor,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _ago(conv.lastMessageAt),
+                          style: TextStyle(
+                              fontSize: 12, color: theme.textSecondaryColor),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      lastMessage,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: conv.unreadCount > 0
-                            ? FontWeight.w700
-                            : FontWeight.normal,
-                        color: conv.unreadCount > 0
-                            ? theme.textColor
-                            : theme.textSecondaryColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            lastMessage,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: conv.unreadCount > 0
+                                  ? FontWeight.w700
+                                  : FontWeight.normal,
+                              color: conv.unreadCount > 0
+                                  ? theme.textColor
+                                  : theme.textSecondaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (conv.unreadCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 22),
+                            height: 22,
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: primaryColor,
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: Text(
+                              conv.unreadCount > 99 ? '99+' : '${conv.unreadCount}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: theme.onPrimaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
-              if (isBuddy && conv.unreadCount > 0)
-                Container(
-                  margin: const EdgeInsetsDirectional.only(end: 6),
-                  width: 11,
-                  height: 11,
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
               if (isBuddy)
                 IconButton(
                   onPressed: () => _showBuddyOptions(conv, primaryColor),
                   icon: const Icon(Icons.more_vert, size: 18),
                   color: theme.textSecondaryColor,
-                  padding: EdgeInsets.zero,
+                  padding: const EdgeInsetsDirectional.only(start: 6),
                   constraints: const BoxConstraints(),
                 ),
             ],
@@ -1001,6 +967,39 @@ class _ChatScreenState extends State<ChatScreen>
       ),
     );
   }
+
+  Widget _buildAvatar(Conversation conv, String name, bool isBuddy,
+      bool isArena, ThemeProvider theme) {
+    final tone = theme.tone(_tones[conv.id.hashCode.abs() % _tones.length]);
+    final url = conv.avatarUrl;
+    return Container(
+      width: 52,
+      height: 52,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
+      child: (isBuddy && url != null && url.isNotEmpty)
+          ? Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _avatarFallback(name, tone),
+            )
+          : isBuddy
+              ? _avatarFallback(name, tone)
+              : Icon(
+                  isArena ? Icons.campaign_rounded : Icons.groups_rounded,
+                  size: 26,
+                  color: tone.fg,
+                ),
+    );
+  }
+
+  Widget _avatarFallback(String name, ToneColors tone) => Center(
+        child: Text(
+          name.isNotEmpty ? name.characters.first : '?',
+          style: TextStyle(
+              fontSize: 21, fontWeight: FontWeight.w800, color: tone.fg),
+        ),
+      );
 
   Widget _buildEmptyState({
     required IconData icon,
@@ -1080,75 +1079,67 @@ class _ChatScreenState extends State<ChatScreen>
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      backgroundColor: theme.surfaceColor,
+      backgroundColor: theme.cardColor,
       builder: (context) {
         return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.all(20),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.borderColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                Container(
+                  width: 44,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: theme.borderColor,
+                    borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
                   'شروع گفتگوی جدید',
                   style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                     color: theme.textColor,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 _buildOptionTile(
-                  icon: Icons.person_add,
+                  icon: Icons.person_add_alt_1_rounded,
                   title: 'هم‌مسیر جدید',
                   subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
-                  color: primaryColor,
+                  tone: Tone.sky,
                   onTap: () {
                     Navigator.pop(context);
                     _showBuddyFinder();
                   },
-                  primaryColor: primaryColor,
                   theme: theme,
                 ),
-                const SizedBox(height: 8),
                 _buildOptionTile(
-                  icon: Icons.group_add,
+                  icon: Icons.group_add_rounded,
                   title: 'ساخت گروه جدید',
                   subtitle: 'با دوستانتان یک گروه بسازید',
-                  color: primaryColor,
+                  tone: Tone.mint,
                   onTap: () {
                     Navigator.pop(context);
                     _showCreateSquadDialog(theme, primaryColor);
                   },
-                  primaryColor: primaryColor,
                   theme: theme,
                 ),
-                const SizedBox(height: 8),
                 _buildOptionTile(
-                  icon: Icons.qr_code_scanner,
+                  icon: Icons.vpn_key_rounded,
                   title: 'پیوستن به گروه',
                   subtitle: 'با کد دعوت وارد شوید',
-                  color: primaryColor,
+                  tone: Tone.butter,
                   onTap: () {
                     Navigator.pop(context);
                     _showJoinSquadDialog(primaryColor);
                   },
-                  primaryColor: primaryColor,
                   theme: theme,
                 ),
-                const SizedBox(height: 12),
               ],
             ),
           ),
@@ -1161,43 +1152,45 @@ class _ChatScreenState extends State<ChatScreen>
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
+    required Tone tone,
     required VoidCallback onTap,
-    required Color primaryColor,
     required ThemeProvider theme,
   }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: theme.textColor,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: theme.textSecondaryColor,
-        ),
-      ),
-      trailing: Icon(
-        Icons.chevron_right,
-        color: theme.textSecondaryColor,
-        size: 20,
-      ),
+    final t = theme.tone(tone);
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(color: t.bg, shape: BoxShape.circle),
+              child: Icon(icon, color: t.fg, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: theme.textColor)),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: TextStyle(
+                          fontSize: 12, color: theme.textSecondaryColor)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
