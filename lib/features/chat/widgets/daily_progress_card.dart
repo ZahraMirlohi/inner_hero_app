@@ -41,7 +41,6 @@ class DailyProgressCard extends StatelessWidget {
 
     final double progress =
         totalHabitsToday > 0 ? completedHabitsToday / totalHabitsToday : 0.0;
-    final int progressPercent = (progress * 100).toInt();
 
     // حروف روزهای هفته از CalendarProvider
     final weekDaysLabels = calendar.weekDayHeaders;
@@ -178,22 +177,6 @@ class DailyProgressCard extends StatelessWidget {
                   backgroundColor: textColor.withValues(alpha: 0.15),
                   color: textColor,
                   minHeight: 6,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  progressPercent >= 80
-                      ? 'عالی!'
-                      : progressPercent >= 50
-                          ? 'ادامه بده!'
-                          : '🌱 تازه شروع کردی!',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
                 ),
               ),
             ],

@@ -903,9 +903,11 @@ class _PackageCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
-    final tone = isActive
-        ? theme.tone(Tone.mint)
-        : theme.tone(_tones[package.id.hashCode.abs() % _tones.length]);
+    // بستهٔ فعال: پر با رنگ اصلی + قاب ضخیم تا از بسته‌های غیرفعال کاملاً متمایز باشد
+    final tone = theme.tone(_tones[package.id.hashCode.abs() % _tones.length]);
+    final Color cardBg = isActive ? theme.effectivePrimary : tone.bg;
+    final Color on = isActive ? theme.onPrimaryColor : _ink;
+    final Color onBody = isActive ? theme.onPrimaryColor : const Color(0xFF3C4034);
     final habits = package.habits.take(3).toList();
     final remaining = package.habits.length - habits.length;
     final white70 = Colors.white.withValues(alpha: 0.7);
@@ -914,8 +916,18 @@ class _PackageCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: tone.bg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(30),
+        border: isActive ? Border.all(color: _ink, width: 2.5) : null,
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: theme.effectivePrimary.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -939,10 +951,10 @@ class _PackageCard extends StatelessWidget {
                     Text(package.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: _ink)),
+                            color: on)),
                     if (package.category.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       _chip(package.category, bg: white70),
@@ -970,8 +982,8 @@ class _PackageCard extends StatelessWidget {
           Text(package.description,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontSize: 13, height: 1.8, color: Color(0xFF3C4034))),
+              style: TextStyle(
+                  fontSize: 13, height: 1.8, color: onBody)),
           const SizedBox(height: 12),
           for (final h in habits)
             Padding(
@@ -990,20 +1002,20 @@ class _PackageCard extends StatelessWidget {
                     child: Text(h.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: _ink)),
+                            color: on)),
                   ),
                 ],
               ),
             ),
           if (remaining > 0)
             Text('... و $remaining عادت دیگر',
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF3C4034))),
+                    color: onBody)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 6,

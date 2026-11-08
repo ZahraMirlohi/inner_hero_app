@@ -1426,7 +1426,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
 
       final successPercent = (performance.successRate * 100).toInt();
-      final motivationalMessage = performance.getMotivationalMessage();
 
       final String widgetText = '''
 📊 عملکرد هفتگی عادت‌ها
@@ -1434,8 +1433,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 ✅ انجام شده: ${performance.completedHabits} از ${performance.totalHabits}
 📈 نرخ موفقیت: $successPercent%
 🔥 استریک: ${_currentStreak} روز
-━━━━━━━━━━━━━━━━━━━━
-$motivationalMessage
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
@@ -1528,8 +1525,6 @@ $motivationalMessage
 ━━━━━━━━━━━━━━━━━━━━
 ✅ انجام شده: ${data.completedItems} از ${data.totalItems}
 📈 نرخ موفقیت: $rate%
-━━━━━━━━━━━━━━━━━━━━
-${data.completionMessage}
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
@@ -2738,6 +2733,7 @@ ${data.completionMessage}
     if (isOwnMessage) menuItemCount++; // حذف برای من
     if (isOwnMessage && !message.isDeleted) menuItemCount++; // حذف برای همه
     menuItemCount++; // اشتراک‌گذاری
+    menuItemCount++; // انتخاب
 
     final double menuItemsHeight = menuItemCount * itemHeight + menuPadding;
     final double totalHeight = reactionsHeight + gap + menuItemsHeight;
@@ -2954,6 +2950,15 @@ ${data.completionMessage}
                         onTap: () {
                           _closeMenu();
                           _showDeleteOptionsDialog(message, primaryColor);
+                        },
+                        theme: theme,
+                      ),
+                      _buildPopupMenuItem(
+                        icon: Icons.check_circle_outline,
+                        label: 'انتخاب',
+                        onTap: () {
+                          _closeMenu();
+                          _enterSelectMode(message.id);
                         },
                         theme: theme,
                       ),
@@ -4654,9 +4659,9 @@ ${data.completionMessage}
                           }
                         }
                       },
-                      onLongPress: () {
+                      onLongPressStart: (d) {
                         if (!_isSelectMode) {
-                          _enterSelectMode(message.id);
+                          _showMessageActionsPopup(message, d.globalPosition);
                         }
                       },
                       child: AnimatedOpacity(
@@ -5724,7 +5729,20 @@ ${data.completionMessage}
 
     switch (message.type) {
       case MessageType.image:
-        return ClipRRect(
+        return GestureDetector(
+          onTap: () {
+            if (_isSelectMode) {
+              _toggleMessageSelection(message.id);
+            } else {
+              _openImageViewer(message.content);
+            }
+          },
+          onLongPressStart: (d) {
+            if (!_isSelectMode) {
+              _showMessageActionsPopup(message, d.globalPosition);
+            }
+          },
+          child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Image.network(
             message.content,
@@ -5754,6 +5772,7 @@ ${data.completionMessage}
               );
             },
           ),
+        ),
         );
 
       case MessageType.sticker:
@@ -5779,6 +5798,40 @@ ${data.completionMessage}
       default:
         return _buildLinkifiedText(message.content, isMe, theme, primaryColor);
     }
+  }
+
+  void _openImageViewer(String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 5,
+                  child: Center(child: Image.network(url)),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   bool _isContactMessage(String content) {

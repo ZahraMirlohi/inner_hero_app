@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:provider/provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/providers/theme_provider.dart';
@@ -35,7 +36,7 @@ class GroupRichSender {
     if (p == null) return null;
     final percent = (p.successRate * 100).toInt();
     return RichPayload(
-      '📊 عملکرد هفتگی عادت‌ها\n✅ انجام شده: ${p.completedHabits} از ${p.totalHabits}\n📈 نرخ موفقیت: $percent%\n${p.getMotivationalMessage()}',
+      '📊 عملکرد هفتگی عادت‌ها\n✅ انجام شده: ${p.completedHabits} از ${p.totalHabits}\n📈 نرخ موفقیت: $percent%',
       meta: {
         'type': 'weekly_performance',
         'userId': userId,
@@ -56,7 +57,7 @@ class GroupRichSender {
     if (d == null) return null;
     final j = Jalali.fromDateTime(d.date);
     return RichPayload(
-      '📋 لیست امروز (${j.day} ${_months[j.month - 1]})\n✅ انجام شده: ${d.completedItems} از ${d.totalItems}\n${d.completionMessage}',
+      '📋 لیست امروز (${j.day} ${_months[j.month - 1]})\n✅ انجام شده: ${d.completedItems} از ${d.totalItems}',
       meta: {
         'is_today_list_widget': true,
         'userId': userId,
@@ -121,13 +122,107 @@ class GroupRichSender {
     );
   }
 
-  /// انتخاب مخاطب با انتخابگر خود سیستم (بدون نیاز به مجوز)
-  static Future<RichPayload?> contact() async {
-    final c = await FlutterContacts.openExternalPick();
+  /// انتخاب مخاطب از دفترچه تلفن (با مجوز مخاطبین، همان رفتار چت هم‌مسیر)
+  static Future<RichPayload?> contact(BuildContext context) async {
+    if (!await FlutterContacts.requestPermission(readonly: true)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('برای ارسال شماره تماس به دسترسی مخاطبان نیاز است')));
+      }
+      return null;
+    }
+    final contacts = await FlutterContacts.getContacts(withProperties: true, withPhoto: false);
+    if (!context.mounted) return null;
+    if (contacts.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('مخاطبی در گوشی شما وجود ندارد')));
+      return null;
+    }
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    final c = await showModalBottomSheet<Contact>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: _ContactPickerSheet(contacts: contacts, theme: theme),
+      ),
+    );
     if (c == null) return null;
     final phone = c.phones.isNotEmpty ? c.phones.first.number : 'شماره موجود نیست';
-    return RichPayload(
-        '📞 شماره تماس\n👤 نام: ${c.displayName}\n📱 شماره: $phone');
+    return RichPayload('📞 شماره تماس\n👤 نام: ${c.displayName}\n📱 شماره: $phone');
+  }
+}
+
+class _ContactPickerSheet extends StatefulWidget {
+  final List<Contact> contacts;
+  final ThemeProvider theme;
+  const _ContactPickerSheet({required this.contacts, required this.theme});
+
+  @override
+  State<_ContactPickerSheet> createState() => _ContactPickerSheetState();
+}
+
+class _ContactPickerSheetState extends State<_ContactPickerSheet> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = widget.theme;
+    final list = widget.contacts
+        .where((c) =>
+            c.displayName.toLowerCase().contains(_q) ||
+            c.phones.any((p) => p.number.contains(_q)))
+        .toList();
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.75,
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+                color: theme.borderColor, borderRadius: BorderRadius.circular(3)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            child: TextField(
+              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'جستجو در مخاطبین...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: theme.backgroundColor,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: list.length,
+              itemBuilder: (_, i) {
+                final c = list[i];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: theme.primarySoft,
+                    child: Text(c.displayName.isEmpty ? '?' : c.displayName.characters.first,
+                        style: TextStyle(color: theme.textColor)),
+                  ),
+                  title: Text(c.displayName, style: TextStyle(color: theme.textColor)),
+                  subtitle: Text(c.phones.isNotEmpty ? c.phones.first.number : '',
+                      style: TextStyle(color: theme.textSecondaryColor)),
+                  onTap: () => Navigator.pop(context, c),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

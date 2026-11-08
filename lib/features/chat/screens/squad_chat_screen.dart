@@ -319,42 +319,89 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   // ==================== پیوست (چندتایی) ====================
   void _showAttachMenu(ThemeProvider theme, Color primaryColor) {
-    Widget item(IconData icon, String title, AttachKind kind) => ListTile(
-          leading: Icon(icon, color: primaryColor),
-          title: Text(title),
-          onTap: () {
-            Navigator.pop(context);
-            _sendAttachments(kind);
-          },
-        );
-    Widget rich(IconData icon, String title, VoidCallback run) => ListTile(
-          leading: Icon(icon, color: primaryColor),
-          title: Text(title),
-          onTap: () {
-            Navigator.pop(context);
-            run();
-          },
-        );
+    final items = <(IconData, String, Tone, VoidCallback)>[
+      (Icons.image_rounded, 'عکس', Tone.sky, () => _sendAttachments(AttachKind.image)),
+      (Icons.insert_drive_file_rounded, 'فایل', Tone.butter, () => _sendAttachments(AttachKind.file)),
+      (Icons.music_note_rounded, 'موزیک', Tone.lilac, () => _sendAttachments(AttachKind.music)),
+      (Icons.location_on_rounded, 'موقعیت', Tone.mint, _sendLocation),
+      (Icons.contact_phone_rounded, 'شماره تماس', Tone.peach, () => _sendRich(GroupRichSender.contact(context))),
+      (Icons.insights_rounded, 'گزارش هفتگی', Tone.rose, () => _sendRich(GroupRichSender.weekly(_userId!))),
+      (Icons.show_chart_rounded, 'پیشرفت', Tone.lime, () => _sendRich(GroupRichSender.progress(_userId!))),
+      (Icons.checklist_rounded, 'لیست امروز', Tone.apricot, () => _sendRich(GroupRichSender.todayList(_userId!))),
+    ];
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: theme.surfaceColor,
+      backgroundColor: theme.cardColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
-      builder: (_) => SafeArea(
-        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 8),
-          item(Icons.image, 'عکس (چندتایی)', AttachKind.image),
-          item(Icons.attach_file, 'فایل (چندتایی)', AttachKind.file),
-          item(Icons.music_note, 'موزیک (چندتایی)', AttachKind.music),
-          rich(Icons.location_on, 'موقعیت مکانی', _sendLocation),
-          rich(Icons.contact_phone, 'شماره تماس', () => _sendRich(GroupRichSender.contact())),
-          rich(Icons.insights, 'گزارش هفتگی', () => _sendRich(GroupRichSender.weekly(_userId!))),
-          rich(Icons.show_chart, 'نمودار پیشرفت', () => _sendRich(GroupRichSender.progress(_userId!))),
-          rich(Icons.checklist, 'لیست کارهای امروز', () => _sendRich(GroupRichSender.todayList(_userId!))),
-          const SizedBox(height: 8),
-        ])),
+      builder: (sheetCtx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: theme.borderColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text('ارسال',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor)),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 14),
+                  itemBuilder: (_, i) {
+                    final it = items[i];
+                    final t = theme.tone(it.$3);
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        Navigator.pop(sheetCtx);
+                        it.$4();
+                      },
+                      child: SizedBox(
+                        width: 72,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                  color: t.bg, shape: BoxShape.circle),
+                              child: Icon(it.$1, color: t.fg, size: 26),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(it.$2,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textColor)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -932,7 +979,6 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (!isMe) _buildAvatar(message, primaryColor, theme),
             Flexible(child: Container(
           margin: const EdgeInsets.only(bottom: 2),
           constraints: BoxConstraints(
@@ -1072,6 +1118,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             ],
           ),
         )),
+            if (!isMe) _buildAvatar(message, primaryColor, theme),
           ],
         ),
       ),
