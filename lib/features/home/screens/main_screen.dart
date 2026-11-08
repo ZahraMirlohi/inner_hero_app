@@ -1,6 +1,7 @@
 // lib/features/home/screens/main_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart'; // اضافه کنید
 import '../../../services/supabase_service.dart';
 import '../../arena/screens/arena_screen.dart';
@@ -20,6 +21,8 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  final List<int> _tabHistory = []; // برای دکمه‌ی بک: یک مرحله برگشت
+  DateTime? _lastBack;
 
   final ValueNotifier<int> _profileRefreshNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> _exploreRefreshNotifier = ValueNotifier<int>(0);
@@ -42,7 +45,32 @@ class _MainScreenState extends State<MainScreen> {
     // دریافت تم از Provider
     final theme = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (_tabHistory.isNotEmpty) {
+          setState(() => _currentIndex = _tabHistory.removeLast());
+          return;
+        }
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+          return;
+        }
+        // روی خانه: برای خروج دو بار بک
+        final now = DateTime.now();
+        if (_lastBack != null &&
+            now.difference(_lastBack!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+        } else {
+          _lastBack = now;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('برای خروج دوباره بزنید'),
+            duration: Duration(seconds: 2),
+          ));
+        }
+      },
+      child: Scaffold(
       // استفاده از رنگ پس‌زمینه تم به جای رنگ هاردکد شده
       backgroundColor:
           (_currentIndex == 0 || _currentIndex == 3)
@@ -76,6 +104,10 @@ class _MainScreenState extends State<MainScreen> {
                 currentIndex: _currentIndex,
                 onTap: (index) {
                   setState(() {
+                    if (index != _currentIndex) {
+                      _tabHistory.add(_currentIndex);
+                      if (_tabHistory.length > 10) _tabHistory.removeAt(0);
+                    }
                     _currentIndex = index;
                   });
 
@@ -92,6 +124,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

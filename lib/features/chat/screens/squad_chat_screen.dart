@@ -14,6 +14,8 @@ import '../models/conversation_model.dart';
 import '/services/chat_upload_service.dart';
 import '../widgets/message_actions_menu.dart';
 import '../widgets/file_message_widget.dart';
+import '../widgets/group_rich_messages.dart';
+import 'location_picker_screen.dart';
 
 class SquadChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -49,6 +51,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   StreamSubscription<List<ChatMessage>>? _msgSub;
   final Map<String, GlobalKey> _messageKeys = {};
   String? _highlightedId;
+  // واکنش‌ها جدا از پیام‌ها نگهداری می‌شوند تا با هر به‌روزرسانی استریم گم نشوند
+  Map<String, List<MessageReaction>> _reactions = {};
+  RealtimeChannel? _reactionChannel;
+  Timer? _reactionDebounce;
+  ChatMessage? _menuMessage;
+  Offset? _menuPosition;
+  final GlobalKey _stackKey = GlobalKey();
+  final List<String> _menuReactions = ['❤️', '🔥', '💪', '🎉', '😂', '😍', '🙏', '👍'];
 
   bool get _reactionsEnabled => _settings['reactions_enabled'] != false;
   bool get _adminsOnlyPosting => _settings['posting_mode'] == 'admins';
@@ -94,6 +104,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   void dispose() {
     _membersRev.dispose();
     _msgSub?.cancel();
+    _reactionDebounce?.cancel();
+    if (_reactionChannel != null) _chatService.client.removeChannel(_reactionChannel!);
     _tabController.dispose();
     _messageController.dispose();
     _scrollController.dispose();
@@ -205,10 +217,36 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         setState(() {
           _messages = newMessages.reversed.toList();
         });
-        if (grew) _scrollToBottom();
+        if (grew) {
+          _scrollToBottom();
+          _loadReactions();
+        }
       }
     });
+    _loadReactions();
+    // واکنش‌های بقیه‌ی اعضا به‌صورت زنده
+    _reactionChannel = _chatService.client
+        .channel('reactions_${widget.conversation.id}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'message_reactions',
+          callback: (_) {
+            _reactionDebounce?.cancel();
+            _reactionDebounce =
+                Timer(const Duration(milliseconds: 300), _loadReactions);
+          },
+        )
+        .subscribe();
   }
+
+  Future<void> _loadReactions() async {
+    final r = await _chatService.getConversationReactions(widget.conversation.id);
+    if (mounted) setState(() => _reactions = r);
+  }
+
+  List<MessageReaction> _reactionsOf(ChatMessage m) =>
+      _reactions[m.id] ?? m.reactions ?? const [];
 
   void _scrollToBottom() {
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -287,22 +325,55 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             _sendAttachments(kind);
           },
         );
+    Widget rich(IconData icon, String title, VoidCallback run) => ListTile(
+          leading: Icon(icon, color: primaryColor),
+          title: Text(title),
+          onTap: () {
+            Navigator.pop(context);
+            run();
+          },
+        );
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: theme.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox(height: 8),
           item(Icons.image, 'عکس (چندتایی)', AttachKind.image),
           item(Icons.attach_file, 'فایل (چندتایی)', AttachKind.file),
           item(Icons.music_note, 'موزیک (چندتایی)', AttachKind.music),
+          rich(Icons.location_on, 'موقعیت مکانی', _sendLocation),
+          rich(Icons.contact_phone, 'شماره تماس', () => _sendRich(GroupRichSender.contact())),
+          rich(Icons.insights, 'گزارش هفتگی', () => _sendRich(GroupRichSender.weekly(_userId!))),
+          rich(Icons.show_chart, 'نمودار پیشرفت', () => _sendRich(GroupRichSender.progress(_userId!))),
+          rich(Icons.checklist, 'لیست کارهای امروز', () => _sendRich(GroupRichSender.todayList(_userId!))),
           const SizedBox(height: 8),
-        ]),
+        ])),
       ),
     );
+  }
+
+  Future<void> _sendLocation() async {
+    final t = await Navigator.push<String>(
+        context, MaterialPageRoute(builder: (_) => const LocationPickerScreen()));
+    if (t != null && t.isNotEmpty) _sendMessage(text: t);
+  }
+
+  Future<void> _sendRich(Future<RichPayload?> f) async {
+    try {
+      final p = await f;
+      if (p == null) {
+        _snack('داده‌ای برای ارسال وجود ندارد');
+        return;
+      }
+      await _sendMessage(text: p.text, type: p.type, metadata: p.meta);
+    } catch (e) {
+      _snack('ارسال ناموفق بود', error: true);
+    }
   }
 
   Future<void> _sendAttachments(AttachKind kind) async {
@@ -701,12 +772,20 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       _snack('ادمین واکنش‌ها را غیرفعال کرده است');
       return;
     }
+    final list = List<MessageReaction>.from(_reactionsOf(message));
+    final mine = list.indexWhere((r) => r.userId == _userId);
+    final same = mine != -1 && list[mine].emoji == emoji;
+    if (mine != -1) list.removeAt(mine);
+    if (!same) {
+      list.add(MessageReaction(
+          userId: _userId!, emoji: emoji, userName: _myName, createdAt: DateTime.now()));
+    }
+    setState(() => _reactions = {..._reactions, message.id: list});
     _chatService
         .toggleReaction(messageId: message.id, userId: _userId!, emoji: emoji)
-        .then((_) {
-      setState(() {});
-    }).catchError((e) {
-      print('❌ Error toggling reaction: $e');
+        .catchError((e) {
+      _snack('ثبت واکنش ناموفق بود', error: true);
+      _loadReactions();
     });
   }
 
@@ -845,10 +924,16 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final Color textColor = isMe ? const Color(0xFF090909) : theme.textColor;
 
     return GestureDetector(
-      onLongPress: () => _showMessageActions(message, theme, primaryColor),
+      onTapUp: (d) => _openMenu(message, d.globalPosition),
+      onLongPressStart: (d) => _openMenu(message, d.globalPosition),
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!isMe) _buildAvatar(message, primaryColor, theme),
+            Flexible(child: Container(
           margin: const EdgeInsets.only(bottom: 2),
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.72,
@@ -957,38 +1042,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ],
                 ),
               ),
-              if (message.reactions != null && message.reactions!.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(top: 2),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor, // ✅
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: theme.isDarkMode ? 0.3 : 0.05,
-                        ),
-                        blurRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: message.reactions!.map((reaction) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: Text(
-                          reaction.emoji,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
+              _buildReactionChips(message, theme, primaryColor),
               Padding(
                 padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
                 child: Row(
@@ -1003,23 +1057,262 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                     if (isMe) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        Icons.check,
-                        size: 12,
-                        color: theme.textSecondaryColor,
-                      ),
+                      _buildStatusIcon(message.status),
                     ],
                   ],
                 ),
               ),
             ],
           ),
+        )),
+          ],
         ),
       ),
     );
   }
 
+  // تیک وضعیت مثل چت هم‌مسیر
+  Widget _buildStatusIcon(MessageStatus status) {
+    switch (status) {
+      case MessageStatus.sending:
+        return SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(
+              strokeWidth: 1.2, color: Colors.grey.shade500),
+        );
+      case MessageStatus.failed:
+        return const Icon(Icons.error_outline, size: 14, color: Colors.red);
+      case MessageStatus.seen:
+        return const Icon(Icons.done_all, size: 14, color: Color(0xFF4FC3F7));
+      default:
+        return Icon(Icons.done_all, size: 14, color: Colors.grey.shade500);
+    }
+  }
+
+  Widget _buildAvatar(ChatMessage m, Color primaryColor, ThemeProvider theme) {
+    final member = _members.cast<Map<String, dynamic>?>().firstWhere(
+        (x) => x?['user_id'] == m.senderId,
+        orElse: () => null);
+    final url = (member?['avatar'] as String?)?.isNotEmpty == true
+        ? member!['avatar'] as String
+        : m.senderAvatar;
+    final name = m.senderName ?? 'کاربر';
+    return Padding(
+      padding: const EdgeInsets.only(right: 6, bottom: 18),
+      child: CircleAvatar(
+        radius: 14,
+        backgroundColor: primaryColor.withValues(alpha: 0.2),
+        backgroundImage:
+            (url != null && url.isNotEmpty) ? NetworkImage(url) : null,
+        child: (url != null && url.isNotEmpty)
+            ? null
+            : Text(name.isEmpty ? '?' : name.characters.first,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  // ==================== منوی شناور ====================
+  void _openMenu(ChatMessage m, Offset global) {
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    final local = box != null ? box.globalToLocal(global) : global;
+    setState(() {
+      _menuMessage = m;
+      _menuPosition = local;
+    });
+  }
+
+  void _closeMenu() => setState(() {
+        _menuMessage = null;
+        _menuPosition = null;
+      });
+
+  Widget _menuItem(IconData icon, String label, VoidCallback onTap,
+      ThemeProvider theme,
+      {Color? color}) {
+    final c = color ?? (theme.isDarkMode ? Colors.white : Colors.grey.shade800);
+    return InkWell(
+      onTap: () {
+        _closeMenu();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        child: Row(children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: c.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: c),
+          ),
+          const SizedBox(width: 10),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w500, color: c)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildPopup(ThemeProvider theme, Color primaryColor) {
+    final m = _menuMessage;
+    final pos = _menuPosition;
+    if (m == null || pos == null) return const SizedBox.shrink();
+    final box = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    final size = box?.size ?? MediaQuery.of(context).size;
+    const w = 210.0;
+    final own = m.isFromMe;
+    final items = <Widget>[
+      _menuItem(Icons.reply, 'پاسخ', () => _setReplyTo(m), theme),
+      if (own && m.canBeEdited)
+        _menuItem(Icons.edit, 'ویرایش', () => _editMessage(m, primaryColor), theme),
+      _menuItem(Icons.copy, 'کپی', () => _copyMessage(m), theme),
+      if (own)
+        _menuItem(Icons.delete_outline, 'حذف برای من',
+            () => _deleteMessageForMe(m), theme,
+            color: Colors.red),
+      if (own || _isAdmin)
+        _menuItem(Icons.delete_forever, 'حذف برای همه',
+            () => _deleteMessageForEveryone(m), theme,
+            color: Colors.red),
+    ];
+    final totalH = 44 + 4 + items.length * 40 + 6.0;
+    final left = (pos.dx - w / 2).clamp(8.0, (size.width - w - 8).clamp(8.0, 9999.0));
+    final top = (pos.dy - totalH / 2).clamp(8.0, (size.height - totalH - 8).clamp(8.0, 9999.0));
+    final shadows = [
+      BoxShadow(
+          color: Colors.black.withValues(alpha: theme.isDarkMode ? 0.6 : 0.2),
+          blurRadius: 20,
+          spreadRadius: 2,
+          offset: const Offset(0, 6)),
+    ];
+    BoxDecoration deco() => BoxDecoration(
+          color: theme.surfaceColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: theme.isDarkMode ? theme.borderColor : Colors.grey.shade200),
+          boxShadow: shadows,
+        );
+    final mine = _reactionsOf(m).where((r) => r.userId == _userId).map((r) => r.emoji).toSet();
+    return Positioned(
+      left: left,
+      top: top,
+      child: Material(
+        color: Colors.transparent,
+        child: SizedBox(
+          width: w,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_reactionsEnabled)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: deco(),
+                child: SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final e in _menuReactions)
+                        GestureDetector(
+                          onTap: () {
+                            _closeMenu();
+                            _toggleReaction(m, e);
+                          },
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                            decoration: BoxDecoration(
+                              color: mine.contains(e)
+                                  ? primaryColor.withValues(alpha: 0.2)
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: mine.contains(e)
+                                  ? Border.all(color: primaryColor, width: 1.5)
+                                  : null,
+                            ),
+                            child: Center(
+                                child: Text(e, style: const TextStyle(fontSize: 20))),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              decoration: deco(),
+              child: Column(mainAxisSize: MainAxisSize.min, children: items),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReactionChips(ChatMessage m, ThemeProvider theme, Color primaryColor) {
+    final list = _reactionsOf(m);
+    if (list.isEmpty) return const SizedBox.shrink();
+    final counts = <String, int>{};
+    for (final r in list) {
+      counts[r.emoji] = (counts[r.emoji] ?? 0) + 1;
+    }
+    final mine = list.where((r) => r.userId == _userId).map((r) => r.emoji).toSet();
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Wrap(
+        spacing: 3,
+        children: [
+          for (final e in counts.entries)
+            GestureDetector(
+              onTap: () => _toggleReaction(m, e.key),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  border: mine.contains(e.key)
+                      ? Border.all(color: primaryColor, width: 1.5)
+                      : null,
+                  borderRadius: BorderRadius.circular(14),
+                  color: theme.isDarkMode
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : Colors.white.withValues(alpha: 0.9),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.08),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1)),
+                  ],
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(e.key, style: const TextStyle(fontSize: 15)),
+                  if (e.value > 1) ...[
+                    const SizedBox(width: 2),
+                    Text('${e.value}',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: theme.textSecondaryColor)),
+                  ],
+                ]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSquadContent(ChatMessage m, bool isMe, Color textColor) {
+    final rich = GroupRichContent.build(
+        context, m, isMe, Provider.of<ThemeProvider>(context, listen: false));
+    if (rich != null) return rich;
     final md = m.metadata;
     if (md != null && md['file_url'] != null) {
       var t = md['type'] as String? ?? 'file';
@@ -1249,11 +1542,15 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _messageController,
+                      builder: (context, value, _) {
+                        final empty = value.text.trim().isEmpty;
+                        return Container(
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: _isSending || _messageController.text.isEmpty
+                        color: _isSending || empty
                             ? (theme.isDarkMode
                                 ? const Color(0xFF2A2A2A)
                                 : Colors.grey.shade300)
@@ -1263,7 +1560,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         onPressed:
-                            (_isSending || _messageController.text.isEmpty)
+                            (_isSending || empty)
                                 ? null
                                 : () => _sendMessage(),
                         icon: _isSending
@@ -1281,6 +1578,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                                 size: 20,
                               ),
                       ),
+                    );
+                      },
                     ),
                   ],
                 ),
@@ -2326,7 +2625,23 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       appBar: _buildAppBar(theme, primaryColor),
       body: Column(
         children: [
-          Expanded(child: _buildChatTab(theme, primaryColor)),
+          Expanded(
+            child: Stack(
+              key: _stackKey,
+              children: [
+                _buildChatTab(theme, primaryColor),
+                if (_menuMessage != null)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _closeMenu,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                _buildPopup(theme, primaryColor),
+              ],
+            ),
+          ),
         ],
       ),
     );

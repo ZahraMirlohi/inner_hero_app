@@ -4454,24 +4454,11 @@ ${data.completionMessage}
   }
 
   void _copyMessage(ChatMessage message) {
-    final String appLink = 'https://innerhero.app/download';
-    final String appName = 'قهرمان درون';
-
-    final String copyText = '''
-${message.content}
-
-━━━━━━━━━━━━━━━━━━━━
-📱 ارسال شده از اپلیکیشن $appName
-🔗 دانلود اپلیکیشن: $appLink
-━━━━━━━━━━━━━━━━━━━━
-''';
-
-    Clipboard.setData(ClipboardData(text: copyText));
-
+    Clipboard.setData(ClipboardData(text: message.content));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('متن با لینک دانلود کپی شد 📋'),
-        duration: Duration(seconds: 2),
+        content: Text('متن کپی شد'),
+        duration: Duration(seconds: 1),
       ),
     );
   }

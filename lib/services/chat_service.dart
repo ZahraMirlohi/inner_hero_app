@@ -54,11 +54,16 @@ class ChatService {
       final activeConversationIds =
           activeConversationsResponse.map((c) => c['id'] as String).toList();
 
-      // مرحله 3: گرفتن همه اعضای این گفتگوها با یک کوئری
-      final allMembersResponse = await _client
+      // مرحله 3: اعضا + آخرین پیام + خوانده‌نشده‌ها به‌صورت موازی
+      final membersF = _client
           .from('conversation_members')
           .select('conversation_id, user_id')
           .inFilter('conversation_id', activeConversationIds);
+      final lastF = _lastMessages(activeConversationIds);
+      final unreadF = _unreadCounts(activeConversationIds, userId);
+      final allMembersResponse = await membersF;
+      final lastMessageByConv = await lastF;
+      final unreadByConv = await unreadF;
 
       final Map<String, List<String>> membersByConv = {};
       for (var m in allMembersResponse) {
@@ -67,54 +72,23 @@ class ChatService {
         membersByConv.putIfAbsent(convId, () => []).add(uid);
       }
 
-      // مرحله 4: گرفتن همه پروفایل‌های اعضا با یک کوئری
-      final allMemberIds = allMembersResponse
-          .map((m) => m['user_id'] as String)
-          .toSet()
-          .toList();
-
-      final profilesResponse = await _client
-          .from('profiles')
-          .select('user_id, name, avatar_url, updated_at, last_seen_at')
-          .inFilter('user_id', allMemberIds);
+      // مرحله 4: پروفایل فقط برای گفتگوهای هم‌مسیر (گروه‌ها به پروفایل اعضا نیاز ندارند)
+      final buddyIds = <String>{};
+      for (final c in activeConversationsResponse) {
+        if ((c['type'] ?? 'buddy') == 'buddy') {
+          buddyIds.addAll(membersByConv[c['id']] ?? const <String>[]);
+        }
+      }
+      final profilesResponse = buddyIds.isEmpty
+          ? <Map<String, dynamic>>[]
+          : await _client
+              .from('profiles')
+              .select('user_id, name, avatar_url, updated_at, last_seen_at')
+              .inFilter('user_id', buddyIds.toList());
 
       final Map<String, Map<String, dynamic>> profilesMap = {
         for (var p in profilesResponse) p['user_id'] as String: p,
       };
-
-      // مرحله 5: گرفتن آخرین پیام هر گفتگو با یک کوئری
-      final lastMessagesResponse = await _client
-          .from('messages')
-          .select('conversation_id, content, created_at, sender_id')
-          .inFilter('conversation_id', activeConversationIds)
-          .eq('is_deleted', false)
-          .order('created_at', ascending: false);
-
-      final Map<String, Map<String, dynamic>> lastMessageByConv = {};
-      for (var msg in lastMessagesResponse) {
-        final convId = msg['conversation_id'] as String;
-        if (!lastMessageByConv.containsKey(convId)) {
-          lastMessageByConv[convId] = msg;
-        }
-      }
-
-      // پیام‌های خوانده‌نشده (فقط گفتگوی هم‌مسیر؛ status فقط یک مقدار مشترک است)
-      final Map<String, int> unreadByConv = {};
-      try {
-        final unreadRows = await _client
-            .from('messages')
-            .select('conversation_id')
-            .inFilter('conversation_id', activeConversationIds)
-            .neq('sender_id', userId)
-            .neq('status', 'seen')
-            .eq('is_deleted', false);
-        for (final r in unreadRows) {
-          final id = r['conversation_id'] as String;
-          unreadByConv[id] = (unreadByConv[id] ?? 0) + 1;
-        }
-      } catch (e) {
-        print('unread count error: $e');
-      }
 
       // مرحله 6: ساخت لیست نهایی
       final List<Conversation> conversations = [];
@@ -175,7 +149,9 @@ class ChatService {
         DateTime lastMessageAt = DateTime.now();
 
         if (lastMsg != null) {
-          lastMessage = lastMsg['content'] as String? ?? 'شروع گفتگو';
+          lastMessage = lastMsg['type'] == 'image'
+              ? '📷 عکس'
+              : (lastMsg['content'] as String? ?? 'شروع گفتگو');
           lastMessageAt = DateTime.tryParse(lastMsg['created_at'] as String) ??
               DateTime.now();
         }
@@ -220,6 +196,57 @@ class ChatService {
       print('Error getting conversations: $e');
       return [];
     }
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _lastMessages(List<String> ids) async {
+    final out = <String, Map<String, dynamic>>{};
+    try {
+      final rows = await _client.rpc('chat_last_messages', params: {'p_conv_ids': ids});
+      for (final r in rows as List) {
+        out[r['conversation_id'] as String] = Map<String, dynamic>.from(r);
+      }
+      return out;
+    } catch (e) {
+      // sql/11 اجرا نشده: روش قدیمی ولی محدود
+      print('chat_last_messages rpc unavailable: $e');
+      final rows = await _client
+          .from('messages')
+          .select('conversation_id, content, created_at, sender_id, type')
+          .inFilter('conversation_id', ids)
+          .eq('is_deleted', false)
+          .order('created_at', ascending: false)
+          .limit(300);
+      for (final r in rows) {
+        out.putIfAbsent(r['conversation_id'] as String, () => r);
+      }
+      return out;
+    }
+  }
+
+  Future<Map<String, int>> _unreadCounts(List<String> ids, String userId) async {
+    final out = <String, int>{};
+    try {
+      final rows = await _client.rpc('chat_unread_counts', params: {'p_conv_ids': ids});
+      for (final r in rows as List) {
+        out[r['conversation_id'] as String] = (r['unread'] as num).toInt();
+      }
+    } catch (e) {
+      try {
+        final rows = await _client
+            .from('messages')
+            .select('conversation_id')
+            .inFilter('conversation_id', ids)
+            .neq('sender_id', userId)
+            .neq('status', 'seen')
+            .eq('is_deleted', false)
+            .limit(500);
+        for (final r in rows) {
+          final id = r['conversation_id'] as String;
+          out[id] = (out[id] ?? 0) + 1;
+        }
+      } catch (_) {}
+    }
+    return out;
   }
 
   Future<void> deleteConversation(String conversationId) async {
@@ -566,9 +593,9 @@ class ChatService {
           .from('messages')
           .stream(primaryKey: ['id'])
           .eq('conversation_id', conversationId)
+          .order('created_at', ascending: false)
+          .limit(200)
           .map((data) {
-        print('[STREAM] Received ${data.length} messages from Realtime');
-
         final List<ChatMessage> messages = [];
         for (var item in data) {
           final convId = item['conversation_id'] as String?;
@@ -576,9 +603,6 @@ class ChatService {
             final msg = ChatMessage.fromMap(item);
             if (userId == null || !msg.hiddenFor.contains(userId)) {
               messages.add(msg);
-              print(
-                '[STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
-              );
             }
           }
         }
@@ -806,21 +830,36 @@ class ChatService {
     String conversationId,
   ) async {
     try {
-      // 1. دریافت همه پیام‌های گفتگو
-      final messages = await _client
-          .from('messages')
-          .select('id')
-          .eq('conversation_id', conversationId);
+      // یک کوئری با join به‌جای دو مرحله
+      final List<Map<String, dynamic>> response;
+      try {
+        response = List<Map<String, dynamic>>.from(await _client
+            .from('message_reactions')
+            .select('*, messages!inner(conversation_id)')
+            .eq('messages.conversation_id', conversationId));
+      } catch (_) {
+        final messages = await _client
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId);
+        if (messages.isEmpty) return {};
+        final messageIds = messages.map((m) => m['id'] as String).toList();
+        final r = await _client
+            .from('message_reactions')
+            .select()
+            .inFilter('message_id', messageIds);
+        return _groupReactionRows(List<Map<String, dynamic>>.from(r));
+      }
+      return _groupReactionRows(response);
+    } catch (e) {
+      print('Error getting conversation reactions: $e');
+      return {};
+    }
+  }
 
-      if (messages.isEmpty) return {};
-
-      final messageIds = messages.map((m) => m['id'] as String).toList();
-
-      // 2. دریافت واکنش‌های این پیام‌ها
-      final response = await _client
-          .from('message_reactions')
-          .select()
-          .inFilter('message_id', messageIds);
+  Future<Map<String, List<MessageReaction>>> _groupReactionRows(
+      List<Map<String, dynamic>> response) async {
+    try {
 
       if (response.isEmpty) return {};
 

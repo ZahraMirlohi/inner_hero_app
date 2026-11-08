@@ -58,8 +58,10 @@ class QuestCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CardImage(url: quest.imageUrl, height: 170, showWhole: true),
-            Padding(
+            _withImage(
+              context,
+              quest.imageUrl,
+              Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,8 +160,32 @@ class QuestCard extends StatelessWidget {
                 ],
               ),
             ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  // تصویر در سمت چپ کارت و تمام ارتفاع آن؛ اطلاعات سمت راست (کراپ کناره‌ها اشکال ندارد)
+  Widget _withImage(BuildContext context, String? url, Widget info) {
+    if (!CardImage.has(url)) return info;
+    final dir = Directionality.of(context);
+    return IntrinsicHeight(
+      child: Row(
+        textDirection: TextDirection.ltr,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Image.network(
+              url!.trim(),
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => const SizedBox.shrink(),
+            ),
+          ),
+          Expanded(child: Directionality(textDirection: dir, child: info)),
+        ],
       ),
     );
   }
