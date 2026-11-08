@@ -107,6 +107,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             .eq('is_active', true)
             .order('activity_date', ascending: false);
 
+        _maxXpInDay = 0;
+        for (final d in activityResponse) {
+          final xp = (d['xp_earned'] as num?)?.toInt() ?? 0;
+          if (xp > _maxXpInDay) _maxXpInDay = xp;
+        }
         if (activityResponse.isNotEmpty) {
           _activeDays = activityResponse
               .map((d) => DateTime.parse(d['activity_date']))
@@ -122,6 +127,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       await _calculateBestStreak();
       await _calculateSuccessData();
+      await _calculateHabitRates();
+      await _calculateToday();
 
       if (mounted) {
         setState(() {
@@ -187,6 +194,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         int streak = 0;
         DateTime checkDate = DateTime.now();
+        // اگر امروز هنوز انجام نشده، استریک از دیروز حساب می‌شود (فقط با یک روز کامل خالی می‌شکند)
+        final latest = sortedDates.first;
+        final yesterday = checkDate.subtract(const Duration(days: 1));
+        if (!(latest.year == checkDate.year &&
+            latest.month == checkDate.month &&
+            latest.day == checkDate.day)) {
+          checkDate = yesterday;
+        }
 
         for (var date in sortedDates) {
           if (date.year == checkDate.year &&

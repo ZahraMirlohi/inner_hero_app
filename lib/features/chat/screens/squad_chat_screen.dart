@@ -58,6 +58,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   Map<String, List<MessageReaction>> _reactions = {};
   RealtimeChannel? _reactionChannel;
   bool _streamReady = false;
+  final Set<String> _selectedIds = {};
   Timer? _reactionDebounce;
   ChatMessage? _menuMessage;
   Offset? _menuPosition;
@@ -992,8 +993,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final Color textColor = theme.textColor;
 
     return GestureDetector(
-      onTapUp: (d) => _openMenu(message, d.globalPosition),
-      onLongPressStart: (d) => _openMenu(message, d.globalPosition),
+      onTapUp: (d) => _selectedIds.isNotEmpty
+          ? _toggleSelect(message.id)
+          : _openMenu(message, d.globalPosition),
+      onLongPressStart: (d) => _selectedIds.isNotEmpty
+          ? _toggleSelect(message.id)
+          : _openMenu(message, d.globalPosition),
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Row(
@@ -1079,7 +1084,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ),
                   border: _highlightedId == message.id
                       ? Border.all(color: const Color(0xFFFF6B00), width: 3)
-                      : null,
+                      : _selectedIds.contains(message.id)
+                          ? Border.all(color: primaryColor, width: 2.5)
+                          : null,
                   boxShadow: [
                     if (!isMe)
                       BoxShadow(
@@ -1201,6 +1208,32 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     });
   }
 
+  void _toggleSelect(String id) => setState(() {
+        if (!_selectedIds.remove(id)) _selectedIds.add(id);
+      });
+
+  void _copySelected() {
+    final texts = _messages
+        .where((m) => _selectedIds.contains(m.id) && !m.isDeleted)
+        .map((m) => m.content)
+        .join('\n');
+    Clipboard.setData(ClipboardData(text: texts));
+    setState(_selectedIds.clear);
+    _snack('متن کپی شد');
+  }
+
+  void _deleteSelectedForMe() {
+    for (final id in _selectedIds) {
+      _chatService
+          .deleteMessageForMe(id, _userId!)
+          .catchError((e) => _snack('حذف ناموفق بود', error: true));
+    }
+    setState(() {
+      _messages.removeWhere((m) => _selectedIds.contains(m.id));
+      _selectedIds.clear();
+    });
+  }
+
   void _closeMenu() => setState(() {
         _menuMessage = null;
         _menuPosition = null;
@@ -1250,6 +1283,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       if (own && m.canBeEdited)
         _menuItem(Icons.edit, 'ویرایش', () => _editMessage(m, primaryColor), theme),
       _menuItem(Icons.copy, 'کپی', () => _copyMessage(m), theme),
+      _menuItem(Icons.check_circle_outline, 'انتخاب',
+          () => setState(() => _selectedIds.add(m.id)), theme),
       if (own)
         _menuItem(Icons.delete_outline, 'حذف برای من',
             () => _deleteMessageForMe(m), theme,
@@ -2764,6 +2799,27 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           ),
         );
     final tone = theme.tone(Tone.mint);
+
+    if (_selectedIds.isNotEmpty) {
+      return AppBar(
+        backgroundColor: theme.backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: theme.textColor,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => setState(_selectedIds.clear),
+        ),
+        title: Text('${_selectedIds.length} پیام انتخاب شده',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(icon: const Icon(Icons.copy), onPressed: _copySelected),
+          IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: _deleteSelectedForMe),
+        ],
+      );
+    }
 
     return AppBar(
       automaticallyImplyLeading: false,
