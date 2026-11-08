@@ -9,6 +9,7 @@ import '/services/chat_service.dart';
 import '/services/buddy_matcher_service.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/core/app_palette.dart';
 import '../models/message_model.dart';
 import '../models/conversation_model.dart';
 import '/services/chat_upload_service.dart';
@@ -915,13 +916,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     }
 
     // ✅ رنگ‌های حباب
-    final Color myBubbleColor =
-        theme.isDarkMode ? theme.primaryColor : theme.primaryLight;
-    final Color otherBubbleColor =
-        theme.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color myBubbleColor = theme.primarySoft;
+    final Color otherBubbleColor = theme.cardColor;
 
     final Color bubbleColor = isMe ? myBubbleColor : otherBubbleColor;
-    final Color textColor = isMe ? const Color(0xFF090909) : theme.textColor;
+    final Color textColor = theme.textColor;
 
     return GestureDetector(
       onTapUp: (d) => _openMenu(message, d.globalPosition),
@@ -995,8 +994,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                 ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 6,
+                  horizontal: 14,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
                   color: _highlightedId == message.id
@@ -1004,16 +1003,23 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                           const Color(0xFFFF6B00).withValues(alpha: 0.3),
                           bubbleColor)
                       : bubbleColor,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(22),
+                    topRight: const Radius.circular(22),
+                    bottomLeft: Radius.circular(isMe ? 22 : 6),
+                    bottomRight: Radius.circular(isMe ? 6 : 22),
+                  ),
                   border: _highlightedId == message.id
                       ? Border.all(color: const Color(0xFFFF6B00), width: 3)
                       : null,
                   boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
+                    if (!isMe)
+                      BoxShadow(
+                        color: Colors.black
+                            .withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 3),
+                      ),
                     if (_highlightedId == message.id)
                       BoxShadow(
                         color: const Color(0xFFFF6B00).withValues(alpha: 0.6),
@@ -1351,7 +1357,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     }
     return Text(
       m.content,
-      style: TextStyle(color: textColor, fontSize: 13, height: 1.4),
+      style: TextStyle(color: textColor, fontSize: 14, height: 1.8),
     );
   }
 
@@ -1456,6 +1462,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         ),
       );
     }
+    final shadow = [
+      BoxShadow(
+        color: Colors.black.withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
+        blurRadius: 12,
+        offset: const Offset(0, 3),
+      ),
+    ];
     return SafeArea(
       top: false,
       child: Column(
@@ -1463,81 +1476,79 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         children: [
           if (_showStickerPicker) _buildStickerPicker(theme),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.surfaceColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            color: theme.backgroundColor,
             child: Column(
               children: [
                 _buildReplyPreview(theme, primaryColor),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _showStickerPicker = !_showStickerPicker;
-                        });
-                      },
-                      icon: Icon(
-                        _showStickerPicker
-                            ? Icons.keyboard
-                            : Icons.emoji_emotions_outlined,
-                        color: _showStickerPicker
-                            ? primaryColor
-                            : theme.textSecondaryColor,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      onPressed: _isSending
+                    InkWell(
+                      onTap: _isSending
                           ? null
                           : () => _showAttachMenu(theme, primaryColor),
-                      icon: Icon(
-                        Icons.attach_file,
-                        color: theme.textSecondaryColor,
+                      customBorder: const CircleBorder(),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          shape: BoxShape.circle,
+                          boxShadow: shadow,
+                        ),
+                        child: Icon(Icons.attach_file,
+                            size: 22, color: theme.textColor),
                       ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Container(
+                        constraints: const BoxConstraints(minHeight: 52),
                         decoration: BoxDecoration(
-                          // ✅ ورودی متن با تم هماهنگ
-                          color: theme.isDarkMode
-                              ? const Color(0xFF2A2A2A)
-                              : primaryColor.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(24),
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: shadow,
                         ),
-                        child: TextField(
-                          controller: _messageController,
-                          focusNode: _focusNode,
-                          style: TextStyle(color: theme.textColor),
-                          decoration: InputDecoration(
-                            hintText: 'پیام خود را بنویسید...',
-                            hintStyle: TextStyle(
-                              fontSize: 14,
-                              color: theme.textSecondaryColor,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _messageController,
+                                focusNode: _focusNode,
+                                style: TextStyle(
+                                    color: theme.textColor, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: 'پیام خود را بنویسید...',
+                                  hintStyle: TextStyle(
+                                    fontSize: 14,
+                                    color: theme.textSecondaryColor,
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 14,
+                                  ),
+                                ),
+                                textInputAction: TextInputAction.newline,
+                                keyboardType: TextInputType.multiline,
+                                maxLines: 4,
+                                minLines: 1,
+                              ),
                             ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
+                            IconButton(
+                              onPressed: () => setState(
+                                  () => _showStickerPicker = !_showStickerPicker),
+                              icon: Icon(
+                                _showStickerPicker
+                                    ? Icons.keyboard
+                                    : Icons.emoji_emotions_outlined,
+                                color: _showStickerPicker
+                                    ? primaryColor
+                                    : theme.textSecondaryColor,
+                              ),
                             ),
-                          ),
-                          textInputAction: TextInputAction.newline,
-                          keyboardType: TextInputType.multiline,
-                          maxLines: 4,
-                          minLines: 1,
+                          ],
                         ),
                       ),
                     ),
@@ -1545,40 +1556,34 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ValueListenableBuilder<TextEditingValue>(
                       valueListenable: _messageController,
                       builder: (context, value, _) {
-                        final empty = value.text.trim().isEmpty;
-                        return Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: _isSending || empty
-                            ? (theme.isDarkMode
-                                ? const Color(0xFF2A2A2A)
-                                : Colors.grey.shade300)
-                            : primaryColor,
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        onPressed:
-                            (_isSending || empty)
-                                ? null
-                                : () => _sendMessage(),
-                        icon: _isSending
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.send,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                      ),
-                    );
+                        final disabled = _isSending || value.text.trim().isEmpty;
+                        return InkWell(
+                          onTap: disabled ? null : () => _sendMessage(),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: disabled
+                                  ? theme.disabledButtonBackground
+                                  : primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: _isSending
+                                ? Padding(
+                                    padding: const EdgeInsets.all(15),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: theme.onPrimaryColor,
+                                    ),
+                                  )
+                                : Icon(Icons.send_rounded,
+                                    size: 22,
+                                    color: disabled
+                                        ? theme.textSecondaryColor
+                                        : theme.onPrimaryColor),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -2653,61 +2658,85 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   ) {
     final memberCount = _members.length;
 
+    Widget circ(IconData icon, VoidCallback onTap) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black
+                        .withValues(alpha: theme.isDarkMode ? 0.3 : 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 20, color: theme.textColor),
+            ),
+          ),
+        );
+    final tone = theme.tone(Tone.mint);
+
     return AppBar(
+      automaticallyImplyLeading: false,
+      leadingWidth: 56,
+      leading: circ(Icons.arrow_forward_rounded, () => Navigator.maybePop(context)),
+      titleSpacing: 4,
       title: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(22),
         onTap: () => _openMembersPage(theme, primaryColor),
         child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: tone.bg, shape: BoxShape.circle),
+              child: Icon(Icons.groups_rounded, color: tone.fg, size: 22),
             ),
-            child: Icon(
-              Icons.group,
-              color: primaryColor,
-              size: 20,
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.conversation.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor,
+                    ),
+                  ),
+                  Text(
+                    '$memberCount عضو',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.textSecondaryColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.conversation.displayName,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: theme.textColor,
-                ),
-              ),
-              Text(
-                '$memberCount عضو',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.textSecondaryColor,
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-      ),
-      backgroundColor: theme.surfaceColor,
+      backgroundColor: theme.backgroundColor,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       foregroundColor: theme.textColor,
       actions: [
-        IconButton(
-          icon: Icon(Icons.search, color: theme.textColor),
-          onPressed: () => _showSearch(theme, primaryColor),
-        ),
-        IconButton(
-          icon: Icon(Icons.more_vert, color: theme.textColor),
-          onPressed: () => _showSquadTools(theme, primaryColor),
-        ),
+        circ(Icons.search, () => _showSearch(theme, primaryColor)),
+        circ(Icons.more_vert, () => _showSquadTools(theme, primaryColor)),
+        const SizedBox(width: 8),
       ],
     );
   }

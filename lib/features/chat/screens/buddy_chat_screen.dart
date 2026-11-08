@@ -422,23 +422,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
 // رنگ حباب من در شب
   Color _getMyBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? const Color(0xFF2A2A2A) // ✅ تیره‌تر از primaryColor برای شب
-        : theme.primaryLight;
+    return theme.primarySoft;
   }
 
 // رنگ حباب مقابل در شب
   Color _getOtherBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? const Color(0xFF1E1E1E) // مشکی
-        : Colors.white;
+    return theme.cardColor;
   }
 
 // ✅ رنگ متن حباب من در شب
   Color _getMyBubbleTextColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? Colors.white // ✅ سفید در شب
-        : const Color(0xFF090909); // مشکی در روز
+    return theme.textColor;
   }
 
 // ✅ رنگ متن حباب مقابل در شب
@@ -4674,8 +4668,8 @@ ${data.completionMessage}
                           padding: isWidgetMessage
                               ? EdgeInsets.zero
                               : const EdgeInsets.symmetric(
-                                  horizontal: 11,
-                                  vertical: 6,
+                                  horizontal: 14,
+                                  vertical: 10,
                                 ),
                           decoration: isWidgetMessage
                               ? (isHighlighted
@@ -4702,7 +4696,12 @@ ${data.completionMessage}
                                           bubbleColor,
                                         )
                                       : bubbleColor,
-                                  borderRadius: BorderRadius.circular(18),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(22),
+                                    topRight: const Radius.circular(22),
+                                    bottomLeft: Radius.circular(isMe ? 22 : 6),
+                                    bottomRight: Radius.circular(isMe ? 6 : 22),
+                                  ),
                                   border: isHighlighted
                                       ? Border.all(
                                           color: highlightBorderColor,
@@ -6737,17 +6736,8 @@ ${data.completionMessage}
           if (_showStickerPicker) _buildStickerPicker(theme, primaryColor),
           if (_showGifPicker) _buildGifPicker(theme, primaryColor),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.surfaceColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            color: theme.backgroundColor,
             child: Column(
               children: [
                 _buildReplyPreview(theme, primaryColor),
@@ -6793,24 +6783,22 @@ ${data.completionMessage}
                       child: Container(
                         decoration: BoxDecoration(
                           // ✅ در تم شب تیره، در تم روز روشن
-                          color: theme.isDarkMode
-                              ? const Color(0xFF1E1E1E) // تیره برای شب
-                              : const Color(0xFFF5F5F5), // روشن برای روز
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: theme.isDarkMode
-                                ? const Color(0xFF333333) // border تیره برای شب
-                                : Colors.grey.shade300,
-                            width: 1,
-                          ),
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                  alpha: theme.isDarkMode ? 0.3 : 0.05),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: TextField(
                           controller: _messageController,
                           focusNode: _focusNode,
                           style: TextStyle(
-                            color: theme.isDarkMode
-                                ? Colors.white
-                                : Colors.black, // ✅ متن واضح
+                            color: theme.textColor,
                             fontSize: 14,
                           ),
                           decoration: InputDecoration(
@@ -6859,8 +6847,8 @@ ${data.completionMessage}
 
                     // دکمه ارسال
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: _isSending || _messageController.text.isEmpty
                             ? theme.disabledButtonBackground // ✅ جدید
@@ -6883,10 +6871,10 @@ ${data.completionMessage}
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(
-                                Icons.send,
-                                color: Colors.white,
-                                size: 20,
+                            : Icon(
+                                Icons.send_rounded,
+                                color: theme.onPrimaryColor,
+                                size: 22,
                               ),
                       ),
                     ),
@@ -7031,7 +7019,8 @@ ${data.completionMessage}
           ],
         ),
       ),
-      backgroundColor: theme.surfaceColor,
+      backgroundColor: theme.backgroundColor,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       foregroundColor: theme.textColor,
       actions: [
