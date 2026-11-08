@@ -58,7 +58,7 @@ class QuestCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CardImage(url: quest.imageUrl, height: 110),
+            CardImage(url: quest.imageUrl, height: 170, showWhole: true),
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(

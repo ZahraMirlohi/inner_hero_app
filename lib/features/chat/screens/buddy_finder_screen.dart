@@ -254,6 +254,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (!mounted) return; // بعد از await دوباره چک کن
 
       _categorizeMatches(matches);
+      await _mergeRequestsAndBuddies();
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -265,6 +267,112 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       print('Error loading data: $e');
       if (!mounted) return; // بعد از catch هم چک کن
       setState(() => _isLoading = false);
+    }
+  }
+
+  // درخواست‌های در انتظار و هم‌مسیرهای فعلی را مستقیم از دیتابیس می‌گیرد
+  // (مستقل از اینکه طرف مقابل «دنبال هم‌مسیر» باشد یا پروفایل شخصیت داشته باشد)
+  Future<void> _mergeRequestsAndBuddies() async {
+    final uid = _userId;
+    if (uid == null) return;
+    try {
+      final reqs = await _supabaseClient
+          .from('buddy_requests')
+          .select('id, from_user_id, to_user_id')
+          .or('from_user_id.eq.$uid,to_user_id.eq.$uid')
+          .eq('status', 'pending');
+
+      final myConvs = await _supabaseClient
+          .from('conversation_members')
+          .select('conversation_id')
+          .eq('user_id', uid);
+      final convIds = [for (final c in myConvs) c['conversation_id'] as String];
+      final buddyConv = <String, String>{};
+      if (convIds.isNotEmpty) {
+        final convs = await _supabaseClient
+            .from('conversations')
+            .select('id')
+            .inFilter('id', convIds)
+            .eq('type', 'buddy')
+            .eq('is_active', true);
+        final ids = [for (final c in convs) c['id'] as String];
+        if (ids.isNotEmpty) {
+          final members = await _supabaseClient
+              .from('conversation_members')
+              .select('conversation_id, user_id')
+              .inFilter('conversation_id', ids);
+          for (final m in members) {
+            if (m['user_id'] != uid) {
+              buddyConv[m['user_id'] as String] = m['conversation_id'] as String;
+            }
+          }
+        }
+      }
+
+      final reqByUser = <String, Map<String, dynamic>>{};
+      for (final r in reqs) {
+        final other = r['from_user_id'] == uid ? r['to_user_id'] : r['from_user_id'];
+        reqByUser[other as String] = r;
+      }
+
+      final needed = {...reqByUser.keys, ...buddyConv.keys};
+      final known = {for (final m in _allMatches) m['user_id'] as String: m};
+      final missing = needed.where((id) => !known.containsKey(id)).toList();
+      final profiles = <String, Map<String, dynamic>>{};
+      if (missing.isNotEmpty) {
+        final rows = await _supabaseClient
+            .from('profiles')
+            .select('user_id, name, avatar_url, total_xp, current_streak')
+            .inFilter('user_id', missing);
+        for (final p in rows) {
+          profiles[p['user_id'] as String] = p;
+        }
+      }
+
+      final pending = <Map<String, dynamic>>[];
+      final buddies = <Map<String, dynamic>>[];
+      for (final id in needed) {
+        final pr = profiles[id];
+        final e = Map<String, dynamic>.from(known[id] ??
+            {
+              'user_id': id,
+              'name': pr?['name'] ?? 'کاربر',
+              'gender': 'other',
+              'avatar_url': pr?['avatar_url'],
+              'total_xp': pr?['total_xp'] ?? 0,
+              'current_streak': pr?['current_streak'] ?? 0,
+              'match_score': 0.0,
+              'common_habits': [],
+              'common_interests': [],
+            });
+        if (buddyConv.containsKey(id)) {
+          e['is_buddy'] = true;
+          e['has_pending_request'] = false;
+          e['conversation_id'] = buddyConv[id];
+          buddies.add(e);
+        } else {
+          final r = reqByUser[id]!;
+          e['is_buddy'] = false;
+          e['has_pending_request'] = true;
+          e['is_sent_by_me'] = r['from_user_id'] == uid;
+          e['is_received_by_me'] = r['to_user_id'] == uid;
+          e['request_id'] = r['id'];
+          pending.add(e);
+        }
+        final i = _allMatches.indexWhere((m) => m['user_id'] == id);
+        if (i != -1) {
+          _allMatches[i] = e;
+        } else {
+          _allMatches.add(e);
+        }
+      }
+      _pendingRequests = pending;
+      _myBuddies = buddies;
+      _searchResults = _searchResults
+          .where((m) => !needed.contains(m['user_id']))
+          .toList();
+    } catch (e) {
+      print('merge requests/buddies error: $e');
     }
   }
 
@@ -348,11 +456,23 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         final index = _searchResults.indexWhere(
           (m) => m['user_id'] == toUserId,
         );
-        if (index != -1) {
-          final updated = Map<String, dynamic>.from(_searchResults[index]);
+        final fromSearch =
+            _searchResult != null && _searchResult!['user_id'] == toUserId;
+        if (fromSearch) {
+          // کارت نتیجه‌ی جستجو هم وضعیت «ارسال شد» را نشان بدهد
+          _searchResult = {
+            ..._searchResult!,
+            'has_pending_request': true,
+            'is_sent_by_me': true,
+          };
+        }
+        if (index != -1 || fromSearch) {
+          final updated = Map<String, dynamic>.from(
+              index != -1 ? _searchResults[index] : _searchResult!);
           updated['has_pending_request'] = true;
           updated['is_sent_by_me'] = true;
-          _searchResults.removeAt(index);
+          if (index != -1) _searchResults.removeAt(index);
+          _pendingRequests.removeWhere((m) => m['user_id'] == toUserId);
           _pendingRequests.insert(0, updated);
 
           final allIndex = _allMatches.indexWhere(
@@ -360,6 +480,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           );
           if (allIndex != -1) {
             _allMatches[allIndex] = updated;
+          } else {
+            _allMatches.add(updated);
           }
         }
       });
@@ -855,7 +977,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 ? _buildEmptyState(
                     icon: Icons.search_off,
                     title: 'نتیجه‌ای یافت نشد',
-                    subtitle: 'فیلترها را تغییر دهید یا از جستجو استفاده کنید',
+                    subtitle:
+                        'فقط کسانی نمایش داده می‌شوند که «دنبال هم‌مسیر» را روشن کرده‌اند. می‌توانی با نام کاربری یا شماره هم جستجو کنی',
                     theme: theme,
                     primaryColor: primaryColor,
                   )

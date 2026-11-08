@@ -1423,6 +1423,45 @@ class ChatService {
     return id as String;
   }
 
+  /// افزودن هم‌مسیرهای ادمین به گروه؛ تعداد افزوده‌شده‌ها را برمی‌گرداند
+  Future<int> addGroupMembers(String conversationId, List<String> userIds) async {
+    final n = await _client.rpc('add_group_members',
+        params: {'p_conversation_id': conversationId, 'p_user_ids': userIds});
+    return (n as num).toInt();
+  }
+
+  /// هم‌مسیرهای فعلی کاربر: [{user_id, name, avatar_url}]
+  Future<List<Map<String, dynamic>>> getMyBuddies() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return [];
+    final mine = await _client
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', uid);
+    final ids = [for (final r in mine) r['conversation_id'] as String];
+    if (ids.isEmpty) return [];
+    final convs = await _client
+        .from('conversations')
+        .select('id')
+        .inFilter('id', ids)
+        .eq('type', 'buddy')
+        .eq('is_active', true);
+    final convIds = [for (final c in convs) c['id'] as String];
+    if (convIds.isEmpty) return [];
+    final members = await _client
+        .from('conversation_members')
+        .select('user_id')
+        .inFilter('conversation_id', convIds)
+        .neq('user_id', uid);
+    final userIds = {for (final m in members) m['user_id'] as String}.toList();
+    if (userIds.isEmpty) return [];
+    final profiles = await _client
+        .from('profiles')
+        .select('user_id, name, avatar_url')
+        .inFilter('user_id', userIds);
+    return List<Map<String, dynamic>>.from(profiles);
+  }
+
   Future<String> joinPublicGroup(String conversationId) async {
     final id = await _client
         .rpc('join_public_group', params: {'p_conversation_id': conversationId});

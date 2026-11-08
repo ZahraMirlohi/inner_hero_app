@@ -99,6 +99,8 @@ class BuddyMatcherService {
           .from('buddy_requests')
           .select('id, from_user_id, to_user_id, status')
           .or('and(from_user_id.eq.$currentUserId,to_user_id.eq.$userId),and(from_user_id.eq.$userId,to_user_id.eq.$currentUserId)')
+          .eq('status', 'pending')
+          .limit(1)
           .maybeSingle();
 
       // بررسی وجود گفتگو
@@ -236,8 +238,8 @@ class BuddyMatcherService {
     Gender? filterGender,
   }) async {
     try {
+      // بدون پروفایل شخصیت هم پیشنهاد نشان بده (امتیاز تطابق ۰)
       final currentPersonality = await getUserPersonality(userId);
-      if (currentPersonality == null) return [];
 
       // یک کوئری برای همه کاربران
       final allUsers = await _client.from('user_personalities').select();
@@ -351,7 +353,7 @@ class BuddyMatcherService {
         }
 
         final matchScore =
-            currentPersonality.calculateMatchScore(otherPersonality);
+            currentPersonality?.calculateMatchScore(otherPersonality) ?? 0.0;
         if (matchScore < minMatchScore) continue;
 
         final profile = profilesMap[otherUserId];
@@ -369,12 +371,14 @@ class BuddyMatcherService {
           'current_streak': profile?['current_streak'] ?? 0,
           'match_score': matchScore,
           'personality': otherPersonality,
-          'common_habits': currentPersonality.habits
-              .where((h) => otherPersonality.habits.contains(h))
-              .toList(),
-          'common_interests': currentPersonality.interests
-              .where((i) => otherPersonality.interests.contains(i))
-              .toList(),
+          'common_habits': currentPersonality?.habits
+                  .where((h) => otherPersonality.habits.contains(h))
+                  .toList() ??
+              [],
+          'common_interests': currentPersonality?.interests
+                  .where((i) => otherPersonality.interests.contains(i))
+                  .toList() ??
+              [],
           'is_buddy': isBuddy,
           'has_pending_request': isSentByMe || isReceivedByMe,
           'is_sent_by_me': isSentByMe,

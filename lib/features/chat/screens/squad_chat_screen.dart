@@ -45,6 +45,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   bool _isAdmin = false;
   Map<String, dynamic> _settings = {};
   String _myName = 'کاربر';
+  final ValueNotifier<int> _membersRev = ValueNotifier<int>(0);
   StreamSubscription<List<ChatMessage>>? _msgSub;
   final Map<String, GlobalKey> _messageKeys = {};
   String? _highlightedId;
@@ -91,6 +92,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   @override
   void dispose() {
+    _membersRev.dispose();
     _msgSub?.cancel();
     _tabController.dispose();
     _messageController.dispose();
@@ -1328,6 +1330,112 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     );
   }
 
+  // با کلیک روی سربرگ: صفحه‌ی اعضا
+  void _openMembersPage(ThemeProvider theme, Color primaryColor) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => Scaffold(
+          backgroundColor: theme.backgroundColor,
+          appBar: AppBar(
+            title: const Text('اعضای گروه'),
+            backgroundColor: theme.surfaceColor,
+            elevation: 0,
+            foregroundColor: theme.textColor,
+          ),
+          body: ValueListenableBuilder<int>(
+            valueListenable: _membersRev,
+            builder: (_, __, ___) => _buildMembersTab(theme, primaryColor),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addFromBuddies(ThemeProvider theme, Color primaryColor) async {
+    List<Map<String, dynamic>> buddies;
+    try {
+      buddies = await _chatService.getMyBuddies();
+    } catch (e) {
+      _snack('خواندن هم‌مسیرها ناموفق بود', error: true);
+      return;
+    }
+    final existing = {for (final m in _members) m['user_id']};
+    buddies = buddies.where((b) => !existing.contains(b['user_id'])).toList();
+    if (!mounted) return;
+    if (buddies.isEmpty) {
+      _snack('هم‌مسیری برای افزودن نمانده است');
+      return;
+    }
+    final picked = <String>{};
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(ctx).size.height * 0.7,
+            child: Column(children: [
+              const SizedBox(height: 16),
+              Text('افزودن از هم‌مسیرهای من',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor)),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (final b in buddies)
+                      CheckboxListTile(
+                        value: picked.contains(b['user_id']),
+                        onChanged: (v) => setS(() => v == true
+                            ? picked.add(b['user_id'] as String)
+                            : picked.remove(b['user_id'])),
+                        secondary: CircleAvatar(
+                          backgroundImage: (b['avatar_url'] as String?)?.isNotEmpty == true
+                              ? NetworkImage(b['avatar_url'] as String)
+                              : null,
+                          child: (b['avatar_url'] as String?)?.isNotEmpty == true
+                              ? null
+                              : Text(((b['name'] as String?) ?? '؟').characters.first),
+                        ),
+                        title: Text((b['name'] as String?) ?? 'کاربر'),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: picked.isEmpty ? null : () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text('افزودن ${picked.length} نفر',
+                        style: const TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    if (ok != true || picked.isEmpty) return;
+    await _run(() async {
+      await _chatService.addGroupMembers(widget.conversation.id, picked.toList());
+    }, ok: 'اعضا اضافه شدند');
+  }
+
   Widget _buildMembersTab(ThemeProvider theme, Color primaryColor) {
     return Column(
       children: [
@@ -1349,6 +1457,26 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             },
           ),
         ),
+        if (_isAdmin)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _addFromBuddies(theme, primaryColor),
+                icon: const Icon(Icons.group_add, color: Colors.white),
+                label: const Text('افزودن از هم‌مسیرهای من',
+                    style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ),
         if (_isAdmin)
           Padding(
             padding: const EdgeInsets.all(16),
@@ -1688,6 +1816,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       _isAdmin =
           members.any((m) => m['user_id'] == _userId && m['role'] == 'admin');
     });
+    _membersRev.value++;
   }
 
   Future<void> _run(Future<void> Function() action, {String? ok}) async {
@@ -2197,68 +2326,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       appBar: _buildAppBar(theme, primaryColor),
       body: Column(
         children: [
-          // ✅ تب‌های دور گرد - با تم هماهنگ
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: theme.isDarkMode
-                  ? const Color(0xFF2A2A2A)
-                  : const Color(0xFF090909),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              labelPadding: EdgeInsets.zero,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    primaryColor,
-                    Color.lerp(primaryColor, Colors.black, 0.15)!,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              dividerColor: Colors.transparent,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-              labelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-              tabs: const [
-                Tab(height: 42, icon: Icon(Icons.chat, size: 16), text: 'چت'),
-                Tab(
-                  height: 42,
-                  icon: Icon(Icons.people, size: 16),
-                  text: 'اعضا',
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildChatTab(theme, primaryColor),
-                _buildMembersTab(theme, primaryColor),
-              ],
-            ),
-          ),
+          Expanded(child: _buildChatTab(theme, primaryColor)),
         ],
       ),
     );
@@ -2271,7 +2339,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final memberCount = _members.length;
 
     return AppBar(
-      title: Row(
+      title: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openMembersPage(theme, primaryColor),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
@@ -2308,6 +2379,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             ],
           ),
         ],
+      ),
       ),
       backgroundColor: theme.surfaceColor,
       elevation: 0,
