@@ -13,7 +13,7 @@ import '../widgets/analytics_overview_widget.dart';
 import 'terms_and_conditions_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/streak_card_widget.dart';
-import '../widgets/medals_section.dart';
+import 'medals_screen.dart';
 import '/../providers/sync_provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/services.dart';
@@ -812,6 +812,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }),
         const SizedBox(width: 10),
+        tile(Tone.butter, Icons.military_tech_rounded,
+            context.tr('profile.medals'), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MedalsScreen(userId: _profile!.userId),
+            ),
+          );
+        }),
+        const SizedBox(width: 10),
         tile(Tone.lilac, Icons.auto_awesome_rounded,
             context.tr('profile.personality_short'), () {
           Navigator.push(
@@ -880,13 +890,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             weekDays: weekDays,
           ),
           const SizedBox(height: 12),
-          if (_profile != null) ...[
-            MedalsSection(
-              userId: _profile!.userId,
-              refreshToken: widget.refreshNotifier?.value ?? 0,
-            ),
-            const SizedBox(height: 12),
-          ],
           _buildShortcuts(),
           const SizedBox(height: 12),
           _buildUserInfoSection(),

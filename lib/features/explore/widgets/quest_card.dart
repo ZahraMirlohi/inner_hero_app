@@ -58,14 +58,22 @@ class QuestCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration:
-                    const BoxDecoration(color: _ink, shape: BoxShape.circle),
-                child: Icon(_getIconData(quest.icon),
-                    size: 20, color: theme.effectivePrimary),
-              ),
+              if (CardImage.has(quest.imageUrl))
+                CardImage(
+                  url: quest.imageUrl,
+                  width: 52,
+                  height: 52,
+                  borderRadius: BorderRadius.circular(16),
+                )
+              else
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration:
+                      const BoxDecoration(color: _ink, shape: BoxShape.circle),
+                  child: Icon(_getIconData(quest.icon),
+                      size: 20, color: theme.effectivePrimary),
+                ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(quest.title,
