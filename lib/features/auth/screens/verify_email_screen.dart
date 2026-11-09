@@ -1,7 +1,6 @@
 // lib/features/auth/screens/verify_email_screen.dart
 //
-// بعد از ثبت‌نام، اگر Supabase تایید ایمیل بخواهد این صفحه نشان داده می‌شود.
-// کاربر با زدن لینک ایمیل، وارد می‌شود (از طریق رویداد signedIn).
+// بعد از ثبت‌نام: کد ۶ رقمی ایمیل را می‌نویسد؛ با تایید، وارد می‌شود (رویداد signedIn).
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,24 +18,48 @@ class VerifyEmailScreen extends StatefulWidget {
 }
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _code = TextEditingController();
   bool _loading = false;
   bool _sent = false;
   String? _error;
 
-  Future<void> _resend() async {
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _verify() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       _loading = true;
       _error = null;
-      _sent = false;
     });
     final auth = context.read<AuthProvider>();
+    final navigator = Navigator.of(context);
     try {
-      await auth.resendConfirmation(widget.email);
-      if (mounted) setState(() => _sent = true);
+      await auth.verifySignupCode(widget.email, normalizeCode(_code.text));
+      // ورود موفق: HeroApp پشتهٔ صفحه‌ها را عوض می‌کند؛ این را هم می‌بندیم
+      if (mounted) navigator.popUntil((r) => r.isFirst);
     } catch (e) {
       if (mounted) setState(() => _error = authErrorText(context, e));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resend() async {
+    final auth = context.read<AuthProvider>();
+    try {
+      await auth.resendConfirmation(widget.email);
+      if (mounted) setState(() {
+        _sent = true;
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = authErrorText(context, e));
     }
   }
 
@@ -49,11 +72,27 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         if (_error != null) AuthMessage(text: _error!),
         if (_sent)
           AuthMessage(text: context.tr('auth.verify_sent'), isError: false),
+        Form(
+          key: _formKey,
+          child: AuthField(
+            controller: _code,
+            label: context.tr('auth.code_label'),
+            icon: Icons.pin_rounded,
+            keyboardType: TextInputType.number,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            onSubmitted: (_) => _verify(),
+            validator: (v) => AuthCodeValidator.check(context, v),
+          ),
+        ),
+        const SizedBox(height: 20),
         AuthButton(
-          label: context.tr('auth.verify_resend'),
-          onPressed: _resend,
+          label: context.tr('auth.code_btn'),
+          onPressed: _verify,
           isLoading: _loading,
         ),
+        const SizedBox(height: 12),
+        ResendButton(onResend: _resend),
         const SizedBox(height: 12),
         AuthButton(
           label: context.tr('auth.verify_back'),

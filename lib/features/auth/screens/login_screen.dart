@@ -127,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
           isLoading: _loading,
         ),
         const SizedBox(height: 18),
+        if (AuthProvider.googleEnabled) ...[
         Row(
           children: [
             Expanded(child: Divider(color: theme.borderColor)),
@@ -148,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
           onPressed: _google,
           isLoading: _googleLoading,
         ),
+        ],
         const SizedBox(height: 22),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

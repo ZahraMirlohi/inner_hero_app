@@ -53,6 +53,9 @@ class OnboardingAnswers {
 
 class AuthProvider extends ChangeNotifier {
   /// آدرس بازگشت از گوگل / لینک بازیابی رمز (باید در Supabase هم ثبت شود)
+  /// تا وقتی گوگل در Supabase فعال نشده، دکمه‌اش نمایش داده نمی‌شود
+  static const bool googleEnabled = false;
+
   static const String redirectUrl = 'io.supabase.innerhero://login-callback/';
 
   final SupabaseClient _client = Supabase.instance.client;
@@ -64,6 +67,10 @@ class AuthProvider extends ChangeNotifier {
   bool _needsPasswordReset = false;
   bool _justSignedUp = false;
   bool _loadingUser = false;
+  // وسط بازیابی رمز، نشستِ ساخته‌شده با کد نباید کاربر را وارد برنامه کند
+  bool _holdSignIn = false;
+  int _failedLogins = 0;
+  DateTime? _lockUntil;
   String? _userId;
   String? _userName;
   String? _userEmail;
@@ -105,6 +112,7 @@ class AuthProvider extends ChangeNotifier {
         break;
       case AuthChangeEvent.signedIn:
       case AuthChangeEvent.initialSession:
+        if (_holdSignIn) break;
         final user = data.session?.user;
         if (user != null && user.id != _userId) {
           await _loadForUser(user);
@@ -255,8 +263,67 @@ class AuthProvider extends ChangeNotifier {
   // ───────────────────────── ورود و ثبت‌نام ─────────────────────────
 
   Future<void> signInWithEmail(String email, String password) async {
-    await _client.auth.signInWithPassword(email: email.trim(), password: password);
+    // قفل کوتاه سمت برنامه (علاوه بر محدودیت سرور) برای حدس‌زدن رمز
+    final lock = _lockUntil;
+    if (lock != null && DateTime.now().isBefore(lock)) {
+      throw AuthException('too many attempts');
+    }
+    try {
+      await _client.auth
+          .signInWithPassword(email: email.trim(), password: password);
+      _failedLogins = 0;
+      _lockUntil = null;
+    } on AuthException catch (e) {
+      if (e.code == 'invalid_credentials' ||
+          e.message.toLowerCase().contains('invalid login')) {
+        if (++_failedLogins >= 5) {
+          _failedLogins = 0;
+          _lockUntil = DateTime.now().add(const Duration(seconds: 60));
+        }
+      }
+      rethrow;
+    }
     // بقیه‌اش را رویداد signedIn انجام می‌دهد
+  }
+
+  /// تایید ایمیل ثبت‌نام با کد ۶ رقمی
+  Future<void> verifySignupCode(String email, String code) async {
+    _justSignedUp = true; // بعد از تایید، معرفی نشان داده شود
+    try {
+      await _client.auth.verifyOTP(
+          type: OtpType.signup, email: email.trim(), token: code.trim());
+    } catch (_) {
+      _justSignedUp = false;
+      rethrow;
+    }
+  }
+
+  /// مرحلهٔ ۱ بازیابی: تایید کد ایمیل. نشست ساخته می‌شود ولی تا تعیین رمز جدید وارد برنامه نمی‌شویم.
+  Future<void> verifyRecoveryCode(String email, String code) async {
+    _holdSignIn = true;
+    try {
+      await _client.auth.verifyOTP(
+          type: OtpType.recovery, email: email.trim(), token: code.trim());
+    } catch (_) {
+      _holdSignIn = false;
+      rethrow;
+    }
+  }
+
+  /// مرحلهٔ ۲ بازیابی: رمز جدید؛ بعدش کاربر وارد می‌شود.
+  Future<void> completeRecovery(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+    _holdSignIn = false;
+    await checkLoginStatus();
+  }
+
+  /// انصراف وسط بازیابی: نشست موقت بسته می‌شود
+  Future<void> cancelRecovery() async {
+    if (!_holdSignIn) return;
+    _holdSignIn = false;
+    try {
+      await _client.auth.signOut();
+    } catch (_) {}
   }
 
   Future<SignUpResult> signUpWithEmail({

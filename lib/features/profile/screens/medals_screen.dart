@@ -18,9 +18,8 @@ class MedalsScreen extends StatefulWidget {
 }
 
 class _Medal {
-  final String icon;
   final String title;
-  _Medal(this.icon, this.title);
+  _Medal(this.title);
 }
 
 class _MedalsScreenState extends State<MedalsScreen> {
@@ -38,7 +37,7 @@ class _MedalsScreenState extends State<MedalsScreen> {
       {required String link,
       required String table,
       required String idCol,
-      required String icon(Map<String, dynamic> r)}) async {
+      String? name(Map<String, dynamic> r)}) async {
     final client = SupabaseService().client;
     final mine = await client
         .from(link)
@@ -50,7 +49,9 @@ class _MedalsScreenState extends State<MedalsScreen> {
     final rows = await client.from(table).select().inFilter('id', ids);
     return [
       for (final r in rows)
-        _Medal(icon(Map<String, dynamic>.from(r)), (r['title'] as String?) ?? '')
+        _Medal(name(Map<String, dynamic>.from(r))?.trim().isNotEmpty == true
+            ? name(Map<String, dynamic>.from(r))!
+            : (r['title'] as String?) ?? '')
     ];
   }
 
@@ -60,15 +61,13 @@ class _MedalsScreenState extends State<MedalsScreen> {
         link: 'user_quests',
         table: 'quests',
         idCol: 'quest_id',
-        icon: (r) => ((r['badge'] as String?)?.trim().isNotEmpty ?? false)
-            ? r['badge'] as String
-            : '🎯',
+        name: (r) => r['badge'] as String?,
       );
       final c = await _fetch(
         link: 'user_challenges',
         table: 'challenges',
         idCol: 'challenge_id',
-        icon: (_) => '🏆',
+        name: (_) => null,
       );
       if (!mounted) return;
       setState(() {
@@ -168,8 +167,12 @@ class _MedalsScreenState extends State<MedalsScreen> {
                       alignment: Alignment.center,
                       decoration:
                           BoxDecoration(color: tc.bg, shape: BoxShape.circle),
-                      child:
-                          Text(m.icon, style: const TextStyle(fontSize: 30)),
+                      child: Icon(
+                          tone == Tone.mint
+                              ? Icons.military_tech_rounded
+                              : Icons.emoji_events_rounded,
+                          size: 34,
+                          color: tc.fg),
                     ),
                     const SizedBox(height: 6),
                     Text(m.title,
