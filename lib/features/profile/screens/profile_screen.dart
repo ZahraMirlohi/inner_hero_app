@@ -651,7 +651,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     _theme = context.watch<ThemeProvider>();
     final bool darkBg =
-        ThemeData.estimateBrightnessForColor(_theme.primaryColor) ==
+        ThemeData.estimateBrightnessForColor(_theme.backgroundColor) ==
             Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -660,7 +660,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         statusBarBrightness: darkBg ? Brightness.dark : Brightness.light,
       ),
       child: Scaffold(
-      backgroundColor: _theme.primaryColor,
+      backgroundColor: _theme.backgroundColor,
       body: Consumer<SyncProvider>(
         builder: (context, syncProvider, child) {
           // حالت بارگذاری
@@ -908,7 +908,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
-                color: _theme.onPrimaryColor,
+                color: _theme.textColor,
               ),
             ),
           ),

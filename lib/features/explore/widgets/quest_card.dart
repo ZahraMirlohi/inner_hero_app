@@ -120,35 +120,33 @@ class QuestCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            _chip('${quest.targetCount} روز',
-                                Icons.calendar_today_rounded, chipBg),
-                            _chip('+${quest.xpReward} XP',
-                                Icons.star_rounded, chipBg,
-                                bold: true),
-                            if (isCompleted && quest.badge.isNotEmpty)
-                              _chip(quest.badge, null,
-                                  Colors.white.withValues(alpha: 0.75)),
-                          ],
-                        ),
-                      ),
+                      _chip('${quest.targetCount} روز',
+                          Icons.calendar_today_rounded, chipBg),
+                      _chip('+${quest.xpReward} XP', Icons.star_rounded, chipBg,
+                          bold: true),
+                      if (isCompleted && quest.badge.isNotEmpty)
+                        _chip(quest.badge, null,
+                            Colors.white.withValues(alpha: 0.75)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
                       if (isCompleted)
                         _pill('تکمیل شد', Icons.check_circle_rounded,
                             const Color(0xFF2ECC71), _ink, null)
                       else if (isActive) ...[
-                        if (onCancel != null) ...[
-                          _pill('لغو', Icons.close_rounded, Colors.white, _ink,
-                              onCancel),
-                          const SizedBox(width: 6),
-                        ],
                         _pill('مشاهده', Icons.visibility_outlined, _ink,
                             Colors.white, onTap),
+                        if (onCancel != null)
+                          _pill('لغو', Icons.close_rounded, Colors.white, _ink,
+                              onCancel),
                       ] else if (quest.isActive)
                         _pill('شروع', Icons.play_arrow_rounded,
                             theme.effectivePrimary, theme.onPrimaryColor, onStart)

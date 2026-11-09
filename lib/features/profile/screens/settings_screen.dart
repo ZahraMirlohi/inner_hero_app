@@ -247,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: BoxShape.circle,
               boxShadow: theme.softShadow,
             ),
-            child: Icon(Icons.arrow_forward_rounded,
+            child: Icon(Icons.arrow_back_rounded, textDirection: TextDirection.ltr,
                 size: 22, color: theme.textColor),
           ),
         ),

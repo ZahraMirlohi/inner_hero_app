@@ -793,7 +793,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         elevation: 0,
         foregroundColor: theme.textColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, textDirection: TextDirection.ltr),
           onPressed: () {
             // چک کن می‌تونه pop کنه
             if (Navigator.canPop(context)) {

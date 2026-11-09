@@ -2621,8 +2621,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
     final unreadMessages = _messages.where((msg) {
       final isFromOther = msg.senderId != _userId;
-      final isUnread = msg.status != MessageStatus.seen &&
-          msg.status != MessageStatus.delivered;
+      final isUnread = msg.status != MessageStatus.seen;
       final isNotDeleted = !msg.isDeleted;
       return isFromOther && isUnread && isNotDeleted;
     }).toList();

@@ -286,7 +286,7 @@ class HabitDetailScreen extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: theme.softShadow,
           ),
-          child: Icon(icon, size: 22, color: theme.textColor),
+          child: Icon(icon, size: 22, color: theme.textColor, textDirection: TextDirection.ltr),
         ),
       ),
     );
@@ -297,7 +297,7 @@ class HabitDetailScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
         children: [
-          _circleButton(theme, Icons.arrow_forward_rounded,
+          _circleButton(theme, Icons.arrow_back_rounded,
               () => Navigator.pop(context), context.tr('ad.back')),
           const SizedBox(width: 12),
           Expanded(

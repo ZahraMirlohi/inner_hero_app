@@ -1009,7 +1009,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         onPressed: () {
           Navigator.pop(context);
         },
-        icon: const Icon(Icons.arrow_back, size: 18, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, size: 18, color: Colors.white, textDirection: TextDirection.ltr),
         label: const Text(
           'بازگشت به گفتگو',
           style: TextStyle(

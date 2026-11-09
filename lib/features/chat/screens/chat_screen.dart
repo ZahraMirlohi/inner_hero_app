@@ -457,6 +457,8 @@ class _ChatScreenState extends State<ChatScreen>
   Widget build(BuildContext context) {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.effectivePrimary;
+    // بالای نوار ناوبری اصلی (۶۴ + حاشیه‌ها + ناحیهٔ امن پایین)
+    final navClear = 96.0 + MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
@@ -494,23 +496,25 @@ class _ChatScreenState extends State<ChatScreen>
           ],
         ),
       )),
-        PositionedDirectional(
-          start: 20,
-          bottom: 100,
+        Positioned(
+          right: 20,
+          bottom: navClear,
           child: _buildAiFab(theme, primaryColor),
         ),
-      ]),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 90),
-        child: FloatingActionButton(
-          onPressed: () => _showNewConversationDialog(theme, primaryColor),
-          backgroundColor: primaryColor,
-          shape: const CircleBorder(),
-          elevation: 6,
-          child: Icon(Icons.add_rounded, color: theme.onPrimaryColor, size: 28),
+        Positioned(
+          left: 20,
+          bottom: navClear,
+          child: FloatingActionButton(
+            heroTag: 'chat_add',
+            onPressed: () => _showNewConversationDialog(theme, primaryColor),
+            backgroundColor: primaryColor,
+            shape: const CircleBorder(),
+            elevation: 6,
+            child:
+                Icon(Icons.add_rounded, color: theme.onPrimaryColor, size: 28),
+          ),
         ),
-      ),
+      ]),
     );
   }
 
@@ -554,14 +558,28 @@ class _ChatScreenState extends State<ChatScreen>
       onTap: () {
         showModalBottomSheet(
           context: context,
-          isScrollControlled: true,
-          useSafeArea: true,
-          backgroundColor: Colors.transparent,
-          builder: (ctx) => ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            child: SizedBox(
-              height: MediaQuery.of(ctx).size.height * 0.88,
-              child: const AIChatScreen(),
+          backgroundColor: theme.surfaceColor,
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+          builder: (ctx) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.smart_toy_rounded, size: 44, color: primaryColor),
+                  const SizedBox(height: 14),
+                  Text('مربی هوش مصنوعی',
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: theme.textColor)),
+                  const SizedBox(height: 8),
+                  Text('به زودی',
+                      style: TextStyle(
+                          fontSize: 15, color: theme.textSecondaryColor)),
+                ],
+              ),
             ),
           ),
         );

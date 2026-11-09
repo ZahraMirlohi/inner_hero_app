@@ -297,7 +297,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           shape: BoxShape.circle,
           boxShadow: t.softShadow,
         ),
-        child: Icon(Icons.arrow_forward_rounded, size: 22, color: t.textColor),
+        child: Icon(Icons.arrow_back_rounded, textDirection: TextDirection.ltr, size: 22, color: t.textColor),
       ),
     );
   }

@@ -724,7 +724,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                   left: xOf(i.toDouble()),
                   top: 0,
                   width: sw,
-                  height: 56,
+                  height: 44,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _onTabChanged(i),
@@ -761,7 +761,7 @@ class _ArenaScreenState extends State<ArenaScreen>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
-              height: 1.0,
+              height: 1.25,
               fontWeight: FontWeight.w800,
               color: color,
             ),

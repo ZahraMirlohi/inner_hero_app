@@ -490,7 +490,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             child: Icon(
                               Icons.arrow_back_rounded,
                               color: theme.textColor,
-                              textDirection: Directionality.of(context),
+                              textDirection: TextDirection.ltr,
                             ),
                           ),
                         ),

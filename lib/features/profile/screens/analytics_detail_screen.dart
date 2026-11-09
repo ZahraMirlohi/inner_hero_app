@@ -534,7 +534,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 boxShadow: theme.softShadow,
               ),
               child: Icon(
-                rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                Icons.arrow_back_rounded,
+                textDirection: TextDirection.ltr,
                 size: 22,
                 color: theme.textColor,
               ),

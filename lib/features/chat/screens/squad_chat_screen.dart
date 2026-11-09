@@ -213,6 +213,24 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     }
   }
 
+  bool _markingRead = false;
+
+  // shortcut: وضعیت seen مشترک است؛ در گروه با خواندن اولین عضو، شمارندهٔ بقیه هم صفر می‌شود
+  Future<void> _markRead() async {
+    final uid = _userId;
+    if (_markingRead || uid == null) return;
+    final hasUnread = _messages.any((m) =>
+        !m.isFromMe && !m.isDeleted && m.status != MessageStatus.seen);
+    if (!hasUnread) return;
+    _markingRead = true;
+    try {
+      await _chatService.markAllMessagesAsReadSafe(
+          conversationId: widget.conversation.id, userId: uid);
+    } finally {
+      _markingRead = false;
+    }
+  }
+
   void _setupRealtimeSubscription() {
     _msgSub = _chatService
         .getMessages(widget.conversation.id, userId: _chatService.client.auth.currentUser?.id)
@@ -230,6 +248,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           _loadReactions();
         }
         _streamReady = true;
+        _markRead();
       }
     });
     _loadReactions();
@@ -2794,7 +2813,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ),
                 ],
               ),
-              child: Icon(icon, size: 20, color: theme.textColor),
+              child: Icon(icon, size: 20, color: theme.textColor, textDirection: TextDirection.ltr),
             ),
           ),
         );
@@ -2824,7 +2843,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     return AppBar(
       automaticallyImplyLeading: false,
       leadingWidth: 56,
-      leading: circ(Icons.arrow_forward_rounded, () => Navigator.maybePop(context)),
+      leading: circ(Icons.arrow_back_rounded, () => Navigator.maybePop(context)),
       titleSpacing: 4,
       title: InkWell(
         borderRadius: BorderRadius.circular(22),
