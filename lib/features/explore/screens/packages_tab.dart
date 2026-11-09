@@ -980,12 +980,12 @@ class _PackageCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(package.description,
-              maxLines: 3,
+              maxLines: isActive ? 2 : 3,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   fontSize: 13, height: 1.8, color: onBody)),
           const SizedBox(height: 12),
-          for (final h in habits)
+          if (!isActive) for (final h in habits)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
@@ -1010,7 +1010,7 @@ class _PackageCard extends StatelessWidget {
                 ],
               ),
             ),
-          if (remaining > 0)
+          if (!isActive && remaining > 0)
             Text('... و $remaining عادت دیگر',
                 style: TextStyle(
                     fontSize: 12,

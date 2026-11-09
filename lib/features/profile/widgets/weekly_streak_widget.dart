@@ -219,15 +219,15 @@ class _WeeklyStreakWidgetState extends State<WeeklyStreakWidget> {
 
   String _getStreakMessage() {
     if (widget.weeklyStreak == 0) {
-      return 'امروز رو شروع کن! هر روز یک قدم به قهرمانی نزدیک‌تر میشی 💪';
+      return 'استریکت صفره. عادت‌ها قهر نکردن، فقط منتظرن بفهمی.';
     } else if (widget.weeklyStreak < 3) {
-      return '${widget.weeklyStreak} روز پیاپی! عالی ادامه بده 🔥';
+      return '${widget.weeklyStreak} روز پیاپی. هنوز زوده کسی باور کنه، ولی داریم نگاه می‌کنیم.';
     } else if (widget.weeklyStreak < 5) {
-      return '${widget.weeklyStreak} روز پیاپی! تو یک قهرمان واقعی هستی 🏆';
+      return '${widget.weeklyStreak} روز پیاپی! بدنت داره شک می‌کنه که نکنه آدم شدی.';
     } else if (widget.weeklyStreak < 7) {
-      return '${widget.weeklyStreak} روز پیاپی! فقط ${7 - widget.weeklyStreak} روز دیگه تا هفته کامل 💎';
+      return '${widget.weeklyStreak} روز پیاپی؛ فقط ${7 - widget.weeklyStreak} روز مونده. الان ول کنی خودت از خودت خجالت می‌کشی.';
     } else {
-      return '🎉 هفته کامل! تو یک افسانه هستی! 🌟';
+      return 'هفته کامل! حالا سعی کن آخر هفته هم همین‌قدر آدم بمونی.';
     }
   }
 

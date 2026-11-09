@@ -45,6 +45,47 @@ class QuestCard extends StatelessWidget {
     final p = (progress ?? 0).clamp(0, quest.targetCount);
     final ratio = quest.targetCount > 0 ? p / quest.targetCount : 0.0;
 
+    // ماموریت انجام‌شده: فقط عنوان، XP و نشان تکمیل
+    if (isCompleted) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration:
+                    const BoxDecoration(color: _ink, shape: BoxShape.circle),
+                child: Icon(_getIconData(quest.icon),
+                    size: 20, color: theme.effectivePrimary),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(quest.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w800, color: _ink)),
+              ),
+              const SizedBox(width: 8),
+              _chip('+${quest.xpReward} XP', Icons.star_rounded, chipBg,
+                  bold: true),
+              const SizedBox(width: 6),
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF2ECC71), size: 24),
+            ],
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(

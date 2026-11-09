@@ -13,6 +13,7 @@ import '../widgets/analytics_overview_widget.dart';
 import 'terms_and_conditions_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/streak_card_widget.dart';
+import '../widgets/medals_section.dart';
 import '/../providers/sync_provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/services.dart';
@@ -879,6 +880,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             weekDays: weekDays,
           ),
           const SizedBox(height: 12),
+          if (_profile != null) ...[
+            MedalsSection(
+              userId: _profile!.userId,
+              refreshToken: widget.refreshNotifier?.value ?? 0,
+            ),
+            const SizedBox(height: 12),
+          ],
           _buildShortcuts(),
           const SizedBox(height: 12),
           _buildUserInfoSection(),
@@ -1120,7 +1128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            Icon(Icons.chevron_left_rounded, color: _theme.textSecondaryColor),
+            Icon(Icons.chevron_left_rounded, textDirection: TextDirection.ltr, color: _theme.textSecondaryColor),
           ],
         ),
       ),

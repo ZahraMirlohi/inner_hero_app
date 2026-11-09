@@ -2494,7 +2494,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         ),
       ),
       trailing: Icon(
-        Icons.chevron_right,
+        Icons.chevron_left, textDirection: TextDirection.ltr,
         color: theme.textSecondaryColor,
       ),
       onTap: onTap,

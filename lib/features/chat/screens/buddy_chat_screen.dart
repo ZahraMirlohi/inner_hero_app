@@ -2154,7 +2154,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         ),
       ),
       trailing: Icon(
-        Icons.chevron_right,
+        Icons.chevron_left, textDirection: TextDirection.ltr,
         color: theme.textSecondaryColor, // ✅
         size: 20,
       ),
@@ -2427,7 +2427,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                             ],
                           ),
                           trailing: Icon(
-                            Icons.chevron_right,
+                            Icons.chevron_left, textDirection: TextDirection.ltr,
                             color: theme.textSecondaryColor, // ✅
                             size: 20,
                           ),

@@ -1009,6 +1009,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ),
             Icon(
               rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+              textDirection: TextDirection.ltr,
               size: 22,
               color: theme.textColor,
             ),
@@ -1075,7 +1076,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             color: theme.cardSecondaryColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 18, color: theme.textColor),
+          child: Icon(icon, size: 18, color: theme.textColor, textDirection: TextDirection.ltr),
         ),
       );
     }

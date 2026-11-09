@@ -396,6 +396,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (showChevron)
                 Icon(
                   Icons.chevron_left_rounded,
+                  textDirection: TextDirection.ltr,
                   size: 20,
                   color: theme.textSecondaryColor,
                 ),

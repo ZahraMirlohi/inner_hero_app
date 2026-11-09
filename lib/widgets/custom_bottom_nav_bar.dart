@@ -64,37 +64,54 @@ class CustomBottomNavBar extends StatelessWidget {
                     if (!active) onTap(i);
                   },
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutCubic,
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeInOutCubic,
+                    width: active ? 104 : 48,
                     height: 48,
-                    padding: EdgeInsets.symmetric(horizontal: active ? 14 : 10),
                     decoration: BoxDecoration(
                       color: active ? theme.primaryColor : Colors.transparent,
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          items[i].icon,
-                          size: 24,
-                          color: active ? theme.onPrimaryColor : inactive,
-                        ),
-                        if (active) ...[
-                          const SizedBox(width: 6),
-                          Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: Text(
-                              items[i].label,
-                              style: TextStyle(
-                                color: theme.onPrimaryColor,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                    child: ClipRect(
+                      child: OverflowBox(
+                        maxWidth: 112,
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TweenAnimationBuilder<Color?>(
+                              tween: ColorTween(
+                                  end: active ? theme.onPrimaryColor : inactive),
+                              duration: const Duration(milliseconds: 320),
+                              builder: (_, c, __) =>
+                                  Icon(items[i].icon, size: 24, color: c),
+                            ),
+                            AnimatedOpacity(
+                              duration: const Duration(milliseconds: 240),
+                              opacity: active ? 1 : 0,
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.only(start: 6),
+                                child: Directionality(
+                                  textDirection: TextDirection.rtl,
+                                  child: Text(
+                                    items[i].label,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: TextStyle(
+                                      color: theme.onPrimaryColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ],
+                          ],
+                        ),
+                        ),
+                      ),
                     ),
                   ),
                 );

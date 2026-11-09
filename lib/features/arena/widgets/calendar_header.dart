@@ -221,7 +221,7 @@ class _CalendarHeaderState extends State<CalendarHeader>
             shape: BoxShape.circle,
             boxShadow: shadow ? theme.softShadow : null,
           ),
-          child: Icon(icon, size: 22, color: iconColor ?? theme.textColor),
+          child: Icon(icon, size: 22, color: iconColor ?? theme.textColor, textDirection: TextDirection.ltr),
         ),
       );
     }

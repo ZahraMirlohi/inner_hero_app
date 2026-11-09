@@ -1001,8 +1001,11 @@ class SupabaseService {
           .maybeSingle();
 
       if (userChallenge != null) {
-        final startDate = DateTime.parse(userChallenge['challenge_start_date']);
-        final endDate = DateTime.parse(userChallenge['challenge_end_date']);
+        // فقط بخش تاریخ؛ اگر ساعت ذخیره شده باشد روز اول به‌اشتباه «خارج از محدوده» می‌شد
+        final sd = DateTime.parse(userChallenge['challenge_start_date']);
+        final ed = DateTime.parse(userChallenge['challenge_end_date']);
+        final startDate = DateTime(sd.year, sd.month, sd.day);
+        final endDate = DateTime(ed.year, ed.month, ed.day);
 
         final checkDate = DateTime(date.year, date.month, date.day);
 
@@ -1050,8 +1053,10 @@ class SupabaseService {
       final today = DateTime(now.year, now.month, now.day);
 
       if (userChallenge != null) {
-        final startDate = DateTime.parse(userChallenge['challenge_start_date']);
-        final endDate = DateTime.parse(userChallenge['challenge_end_date']);
+        final sd = DateTime.parse(userChallenge['challenge_start_date']);
+        final ed = DateTime.parse(userChallenge['challenge_end_date']);
+        final startDate = DateTime(sd.year, sd.month, sd.day);
+        final endDate = DateTime(ed.year, ed.month, ed.day);
 
         for (var completion in completionsCount) {
           final compDate = DateTime.parse(completion['date'] as String);
@@ -2789,7 +2794,7 @@ class SupabaseService {
 
       // 5. افزودن مدال
       final badge = questData['badge'] as String? ?? '🎯';
-      await _addBadgeToUser(userId, badge);
+      await _addBadgeToUser(userId, badge, title: questData['title'] as String?);
 
       final quest = Quest.fromMap(questData, questData['id']);
       return quest;
@@ -2845,14 +2850,17 @@ class SupabaseService {
 
 // lib/services/supabase_service.dart
 
-  Future<void> _addBadgeToUser(String userId, String badge) async {
+  Future<void> _addBadgeToUser(String userId, String badge,
+      {String? title}) async {
+    // نام یکتا برای هر ماموریت، تا مدال‌های هم‌آیکون روی هم نیفتند
+    final name = (title == null || title.isEmpty) ? badge : '$badge $title';
     try {
       // بررسی وجود مدال تکراری
       final existing = await client
           .from('user_badges')
           .select()
           .eq('user_id', userId)
-          .eq('badge_name', badge)
+          .eq('badge_name', name)
           .maybeSingle();
 
       if (existing != null) {
@@ -2862,7 +2870,7 @@ class SupabaseService {
       // ثبت مدال جدید
       await client.from('user_badges').insert({
         'user_id': userId,
-        'badge_name': badge,
+        'badge_name': name,
         'badge_icon': badge,
         'badge_type': 'quest',
         'earned_at': DateTime.now().toIso8601String(),
