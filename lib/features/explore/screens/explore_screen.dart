@@ -1414,7 +1414,76 @@ class _ExploreScreenState extends State<ExploreScreen>
           right: 0,
           child: _buildTabBar(primaryColor, theme),
         ),
+        Positioned(
+          top: 84,
+          left: 24,
+          child: GestureDetector(
+            onTap: () => _showHelp(theme),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                shape: BoxShape.circle,
+                boxShadow: theme.softShadow,
+              ),
+              child: Icon(Icons.question_mark_rounded,
+                  size: 18, color: theme.textColor),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+
+  static const _help = [
+    (
+      'چالش‌ها، یا قول‌های دسته‌جمعی',
+      'چالش یعنی چند نفر قسم می‌خورن یه کاری رو چند روز پشت‌سر‌هم انجام بدن و بعد با هم ناپدید می‌شن. به چه دردی می‌خوره؟ به اینکه جلوی چشم بقیه کم‌کاری کردن سخت‌تره.\n\nبعد از «شروع»، عادت‌های چالش می‌رن توی میدان؛ هر روز تیکشون بزن. یه روز نزنی، نوار پیشرفت بدون ترحم نگاهت می‌کنه.'
+    ),
+    (
+      'بسته‌ها، یعنی عادت‌های آماده',
+      'بسته یه سبد آماده از عادت‌هاست، مثل «آدم شدن در ۷ مرحله». به درد کسایی می‌خوره که حوصله‌ی ساختن عادت‌ها رو یکی‌یکی ندارن.\n\nفعالش که کنی، همه‌ی عادت‌هاش یک‌جا میان توی میدان. بعدش فقط مونده انجامشون بدی، تنها بخشی که هیچ بسته‌ای جات رو نمی‌گیره.'
+    ),
+    (
+      'ماموریت‌ها، یعنی هدف تک‌نفره',
+      'ماموریت یه هدف مشخص با تعداد روز معینه، مثلاً ۷ روز آب خوردن. برخلاف چالش، اینجا فقط خودتی و وجدانت.\n\nبعد از «شروع»، هر روز توی میدان انجامش بده. آخرش XP و مدال می‌گیری که از یه «آفرین» خشک‌وخالی بیشتر ارزش داره.'
+    ),
+    (
+      'افتخارات، یعنی جدول رتبه‌ها',
+      'اینجا می‌فهمی کی بیشتر از تو XP جمع کرده و بی‌دلیل هم باهات مهربون نیست. به درد غرور و حسادت می‌خوره، هر دو در دوز سالم.\n\nکاری لازم نیست بکنی؛ فقط XP جمع کن و بالا برو. جدول بقیه‌اش رو خودش خجالت‌زده می‌کنه.'
+    ),
+  ];
+
+  void _showHelp(ThemeProvider theme) {
+    final (title, body) = _help[_tabController.index];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor)),
+              const SizedBox(height: 12),
+              Text(body,
+                  style: TextStyle(
+                      fontSize: 14,
+                      height: 1.9,
+                      color: theme.textSecondaryColor)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
