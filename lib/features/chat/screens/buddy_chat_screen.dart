@@ -4066,7 +4066,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     try {
       final String appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final String appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final String appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
       if (message.type == MessageType.image) {
         final String shareText = '''
@@ -7244,7 +7244,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 ━━━━━━━━━━━━━━━━━━━━
 🔗 $url
 ━━━━━━━━━━━━━━━━━━━━
-📱 ارسال شده از اپلیکیشن قهرمان درون
+📱 ارسال شده از اپلیکیشن Dacko
 ''';
       await Share.share(shareText);
     } catch (e) {

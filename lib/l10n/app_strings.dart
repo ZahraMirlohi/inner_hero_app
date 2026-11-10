@@ -47,7 +47,7 @@ class AppStrings {
     ...atFa,
     ...ahFa,
     // عمومی
-    'app.name': 'قهرمان درون',
+    'app.name': 'Dacko',
     'common.cancel': 'بی‌خیال',
     'common.ok': 'باشه',
     'common.save': 'ذخیره',
@@ -125,7 +125,7 @@ class AppStrings {
 
     'settings.remind_time': 'ساعت یادآور روزانه',
     'notif.channel': 'یادآور روزانه',
-    'notif.title': 'قهرمان درون',
+    'notif.title': 'Dacko',
     'notif.body1': 'عادت‌هات دلشون برات تنگ شده. یه سر بزن.',
     'notif.body2': 'استریکت بدون تو غذا نمی‌خوره. بیا نجاتش بده.',
     'notif.body3': 'پنج دقیقه وقت داری؟ قهرمان‌ها از همین پنج دقیقه‌ها ساخته می‌شن.',
@@ -178,7 +178,7 @@ class AppStrings {
     ...adEn,
     ...atEn,
     ...ahEn,
-    'app.name': 'Inner Hero',
+    'app.name': 'Dacko',
     'common.cancel': 'Cancel',
     'common.ok': 'OK',
     'common.save': 'Save',
@@ -257,7 +257,7 @@ class AppStrings {
 
     'settings.remind_time': 'Daily reminder time',
     'notif.channel': 'Daily reminder',
-    'notif.title': 'Inner Hero',
+    'notif.title': 'Dacko',
     'notif.body1': 'Your habits miss you. Come say hi.',
     'notif.body2': 'Your streak needs you. Do not let it down.',
     'notif.body3': 'Got five minutes? Heroes are made of those.',

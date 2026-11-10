@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import '/core/app_palette.dart';
+import '/services/buddy_matcher_service.dart';
 
 class LeaderboardTab extends StatefulWidget {
   const LeaderboardTab({super.key});
@@ -20,6 +21,10 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
   String _errorMessage = '';
   String? _currentUserId;
   int _currentUserRank = 0;
+  // پیش‌فرض: فقط هم‌سطح‌های خودم (سطح = XP ÷ ۱۰۰ + ۱، مثل بقیهٔ برنامه)
+  bool _onlyPeers = true;
+  int _myLevel = 1;
+  bool _sending = false;
 
   @override
   void initState() {
@@ -38,6 +43,15 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     try {
       final currentUser = await _supabase.getCurrentUser();
       _currentUserId = currentUser?.id;
+      _currentUserRank = 0;
+      if (_currentUserId != null) {
+        final me = await _supabase.client
+            .from('user_progress')
+            .select('total_xp')
+            .eq('user_id', _currentUserId!)
+            .maybeSingle();
+        _myLevel = (((me?['total_xp'] ?? 0) as int) / 100).floor() + 1;
+      }
 
       final users = await _getTopUsers();
 
@@ -81,11 +95,15 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
 
   Future<List<Map<String, dynamic>>> _getTopUsers() async {
     try {
-      final response = await _supabase.client
-          .from('user_progress')
-          .select('user_id, total_xp')
-          .order('total_xp', ascending: false)
-          .limit(100);
+      final base =
+          _supabase.client.from('user_progress').select('user_id, total_xp');
+      final filtered = _onlyPeers
+          ? base
+              .gte('total_xp', (_myLevel - 1) * 100)
+              .lt('total_xp', _myLevel * 100)
+          : base;
+      final response =
+          await filtered.order('total_xp', ascending: false).limit(100);
 
       if (response.isNotEmpty) {
         // یک درخواست برای همه پروفایل‌ها (به‌جای ۱۰۰ درخواست جدا)
@@ -156,6 +174,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
         children: [
           const SizedBox(height: 100),
           _buildHeader(primaryColor, theme),
+          _buildScopeToggle(theme),
           Expanded(
             child: _isLoading
                 ? _buildLoadingState(primaryColor, theme)
@@ -202,6 +221,197 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                   fontSize: size, fontWeight: FontWeight.w800, color: _ink)),
         ],
       );
+
+  Widget _buildScopeToggle(ThemeProvider theme) {
+    Widget chip(String label, bool peers) {
+      final on = _onlyPeers == peers;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () {
+            if (_onlyPeers == peers) return;
+            setState(() => _onlyPeers = peers);
+            _loadLeaderboard();
+          },
+          child: Container(
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: on ? theme.effectivePrimary : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: on ? theme.onPrimaryColor : theme.textSecondaryColor)),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: theme.softShadow,
+      ),
+      child: Row(children: [
+        chip('هم‌سطح‌ها (سطح $_myLevel)', true),
+        chip('همه', false),
+      ]),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // پروفایل کوتاه + ارسال درخواست هم‌مسیری
+  // ═══════════════════════════════════════════════════════════
+  Future<String> _relation(String otherId) async {
+    final me = _currentUserId!;
+    final rows = await _supabase.client
+        .from('buddy_requests')
+        .select('from_user_id, to_user_id, status')
+        .or('and(from_user_id.eq.$me,to_user_id.eq.$otherId),and(from_user_id.eq.$otherId,to_user_id.eq.$me)')
+        .inFilter('status', ['pending', 'accepted']);
+    for (final r in rows) {
+      if (r['status'] == 'accepted') return 'accepted';
+    }
+    for (final r in rows) {
+      return r['from_user_id'] == me ? 'sent' : 'incoming';
+    }
+    return 'none';
+  }
+
+  Future<bool> _acceptsRequests(String otherId) async {
+    try {
+      final r = await _supabase.client
+          .from('profiles')
+          .select('allow_buddy_requests')
+          .eq('user_id', otherId)
+          .maybeSingle();
+      return r?['allow_buddy_requests'] != false;
+    } catch (_) {
+      return true; // ستون هنوز ساخته نشده
+    }
+  }
+
+  void _showUser(Map<String, dynamic> user, ThemeProvider theme) {
+    final id = user['user_id'] as String;
+    final isMe = id == _currentUserId;
+    final xp = (user['total_xp'] ?? 0) as int;
+    final relationFuture = isMe || _currentUserId == null
+        ? Future.value('me')
+        : _relation(id).catchError((_) => 'none');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _avatar(user['avatar_url'], 72, theme),
+              const SizedBox(height: 10),
+              Text(user['name'] ?? 'کاربر',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor)),
+              const SizedBox(height: 4),
+              Text('سطح ${(xp / 100).floor() + 1}  |  $xp XP',
+                  style:
+                      TextStyle(fontSize: 13, color: theme.textSecondaryColor)),
+              const SizedBox(height: 18),
+              FutureBuilder<String>(
+                future: relationFuture,
+                builder: (c, snap) {
+                  final rel = snap.data;
+                  if (rel == null) {
+                    return const SizedBox(
+                        height: 48,
+                        child: Center(
+                            child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))));
+                  }
+                  if (rel == 'me') return const SizedBox.shrink();
+                  final label = switch (rel) {
+                    'accepted' => 'هم‌مسیر شما هستند',
+                    'sent' => 'درخواست فرستاده شده',
+                    'incoming' => 'درخواستش را در چت‌ها ببین',
+                    _ => 'درخواست هم‌مسیری',
+                  };
+                  return StatefulBuilder(
+                    builder: (c2, setS) => GestureDetector(
+                      onTap: rel != 'none' || _sending
+                          ? null
+                          : () async {
+                              setS(() => _sending = true);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final nav = Navigator.of(ctx);
+                              try {
+                                if (!await _acceptsRequests(id)) {
+                                  messenger.showSnackBar(const SnackBar(
+                                      content: Text(
+                                          'این کاربر درخواست هم‌مسیری دریافت نمی‌کند')));
+                                } else {
+                                  await BuddyMatcherService()
+                                      .sendBuddyRequestWithMatch(
+                                          _currentUserId!, id);
+                                  messenger.showSnackBar(const SnackBar(
+                                      content: Text('درخواست ارسال شد')));
+                                }
+                                nav.pop();
+                              } catch (_) {
+                                messenger.showSnackBar(const SnackBar(
+                                    content:
+                                        Text('ارسال درخواست انجام نشد')));
+                              } finally {
+                                _sending = false;
+                                if (c2.mounted) setS(() {});
+                              }
+                            },
+                      child: Container(
+                        height: 52,
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: rel == 'none'
+                              ? theme.effectivePrimary
+                              : theme.disabledButtonBackground,
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: _sending
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : Text(label,
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: rel == 'none'
+                                        ? theme.onPrimaryColor
+                                        : theme.textSecondaryColor)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildHeader(Color primaryColor, ThemeProvider theme) {
     return Container(
@@ -291,6 +501,9 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       final u = top3[idx];
       final badges = (u['badgeCount'] ?? 0) as int;
       return Expanded(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _showUser(u, theme),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -345,6 +558,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
               ),
             ),
           ],
+        ),
         ),
       );
     }
@@ -408,7 +622,9 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     final isMe = user['user_id'] == _currentUserId;
     final badges = (user['badgeCount'] ?? 0) as int;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _showUser(user, theme),
+      child: Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       constraints: const BoxConstraints(minHeight: 60),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -492,7 +708,7 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
             ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _stateView(ThemeProvider theme, IconData icon, Tone tone, String title,

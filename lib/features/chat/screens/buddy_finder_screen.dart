@@ -138,7 +138,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     try {
       final appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
       final myUsername = _myUsername ?? 'یک دوست';
 
@@ -175,7 +175,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     try {
       final appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
       final myUsername = _myUsername ?? 'یک دوست';
 
