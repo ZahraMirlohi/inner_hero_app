@@ -37,7 +37,7 @@ class _MedalsScreenState extends State<MedalsScreen> {
       {required String link,
       required String table,
       required String idCol,
-      String? name(Map<String, dynamic> r)}) async {
+      required String? Function(Map<String, dynamic> r) name}) async {
     final client = SupabaseService().client;
     final mine = await client
         .from(link)
