@@ -435,6 +435,7 @@ class _PackagesTabState extends State<PackagesTab> {
   // غیرفعال‌سازی بسته (با دیالوگ)
   // ═══════════════════════════════════════════════════════════
   void _showDeactivateDialog(Package package, Color primaryColor) {
+    if (ModalRoute.of(context)?.isCurrent == false) return;
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
@@ -514,6 +515,7 @@ class _PackagesTabState extends State<PackagesTab> {
 
   void _showPackageSheet(Package package, Color primaryColor,
       {required bool activate}) {
+    if (ModalRoute.of(context)?.isCurrent == false) return;
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     const ink = Color(0xFF090909);
     final soft = theme.tone(Tone.lime).bg;

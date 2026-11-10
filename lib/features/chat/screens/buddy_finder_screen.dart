@@ -436,7 +436,19 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ==================== ارسال درخواست ====================
+  // جلوگیری از کلیک چندباره: تا پایان کار هر درخواست، کلیک دوباره نادیده گرفته می‌شود
+  final Set<String> _inFlight = {};
+
   Future<void> _sendRequest(String toUserId, Color primaryColor) async {
+    if (!_inFlight.add('s$toUserId')) return;
+    try {
+      await _sendRequestImpl(toUserId, primaryColor);
+    } finally {
+      _inFlight.remove('s$toUserId');
+    }
+  }
+
+  Future<void> _sendRequestImpl(String toUserId, Color primaryColor) async {
     if (_userId == null) return;
 
     try {
@@ -599,6 +611,19 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
 
 // ==================== پاسخ به درخواست ====================
   Future<void> _respondToRequest(
+    String requestId,
+    bool accept,
+    Color primaryColor,
+  ) async {
+    if (!_inFlight.add('r$requestId')) return;
+    try {
+      await _respondToRequestImpl(requestId, accept, primaryColor);
+    } finally {
+      _inFlight.remove('r$requestId');
+    }
+  }
+
+  Future<void> _respondToRequestImpl(
     String requestId,
     bool accept,
     Color primaryColor,

@@ -557,7 +557,20 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ═══════════════════════════════════════════════════════════
   // دیالوگ جزئیات چالش
   // ═══════════════════════════════════════════════════════════
+  bool _detailChallengeDetailsDialogBusy = false;
+
+  // کلیک‌های پشت‌سرهم (اینترنت کند) فقط یک صفحه باز می‌کند
   void _showChallengeDetailsDialog(Map<String, dynamic> challenge) async {
+    if (_detailChallengeDetailsDialogBusy || ModalRoute.of(context)?.isCurrent == false) return;
+    _detailChallengeDetailsDialogBusy = true;
+    try {
+      await _showChallengeDetailsDialogImpl(challenge);
+    } finally {
+      _detailChallengeDetailsDialogBusy = false;
+    }
+  }
+
+  Future<void> _showChallengeDetailsDialogImpl(Map<String, dynamic> challenge) async {
     try {
       final challengeId = challenge['id'];
 
@@ -1044,7 +1057,20 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ═══════════════════════════════════════════════════════════
   // دیالوگ جزئیات ماموریت
   // ═══════════════════════════════════════════════════════════
+  bool _detailQuestDetailDialogBusy = false;
+
+  // کلیک‌های پشت‌سرهم (اینترنت کند) فقط یک صفحه باز می‌کند
   void _showQuestDetailDialog(Quest quest) async {
+    if (_detailQuestDetailDialogBusy || ModalRoute.of(context)?.isCurrent == false) return;
+    _detailQuestDetailDialogBusy = true;
+    try {
+      await _showQuestDetailDialogImpl(quest);
+    } finally {
+      _detailQuestDetailDialogBusy = false;
+    }
+  }
+
+  Future<void> _showQuestDetailDialogImpl(Quest quest) async {
     try {
       final theme = Provider.of<ThemeProvider>(context, listen: false);
       final Color color = _parseColor(quest.color);

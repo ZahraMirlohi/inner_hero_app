@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
 import '/providers/theme_provider.dart';
+import '../widgets/buddy_requests_view.dart';
 import '/core/app_palette.dart';
 import '/features/chat/models/conversation_model.dart';
 import 'ai_chat_screen.dart';
@@ -14,6 +15,9 @@ import 'squad_chat_screen.dart';
 import 'arena_chat_screen.dart';
 
 class ChatScreen extends StatefulWidget {
+  /// MainScreen آن را زیاد می‌کند تا چت روی «درخواست‌ها» باز شود
+  static final ValueNotifier<int> openRequestsSignal = ValueNotifier(0);
+
   const ChatScreen({super.key});
 
   @override
@@ -23,6 +27,9 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _buddySub = 0; // 0 گفتگوها، 1 درخواست‌ها
+  int _incomingCount = 0;
+  int _requestsEpoch = 0;
   final ChatService _chatService = ChatService();
   final SupabaseClient _supabaseClient = Supabase.instance.client;
 
@@ -33,6 +40,8 @@ class _ChatScreenState extends State<ChatScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    ChatScreen.openRequestsSignal.addListener(_openRequests);
+    _loadIncomingCount();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -43,8 +52,31 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   void dispose() {
+    ChatScreen.openRequestsSignal.removeListener(_openRequests);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _openRequests() {
+    if (!mounted) return;
+    setState(() {
+      _buddySub = 1;
+      _requestsEpoch++;
+    });
+    _tabController.animateTo(0);
+  }
+
+  Future<void> _loadIncomingCount() async {
+    try {
+      final me = _supabaseClient.auth.currentUser?.id;
+      if (me == null) return;
+      final rows = await _supabaseClient
+          .from('buddy_requests')
+          .select('id')
+          .eq('to_user_id', me)
+          .eq('status', 'pending');
+      if (mounted) setState(() => _incomingCount = rows.length);
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
@@ -609,6 +641,65 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   Widget _buildBuddyTab(ThemeProvider theme, Color primaryColor) {
+    return Column(
+      children: [
+        _buildBuddySubToggle(theme),
+        Expanded(
+          child: _buddySub == 1
+              ? BuddyRequestsView(
+                  key: ValueKey(_requestsEpoch),
+                  onChanged: (n, {bool accepted = false}) {
+                    if (mounted) setState(() => _incomingCount = n);
+                    if (accepted) _loadData();
+                  },
+                )
+              : _buildBuddyConversations(theme, primaryColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBuddySubToggle(ThemeProvider theme) {
+    Widget chip(String label, int idx, {int badge = 0}) {
+      final on = _buddySub == idx;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => setState(() {
+            _buddySub = idx;
+            if (idx == 1) _requestsEpoch++;
+          }),
+          child: Container(
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: on ? theme.effectivePrimary : Colors.transparent,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Text(badge > 0 ? '$label ($badge)' : label,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: on ? theme.onPrimaryColor : theme.textSecondaryColor)),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(23),
+      ),
+      child: Row(children: [
+        chip('گفتگوها', 0),
+        chip('درخواست‌ها', 1, badge: _incomingCount),
+      ]),
+    );
+  }
+
+  Widget _buildBuddyConversations(ThemeProvider theme, Color primaryColor) {
     if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(color: primaryColor),
