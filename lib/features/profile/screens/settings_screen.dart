@@ -12,6 +12,7 @@ import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
 import '/services/local_storage_service.dart';
 import '/services/notification_service.dart';
+import '/services/privacy_service.dart';
 import '/services/sound_service.dart';
 import '/services/supabase_service.dart';
 import 'color_picker_screen.dart';
@@ -25,6 +26,34 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  bool _allowRequests = true;
+  bool _discoverable = true;
+
+  @override
+  void initState() {
+    super.initState();
+    PrivacyService.instance.allowRequests().then((v) {
+      if (mounted) setState(() => _allowRequests = v);
+    });
+    PrivacyService.instance.discoverable().then((v) {
+      if (mounted) setState(() => _discoverable = v);
+    });
+  }
+
+  Future<void> _togglePrivacy(
+      bool v, Future<void> Function(bool) save, void Function(bool) apply) async {
+    final old = !v;
+    setState(() => apply(v));
+    try {
+      await save(v);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => apply(old));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ذخیره نشد، دوباره امتحان کن')));
+    }
+  }
+
   static const String _appVersion = '1.0.0';
   static const Color _danger = Color(0xFFE5483A);
 
@@ -134,6 +163,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _switchRow(
                 theme,
+                tone: Tone.lilac,
+                icon: Icons.person_add_alt_1_rounded,
+                title: context.tr('settings.notif_requests'),
+                value: settings.rawNotifRequests,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifRequests,
+              ),
+              _switchRow(
+                theme,
+                tone: Tone.peach,
+                icon: Icons.local_fire_department_rounded,
+                title: context.tr('settings.notif_streak'),
+                value: settings.rawNotifStreak,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifStreak,
+              ),
+              _switchRow(
+                theme,
+                tone: Tone.lime,
+                icon: Icons.timer_rounded,
+                title: context.tr('settings.notif_timer'),
+                value: settings.rawNotifTimer,
+                enabled: settings.notificationsEnabled,
+                onChanged: settings.setNotifTimer,
+              ),
+              _switchRow(
+                theme,
                 tone: Tone.rose,
                 icon: Icons.card_giftcard_rounded,
                 title: context.tr('settings.notif_xp'),
@@ -165,6 +221,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 enabled: false, // تا وقتی ستون سرورش ساخته نشده فقط «به‌زودی»
                 onChanged: settings.setPrivateProfile,
                 badge: context.tr('common.soon'),
+              ),
+              _switchRow(
+                theme,
+                tone: Tone.lilac,
+                icon: Icons.person_add_alt_1_rounded,
+                title: context.tr('settings.allow_requests'),
+                subtitle: context.tr('settings.allow_requests_hint'),
+                value: _allowRequests,
+                onChanged: (v) => _togglePrivacy(
+                    v, PrivacyService.instance.setAllowRequests,
+                    (x) => _allowRequests = x),
+              ),
+              _switchRow(
+                theme,
+                tone: Tone.sky,
+                icon: Icons.travel_explore_rounded,
+                title: context.tr('settings.discoverable'),
+                subtitle: context.tr('settings.discoverable_hint'),
+                value: _discoverable,
+                onChanged: (v) => _togglePrivacy(
+                    v, PrivacyService.instance.setDiscoverable,
+                    (x) => _discoverable = x),
               ),
               _row(
                 theme,

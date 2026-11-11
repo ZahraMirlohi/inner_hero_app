@@ -431,6 +431,18 @@ class BuddyMatcherService {
       print('Using actualFromUserId: $actualFromUserId');
       print('====================================');
 
+      // گیرنده ممکن است درخواست دریافت نکند (ستون تا اجرای SQL ممکن است نباشد)
+      try {
+        final target = await _client
+            .from('profiles')
+            .select('allow_buddy_requests')
+            .eq('user_id', toUserId)
+            .maybeSingle();
+        if (target?['allow_buddy_requests'] == false) {
+          throw Exception('این کاربر درخواست هم‌مسیری دریافت نمی‌کند');
+        }
+      } on PostgrestException catch (_) {}
+
       // 1. حذف درخواست‌های قبلی بین این دو کاربر
       await _client
           .from('buddy_requests')

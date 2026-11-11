@@ -63,11 +63,14 @@ class _EditHabitScreenState extends State<EditHabitScreen> {
     _selectedIconColor = widget.habit.iconColor;
     _selectedBgColor = widget.habit.backgroundColor;
     _frequencyType = widget.habit.frequencyType;
-    _dailyIntervalDays = widget.habit.dailyIntervalDays?.first ?? 1;
-    _weeklyDays = List.from(widget.habit.weeklyDays ?? []);
-    _weeklyIntervalWeeks = widget.habit.weeklyIntervalWeeks ?? 1;
-    _monthlyDays = List.from(widget.habit.monthlyDays ?? []);
-    _monthlyIntervalMonths = widget.habit.monthlyIntervalMonths ?? 1;
+    final di = widget.habit.dailyIntervalDays;
+    _dailyIntervalDays =
+        ((di == null || di.isEmpty) ? 1 : (int.tryParse('${di.first}') ?? 1))
+            .clamp(1, 30);
+    _weeklyDays = List<int>.from(widget.habit.weeklyDays ?? const <int>[]);
+    _weeklyIntervalWeeks = (widget.habit.weeklyIntervalWeeks ?? 1).clamp(1, 12);
+    _monthlyDays = List<int>.from(widget.habit.monthlyDays ?? const <int>[]);
+    _monthlyIntervalMonths = (widget.habit.monthlyIntervalMonths ?? 1).clamp(1, 12);
     _timeOfDay = widget.habit.timeOfDay;
     _reminders = List.from(widget.habit.reminders);
     _xpReward = widget.habit.xpReward;

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '/features/arena/models/habit_model.dart';
 import '/services/supabase_service.dart';
 import '/features/arena/models/habit_completion.dart';
+import '/features/arena/utils/habit_streaks.dart';
 import '/features/arena/widgets/habit_chart_widget.dart';
 import '/providers/theme_provider.dart';
 import '/core/app_palette.dart';
@@ -16,6 +17,11 @@ class HabitDetailScreen extends StatelessWidget {
   final SupabaseService _supabase = SupabaseService();
 
   HabitDetailScreen({super.key, required this.habit});
+
+  // استریک از تاریخچهٔ واقعی انجام‌ها محاسبه می‌شود (مقدار ذخیره‌شده روی عادت به‌روز نمی‌شد)
+  late final Future<List<HabitCompletion>> _completionsFuture =
+      _supabase.getHabitCompletionsWithLevel(
+          habitId: habit.id, userId: habit.userId);
 
   IconData _getIconData(String iconName) {
     switch (iconName) {
@@ -537,13 +543,19 @@ class HabitDetailScreen extends StatelessWidget {
 
     final apricot = theme.tone(Tone.apricot);
     final butter = theme.tone(Tone.butter);
-    return Row(
+    return FutureBuilder<List<HabitCompletion>>(
+      future: _completionsFuture,
+      builder: (context, snap) {
+        final st = snap.hasData
+            ? HabitStreaks.compute(habit, snap.data!)
+            : HabitStreaks(habit.currentStreak, habit.bestStreak);
+        return Row(
       children: [
         tile(
           Tone.apricot,
           Icons.local_fire_department_rounded,
           theme.isDarkMode ? apricot.fg : const Color(0xFFE8890C),
-          habit.currentStreak,
+          st.current,
           context.tr('ad.streak.current'),
         ),
         const SizedBox(width: 10),
@@ -551,10 +563,12 @@ class HabitDetailScreen extends StatelessWidget {
           Tone.butter,
           Icons.emoji_events_outlined,
           theme.isDarkMode ? butter.fg : _ink,
-          habit.bestStreak,
+          st.best,
           context.tr('ad.streak.best'),
         ),
       ],
+        );
+      },
     );
   }
 
