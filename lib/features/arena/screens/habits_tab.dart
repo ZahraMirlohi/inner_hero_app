@@ -203,6 +203,14 @@ class HabitsTabState extends State<HabitsTab> with TickerProviderStateMixin {
                             icon: Icons.fitness_center_rounded,
                             title: context.tr('ah.habits.emptyTitle'),
                             subtitle: context.tr('ah.empty.sub'),
+                            actionLabel: context.tr('ah.fab.habit'),
+                            actionIcon: Icons.add_rounded,
+                            onAction: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const CategorySelectionScreen()),
+                            ).then((_) => refreshData()),
                           ),
                         ],
                       )

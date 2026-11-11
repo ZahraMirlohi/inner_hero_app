@@ -154,6 +154,13 @@ class TasksTabState extends State<TasksTab> with TickerProviderStateMixin {
                             icon: Icons.assignment_outlined,
                             title: context.tr('ah.tasks.emptyTitle'),
                             subtitle: context.tr('ah.empty.sub'),
+                            actionLabel: context.tr('ah.fab.task'),
+                            actionIcon: Icons.add_rounded,
+                            onAction: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const AddTaskScreen()),
+                            ).then((_) => refreshData()),
                           ),
                         ],
                       )

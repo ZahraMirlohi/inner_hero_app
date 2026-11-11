@@ -5,6 +5,7 @@
 // هر صفحه رنگ پاستلی خودش را دارد و بین صفحه‌ها نرم جابه‌جا می‌شویم.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -21,6 +22,7 @@ import '/providers/auth_provider.dart';
 import '/providers/settings_provider.dart';
 import '/providers/sync_provider.dart';
 import '/providers/theme_provider.dart';
+import '/services/image_crop_service.dart';
 import '/services/notification_service.dart';
 import '/services/sound_service.dart';
 import '/services/storage_service.dart';
@@ -302,7 +304,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         imageQuality: 85,
       );
       if (file == null) return;
-      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      final cropped = await ImageCropService().cropAvatar(
+        imageFile: File(file.path),
+        context: context,
+        primaryColor: context.read<ThemeProvider>().primaryColor,
+      );
+      if (cropped == null) return; // کاربر برش را لغو کرد
+      final bytes = await cropped.readAsBytes();
       if (mounted) setState(() => _avatar = bytes);
     } catch (_) {}
   }

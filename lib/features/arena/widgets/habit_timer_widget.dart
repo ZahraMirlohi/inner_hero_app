@@ -5,17 +5,26 @@ import '/services/supabase_service.dart';
 import '/providers/theme_provider.dart';
 import '/core/app_palette.dart';
 import '/l10n/app_strings.dart';
+import '/services/notification_service.dart';
 
 class HabitTimerWidget extends StatefulWidget {
   final String habitId;
   final String habitTitle;
   final VoidCallback onTimeSaved;
 
+  /// اگر > 0 باشد، با رسیدن به این مدت تایمر خودکار تمام و ثبت می‌شود
+  final int targetSeconds;
+
+  /// بعد از پایان خودکار صدا زده می‌شود؛ true یعنی کاربر «انجام شد» را زده
+  final ValueChanged<bool>? onFinished;
+
   const HabitTimerWidget({
     super.key,
     required this.habitId,
     required this.habitTitle,
     required this.onTimeSaved,
+    this.targetSeconds = 0,
+    this.onFinished,
   });
 
   @override
@@ -34,6 +43,7 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
   @override
   void dispose() {
     _timer?.cancel();
+    NotificationService.instance.cancel(_alertId);
     super.dispose();
   }
 
@@ -44,15 +54,53 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       _isPaused = false;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsedSeconds++;
-        });
+      if (!mounted) return;
+      setState(() => _elapsedSeconds++);
+      if (widget.targetSeconds > 0 && _elapsedSeconds >= widget.targetSeconds) {
+        _finishByTarget();
       }
     });
+    _scheduleEndAlert();
+  }
+
+  static const int _alertId = 2001;
+
+  // اگر برنامه در پس‌زمینه باشد، پایان تایمر با اعلان اطلاع داده می‌شود
+  void _scheduleEndAlert() {
+    if (widget.targetSeconds <= 0) return;
+    final left = widget.targetSeconds - _elapsedSeconds;
+    if (left <= 0) return;
+    NotificationService.instance.scheduleOnce(
+      _alertId,
+      DateTime.now().add(Duration(seconds: left)),
+      context.tr('ad.tmr.endTitle'),
+      widget.habitTitle,
+      channel: 'habit_timer',
+      channelName: 'Timer',
+    );
+  }
+
+  bool _finishing = false;
+
+  Future<void> _finishByTarget() async {
+    if (_finishing || _isSaved) return;
+    _finishing = true;
+    _timer?.cancel();
+    NotificationService.instance.cancel(_alertId);
+    if (!mounted) return;
+    setState(() {
+      _isRunning = false;
+      _isPaused = false;
+      _elapsedSeconds = widget.targetSeconds;
+    });
+    final yes = await showHabitTimerEndDialog(context, widget.habitTitle);
+    if (!mounted) return;
+    await _saveTime();
+    widget.onFinished?.call(yes == true);
   }
 
   void _pauseTimer() {
+    NotificationService.instance.cancel(_alertId);
     _timer?.cancel();
     setState(() {
       _isRunning = false;
@@ -67,15 +115,17 @@ class _HabitTimerWidgetState extends State<HabitTimerWidget> {
       _isPaused = false;
     });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsedSeconds++;
-        });
+      if (!mounted) return;
+      setState(() => _elapsedSeconds++);
+      if (widget.targetSeconds > 0 && _elapsedSeconds >= widget.targetSeconds) {
+        _finishByTarget();
       }
     });
+    _scheduleEndAlert();
   }
 
   void _resetTimer() {
+    NotificationService.instance.cancel(_alertId);
     _timer?.cancel();
     setState(() {
       _isRunning = false;
