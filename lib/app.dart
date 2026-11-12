@@ -99,13 +99,23 @@ class _AppNavigator extends StatefulWidget {
 }
 
 class _AppNavigatorState extends State<_AppNavigator> {
-  final _keys = {
+  var _keys = {
     true: GlobalKey<NavigatorState>(debugLabel: 'nav_in'),
     false: GlobalKey<NavigatorState>(debugLabel: 'nav_out'),
   };
+  String? _uid;
 
   @override
   Widget build(BuildContext context) {
+    // با عوض شدن کاربر، کل درخت صفحه‌ها (و حالت/کش هر صفحه) از نو ساخته می‌شود
+    final uid = context.select<AuthProvider, String?>((a) => a.userId);
+    if (uid != _uid) {
+      _uid = uid;
+      _keys = {
+        true: GlobalKey<NavigatorState>(debugLabel: 'nav_in_$uid'),
+        false: GlobalKey<NavigatorState>(debugLabel: 'nav_out_$uid'),
+      };
+    }
     final key = _keys[widget.loggedIn]!;
     return NavigatorPopHandler(
       onPop: () async {

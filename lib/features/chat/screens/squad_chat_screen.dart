@@ -3,6 +3,8 @@
 import '/services/sound_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/chat_background.dart';
+import '/l10n/app_strings.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -88,9 +90,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     '😘',
   ];
 
+  String? _bgPath;
+
   @override
   void initState() {
     super.initState();
+    ChatBackground.load(widget.conversation.id).then((p) {
+      if (mounted) setState(() => _bgPath = p);
+    });
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
     _setupRealtimeSubscription();
@@ -2329,6 +2336,22 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                   ),
                   const SizedBox(height: 14),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.wallpaper_rounded, color: primaryColor),
+                    title: Text(context.tr('bg.title'),
+                        style: TextStyle(
+                            color: theme.textColor,
+                            fontWeight: FontWeight.w600)),
+                    subtitle: Text(context.tr('bg.sub'),
+                        style: TextStyle(
+                            color: theme.textSecondaryColor, fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      showChatBackgroundSheet(context, widget.conversation.id,
+                          (p) => setState(() => _bgPath = p));
+                    },
+                  ),
                   Text('ابزارهای گروه',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -2494,7 +2517,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         ),
       ),
       trailing: Icon(
-        Icons.chevron_left, textDirection: TextDirection.ltr,
+        Icons.chevron_right,
         color: theme.textSecondaryColor,
       ),
       onTap: onTap,
@@ -2769,6 +2792,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             child: Stack(
               key: _stackKey,
               children: [
+                ChatBackgroundLayer(path: _bgPath, dark: theme.isDarkMode),
                 _buildChatTab(theme, primaryColor),
                 if (_menuMessage != null)
                   Positioned.fill(
@@ -2813,7 +2837,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   ),
                 ],
               ),
-              child: Icon(icon, size: 20, color: theme.textColor, textDirection: TextDirection.ltr),
+              child: Icon(icon, size: 20, color: theme.textColor),
             ),
           ),
         );

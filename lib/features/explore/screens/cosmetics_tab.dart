@@ -1,5 +1,6 @@
 // lib/features/explore/screens/cosmetics_tab.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/providers/theme_provider.dart';
@@ -32,7 +33,7 @@ class CosmeticsTab extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'بازارچه آیتم‌ها',
+              context.tr('ex.cos.title'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -41,12 +42,12 @@ class CosmeticsTab extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'به زودی...',
+              context.tr('ex.cos.soon'),
               style: TextStyle(color: theme.textSecondaryColor),
             ),
             const SizedBox(height: 8),
             Text(
-              'با XPهای خود آیتم‌های جذاب بخرید!',
+              context.tr('ex.cos.sub'),
               style: TextStyle(
                 color: theme.textSecondaryColor,
                 fontSize: 12,

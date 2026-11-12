@@ -21,9 +21,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
   String _errorMessage = '';
   String? _currentUserId;
   int _currentUserRank = 0;
-  // پیش‌فرض: فقط هم‌سطح‌های خودم (سطح = XP ÷ ۱۰۰ + ۱، مثل بقیهٔ برنامه)
-  bool _onlyPeers = true;
-  int _myLevel = 1;
   bool _sending = false;
 
   @override
@@ -44,14 +41,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
       final currentUser = await _supabase.getCurrentUser();
       _currentUserId = currentUser?.id;
       _currentUserRank = 0;
-      if (_currentUserId != null) {
-        final me = await _supabase.client
-            .from('user_progress')
-            .select('total_xp')
-            .eq('user_id', _currentUserId!)
-            .maybeSingle();
-        _myLevel = (((me?['total_xp'] ?? 0) as int) / 100).floor() + 1;
-      }
 
       final users = await _getTopUsers();
 
@@ -67,6 +56,10 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
         final xpA = (a['total_xp'] ?? 0) as int;
         final xpB = (b['total_xp'] ?? 0) as int;
         if (xpB != xpA) return xpB.compareTo(xpA);
+        // هم‌امتیازها: خود کاربر بالاتر از بقیهٔ هم‌سطح‌های هم‌XP
+        final meA = a['user_id'] == _currentUserId ? 0 : 1;
+        final meB = b['user_id'] == _currentUserId ? 0 : 1;
+        if (meA != meB) return meA.compareTo(meB);
         return (b['badgeCount'] ?? 0).compareTo(a['badgeCount'] ?? 0);
       });
 
@@ -97,13 +90,8 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
     try {
       final base =
           _supabase.client.from('user_progress').select('user_id, total_xp');
-      final filtered = _onlyPeers
-          ? base
-              .gte('total_xp', (_myLevel - 1) * 100)
-              .lt('total_xp', _myLevel * 100)
-          : base;
       final response =
-          await filtered.order('total_xp', ascending: false).limit(100);
+          await base.order('total_xp', ascending: false).limit(100);
 
       if (response.isNotEmpty) {
         // یک درخواست برای همه پروفایل‌ها (به‌جای ۱۰۰ درخواست جدا)
@@ -174,7 +162,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
         children: [
           const SizedBox(height: 100),
           _buildHeader(primaryColor, theme),
-          _buildScopeToggle(theme),
           Expanded(
             child: _isLoading
                 ? _buildLoadingState(primaryColor, theme)
@@ -221,48 +208,6 @@ class _LeaderboardTabState extends State<LeaderboardTab> {
                   fontSize: size, fontWeight: FontWeight.w800, color: _ink)),
         ],
       );
-
-  Widget _buildScopeToggle(ThemeProvider theme) {
-    Widget chip(String label, bool peers) {
-      final on = _onlyPeers == peers;
-      return Expanded(
-        child: GestureDetector(
-          onTap: () {
-            if (_onlyPeers == peers) return;
-            setState(() => _onlyPeers = peers);
-            _loadLeaderboard();
-          },
-          child: Container(
-            height: 40,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: on ? theme.effectivePrimary : Colors.transparent,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(label,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: on ? theme.onPrimaryColor : theme.textSecondaryColor)),
-          ),
-        ),
-      );
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: theme.softShadow,
-      ),
-      child: Row(children: [
-        chip('هم‌سطح‌ها (سطح $_myLevel)', true),
-        chip('همه', false),
-      ]),
-    );
-  }
 
   // ═══════════════════════════════════════════════════════════
   // پروفایل کوتاه + ارسال درخواست هم‌مسیری

@@ -1265,7 +1265,44 @@ class ChatService {
 
   // lib/services/chat_service.dart
 
-  Future<void> deleteConversationForBoth(String conversationId) async {
+  /// فهرست هم‌مسیرهای پذیرفته‌شده (جدا از وجود داشتن گفتگو)
+  Future<List<Map<String, dynamic>>> getBuddies(String me) async {
+    final rows = await _client
+        .from('buddy_requests')
+        .select('from_user_id, to_user_id')
+        .eq('status', 'accepted')
+        .or('from_user_id.eq.$me,to_user_id.eq.$me');
+    final ids = <String>{
+      for (final r in rows)
+        (r['from_user_id'] == me ? r['to_user_id'] : r['from_user_id']) as String
+    };
+    if (ids.isEmpty) return [];
+    final profiles = await _client
+        .from('profiles')
+        .select('user_id, name, avatar_url')
+        .inFilter('user_id', ids.toList());
+    return List<Map<String, dynamic>>.from(profiles);
+  }
+
+  /// گفتگوی هم‌مسیر را (اگر پاک شده بود) دوباره می‌سازد و شناسه‌اش را برمی‌گرداند
+  Future<String> openBuddyConversation(String me, String other) =>
+      createConversation(type: 'buddy', memberIds: [me, other], createdBy: me);
+
+  /// پایان هم‌مسیری: درخواست‌ها و گفتگو
+  Future<void> removeBuddy(String me, String other) async {
+    final convs = await getUserConversations(me);
+    for (final c in convs) {
+      if (c.type == ConversationType.buddy && c.memberIds.contains(other)) {
+        await deleteConversationForBoth(c.id);
+      }
+    }
+    await _client.from('buddy_requests').delete().or(
+        'and(from_user_id.eq.$me,to_user_id.eq.$other),'
+        'and(from_user_id.eq.$other,to_user_id.eq.$me)');
+  }
+
+  Future<void> deleteConversationForBoth(String conversationId,
+      {bool removeBuddy = true}) async {
     try {
       print('Starting deletion for conversation: $conversationId');
 
@@ -1281,7 +1318,7 @@ class ChatService {
       print('Members in conversation: $memberIds');
 
       // 2. حذف درخواست‌های هم‌مسیر
-      if (memberIds.length >= 2) {
+      if (removeBuddy && memberIds.length >= 2) {
         try {
           await _client.from('buddy_requests').delete().or(
               'and(from_user_id.eq.${memberIds[0]},to_user_id.eq.${memberIds[1]}),'

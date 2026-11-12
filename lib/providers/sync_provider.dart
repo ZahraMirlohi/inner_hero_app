@@ -85,8 +85,7 @@ class SyncProvider extends ChangeNotifier {
             _currentUserId = userId;
             _isCleared = false;
             _opFailures.clear();
-            notifyListeners();
-            if (_isOnline) _syncAllData();
+            _switchUserThenSync(userId);
           }
           break;
         case AuthChangeEvent.signedOut:
@@ -97,6 +96,24 @@ class SyncProvider extends ChangeNotifier {
           break;
       }
     });
+  }
+
+  // اگر کاربر عوض شده، کش محلی کاربر قبلی پاک می‌شود تا داده‌ی او دیده نشود
+  Future<void> _switchUserThenSync(String userId) async {
+    // تا پاک شدن کش قبلی، صفحهٔ اصلی ساخته نشود (وگرنه چند لحظه داده‌ی کاربر قبلی دیده می‌شود)
+    _isInitialized = false;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final last = prefs.getString('last_data_user');
+      if (last != null && last != userId) {
+        await _localStorage.clearForUserSwitch();
+      }
+      await prefs.setString('last_data_user', userId);
+    } catch (_) {}
+    _isInitialized = true;
+    notifyListeners();
+    if (_isOnline) _syncAllData();
   }
 
   /// ارسال عملیات آفلاین باقی‌مانده (مثلاً قبل از خروج از حساب)

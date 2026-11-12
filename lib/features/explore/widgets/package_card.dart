@@ -1,5 +1,6 @@
 // lib/features/explore/widgets/package_card.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/package_model.dart';
@@ -86,7 +87,7 @@ class PackageCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${package.habits.length} عادت',
+                      context.tr('ex.habits_n', {'n': '${package.habits.length}'}),
                       style: TextStyle(
                         fontSize: 11,
                         color: isActive ? Colors.white : Colors.grey.shade600,
@@ -218,7 +219,7 @@ class PackageCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          isActive ? 'فعال ✅' : 'مشاهده جزئیات',
+                          context.tr(isActive ? 'ex.pkg.active_done' : 'ex.pkg.details'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,

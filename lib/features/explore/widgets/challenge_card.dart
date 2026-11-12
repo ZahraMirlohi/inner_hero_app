@@ -1,5 +1,6 @@
 // lib/features/explore/widgets/challenge_card.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/providers/theme_provider.dart';
@@ -63,7 +64,7 @@ class ChallengeCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          isRegistrationClosed ? '⛔ پایان ثبت‌نام' : '🔥 داغ',
+                          context.tr(isRegistrationClosed ? 'ex.ch.closed' : 'ex.ch.hot'),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -94,7 +95,7 @@ class ChallengeCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${challenge['participants'] ?? 0} نفر',
+                              context.tr('ex.people_n', {'n': '${challenge['participants'] ?? 0}'}),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -108,7 +109,7 @@ class ChallengeCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    challenge['title'] ?? 'بدون عنوان',
+                    challenge['title'] ?? context.tr('ex.untitled'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

@@ -1,5 +1,6 @@
 // lib/features/explore/widgets/quest_card.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
@@ -155,7 +156,7 @@ class QuestCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('$p از ${quest.targetCount} روز',
+                        Text(context.tr('ex.quest.progress', {'n': '$p', 'm': '${quest.targetCount}'}),
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -173,7 +174,7 @@ class QuestCard extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _chip('${quest.targetCount} روز',
+                      _chip(context.tr('ex.days_n', {'n': '${quest.targetCount}'}),
                           Icons.calendar_today_rounded, chipBg),
                       _chip('+${quest.xpReward} XP', Icons.star_rounded, chipBg,
                           bold: true),
@@ -188,19 +189,19 @@ class QuestCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       if (isCompleted)
-                        _pill('تکمیل شد', Icons.check_circle_rounded,
+                        _pill(context.tr('ex.quest.done'), Icons.check_circle_rounded,
                             const Color(0xFF2ECC71), _ink, null)
                       else if (isActive) ...[
-                        _pill('مشاهده', Icons.visibility_outlined, _ink,
+                        _pill(context.tr('ex.view'), Icons.visibility_outlined, _ink,
                             Colors.white, onTap),
                         if (onCancel != null)
-                          _pill('لغو', Icons.close_rounded, Colors.white, _ink,
+                          _pill(context.tr('ex.quest.cancel'), Icons.close_rounded, Colors.white, _ink,
                               onCancel),
                       ] else if (quest.isActive)
-                        _pill('شروع', Icons.play_arrow_rounded,
+                        _pill(context.tr('ex.quest.start'), Icons.play_arrow_rounded,
                             theme.effectivePrimary, theme.onPrimaryColor, onStart)
                       else
-                        _pill('غیرفعال', Icons.block_rounded,
+                        _pill(context.tr('ex.inactive'), Icons.block_rounded,
                             const Color(0xFFCFD3C4), const Color(0xFF555B4B), null),
                     ],
                   ),

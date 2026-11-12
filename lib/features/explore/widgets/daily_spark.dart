@@ -1,5 +1,6 @@
 // lib/features/explore/widgets/daily_spark.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -116,10 +117,10 @@ class _DailySparkState extends State<DailySpark> {
               children: [
                 Text(
                   spark['type'] == 'quote'
-                      ? 'جرقه روزانه'
+                      ? context.tr('ex.spark.quote')
                       : spark['type'] == 'challenge'
-                          ? 'چالش روزانه'
-                          : '💡 واقعیت علمی',
+                          ? context.tr('ex.spark.challenge')
+                          : context.tr('ex.spark.fact'),
                   style: const TextStyle(
                     fontSize: 12,
                     color: Colors.white70,

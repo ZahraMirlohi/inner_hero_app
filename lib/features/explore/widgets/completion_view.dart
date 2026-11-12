@@ -1,3 +1,4 @@
+import '/l10n/app_strings.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -105,7 +106,7 @@ class _CompletionViewState extends State<CompletionView>
                             ),
                           ),
                           const SizedBox(height: 18),
-                          Text('تبریک!',
+                          Text(context.tr('ex.cv.congrats'),
                               style: TextStyle(
                                   fontSize: 30,
                                   fontWeight: FontWeight.w800,
@@ -159,7 +160,7 @@ class _CompletionViewState extends State<CompletionView>
                             ),
                           ],
                         ),
-                        child: Text('ادامه ماجراجویی',
+                        child: Text(context.tr('ex.cv.continue'),
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,

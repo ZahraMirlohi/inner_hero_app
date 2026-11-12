@@ -1,5 +1,8 @@
 // lib/features/chat/screens/buddy_chat_screen.dart
 
+import '../widgets/avatar_viewer.dart';
+import '../widgets/chat_background.dart';
+import '/l10n/app_strings.dart';
 import '/services/sound_service.dart';
 import 'dart:async';
 import 'dart:io';
@@ -179,10 +182,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     '👍',
   ];
 
+  String? _bgPath;
+
   @override
   void initState() {
     super.initState();
     _initChat();
+    ChatBackground.load(widget.conversation.id).then((p) {
+      if (mounted) setState(() => _bgPath = p);
+    });
 
     _statusTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (mounted && _buddyId != null) {
@@ -2078,6 +2086,19 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 ),
                 Divider(height: 1, color: theme.borderColor), // ✅
                 _buildMenuTile(
+                  icon: Icons.wallpaper_rounded,
+                  title: context.tr('bg.title'),
+                  subtitle: context.tr('bg.sub'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showChatBackgroundSheet(this.context, widget.conversation.id,
+                        (p) => setState(() => _bgPath = p));
+                  },
+                  color: primaryColor,
+                  theme: theme,
+                ),
+                Divider(height: 1, color: theme.borderColor),
+                _buildMenuTile(
                   icon: Icons.search,
                   title: 'جستجو در گفتگو',
                   subtitle: 'جستجوی پیام‌ها',
@@ -2154,7 +2175,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         ),
       ),
       trailing: Icon(
-        Icons.chevron_left, textDirection: TextDirection.ltr,
+        Icons.chevron_right,
         color: theme.textSecondaryColor, // ✅
         size: 20,
       ),
@@ -2427,7 +2448,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                             ],
                           ),
                           trailing: Icon(
-                            Icons.chevron_left, textDirection: TextDirection.ltr,
+                            Icons.chevron_right,
                             color: theme.textSecondaryColor, // ✅
                             size: 20,
                           ),
@@ -2588,7 +2609,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     });
 
     try {
-      await _chatService.deleteConversationForBoth(widget.conversation.id);
+      await _chatService.deleteConversationForBoth(widget.conversation.id,
+          removeBuddy: false);
 
       if (!mounted) return;
 
@@ -6381,6 +6403,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               Expanded(
                 child: Stack(
                   children: [
+                    ChatBackgroundLayer(path: _bgPath, dark: theme.isDarkMode),
                     Column(
                       children: [
                         _buildPinnedMessageBar(theme, accentColor),
@@ -6993,7 +7016,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           children: [
             Stack(
               children: [
-                Container(
+                GestureDetector(
+                  onTap: () => showAvatarViewer(context, _buddyAvatar),
+                  child: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -7030,6 +7055,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                             ),
                           ),
                         ),
+                ),
                 ),
                 Positioned(
                   bottom: 0,

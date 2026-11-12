@@ -170,7 +170,7 @@ class _ColorPickerScreenState extends State<ColorPickerScreen> {
               shape: BoxShape.circle,
               boxShadow: theme.softShadow,
             ),
-            child: Icon(Icons.arrow_back_rounded, textDirection: TextDirection.ltr,
+            child: Icon(Icons.arrow_back_rounded,
                 size: 22, color: theme.textColor),
           ),
         ),

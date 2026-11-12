@@ -325,7 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: BoxShape.circle,
               boxShadow: theme.softShadow,
             ),
-            child: Icon(Icons.arrow_back_rounded, textDirection: TextDirection.ltr,
+            child: Icon(Icons.arrow_back_rounded,
                 size: 22, color: theme.textColor),
           ),
         ),
@@ -473,8 +473,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (trailing != null) trailing,
               if (showChevron)
                 Icon(
-                  Icons.chevron_left_rounded,
-                  textDirection: TextDirection.ltr,
+                  Icons.chevron_right_rounded,
+
                   size: 20,
                   color: theme.textSecondaryColor,
                 ),

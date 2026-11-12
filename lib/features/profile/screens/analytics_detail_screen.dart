@@ -535,7 +535,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
               ),
               child: Icon(
                 Icons.arrow_back_rounded,
-                textDirection: TextDirection.ltr,
+
                 size: 22,
                 color: theme.textColor,
               ),

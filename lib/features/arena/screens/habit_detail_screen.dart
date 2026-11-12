@@ -292,7 +292,7 @@ class HabitDetailScreen extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: theme.softShadow,
           ),
-          child: Icon(icon, size: 22, color: theme.textColor, textDirection: TextDirection.ltr),
+          child: Icon(icon, size: 22, color: theme.textColor),
         ),
       ),
     );

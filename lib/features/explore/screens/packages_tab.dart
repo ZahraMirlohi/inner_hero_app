@@ -1,3 +1,4 @@
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/package_model.dart';
@@ -45,25 +46,25 @@ class _PackagesTabState extends State<PackagesTab> {
   String _getCategoryText(String category) {
     switch (category) {
       case 'health':
-        return 'سلامت';
+        return context.tr('ex.cat.health');
       case 'study':
-        return 'مطالعه';
+        return context.tr('ex.cat.study');
       case 'productivity':
-        return 'بهره‌وری';
+        return context.tr('ex.cat.productivity');
       case 'sport':
-        return 'ورزش';
+        return context.tr('ex.cat.sport');
       case 'nutrition':
-        return 'تغذیه';
+        return context.tr('ex.cat.nutrition');
       case 'personal':
-        return 'رشد شخصی';
+        return context.tr('ex.cat.personal');
       case 'fitness':
-        return 'تناسب اندام';
+        return context.tr('ex.cat.fitness');
       case 'mindfulness':
-        return 'ذهن‌آگاهی';
+        return context.tr('ex.cat.mindfulness');
       case 'reading':
-        return 'مطالعه';
+        return context.tr('ex.cat.study');
       case 'writing':
-        return 'نوشتن';
+        return context.tr('ex.cat.writing');
       default:
         return category;
     }
@@ -72,11 +73,11 @@ class _PackagesTabState extends State<PackagesTab> {
   String _getFrequencyText(String frequencyType) {
     switch (frequencyType) {
       case 'daily':
-        return 'روزانه';
+        return context.tr('ex.freq.daily');
       case 'weekly':
-        return 'هفتگی';
+        return context.tr('ex.freq.weekly');
       case 'monthly':
-        return 'ماهانه';
+        return context.tr('ex.freq.monthly');
       default:
         return frequencyType;
     }
@@ -228,7 +229,7 @@ class _PackagesTabState extends State<PackagesTab> {
             CircularProgressIndicator(color: primaryColor),
             const SizedBox(height: 16),
             Text(
-              'در حال بارگذاری بسته‌ها...',
+              context.tr('ex.pkg.loading'),
               style: TextStyle(
                 color: theme.textSecondaryColor,
                 fontSize: 13,
@@ -259,7 +260,7 @@ class _PackagesTabState extends State<PackagesTab> {
             _buildSectionHeader(
               icon: Icons.check_circle_rounded,
               tone: Tone.mint,
-              title: 'بسته‌های فعال من',
+              title: context.tr('ex.pkg.mine'),
               color: primaryColor,
               count: activePackages.length,
             ),
@@ -287,7 +288,7 @@ class _PackagesTabState extends State<PackagesTab> {
             _buildSectionHeader(
               icon: Icons.inventory_2_rounded,
               tone: Tone.lime,
-              title: 'بسته‌های موجود',
+              title: context.tr('ex.pkg.available'),
               color: primaryColor,
               count: inactivePackages.length,
             ),
@@ -376,7 +377,7 @@ class _PackagesTabState extends State<PackagesTab> {
           ),
           const SizedBox(height: 16),
           Text(
-            'هنوز بسته‌ای وجود ندارد',
+            context.tr('ex.pkg.empty'),
             style: TextStyle(
               color: theme.textSecondaryColor, // 
               fontSize: 16,
@@ -385,7 +386,7 @@ class _PackagesTabState extends State<PackagesTab> {
           ),
           const SizedBox(height: 8),
           Text(
-            'به زودی بسته‌های جدید اضافه می‌شوند',
+            context.tr('ex.pkg.empty.sub'),
             style: TextStyle(
               color: theme.textSecondaryColor, // 
               fontSize: 12,
@@ -413,7 +414,7 @@ class _PackagesTabState extends State<PackagesTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('بسته "${package.title}" فعال شد! '),
+            content: Text(context.tr('ex.pkg.activated', {'n': package.title})),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -423,7 +424,7 @@ class _PackagesTabState extends State<PackagesTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -458,7 +459,7 @@ class _PackagesTabState extends State<PackagesTab> {
                     size: 28, color: Color(0xFF090909)),
               ),
               const SizedBox(height: 14),
-              Text('غیرفعال کردن «${package.title}»؟',
+              Text(context.tr('ex.pkg.deact.q', {'n': package.title}),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 17,
@@ -466,7 +467,7 @@ class _PackagesTabState extends State<PackagesTab> {
                       color: theme.textColor)),
               const SizedBox(height: 8),
               Text(
-                  'عادت‌های این بسته از لیستت حذف می‌شن و پیشرفتشون از بین می‌ره. هر وقت خواستی می‌تونی دوباره فعالش کنی.',
+                  context.tr('ex.pkg.deact.body'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 13,
@@ -476,12 +477,12 @@ class _PackagesTabState extends State<PackagesTab> {
               Row(
                 children: [
                   Expanded(
-                    child: _sheetButton('انصراف', null, theme.cardSecondaryColor,
+                    child: _sheetButton(context.tr('ex.cancel'), null, theme.cardSecondaryColor,
                         theme.textColor, () => Navigator.pop(ctx)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: _sheetButton('غیرفعال کردن', null,
+                    child: _sheetButton(context.tr('ex.deactivate'), null,
                         theme.errorColor, Colors.white, () {
                       Navigator.pop(ctx);
                       _deactivatePackage(package, primaryColor);
@@ -505,11 +506,11 @@ class _PackagesTabState extends State<PackagesTab> {
   String _freqLabel(String t) {
     switch (t) {
       case 'weekly':
-        return 'هفتگی';
+        return context.tr('ex.freq.weekly');
       case 'monthly':
-        return 'ماهانه';
+        return context.tr('ex.freq.monthly');
       default:
-        return 'روزانه';
+        return context.tr('ex.freq.daily');
     }
   }
 
@@ -617,19 +618,19 @@ class _PackagesTabState extends State<PackagesTab> {
                       ),
                       child: Column(
                         children: [
-                          infoRow(Icons.checklist_rounded, 'تعداد عادت‌ها',
-                              '${package.habits.length} عادت'),
-                          infoRow(Icons.star_rounded, 'پاداش XP',
+                          infoRow(Icons.checklist_rounded, context.tr('ex.pkg.info.habits'),
+                              context.tr('ex.habits_n', {'n': '${package.habits.length}'})),
+                          infoRow(Icons.star_rounded, context.tr('ex.pkg.info.xp'),
                               '+${package.xpReward} XP'),
-                          infoRow(Icons.military_tech_rounded, 'نشان',
+                          infoRow(Icons.military_tech_rounded, context.tr('ex.pkg.info.badge'),
                               package.badge),
-                          infoRow(Icons.category_rounded, 'دسته‌بندی',
+                          infoRow(Icons.category_rounded, context.tr('ex.pkg.info.cat'),
                               _getCategoryText(package.category)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Text('عادت‌های این بسته:',
+                    Text(context.tr('ex.pkg.habits_of'),
                         style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
@@ -674,7 +675,7 @@ class _PackagesTabState extends State<PackagesTab> {
                   children: [
                     if (activate) ...[
                       Expanded(
-                        child: _sheetButton('انصراف', null, theme.cardSecondaryColor,
+                        child: _sheetButton(context.tr('ex.cancel'), null, theme.cardSecondaryColor,
                             theme.textColor, () => Navigator.pop(ctx)),
                       ),
                       const SizedBox(width: 10),
@@ -683,14 +684,14 @@ class _PackagesTabState extends State<PackagesTab> {
                       flex: activate ? 2 : 1,
                       child: activate
                           ? _sheetButton(
-                              'فعال‌سازی بسته',
+                              context.tr('ex.pkg.activate_btn'),
                               Icons.play_arrow_rounded,
                               ink,
                               theme.effectivePrimary, () {
                               Navigator.pop(ctx);
                               _activatePackage(package, primaryColor);
                             })
-                          : _sheetButton('بستن', null, ink, Colors.white,
+                          : _sheetButton(context.tr('ex.close'), null, ink, Colors.white,
                               () => Navigator.pop(ctx)),
                     ),
                   ],
@@ -825,7 +826,7 @@ class _PackagesTabState extends State<PackagesTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('بسته "${package.title}" غیرفعال شد'),
+            content: Text(context.tr('ex.pkg.deactivated', {'n': package.title})),
             backgroundColor: const Color(0xFF090909),
             duration: const Duration(seconds: 2),
           ),
@@ -835,7 +836,7 @@ class _PackagesTabState extends State<PackagesTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -965,7 +966,7 @@ class _PackageCard extends StatelessWidget {
                 ),
               ),
               if (isActive)
-                _chip('فعال',
+                _chip(context.tr('ex.active'),
                     icon: Icons.check_circle_rounded,
                     bg: const Color(0xFF2ECC71),
                     bold: true),
@@ -1013,7 +1014,7 @@ class _PackageCard extends StatelessWidget {
               ),
             ),
           if (!isActive && remaining > 0)
-            Text('... و $remaining عادت دیگر',
+            Text(context.tr('ex.pkg.more', {'n': '$remaining'}),
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1023,7 +1024,7 @@ class _PackageCard extends StatelessWidget {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _chip('${package.habits.length} عادت',
+              _chip(context.tr('ex.habits_n', {'n': '${package.habits.length}'}),
                   icon: Icons.checklist_rounded, bg: white70),
               _chip('+${package.xpReward} XP',
                   icon: Icons.star_rounded, bg: white70, bold: true),
@@ -1036,15 +1037,15 @@ class _PackageCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (isActive && onView != null)
-                _pill('مشاهده', Icons.visibility_outlined, Colors.white, _ink,
+                _pill(context.tr('ex.view'), Icons.visibility_outlined, Colors.white, _ink,
                     onView!),
               if (isActive && onDeactivate != null) ...[
                 const SizedBox(width: 8),
-                _pill('غیرفعال', Icons.power_settings_new_rounded,
+                _pill(context.tr('ex.inactive'), Icons.power_settings_new_rounded,
                     const Color(0xFFFFD3CF), _ink, onDeactivate!),
               ],
               if (!isActive && onActivate != null)
-                _pill('فعال‌سازی', Icons.play_arrow_rounded, _ink,
+                _pill(context.tr('ex.activate'), Icons.play_arrow_rounded, _ink,
                     Colors.white, onActivate!),
             ],
           ),

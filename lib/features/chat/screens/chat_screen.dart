@@ -1,11 +1,14 @@
 // lib/features/chat/screens/chat_screen.dart
 
+import '../widgets/avatar_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/services/chat_service.dart';
 import '/providers/theme_provider.dart';
 import '../widgets/buddy_requests_view.dart';
+import '../widgets/buddy_list_view.dart';
+import '/l10n/app_strings.dart';
 import '/core/app_palette.dart';
 import '/features/chat/models/conversation_model.dart';
 import 'ai_chat_screen.dart';
@@ -27,7 +30,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _buddySub = 0; // 0 گفتگوها، 1 درخواست‌ها
+  int _buddySub = 0; // 0 گفتگوها، 1 درخواست‌ها، 2 هم‌مسیرها
   int _incomingCount = 0;
   int _requestsEpoch = 0;
   final ChatService _chatService = ChatService();
@@ -125,15 +128,33 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  Future<void> _openBuddyChat(String otherId) async {
+    try {
+      final me = (await _chatService.getCurrentUser())!.id;
+      final id = await _chatService.openBuddyConversation(me, otherId);
+      final convs = await _chatService.getUserConversations(me);
+      final conv = convs.firstWhere((c) => c.id == id);
+      if (!mounted) return;
+      await Navigator.push(context,
+          MaterialPageRoute(builder: (_) => BuddyChatScreen(conversation: conv)));
+      if (mounted) _loadData();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.tr('bd.error'))));
+      }
+    }
+  }
+
   // ==================== حذف هم‌مسیر ====================
-  Future<void> _removeBuddy(Conversation conv) async {
+  Future<void> _removeBuddy(Conversation conv, {bool buddyToo = true}) async {
     try {
       final currentUser = await _chatService.getCurrentUser();
       if (currentUser == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لطفاً وارد حساب کاربری خود شوید'),
+            SnackBar(
+              content: Text(context.tr('ct.chat.login')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -167,8 +188,8 @@ class _ChatScreenState extends State<ChatScreen>
       if (otherUserId.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('کاربر مقابل پیدا نشد'),
+            SnackBar(
+              content: Text(context.tr('ct.chat.nouser')),
               backgroundColor: Colors.red,
             ),
           );
@@ -176,7 +197,8 @@ class _ChatScreenState extends State<ChatScreen>
         return;
       }
 
-      await _chatService.deleteConversationForBoth(conv.id);
+      await _chatService.deleteConversationForBoth(conv.id,
+          removeBuddy: buddyToo);
 
       if (mounted) {
         setState(() {
@@ -189,7 +211,9 @@ class _ChatScreenState extends State<ChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('هم‌مسیر "${conv.displayName}" حذف شد'),
+            content: Text(buddyToo
+                ? context.tr('bd.removed')
+                : context.tr('bd.delchat.done')),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 2),
           ),
@@ -200,7 +224,7 @@ class _ChatScreenState extends State<ChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -240,8 +264,8 @@ class _ChatScreenState extends State<ChatScreen>
       if (otherUserId.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('کاربر مقابل پیدا نشد'),
+            SnackBar(
+              content: Text(context.tr('ct.chat.nouser')),
               backgroundColor: Colors.red,
             ),
           );
@@ -284,10 +308,10 @@ class _ChatScreenState extends State<ChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('کاربر مسدود شد'),
+          SnackBar(
+            content: Text(context.tr('ct.chat.blocked')),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -296,7 +320,7 @@ class _ChatScreenState extends State<ChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -309,22 +333,21 @@ class _ChatScreenState extends State<ChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف هم‌مسیر'),
+        title: Text(context.tr('ct.chat.rmBuddy')),
         content: Text(
-          'آیا از حذف هم‌مسیر "${conv.displayName}" مطمئن هستید؟\n'
-          'با این کار، گفتگوی شما حذف می‌شود و دیگر در لیست هم‌مسیرها نخواهید بود.',
+          context.tr('ct.chat.rmBuddy.q', {'n': conv.displayName}),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bd.cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _removeBuddy(conv);
             },
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('bd.delete'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -336,27 +359,23 @@ class _ChatScreenState extends State<ChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('مسدود کردن کاربر'),
+        title: Text(context.tr('ct.chat.block')),
         content: Text(
-          'آیا از مسدود کردن "${conv.displayName}" مطمئن هستید؟\n'
-          'با این کار:\n'
-          '• کاربر از لیست هم‌مسیرها حذف می‌شود\n'
-          '• دیگر نمی‌تواند به شما پیام دهد\n'
-          '• شما نمی‌توانید به او پیام دهید',
+          context.tr('ct.chat.block.q', {'n': conv.displayName}),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bd.cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _blockUser(conv);
             },
-            child: const Text(
-              'مسدود کردن',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              context.tr('ct.chat.block.btn'),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -392,7 +411,7 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'گزینه‌های هم‌مسیر',
+                  context.tr('ct.chat.opts'),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
@@ -400,6 +419,26 @@ class _ChatScreenState extends State<ChatScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.delete_sweep_rounded,
+                        color: Colors.blueGrey),
+                  ),
+                  title: Text(context.tr('bd.delchat'),
+                      style: TextStyle(color: theme.textColor)),
+                  subtitle: Text(context.tr('bd.delchat.sub'),
+                      style: TextStyle(
+                          fontSize: 12, color: theme.textSecondaryColor)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _removeBuddy(conv, buddyToo: false);
+                  },
+                ),
                 ListTile(
                   leading: Container(
                     padding: const EdgeInsets.all(10),
@@ -413,11 +452,11 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                   ),
                   title: Text(
-                    'حذف از هم‌مسیرها',
+                    context.tr('bd.remove'),
                     style: TextStyle(color: theme.textColor),
                   ),
                   subtitle: Text(
-                    'دیگر با این کاربر هم‌مسیر نخواهید بود',
+                    context.tr('ct.chat.rmBuddy.sub'),
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.textSecondaryColor,
@@ -438,11 +477,11 @@ class _ChatScreenState extends State<ChatScreen>
                     child: const Icon(Icons.block, color: Colors.red),
                   ),
                   title: Text(
-                    'مسدود کردن کاربر',
+                    context.tr('ct.chat.block'),
                     style: TextStyle(color: theme.textColor),
                   ),
                   subtitle: Text(
-                    'کاربر را مسدود کنید و از لیست هم‌مسیرها حذف کنید',
+                    context.tr('ct.chat.block.sub'),
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.textSecondaryColor,
@@ -477,12 +516,12 @@ class _ChatScreenState extends State<ChatScreen>
 
   String _ago(DateTime t) {
     final d = DateTime.now().difference(t);
-    if (d.inMinutes < 1) return 'اکنون';
-    if (d.inMinutes < 60) return '${d.inMinutes} دقیقه پیش';
-    if (d.inHours < 24) return '${d.inHours} ساعت پیش';
-    if (d.inDays == 1) return 'دیروز';
-    if (d.inDays < 7) return '${d.inDays} روز پیش';
-    return '${d.inDays ~/ 7} هفته پیش';
+    if (d.inMinutes < 1) return context.tr('ct.ago.now');
+    if (d.inMinutes < 60) return context.tr('ct.ago.min', {'n': '${d.inMinutes}'});
+    if (d.inHours < 24) return context.tr('ct.ago.hour', {'n': '${d.inHours}'});
+    if (d.inDays == 1) return context.tr('ct.ago.yesterday');
+    if (d.inDays < 7) return context.tr('ct.ago.day', {'n': '${d.inDays}'});
+    return context.tr('ct.ago.week', {'n': '${d.inDays ~/ 7}'});
   }
 
   @override
@@ -504,7 +543,7 @@ class _ChatScreenState extends State<ChatScreen>
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: Text(
-                  'گپ و گفتگو',
+                  context.tr('ct.chat.title'),
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
@@ -575,10 +614,10 @@ class _ChatScreenState extends State<ChatScreen>
         labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         unselectedLabelStyle:
             const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        tabs: const [
-          Tab(height: 48, text: 'هم‌مسیرها'),
-          Tab(height: 48, text: 'گروه‌ها'),
-          Tab(height: 48, text: 'کانال‌ها'),
+        tabs: [
+          Tab(height: 48, text: context.tr('bd.tab.buddies')),
+          Tab(height: 48, text: context.tr('ct.chat.tab.groups')),
+          Tab(height: 48, text: context.tr('ct.chat.tab.channels')),
         ],
       ),
     );
@@ -601,13 +640,13 @@ class _ChatScreenState extends State<ChatScreen>
                 children: [
                   Icon(Icons.smart_toy_rounded, size: 44, color: primaryColor),
                   const SizedBox(height: 14),
-                  Text('مربی هوش مصنوعی',
+                  Text(context.tr('ct.chat.ai'),
                       style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: theme.textColor)),
                   const SizedBox(height: 8),
-                  Text('به زودی',
+                  Text(context.tr('ct.chat.soon'),
                       style: TextStyle(
                           fontSize: 15, color: theme.textSecondaryColor)),
                 ],
@@ -629,8 +668,8 @@ class _ChatScreenState extends State<ChatScreen>
           children: [
             Icon(Icons.smart_toy_rounded, color: primaryColor, size: 22),
             const SizedBox(width: 8),
-            const Text('مربی',
-                style: TextStyle(
+            Text(context.tr('ct.chat.coach'),
+                style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: Colors.white)),
@@ -645,7 +684,9 @@ class _ChatScreenState extends State<ChatScreen>
       children: [
         _buildBuddySubToggle(theme),
         Expanded(
-          child: _buddySub == 1
+          child: _buddySub == 2
+              ? BuddyListView(onOpen: _openBuddyChat)
+              : _buddySub == 1
               ? BuddyRequestsView(
                   key: ValueKey(_requestsEpoch),
                   onChanged: (n, {bool accepted = false}) {
@@ -693,8 +734,9 @@ class _ChatScreenState extends State<ChatScreen>
         borderRadius: BorderRadius.circular(23),
       ),
       child: Row(children: [
-        chip('گفتگوها', 0),
-        chip('درخواست‌ها', 1, badge: _incomingCount),
+        chip(context.tr('bd.tab.chats'), 0),
+        chip(context.tr('bd.tab.buddies'), 2),
+        chip(context.tr('bd.tab.requests'), 1, badge: _incomingCount),
       ]),
     );
   }
@@ -712,9 +754,9 @@ class _ChatScreenState extends State<ChatScreen>
     if (buddyConversations.isEmpty) {
       return _buildEmptyState(
         icon: Icons.people_outline,
-        title: 'هنوز هم‌مسیری ندارید',
-        subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
-        buttonText: 'پیدا کردن هم‌مسیر',
+        title: context.tr('ct.chat.nobuddy'),
+        subtitle: context.tr('ct.chat.nobuddy.sub'),
+        buttonText: context.tr('ct.chat.findBuddy'),
         onPressed: _showBuddyFinder,
         theme: theme,
         primaryColor: primaryColor,
@@ -748,9 +790,9 @@ class _ChatScreenState extends State<ChatScreen>
     if (squadConversations.isEmpty) {
       return _buildEmptyState(
         icon: Icons.group_outlined,
-        title: 'هنوز گروهی ندارید',
-        subtitle: 'یک گروه بسازید یا به گروهی بپیوندید',
-        buttonText: 'ساخت گروه جدید',
+        title: context.tr('ct.chat.nogroup'),
+        subtitle: context.tr('ct.chat.nogroup.sub'),
+        buttonText: context.tr('ct.chat.newGroup'),
         onPressed: () => _showCreateSquadDialog(theme, primaryColor),
         theme: theme,
         primaryColor: primaryColor,
@@ -785,9 +827,9 @@ class _ChatScreenState extends State<ChatScreen>
     if (arenaConversations.isEmpty) {
       return _buildEmptyState(
         icon: Icons.stadium_outlined,
-        title: 'کانال فعالی وجود ندارد',
-        subtitle: 'با شرکت در چالش‌ها، کانال‌های جدید فعال می‌شوند',
-        buttonText: 'مشاهده چالش‌ها',
+        title: context.tr('ct.chat.nochan'),
+        subtitle: context.tr('ct.chat.nochan.sub'),
+        buttonText: context.tr('ct.chat.viewChallenges'),
         onPressed: () {},
         theme: theme,
         primaryColor: primaryColor,
@@ -817,7 +859,7 @@ class _ChatScreenState extends State<ChatScreen>
     required Color primaryColor,
   }) {
     final displayName = conv.displayName;
-    final lastMessage = conv.lastMessage ?? 'شروع گفتگو';
+    final lastMessage = conv.lastMessage ?? context.tr('ct.chat.startChat');
     final isBuddy = conv.type == ConversationType.buddy;
 
     return Dismissible(
@@ -831,12 +873,12 @@ class _ChatScreenState extends State<ChatScreen>
         ),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              'حذف هم‌مسیر',
-              style: TextStyle(
+              context.tr('ct.chat.rmBuddy'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -854,19 +896,17 @@ class _ChatScreenState extends State<ChatScreen>
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: const Text('حذف هم‌مسیر'),
-              content: Text(
-                'آیا از حذف هم‌مسیر "$displayName" مطمئن هستید؟\n'
-                'با این کار، گفتگوی شما حذف می‌شود و دیگر در لیست هم‌مسیرها نخواهید بود.',
-              ),
+              title: Text(context.tr('bd.delchat')),
+              content: Text(context.tr('bd.delchat.q', {'n': displayName})),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('انصراف'),
+                  child: Text(context.tr('bd.cancel')),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('حذف', style: TextStyle(color: Colors.red)),
+                  child: Text(context.tr('bd.delete'),
+                      style: const TextStyle(color: Colors.red)),
                 ),
               ],
             ),
@@ -876,7 +916,7 @@ class _ChatScreenState extends State<ChatScreen>
         return false;
       },
       onDismissed: (direction) {
-        _removeBuddy(conv);
+        _removeBuddy(conv, buddyToo: false);
       },
       child: GestureDetector(
         onTap: () async {
@@ -1050,7 +1090,11 @@ class _ChatScreenState extends State<ChatScreen>
       bool isArena, ThemeProvider theme) {
     final tone = theme.tone(_tones[conv.id.hashCode.abs() % _tones.length]);
     final url = conv.avatarUrl;
-    return Container(
+    return GestureDetector(
+      onTap: (!isArena && url != null && url.isNotEmpty)
+          ? () => showAvatarViewer(context, url)
+          : null,
+      child: Container(
       width: 52,
       height: 52,
       clipBehavior: Clip.antiAlias,
@@ -1068,7 +1112,7 @@ class _ChatScreenState extends State<ChatScreen>
                   size: 26,
                   color: tone.fg,
                 ),
-    );
+    ));
   }
 
   Widget _avatarFallback(String name, ToneColors tone) => Center(
@@ -1177,7 +1221,7 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'شروع گفتگوی جدید',
+                  context.tr('ct.chat.newChat'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -1187,8 +1231,8 @@ class _ChatScreenState extends State<ChatScreen>
                 const SizedBox(height: 10),
                 _buildOptionTile(
                   icon: Icons.person_add_alt_1_rounded,
-                  title: 'هم‌مسیر جدید',
-                  subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
+                  title: context.tr('ct.chat.newBuddy'),
+                  subtitle: context.tr('ct.chat.nobuddy.sub'),
                   tone: Tone.sky,
                   onTap: () {
                     Navigator.pop(context);
@@ -1198,8 +1242,8 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 _buildOptionTile(
                   icon: Icons.group_add_rounded,
-                  title: 'ساخت گروه جدید',
-                  subtitle: 'با دوستانتان یک گروه بسازید',
+                  title: context.tr('ct.chat.newGroup'),
+                  subtitle: context.tr('ct.chat.newGroup.sub'),
                   tone: Tone.mint,
                   onTap: () {
                     Navigator.pop(context);
@@ -1209,8 +1253,8 @@ class _ChatScreenState extends State<ChatScreen>
                 ),
                 _buildOptionTile(
                   icon: Icons.vpn_key_rounded,
-                  title: 'پیوستن به گروه',
-                  subtitle: 'با کد دعوت وارد شوید',
+                  title: context.tr('ct.chat.joinGroup'),
+                  subtitle: context.tr('ct.chat.joinGroup.sub'),
                   tone: Tone.butter,
                   onTap: () {
                     Navigator.pop(context);
@@ -1312,7 +1356,7 @@ class _ChatScreenState extends State<ChatScreen>
           backgroundColor: theme.cardColor,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          title: Text('ساخت گروه جدید', style: TextStyle(color: theme.textColor)),
+          title: Text(context.tr('ct.chat.newGroup'), style: TextStyle(color: theme.textColor)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1320,18 +1364,18 @@ class _ChatScreenState extends State<ChatScreen>
                 TextField(
                   controller: nameC,
                   maxLength: 40,
-                  decoration: const InputDecoration(labelText: 'نام گروه'),
+                  decoration: InputDecoration(labelText: context.tr('ct.chat.groupName')),
                 ),
                 TextField(
                   controller: descC,
                   maxLength: 200,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'توضیحات (اختیاری)'),
+                  decoration: InputDecoration(labelText: context.tr('ct.chat.groupDesc')),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('گروه عمومی'),
-                  subtitle: const Text('همه می‌توانند پیدا کنند و بپیوندند'),
+                  title: Text(context.tr('ct.chat.public')),
+                  subtitle: Text(context.tr('ct.chat.public.sub')),
                   value: isPublic,
                   onChanged: (v) => setD(() => isPublic = v),
                 ),
@@ -1341,7 +1385,7 @@ class _ChatScreenState extends State<ChatScreen>
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('انصراف')),
+                child: Text(context.tr('bd.cancel'))),
             TextButton(
               onPressed: () async {
                 final n = nameC.text.trim();
@@ -1353,13 +1397,13 @@ class _ChatScreenState extends State<ChatScreen>
                     description: descC.text.trim().isEmpty ? null : descC.text.trim(),
                     isPublic: isPublic,
                   );
-                  _msg('گروه ساخته شد');
+                  _msg(context.tr('ct.chat.created'));
                   _loadData();
                 } catch (e) {
                   _msg(_chatService.groupErrorText(e), error: true);
                 }
               },
-              child: const Text('ساخت'),
+              child: Text(context.tr('ct.chat.create')),
             ),
           ],
         ),
@@ -1375,16 +1419,16 @@ class _ChatScreenState extends State<ChatScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Text('پیوستن به گروه', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('ct.chat.joinGroup'), style: TextStyle(color: theme.textColor)),
         content: TextField(
           controller: codeC,
           textDirection: TextDirection.ltr,
           textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(labelText: 'کد دعوت'),
+          decoration: InputDecoration(labelText: context.tr('ct.chat.code')),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+              onPressed: () => Navigator.pop(ctx), child: Text(context.tr('bd.cancel'))),
           TextButton(
             onPressed: () async {
               final c = codeC.text.trim();
@@ -1392,13 +1436,13 @@ class _ChatScreenState extends State<ChatScreen>
               Navigator.pop(ctx);
               try {
                 await _chatService.joinGroupByCode(c);
-                _msg('به گروه پیوستید');
+                _msg(context.tr('ct.chat.joined'));
                 _loadData();
               } catch (e) {
                 _msg(_chatService.groupErrorText(e), error: true);
               }
             },
-            child: const Text('پیوستن'),
+            child: Text(context.tr('ct.chat.join')),
           ),
         ],
       ),
@@ -1410,15 +1454,15 @@ class _ChatScreenState extends State<ChatScreen>
     final diff = now.difference(time);
 
     if (diff.inDays > 7) {
-      return '${diff.inDays ~/ 7} هفته پیش';
+      return context.tr('ct.ago.week', {'n': '${diff.inDays ~/ 7}'});
     } else if (diff.inDays > 0) {
-      return '${diff.inDays} روز پیش';
+      return context.tr('ct.ago.day', {'n': '${diff.inDays}'});
     } else if (diff.inHours > 0) {
-      return '${diff.inHours} ساعت پیش';
+      return context.tr('ct.ago.hour', {'n': '${diff.inHours}'});
     } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} دقیقه پیش';
+      return context.tr('ct.ago.min', {'n': '${diff.inMinutes}'});
     } else {
-      return 'لحظاتی پیش';
+      return context.tr('ct.ago.moments');
     }
   }
 }

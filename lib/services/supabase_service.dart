@@ -107,20 +107,11 @@ class SupabaseService {
 
   // متد getCurrentUser را می‌توان ساده‌تر کرد
   Future<User?> getCurrentUser() async {
-    if (_cachedUser != null &&
-        _userCacheTime != null &&
-        DateTime.now().difference(_userCacheTime!) < _userCacheDuration) {
-      return _cachedUser;
-    }
-
+    // کش نمی‌کنیم: currentUser محلی و آنی است و با تعویض حساب باید همان لحظه عوض شود
     final user = client.auth.currentUser;
-    if (user != null) {
-      _cachedUser = user;
-      _userCacheTime = DateTime.now();
-      return user;
-    }
-
-    return null;
+    _cachedUser = user;
+    _userCacheTime = user == null ? null : DateTime.now();
+    return user;
   }
 
   void clearUserCache() {

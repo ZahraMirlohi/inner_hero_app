@@ -57,7 +57,7 @@ class AppTheme {
       iconTheme: IconThemeData(color: t.textColor),
       actionIconTheme: ActionIconThemeData(
         backButtonIconBuilder: (_) =>
-            const Icon(Icons.arrow_back, textDirection: TextDirection.ltr),
+            const Icon(Icons.arrow_back,),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: t.surfaceColor,

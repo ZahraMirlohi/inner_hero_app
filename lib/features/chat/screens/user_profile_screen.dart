@@ -1,5 +1,7 @@
 // lib/features/chat/screens/user_profile_screen.dart
 
+import '/l10n/app_strings.dart';
+import '../widgets/avatar_viewer.dart';
 import '/widgets/bottom_safe.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -76,14 +78,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _loadUserPhotos();
       } else {
         setState(() {
-          _errorMessage = 'اطلاعات کاربر یافت نشد';
+          _errorMessage = context.tr('ct.up.notfound');
           _isLoading = false;
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'خطا در بارگذاری اطلاعات: ${e.toString()}';
+        _errorMessage = context.tr('ct.up.loadErr', {'e': e.toString()});
         _isLoading = false;
       });
     }
@@ -122,7 +124,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'اطلاعات کاربر',
+          context.tr('ct.up.title'),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -151,9 +153,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
           const SizedBox(height: 16),
-          const Text(
-            'در حال بارگذاری اطلاعات...',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+          Text(
+            context.tr('ct.up.loading'),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
         ],
       ),
@@ -176,9 +178,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ElevatedButton.icon(
             onPressed: _loadUserData,
             icon: const Icon(Icons.refresh, color: Colors.white),
-            label: const Text(
-              'تلاش مجدد',
-              style: TextStyle(color: Colors.white),
+            label: Text(
+              context.tr('ct.up.retry'),
+              style: const TextStyle(color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
@@ -201,7 +203,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final personality =
         _userData!['personality'] as Map<String, dynamic>? ?? {};
 
-    final name = profile['name'] as String? ?? 'کاربر';
+    final name = profile['name'] as String? ?? context.tr('ct.user');
     final avatarUrl = profile['avatar_url'] as String?;
     final username = profile['username'] as String?;
     final bio = profile['bio'] as String? ?? personality['bio'] as String?;
@@ -302,7 +304,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'گالری',
+                  context.tr('ct.up.gallery'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -362,7 +364,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'گالری',
+                  context.tr('ct.up.gallery'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -384,7 +386,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'هنوز عکسی آپلود نکرده',
+                      context.tr('ct.up.nophotos'),
                       style: TextStyle(
                         fontSize: 13,
                         color: theme.textSecondaryColor,
@@ -433,7 +435,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'گالری',
+                context.tr('ct.up.gallery'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -451,7 +453,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${_photos.length} عکس',
+                  context.tr('ct.up.photos', {'n': '${_photos.length}'}),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -647,7 +649,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         children: [
           // آواتار
-          Container(
+          GestureDetector(
+            onTap: () => showAvatarViewer(context, avatarUrl),
+            child: Container(
             width: 100,
             height: 100,
             decoration: BoxDecoration(
@@ -678,7 +682,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   )
                 : _buildAvatarInitial(name, primaryColor),
-          ),
+          )),
           const SizedBox(height: 16),
 
           // نام
@@ -800,21 +804,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
           _buildStatItem(
             icon: Icons.local_fire_department,
-            label: 'استریک فعلی',
-            value: '$currentStreak روز',
+            label: context.tr('ct.up.curStreak'),
+            value: context.tr('ct.bf.days', {'n': '$currentStreak'}),
             color: primaryColor,
             theme: theme,
           ),
           _buildStatItem(
             icon: Icons.emoji_events,
-            label: 'بهترین استریک',
-            value: '$bestStreak روز',
+            label: context.tr('ct.up.bestStreak'),
+            value: context.tr('ct.bf.days', {'n': '$bestStreak'}),
             color: primaryColor,
             theme: theme,
           ),
           _buildStatItem(
             icon: Icons.cake,
-            label: 'عضو از',
+            label: context.tr('ct.up.since'),
             value: _formatDate(createdAt),
             color: primaryColor,
             theme: theme,
@@ -900,7 +904,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'شخصیت',
+                context.tr('ct.up.personality'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -930,7 +934,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ],
           if (interests != null && interests.isNotEmpty) ...[
             Text(
-              'علاقه‌مندی‌ها:',
+              context.tr('ct.up.interests'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -965,7 +969,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ],
           if (goals != null && goals.isNotEmpty) ...[
             Text(
-              'اهداف:',
+              context.tr('ct.up.goals'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -1009,10 +1013,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         onPressed: () {
           Navigator.pop(context);
         },
-        icon: const Icon(Icons.arrow_back, size: 18, color: Colors.white, textDirection: TextDirection.ltr),
-        label: const Text(
-          'بازگشت به گفتگو',
-          style: TextStyle(
+        icon: const Icon(Icons.arrow_back, size: 18, color: Colors.white,),
+        label: Text(
+          context.tr('ct.up.back'),
+          style: const TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -1036,17 +1040,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final diff = now.difference(date);
 
     if (diff.inDays == 0) {
-      return 'امروز';
+      return context.tr('ct.up.today');
     } else if (diff.inDays == 1) {
-      return 'دیروز';
+      return context.tr('ct.ago.yesterday');
     } else if (diff.inDays < 7) {
-      return '${diff.inDays} روز پیش';
+      return context.tr('ct.ago.day', {'n': '${diff.inDays}'});
     } else if (diff.inDays < 30) {
-      return '${diff.inDays ~/ 7} هفته پیش';
+      return context.tr('ct.ago.week', {'n': '${diff.inDays ~/ 7}'});
     } else if (diff.inDays < 365) {
-      return '${diff.inDays ~/ 30} ماه پیش';
+      return context.tr('ct.ago.month', {'n': '${diff.inDays ~/ 30}'});
     } else {
-      return '${diff.inDays ~/ 365} سال پیش';
+      return context.tr('ct.ago.year', {'n': '${diff.inDays ~/ 365}'});
     }
   }
 }

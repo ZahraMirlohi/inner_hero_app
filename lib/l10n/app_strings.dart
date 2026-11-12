@@ -11,6 +11,9 @@
 import 'package:flutter/material.dart';
 
 import 'strings_ad.dart';
+import 'strings_bd.dart';
+import 'strings_ct.dart';
+import 'strings_ex.dart';
 import 'strings_af.dart';
 import 'strings_ah.dart';
 import 'strings_an.dart';
@@ -46,6 +49,9 @@ class AppStrings {
     ...adFa,
     ...atFa,
     ...ahFa,
+    ...bdFa,
+    ...ctFa,
+    ...exFa,
     // عمومی
     'app.name': 'Dacko',
     'common.cancel': 'بی‌خیال',
@@ -185,6 +191,9 @@ class AppStrings {
     ...adEn,
     ...atEn,
     ...ahEn,
+    ...bdEn,
+    ...ctEn,
+    ...exEn,
     'app.name': 'Dacko',
     'common.cancel': 'Cancel',
     'common.ok': 'OK',
