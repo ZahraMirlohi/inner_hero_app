@@ -128,7 +128,11 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
+  bool _openingChat = false;
+
   Future<void> _openBuddyChat(String otherId) async {
+    if (_openingChat) return; // لمس تکراری تا باز شدن چت نادیده گرفته می‌شود
+    _openingChat = true;
     try {
       final me = (await _chatService.getCurrentUser())!.id;
       final id = await _chatService.openBuddyConversation(me, otherId);
@@ -143,6 +147,8 @@ class _ChatScreenState extends State<ChatScreen>
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(context.tr('bd.error'))));
       }
+    } finally {
+      _openingChat = false;
     }
   }
 

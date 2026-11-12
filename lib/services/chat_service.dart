@@ -1285,8 +1285,15 @@ class ChatService {
   }
 
   /// گفتگوی هم‌مسیر را (اگر پاک شده بود) دوباره می‌سازد و شناسه‌اش را برمی‌گرداند
-  Future<String> openBuddyConversation(String me, String other) =>
-      createConversation(type: 'buddy', memberIds: [me, other], createdBy: me);
+  // چند لمس پشت‌سرهم باید یک گفتگو بسازد، نه چندتا: درخواست‌های هم‌زمان یک Future را به اشتراک می‌گذارند
+  static final Map<String, Future<String>> _openingBuddy = {};
+
+  Future<String> openBuddyConversation(String me, String other) {
+    final key = ([me, other]..sort()).join('|');
+    return _openingBuddy[key] ??=
+        createConversation(type: 'buddy', memberIds: [me, other], createdBy: me)
+            .whenComplete(() => _openingBuddy.remove(key));
+  }
 
   /// پایان هم‌مسیری: درخواست‌ها و گفتگو
   Future<void> removeBuddy(String me, String other) async {
