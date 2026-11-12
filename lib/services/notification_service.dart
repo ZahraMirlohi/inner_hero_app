@@ -131,6 +131,47 @@ class NotificationService {
     }
   }
 
+  NotificationDetails _details(String channel, String name) => NotificationDetails(
+        android: AndroidNotificationDetails(channel, name,
+            importance: Importance.high, priority: Priority.high),
+        iOS: const DarwinNotificationDetails(),
+      );
+
+  /// اعلان فوری (درخواست جدید، پیام، ...)
+  Future<void> showNow(int id, String title, String body,
+      {String channel = 'general', String channelName = 'Dacko'}) async {
+    if (!_supported) return;
+    await init();
+    if (!_ready) return;
+    try {
+      await _plugin.show(id, title, body, _details(channel, channelName));
+    } catch (_) {}
+  }
+
+  /// اعلان یک‌بارهٔ زمان‌دار (پایان تایمر، هشدار استریک)
+  Future<void> scheduleOnce(int id, DateTime at, String title, String body,
+      {String channel = 'general', String channelName = 'Dacko'}) async {
+    if (!_supported) return;
+    await init();
+    if (!_ready) return;
+    try {
+      final when = tz.TZDateTime.from(at, tz.local);
+      if (!when.isAfter(tz.TZDateTime.now(tz.local))) return;
+      await _plugin.zonedSchedule(id, title, body, when,
+          _details(channel, channelName),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime);
+    } catch (_) {}
+  }
+
+  Future<void> cancel(int id) async {
+    if (!_supported || !_ready) return;
+    try {
+      await _plugin.cancel(id);
+    } catch (_) {}
+  }
+
   Future<void> cancelAll() async {
     if (!_supported || !_ready) return;
     try {

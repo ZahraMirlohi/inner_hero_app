@@ -602,6 +602,18 @@ class LocalStorageService {
     await _userChallengesBox.clear();
   }
 
+  /// هنگام ورود با حساب دیگر: داده‌های کاربر قبلی (بدون تنظیمات ظاهری) پاک می‌شود
+  Future<void> clearForUserSwitch() async {
+    await _habitsBox.clear();
+    await _tasksBox.clear();
+    await _questsBox.clear();
+    await _packagesBox.clear();
+    await _userProfileBox.clear();
+    await _offlineBox.clear();
+    await _challengesBox.clear();
+    await _userChallengesBox.clear();
+  }
+
   Future<void> clearAllDataExceptProfile() async {
     try {
       final profile = getUserProfile();

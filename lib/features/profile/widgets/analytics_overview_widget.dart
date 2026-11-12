@@ -354,7 +354,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                'جزئیات بیشتر ›',
+                'جزئیات بیشتر ‹',
                 style: TextStyle(
                   color: primaryColor,
                   fontWeight: FontWeight.w600,
@@ -656,17 +656,17 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
 
   String _getCompletionMessage(int percent) {
     if (percent >= 90) {
-      return '🌟 فوق‌العاده! امروز واقعاً درخشان بودی!';
+      return 'تقریباً همه‌چیز تموم شد. یکی به این آدم جایزه بده، لطفاً.';
     } else if (percent >= 70) {
-      return '💪 عالی! تقریباً همه کارها رو انجام دادی!';
+      return 'خیلی خوب پیش رفتی؛ فقط یه کار مونده که معلومه عمداً جا گذاشتی.';
     } else if (percent >= 50) {
-      return '👍 خوب! نصف کارها رو انجام دادی، ادامه بده!';
+      return 'نصف کارها انجام شد. نصف دیگه منتظر یه بهانهٔ جدیده.';
     } else if (percent >= 30) {
-      return '📈 شروع خوبی داری، امروز رو قوی تموم کن!';
+      return 'شروع بد نبود؛ ادامه‌اش رو به «خودِ فردا» نسپار، اون هم شلوغه.';
     } else if (percent > 0) {
-      return '🌱 هر قدم کوچک مهمه، امروز رو ادامه بده!';
+      return 'یه کار انجام شد. از هیچی بهتره، دقیقاً یک واحد بهتر.';
     } else {
-      return '🚀 امروز رو شروع کن! یک قدم به قهرمانی نزدیک‌تر میشی!';
+      return 'هیچی انجام نشده. لیست‌هات دارن بهت زل می‌زنن.';
     }
   }
 
@@ -726,7 +726,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'همه کارهای امروز رو انجام دادی! تو یک قهرمان واقعی هستی!',
+                'همهٔ کارهای امروز انجام شد. می‌تونی رسماً از وجدانت مرخصی بگیری.',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -757,7 +757,7 @@ class AnalyticsOverviewWidgetState extends State<AnalyticsOverviewWidget>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'فقط $remaining کار دیگه مونده! ادامه بده، به قهرمانی نزدیک میشی!',
+              'فقط $remaining کار مونده؛ همون‌هایی که از صبح ازشون فرار می‌کردی.',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

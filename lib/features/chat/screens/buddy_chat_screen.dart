@@ -1,5 +1,9 @@
 // lib/features/chat/screens/buddy_chat_screen.dart
 
+import '../widgets/avatar_viewer.dart';
+import '../widgets/chat_background.dart';
+import '/l10n/app_strings.dart';
+import '/services/sound_service.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -86,6 +90,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   String? _userId;
   String? _buddyId;
   String? _highlightedMessageId;
+  bool _isClearingHistory = false;
   String? _buddyName;
   String? _buddyAvatar;
   bool _isBuddyOnline = false;
@@ -177,10 +182,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     '👍',
   ];
 
+  String? _bgPath;
+
   @override
   void initState() {
     super.initState();
     _initChat();
+    ChatBackground.load(widget.conversation.id).then((p) {
+      if (mounted) setState(() => _bgPath = p);
+    });
 
     _statusTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (mounted && _buddyId != null) {
@@ -348,7 +358,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       _messageSubscription = _chatService
           .getMessages(widget.conversation.id, userId: _userId)
           .listen((newMessages) async {
-        if (!mounted) return;
+        if (!mounted || _isClearingHistory) return;
 
         try {
           final messagesWithReactions = await _loadReactionsForMessages(
@@ -370,7 +380,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             await _markMessagesAsRead();
 
             if (_messages.length > oldMessageCount) {
-              final lastMessage = _messages.first;
+              final lastMessage = _messages.last;
+              if (oldMessageCount > 0 && lastMessage.senderId != _userId) {
+                SoundService.instance.play(Sfx.message);
+              }
               if (lastMessage.senderId != _userId) {
                 _scrollToBottom();
               }
@@ -421,23 +434,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
 // رنگ حباب من در شب
   Color _getMyBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? const Color(0xFF2A2A2A) // ✅ تیره‌تر از primaryColor برای شب
-        : theme.primaryLight;
+    return theme.primarySoft;
   }
 
 // رنگ حباب مقابل در شب
   Color _getOtherBubbleColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? const Color(0xFF1E1E1E) // مشکی
-        : Colors.white;
+    return theme.cardColor;
   }
 
 // ✅ رنگ متن حباب من در شب
   Color _getMyBubbleTextColor(ThemeProvider theme) {
-    return theme.isDarkMode
-        ? Colors.white // ✅ سفید در شب
-        : const Color(0xFF090909); // مشکی در روز
+    return theme.textColor;
   }
 
 // ✅ رنگ متن حباب مقابل در شب
@@ -496,7 +503,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return DraggableScrollableSheet(
           initialChildSize: 0.35,
           minChildSize: 0.25,
@@ -555,7 +562,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             );
           },
         );
-      },
+      })),
     );
   }
 
@@ -989,13 +996,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
     try {
       final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
+        allowMultiple: true,
         type: FileType.any,
       );
 
       if (result == null || result.files.isEmpty) return;
 
-      final file = result.files.first;
+      for (final file in result.files) {
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
@@ -1021,10 +1028,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (fileBytes == null) {
         _showSnackBar('فایل قابل خواندن نیست');
-        return;
+        continue;
       }
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final tempMessageId = '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -1051,7 +1058,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -1072,7 +1079,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود فایل');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -1117,6 +1124,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           ),
         );
       }
+    
+      }
     } catch (e) {
       print('❌ Error in _sendFile: $e');
       setState(() {
@@ -1149,13 +1158,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
     try {
       final result = await FilePicker.platform.pickFiles(
-        allowMultiple: false,
+        allowMultiple: true,
         type: FileType.audio,
       );
 
       if (result == null || result.files.isEmpty) return;
 
-      final file = result.files.first;
+      for (final file in result.files) {
       final fileName = file.name;
       final fileSize = file.size ?? 0;
 
@@ -1183,10 +1192,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (fileBytes == null) {
         _showSnackBar('فایل موزیک قابل خواندن نیست');
-        return;
+        continue;
       }
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      final tempMessageId = '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -1213,7 +1222,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -1250,7 +1259,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود موزیک');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -1344,6 +1353,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           _isSending = false;
         });
       }
+      }
     } catch (e) {
       print('❌ Error in _sendMusic: $e');
 
@@ -1428,7 +1438,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
 
       final successPercent = (performance.successRate * 100).toInt();
-      final motivationalMessage = performance.getMotivationalMessage();
 
       final String widgetText = '''
 📊 عملکرد هفتگی عادت‌ها
@@ -1436,8 +1445,6 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 ✅ انجام شده: ${performance.completedHabits} از ${performance.totalHabits}
 📈 نرخ موفقیت: $successPercent%
 🔥 استریک: ${_currentStreak} روز
-━━━━━━━━━━━━━━━━━━━━
-$motivationalMessage
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
@@ -1531,8 +1538,6 @@ $motivationalMessage
 ✅ انجام شده: ${data.completedItems} از ${data.totalItems}
 📈 نرخ موفقیت: $rate%
 ━━━━━━━━━━━━━━━━━━━━
-${data.completionMessage}
-━━━━━━━━━━━━━━━━━━━━
 ''';
 
       _sendMessage(
@@ -1602,7 +1607,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return CreateChallengeSheet(
           buddyName: _buddyName ?? 'هم‌مسیر',
           buddyId: _buddyId ?? '',
@@ -1612,7 +1617,7 @@ ${data.completionMessage}
             _sendChallengeInvite(challenge);
           },
         );
-      },
+      })),
     );
   }
 
@@ -2039,7 +2044,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -2081,6 +2086,19 @@ ${data.completionMessage}
                 ),
                 Divider(height: 1, color: theme.borderColor), // ✅
                 _buildMenuTile(
+                  icon: Icons.wallpaper_rounded,
+                  title: context.tr('bg.title'),
+                  subtitle: context.tr('bg.sub'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showChatBackgroundSheet(this.context, widget.conversation.id,
+                        (p) => setState(() => _bgPath = p));
+                  },
+                  color: primaryColor,
+                  theme: theme,
+                ),
+                Divider(height: 1, color: theme.borderColor),
+                _buildMenuTile(
                   icon: Icons.search,
                   title: 'جستجو در گفتگو',
                   subtitle: 'جستجوی پیام‌ها',
@@ -2120,7 +2138,7 @@ ${data.completionMessage}
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -2324,57 +2342,7 @@ ${data.completionMessage}
     _showSearchResultsSheet(results, query);
   }
 
-  void _scrollToPinnedMessage(String messageId) {
-    final index = _messages.indexWhere((msg) => msg.id == messageId);
-    if (index == -1) {
-      _showSnackBar('پیام پین شده در لیست موجود نیست');
-      return;
-    }
-
-    _highlightMessage(messageId);
-    _scrollToMessageWithEnsureVisible(messageId);
-  }
-
-  void _scrollToMessageWithEnsureVisible(String messageId) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_messageKeys.containsKey(messageId)) {
-        _messageKeys[messageId] = GlobalKey();
-      }
-
-      final key = _messageKeys[messageId]!;
-      _tryEnsureVisible(key, messageId, attempt: 0);
-    });
-  }
-
-  void _tryEnsureVisible(GlobalKey key, String messageId, {int attempt = 0}) {
-    const maxAttempts = 5;
-    const delay = Duration(milliseconds: 200);
-
-    Future.delayed(delay * (attempt + 1), () {
-      if (!mounted) return;
-
-      try {
-        final context = key.currentContext;
-        if (context != null) {
-          Scrollable.ensureVisible(
-            context,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
-            alignment: 0.5,
-          );
-          return;
-        }
-      } catch (e) {
-        print('⚠️ EnsureVisible attempt ${attempt + 1} failed: $e');
-      }
-
-      if (attempt < maxAttempts - 1) {
-        _tryEnsureVisible(key, messageId, attempt: attempt + 1);
-      } else {
-        _scrollToMessageFallback(messageId);
-      }
-    });
-  }
+  void _scrollToPinnedMessage(String messageId) => _scrollToMessage(messageId);
 
   void _showSearchResultsSheet(List<ChatMessage> results, String query) {
     // ✅ CalendarProvider رو بگیرید
@@ -2387,7 +2355,7 @@ ${data.completionMessage}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
           minChildSize: 0.3,
@@ -2497,7 +2465,7 @@ ${data.completionMessage}
             );
           },
         );
-      },
+      })),
     );
   }
 
@@ -2552,6 +2520,8 @@ ${data.completionMessage}
 
     if (confirm != true) return;
 
+    // استریم زنده را موقتاً نادیده بگیر تا پیام‌ها یکی‌یکی محو نشوند
+    _isClearingHistory = true;
     setState(() {
       _isLoading = true;
     });
@@ -2565,8 +2535,11 @@ ${data.completionMessage}
       setState(() {
         _messages.clear();
         _messageKeys.clear();
+        _pinnedMessage = null;
         _isLoading = false;
       });
+      Future.delayed(
+          const Duration(seconds: 2), () => _isClearingHistory = false);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2578,6 +2551,7 @@ ${data.completionMessage}
         );
       }
     } catch (e) {
+      _isClearingHistory = false;
       setState(() {
         _isLoading = false;
       });
@@ -2635,7 +2609,8 @@ ${data.completionMessage}
     });
 
     try {
-      await _chatService.deleteConversationForBoth(widget.conversation.id);
+      await _chatService.deleteConversationForBoth(widget.conversation.id,
+          removeBuddy: false);
 
       if (!mounted) return;
 
@@ -2668,8 +2643,7 @@ ${data.completionMessage}
 
     final unreadMessages = _messages.where((msg) {
       final isFromOther = msg.senderId != _userId;
-      final isUnread = msg.status != MessageStatus.seen &&
-          msg.status != MessageStatus.delivered;
+      final isUnread = msg.status != MessageStatus.seen;
       final isNotDeleted = !msg.isDeleted;
       return isFromOther && isUnread && isNotDeleted;
     }).toList();
@@ -2784,6 +2758,7 @@ ${data.completionMessage}
     if (isOwnMessage) menuItemCount++; // حذف برای من
     if (isOwnMessage && !message.isDeleted) menuItemCount++; // حذف برای همه
     menuItemCount++; // اشتراک‌گذاری
+    menuItemCount++; // انتخاب
 
     final double menuItemsHeight = menuItemCount * itemHeight + menuPadding;
     final double totalHeight = reactionsHeight + gap + menuItemsHeight;
@@ -3000,6 +2975,15 @@ ${data.completionMessage}
                         onTap: () {
                           _closeMenu();
                           _showDeleteOptionsDialog(message, primaryColor);
+                        },
+                        theme: theme,
+                      ),
+                      _buildPopupMenuItem(
+                        icon: Icons.check_circle_outline,
+                        label: 'انتخاب',
+                        onTap: () {
+                          _closeMenu();
+                          _enterSelectMode(message.id);
                         },
                         theme: theme,
                       ),
@@ -3564,6 +3548,7 @@ ${data.completionMessage}
     if (content.isEmpty && (replyToId != null || _replyToMessage != null)) {
       return;
     }
+    SoundService.instance.play(Sfx.tap);
 
     if (_userId == null || _isSending) return;
 
@@ -3609,7 +3594,7 @@ ${data.completionMessage}
     );
 
     setState(() {
-      _messages.insert(0, tempMessage);
+      _messages.add(tempMessage);
       _isSending = true;
       _replyToMessage = null;
       _showStickerPicker = false;
@@ -3714,16 +3699,17 @@ ${data.completionMessage}
       return;
     }
     try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+      final List<XFile> images = await _imagePicker.pickMultiImage(
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 80,
       );
 
-      if (image == null) return;
+      if (images.isEmpty) return;
 
-      final tempMessageId = DateTime.now().millisecondsSinceEpoch.toString();
+      for (final image in images) {
+      final tempMessageId =
+          '${DateTime.now().microsecondsSinceEpoch}';
 
       final tempMessage = ChatMessage(
         id: tempMessageId,
@@ -3748,7 +3734,7 @@ ${data.completionMessage}
       );
 
       setState(() {
-        _messages.insert(0, tempMessage);
+        _messages.add(tempMessage);
         _isSending = true;
       });
 
@@ -3765,7 +3751,7 @@ ${data.completionMessage}
           _isSending = false;
         });
         _showSnackBar('خطا در آپلود عکس');
-        return;
+        continue;
       }
 
       final Map<String, dynamic> metadata = {
@@ -3798,6 +3784,8 @@ ${data.completionMessage}
             duration: Duration(seconds: 1),
           ),
         );
+      }
+    
       }
     } catch (e) {
       print('❌ Error in _sendImage: $e');
@@ -4100,7 +4088,7 @@ ${data.completionMessage}
     try {
       final String appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final String appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final String appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
       if (message.type == MessageType.image) {
         final String shareText = '''
@@ -4491,24 +4479,11 @@ ${data.completionMessage}
   }
 
   void _copyMessage(ChatMessage message) {
-    final String appLink = 'https://innerhero.app/download';
-    final String appName = 'قهرمان درون';
-
-    final String copyText = '''
-${message.content}
-
-━━━━━━━━━━━━━━━━━━━━
-📱 ارسال شده از اپلیکیشن $appName
-🔗 دانلود اپلیکیشن: $appLink
-━━━━━━━━━━━━━━━━━━━━
-''';
-
-    Clipboard.setData(ClipboardData(text: copyText));
-
+    Clipboard.setData(ClipboardData(text: message.content));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('متن با لینک دانلود کپی شد 📋'),
-        duration: Duration(seconds: 2),
+        content: Text('متن کپی شد'),
+        duration: Duration(seconds: 1),
       ),
     );
   }
@@ -4710,9 +4685,9 @@ ${message.content}
                           }
                         }
                       },
-                      onLongPress: () {
+                      onLongPressStart: (d) {
                         if (!_isSelectMode) {
-                          _enterSelectMode(message.id);
+                          _showMessageActionsPopup(message, d.globalPosition);
                         }
                       },
                       child: AnimatedOpacity(
@@ -4724,23 +4699,49 @@ ${message.content}
                           padding: isWidgetMessage
                               ? EdgeInsets.zero
                               : const EdgeInsets.symmetric(
-                                  horizontal: 11,
-                                  vertical: 6,
+                                  horizontal: 14,
+                                  vertical: 10,
                                 ),
                           decoration: isWidgetMessage
-                              ? null
+                              ? (isHighlighted
+                                  ? BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      border: Border.all(
+                                        color: highlightBorderColor,
+                                        width: 3,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: highlightShadowColor,
+                                          blurRadius: 24,
+                                          spreadRadius: 5,
+                                        ),
+                                      ],
+                                    )
+                                  : null)
                               : BoxDecoration(
-                                  color: bubbleColor,
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: message.isPinned
-                                      ? Border.all(
-                                          color: pinnedBorderColor,
-                                          width: 2.5,
+                                  color: isHighlighted
+                                      ? Color.alphaBlend(
+                                          highlightBorderColor.withValues(
+                                              alpha: 0.3),
+                                          bubbleColor,
                                         )
-                                      : isHighlighted
+                                      : bubbleColor,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(22),
+                                    topRight: const Radius.circular(22),
+                                    bottomLeft: Radius.circular(isMe ? 22 : 6),
+                                    bottomRight: Radius.circular(isMe ? 6 : 22),
+                                  ),
+                                  border: isHighlighted
+                                      ? Border.all(
+                                          color: highlightBorderColor,
+                                          width: 3,
+                                        )
+                                      : message.isPinned
                                           ? Border.all(
-                                              color: highlightBorderColor,
-                                              width: 3,
+                                              color: pinnedBorderColor,
+                                              width: 2.5,
                                             )
                                           : null,
                                   boxShadow: [
@@ -5018,7 +5019,7 @@ ${message.content}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -5088,7 +5089,7 @@ ${message.content}
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -5754,7 +5755,20 @@ ${message.content}
 
     switch (message.type) {
       case MessageType.image:
-        return ClipRRect(
+        return GestureDetector(
+          onTap: () {
+            if (_isSelectMode) {
+              _toggleMessageSelection(message.id);
+            } else {
+              _openImageViewer(message.content);
+            }
+          },
+          onLongPressStart: (d) {
+            if (!_isSelectMode) {
+              _showMessageActionsPopup(message, d.globalPosition);
+            }
+          },
+          child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Image.network(
             message.content,
@@ -5784,6 +5798,7 @@ ${message.content}
               );
             },
           ),
+        ),
         );
 
       case MessageType.sticker:
@@ -5811,6 +5826,40 @@ ${message.content}
     }
   }
 
+  void _openImageViewer(String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 5,
+                  child: Center(child: Image.network(url)),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _isContactMessage(String content) {
     return content.contains('📞 شماره تماس') ||
         content.contains('👤 نام:') ||
@@ -5834,7 +5883,10 @@ ${message.content}
       }
     }
 
-    return Container(
+    final hasPhone = phone.isNotEmpty && phone != 'شماره موجود نیست';
+    return GestureDetector(
+      onTap: hasPhone ? () => _showPhoneActions(name, phone) : null,
+      child: Container(
       width: 280,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -5889,15 +5941,75 @@ ${message.content}
             ),
         ],
       ),
+    ),
     );
   }
 
   void _callPhoneNumber(String phone) {
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
     if (cleanPhone.isNotEmpty) {
-      final url = 'tel:$cleanPhone';
-      _launchUrl(url);
+      _launchUrl('tel:$cleanPhone');
     }
+  }
+
+  // با کلیک روی شماره: تماس (شماره آماده در شماره‌گیر)، کپی یا ذخیره در مخاطبین
+  void _showPhoneActions(String name, String phone) {
+    final theme = Provider.of<ThemeProvider>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Text(phone,
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textColor)),
+            ListTile(
+              leading: const Icon(Icons.call),
+              title: const Text('تماس'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _callPhoneNumber(phone);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('کپی شماره'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: phone));
+                _showSnackBar('شماره کپی شد');
+              },
+            ),
+            if (!kIsWeb)
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1),
+                title: const Text('ذخیره در مخاطبین'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await FlutterContacts.openExternalInsert(Contact(
+                      displayName: name,
+                      phones: [Phone(phone)],
+                    ));
+                  } catch (e) {
+                    _showSnackBar('باز کردن مخاطبین ممکن نشد');
+                  }
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _loadChallengeInBackground(String challengeId) {
@@ -6160,28 +6272,41 @@ ${message.content}
     );
   }
 
-  void _scrollToMessage(String messageId) {
-    _highlightMessage(messageId);
-
-    final key = _messageKeys[messageId];
-    if (key == null) {
-      _showSnackBar('پیام مورد نظر یافت نشد');
+  // پرش دقیق به پیام: اگر ویجتش هنوز ساخته نشده، با تخمین ارتفاع نزدیکش می‌شویم
+  // و تا ساخته‌شدن آن تلاش مجدد می‌کنیم.
+  Future<void> _scrollToMessage(String messageId, {int attempt = 0}) async {
+    if (!mounted) return;
+    if (_messages.indexWhere((m) => m.id == messageId) == -1) {
+      _showSnackBar('پیام مورد نظر در این گفتگو پیدا نشد');
       return;
     }
+    if (attempt == 0) _highlightMessage(messageId);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        Scrollable.ensureVisible(
-          key.currentContext!,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
-          alignment: 0.5,
-        );
-      } catch (e) {
-        print('❌ Scroll error: $e');
-        _scrollToMessageFallback(messageId);
-      }
-    });
+    final ctx = _messageKeys[messageId]?.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+      return;
+    }
+    if (attempt >= 8 || !_scrollController.hasClients) return;
+
+    final idx = _messages.indexWhere((m) => m.id == messageId);
+    double offset = 0;
+    for (int i = _messages.length - 1; i > idx; i--) {
+      offset += _estimateSingleItemHeight(_messages[i]);
+    }
+    // اگر تخمین خطا داشت، یک‌بار بالاتر و یک‌بار پایین‌تر امتحان کن
+    final step = (attempt + 1) ~/ 2;
+    final nudge = (attempt.isOdd ? 1 : -1) * step * 250.0;
+    final max = _scrollController.position.maxScrollExtent;
+    _scrollController.jumpTo((offset + (attempt == 0 ? 0 : nudge)).clamp(0.0, max));
+
+    await Future.delayed(const Duration(milliseconds: 80));
+    _scrollToMessage(messageId, attempt: attempt + 1);
   }
 
   void _scrollToMessageFallback(String messageId) {
@@ -6278,6 +6403,7 @@ ${message.content}
               Expanded(
                 child: Stack(
                   children: [
+                    ChatBackgroundLayer(path: _bgPath, dark: theme.isDarkMode),
                     Column(
                       children: [
                         _buildPinnedMessageBar(theme, accentColor),
@@ -6690,17 +6816,8 @@ ${message.content}
           if (_showStickerPicker) _buildStickerPicker(theme, primaryColor),
           if (_showGifPicker) _buildGifPicker(theme, primaryColor),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.surfaceColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            color: theme.backgroundColor,
             child: Column(
               children: [
                 _buildReplyPreview(theme, primaryColor),
@@ -6746,24 +6863,22 @@ ${message.content}
                       child: Container(
                         decoration: BoxDecoration(
                           // ✅ در تم شب تیره، در تم روز روشن
-                          color: theme.isDarkMode
-                              ? const Color(0xFF1E1E1E) // تیره برای شب
-                              : const Color(0xFFF5F5F5), // روشن برای روز
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: theme.isDarkMode
-                                ? const Color(0xFF333333) // border تیره برای شب
-                                : Colors.grey.shade300,
-                            width: 1,
-                          ),
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(26),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(
+                                  alpha: theme.isDarkMode ? 0.3 : 0.05),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
                         child: TextField(
                           controller: _messageController,
                           focusNode: _focusNode,
                           style: TextStyle(
-                            color: theme.isDarkMode
-                                ? Colors.white
-                                : Colors.black, // ✅ متن واضح
+                            color: theme.textColor,
                             fontSize: 14,
                           ),
                           decoration: InputDecoration(
@@ -6792,13 +6907,8 @@ ${message.content}
                                   )
                                 : null,
                           ),
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) {
-                            if (_messageController.text.isNotEmpty ||
-                                _replyToMessage != null) {
-                              _sendMessage();
-                            }
-                          },
+                          textInputAction: TextInputAction.newline,
+                          keyboardType: TextInputType.multiline,
                           maxLines: 4,
                           minLines: 1,
                           maxLength: 500,
@@ -6817,8 +6927,8 @@ ${message.content}
 
                     // دکمه ارسال
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: _isSending || _messageController.text.isEmpty
                             ? theme.disabledButtonBackground // ✅ جدید
@@ -6841,10 +6951,10 @@ ${message.content}
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(
-                                Icons.send,
-                                color: Colors.white,
-                                size: 20,
+                            : Icon(
+                                Icons.send_rounded,
+                                color: theme.onPrimaryColor,
+                                size: 22,
                               ),
                       ),
                     ),
@@ -6906,7 +7016,9 @@ ${message.content}
           children: [
             Stack(
               children: [
-                Container(
+                GestureDetector(
+                  onTap: () => showAvatarViewer(context, _buddyAvatar),
+                  child: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -6943,6 +7055,7 @@ ${message.content}
                             ),
                           ),
                         ),
+                ),
                 ),
                 Positioned(
                   bottom: 0,
@@ -6989,7 +7102,8 @@ ${message.content}
           ],
         ),
       ),
-      backgroundColor: theme.surfaceColor,
+      backgroundColor: theme.backgroundColor,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       foregroundColor: theme.textColor,
       actions: [
@@ -7090,24 +7204,12 @@ ${message.content}
 
   Future<void> _launchUrl(String url) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لینک معتبر نیست'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // canLaunchUrl روی اندروید ۱۱+ برای tel: بدون <queries> همیشه false است
+      final ok = await launchUrl(Uri.parse(url),
+          mode: LaunchMode.externalApplication);
+      if (!ok && mounted) _showSnackBar('لینک باز نشد');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطا: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) _showSnackBar('لینک معتبر نیست');
     }
   }
 
@@ -7168,7 +7270,7 @@ ${message.content}
 ━━━━━━━━━━━━━━━━━━━━
 🔗 $url
 ━━━━━━━━━━━━━━━━━━━━
-📱 ارسال شده از اپلیکیشن قهرمان درون
+📱 ارسال شده از اپلیکیشن Dacko
 ''';
       await Share.share(shareText);
     } catch (e) {
@@ -7196,7 +7298,7 @@ ${message.content}
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -7273,7 +7375,7 @@ ${message.content}
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -7349,13 +7451,44 @@ ${message.content}
             ),
           );
         } else {
-          return Text(
-            element.text,
-            style: TextStyle(
-              color: textColor,
-              fontSize: 14,
-            ),
-          );
+          // شماره تلفن داخل متن: قابل کلیک (تماس / کپی / ذخیره)
+          final phoneRe = RegExp(r'\+?[\d۰-۹][\d۰-۹\s\-]{7,}[\d۰-۹]');
+          final matches = phoneRe.allMatches(element.text).toList();
+          if (matches.isEmpty) {
+            return Text(
+              element.text,
+              style: TextStyle(color: textColor, fontSize: 14),
+            );
+          }
+          final parts = <Widget>[];
+          var last = 0;
+          for (final m in matches) {
+            if (m.start > last) {
+              parts.add(Text(element.text.substring(last, m.start),
+                  style: TextStyle(color: textColor, fontSize: 14)));
+            }
+            final raw = m.group(0)!.trim();
+            parts.add(GestureDetector(
+              onTap: () => _showPhoneActions(
+                  '',
+                  raw.replaceAllMapped(RegExp('[۰-۹]'),
+                      (d) => '${d.group(0)!.codeUnitAt(0) - 0x06F0}')),
+              child: Text(raw,
+                  style: TextStyle(
+                    color: linkColor,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                    decorationColor: linkColor,
+                    fontWeight: FontWeight.w500,
+                  )),
+            ));
+            last = m.end;
+          }
+          if (last < element.text.length) {
+            parts.add(Text(element.text.substring(last),
+                style: TextStyle(color: textColor, fontSize: 14)));
+          }
+          return Wrap(children: parts);
         }
       }).toList(),
     );

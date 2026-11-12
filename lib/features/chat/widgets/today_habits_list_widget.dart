@@ -189,42 +189,6 @@ class TodayHabitsListWidget extends StatelessWidget {
             ),
           ],
 
-          // ==================== پیام پایانی ====================
-          if (data.totalItems > 0) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: textColor.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    rate >= 80
-                        ? Icons.local_fire_department
-                        : rate >= 50
-                            ? Icons.trending_up
-                            : Icons.emoji_emotions_outlined,
-                    color: textColor,
-                    size: 14,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      data.completionMessage,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
           // ==================== فوتر ====================
           const SizedBox(height: 6),
           Row(

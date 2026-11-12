@@ -28,6 +28,9 @@ class SettingsProvider extends ChangeNotifier {
   static const _kNotifChat = 'settings_notif_chat';
   static const _kNotifChallenges = 'settings_notif_challenges';
   static const _kNotifXp = 'settings_notif_xp';
+  static const _kNotifRequests = 'settings_notif_requests';
+  static const _kNotifStreak = 'settings_notif_streak';
+  static const _kNotifTimer = 'settings_notif_timer';
   static const _kPrivate = 'settings_private_profile';
 
   String _language = 'fa';
@@ -38,6 +41,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifChat = true;
   bool _notifChallenges = true;
   bool _notifXp = true;
+  bool _notifRequests = true;
+  bool _notifStreak = true;
+  bool _notifTimer = true;
   bool _privateProfile = false;
 
   static Future<SettingsProvider> load() async {
@@ -59,6 +65,9 @@ class SettingsProvider extends ChangeNotifier {
     _notifChat = p.getBool(_kNotifChat) ?? true;
     _notifChallenges = p.getBool(_kNotifChallenges) ?? true;
     _notifXp = p.getBool(_kNotifXp) ?? true;
+    _notifRequests = p.getBool(_kNotifRequests) ?? true;
+    _notifStreak = p.getBool(_kNotifStreak) ?? true;
+    _notifTimer = p.getBool(_kNotifTimer) ?? true;
     _privateProfile = p.getBool(_kPrivate) ?? false;
   }
 
@@ -73,6 +82,12 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifChat => _notifications && _notifChat;
   bool get notifChallenges => _notifications && _notifChallenges;
   bool get notifXp => _notifications && _notifXp;
+  bool get notifRequests => _notifications && _notifRequests;
+  bool get notifStreak => _notifications && _notifStreak;
+  bool get notifTimer => _notifications && _notifTimer;
+  bool get rawNotifRequests => _notifRequests;
+  bool get rawNotifStreak => _notifStreak;
+  bool get rawNotifTimer => _notifTimer;
   bool get rawNotifHabits => _notifHabits;
   bool get rawNotifChat => _notifChat;
   bool get rawNotifChallenges => _notifChallenges;
@@ -101,6 +116,16 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setNotifChallenges(bool v) =>
       _set(_kNotifChallenges, v, () => _notifChallenges = v);
   Future<void> setNotifXp(bool v) => _set(_kNotifXp, v, () => _notifXp = v);
+  Future<void> setNotifRequests(bool v) =>
+      _set(_kNotifRequests, v, () => _notifRequests = v);
+  Future<void> setNotifStreak(bool v) async {
+    await _set(_kNotifStreak, v, () => _notifStreak = v);
+    if (v) await NotificationService.instance.requestPermission();
+    await NotificationService.instance.reschedule();
+  }
+
+  Future<void> setNotifTimer(bool v) =>
+      _set(_kNotifTimer, v, () => _notifTimer = v);
   Future<void> setPrivateProfile(bool v) =>
       _set(_kPrivate, v, () => _privateProfile = v);
 

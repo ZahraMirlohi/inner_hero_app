@@ -408,6 +408,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                 Directionality.of(context) == TextDirection.rtl
                     ? Icons.chevron_left_rounded
                     : Icons.chevron_right_rounded,
+                textDirection: TextDirection.ltr,
                 color: theme.textSecondaryColor,
               ),
             ],
@@ -420,7 +421,7 @@ class _ArenaScreenState extends State<ArenaScreen>
       context: context,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0xFF090909).withValues(alpha: 0.5),
-      builder: (ctx) => Container(
+      builder: (ctx) => SafeArea(top: false, child: Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         decoration: BoxDecoration(
           color: theme.cardColor,
@@ -460,7 +461,7 @@ class _ArenaScreenState extends State<ArenaScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -724,7 +725,7 @@ class _ArenaScreenState extends State<ArenaScreen>
                   left: xOf(i.toDouble()),
                   top: 0,
                   width: sw,
-                  height: 56,
+                  height: 44,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => _onTabChanged(i),
@@ -761,7 +762,7 @@ class _ArenaScreenState extends State<ArenaScreen>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
-              height: 1.0,
+              height: 1.25,
               fontWeight: FontWeight.w800,
               color: color,
             ),

@@ -1,5 +1,6 @@
 // lib/features/explore/widgets/quest_card.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
@@ -45,6 +46,55 @@ class QuestCard extends StatelessWidget {
     final p = (progress ?? 0).clamp(0, quest.targetCount);
     final ratio = quest.targetCount > 0 ? p / quest.targetCount : 0.0;
 
+    // ماموریت انجام‌شده: فقط عنوان، XP و نشان تکمیل
+    if (isCompleted) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              if (CardImage.has(quest.imageUrl))
+                CardImage(
+                  url: quest.imageUrl,
+                  width: 52,
+                  height: 52,
+                  borderRadius: BorderRadius.circular(16),
+                )
+              else
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration:
+                      const BoxDecoration(color: _ink, shape: BoxShape.circle),
+                  child: Icon(_getIconData(quest.icon),
+                      size: 20, color: theme.effectivePrimary),
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(quest.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w800, color: _ink)),
+              ),
+              const SizedBox(width: 8),
+              _chip('+${quest.xpReward} XP', Icons.star_rounded, chipBg,
+                  bold: true),
+              const SizedBox(width: 6),
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF2ECC71), size: 24),
+            ],
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -58,8 +108,10 @@ class QuestCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CardImage(url: quest.imageUrl, height: 110),
-            Padding(
+            _withImage(
+              context,
+              quest.imageUrl,
+              Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +156,7 @@ class QuestCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('$p از ${quest.targetCount} روز',
+                        Text(context.tr('ex.quest.progress', {'n': '$p', 'm': '${quest.targetCount}'}),
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -118,48 +170,70 @@ class QuestCard extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            _chip('${quest.targetCount} روز',
-                                Icons.calendar_today_rounded, chipBg),
-                            _chip('+${quest.xpReward} XP',
-                                Icons.star_rounded, chipBg,
-                                bold: true),
-                            if (isCompleted && quest.badge.isNotEmpty)
-                              _chip(quest.badge, null,
-                                  Colors.white.withValues(alpha: 0.75)),
-                          ],
-                        ),
-                      ),
+                      _chip(context.tr('ex.days_n', {'n': '${quest.targetCount}'}),
+                          Icons.calendar_today_rounded, chipBg),
+                      _chip('+${quest.xpReward} XP', Icons.star_rounded, chipBg,
+                          bold: true),
+                      if (isCompleted && quest.badge.isNotEmpty)
+                        _chip(quest.badge, null,
+                            Colors.white.withValues(alpha: 0.75)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
                       if (isCompleted)
-                        _pill('تکمیل شد', Icons.check_circle_rounded,
+                        _pill(context.tr('ex.quest.done'), Icons.check_circle_rounded,
                             const Color(0xFF2ECC71), _ink, null)
                       else if (isActive) ...[
-                        if (onCancel != null) ...[
-                          _pill('لغو', Icons.close_rounded, Colors.white, _ink,
-                              onCancel),
-                          const SizedBox(width: 6),
-                        ],
-                        _pill('مشاهده', Icons.visibility_outlined, _ink,
+                        _pill(context.tr('ex.view'), Icons.visibility_outlined, _ink,
                             Colors.white, onTap),
+                        if (onCancel != null)
+                          _pill(context.tr('ex.quest.cancel'), Icons.close_rounded, Colors.white, _ink,
+                              onCancel),
                       ] else if (quest.isActive)
-                        _pill('شروع', Icons.play_arrow_rounded,
+                        _pill(context.tr('ex.quest.start'), Icons.play_arrow_rounded,
                             theme.effectivePrimary, theme.onPrimaryColor, onStart)
                       else
-                        _pill('غیرفعال', Icons.block_rounded,
+                        _pill(context.tr('ex.inactive'), Icons.block_rounded,
                             const Color(0xFFCFD3C4), const Color(0xFF555B4B), null),
                     ],
                   ),
                 ],
               ),
             ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  // تصویر در سمت چپ کارت و تمام ارتفاع آن؛ اطلاعات سمت راست (کراپ کناره‌ها اشکال ندارد)
+  Widget _withImage(BuildContext context, String? url, Widget info) {
+    if (!CardImage.has(url)) return info;
+    final dir = Directionality.of(context);
+    return IntrinsicHeight(
+      child: Row(
+        textDirection: TextDirection.ltr,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 118,
+            child: Image.network(
+              url!.trim(),
+              fit: BoxFit.cover,
+              errorBuilder: (c, e, s) => const SizedBox.shrink(),
+            ),
+          ),
+          Expanded(child: Directionality(textDirection: dir, child: info)),
+        ],
       ),
     );
   }

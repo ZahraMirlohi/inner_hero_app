@@ -298,6 +298,12 @@ String authErrorText(BuildContext context, Object error) {
   if (code == 'weak_password' || raw.contains('password should be')) {
     return tr('auth.err_password_short');
   }
+  if (code == 'otp_expired' ||
+      raw.contains('token has expired') ||
+      raw.contains('otp') ||
+      raw.contains('invalid token')) {
+    return tr('auth.err_code_invalid');
+  }
   if (raw.contains('rate limit') || raw.contains('too many')) {
     return tr('auth.err_rate_limit');
   }
@@ -338,7 +344,91 @@ class AuthValidators {
   static String? password(BuildContext c, String? v) {
     final t = v ?? '';
     if (t.isEmpty) return c.tr('auth.err_password_required');
-    if (t.length < 8) return c.tr('auth.err_password_short');
+    if (t.length < 8 || t.length > 72 ||
+        !RegExp(r'[A-Za-z\u0600-\u06FF]').hasMatch(t) ||
+        !RegExp(r'\d').hasMatch(t)) {
+      return c.tr('auth.err_password_short');
+    }
     return null;
+  }
+}
+
+
+/// کد را به ارقام لاتین تبدیل می‌کند (کیبورد فارسی/عربی هم کار کند)
+String normalizeCode(String input) {
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  final b = StringBuffer();
+  for (final ch in input.runes.map(String.fromCharCode)) {
+    final i = fa.indexOf(ch) >= 0 ? fa.indexOf(ch) : ar.indexOf(ch);
+    b.write(i >= 0 ? '$i' : ch);
+  }
+  return b.toString().replaceAll(RegExp(r'\s'), '');
+}
+
+class AuthCodeValidator {
+  static String? check(BuildContext c, String? v) =>
+      RegExp(r'^\d{6}$').hasMatch(normalizeCode(v ?? ''))
+          ? null
+          : c.tr('auth.err_code_invalid');
+}
+
+/// دکمهٔ «ارسال دوباره» با شمارش معکوس ۶۰ ثانیه‌ای
+class ResendButton extends StatefulWidget {
+  final Future<void> Function() onResend;
+  const ResendButton({super.key, required this.onResend});
+
+  @override
+  State<ResendButton> createState() => _ResendButtonState();
+}
+
+class _ResendButtonState extends State<ResendButton> {
+  Timer? _timer;
+  int _left = 60;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _start();
+  }
+
+  void _start() {
+    _timer?.cancel();
+    setState(() => _left = 60);
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return t.cancel();
+      setState(() => _left--);
+      if (_left <= 0) t.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = _left > 0;
+    return AuthButton(
+      label: waiting
+          ? context.tr('auth.resend_in', {'s': '$_left'})
+          : context.tr('auth.verify_resend'),
+      filled: false,
+      isLoading: _busy,
+      onPressed: waiting
+          ? null
+          : () async {
+              setState(() => _busy = true);
+              try {
+                await widget.onResend();
+                _start();
+              } finally {
+                if (mounted) setState(() => _busy = false);
+              }
+            },
+    );
   }
 }

@@ -995,7 +995,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       context: context,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0xFF090909).withValues(alpha: 0.42),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
           decoration: BoxDecoration(
@@ -1099,7 +1099,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1651,7 +1651,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
-      builder: (bottomSheetContext) {
+      builder: (bottomSheetContext) => SafeArea(top: false, child: Builder(builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
             return Padding(
@@ -1675,6 +1675,12 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
                     onSave: (minutes, seconds, isCountdown) {
                       _saveTimerSetting(
                           habit.id, minutes, seconds, isCountdown);
+                    },
+                    onFinished: (done) {
+                      if (!done) return;
+                      Future.delayed(const Duration(milliseconds: 700), () {
+                        if (mounted) _markHabitCompleted(habit);
+                      });
                     },
                     onComplete: () {
                       // 1. اول BottomSheet رو ببند
@@ -1707,7 +1713,7 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             );
           },
         );
-      },
+      })),
     );
   }
 
@@ -1977,6 +1983,13 @@ class TodayTabState extends State<TodayTab> with TickerProviderStateMixin {
             icon: Icons.check_circle_outline_rounded,
             title: context.tr('ah.today.emptyTitle'),
             subtitle: context.tr('ah.today.emptySub'),
+            actionLabel: context.tr('ah.fab.habit'),
+            actionIcon: Icons.add_rounded,
+            onAction: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const CategorySelectionScreen()),
+            ).then((_) => refreshData()),
           ),
       ],
     );
@@ -1991,8 +2004,10 @@ class _TimerDialogContent extends StatefulWidget {
   final int initialSeconds;
   final Function(int, int, bool) onSave;
   final VoidCallback onComplete;
+  final ValueChanged<bool>? onFinished;
 
   const _TimerDialogContent({
+    this.onFinished,
     super.key,
     required this.habit,
     required this.initialMinutes,
@@ -2074,6 +2089,9 @@ class _TimerDialogContentState extends State<_TimerDialogContent> {
           HabitTimerWidget(
             habitId: widget.habit.id,
             habitTitle: widget.habit.title,
+            targetSeconds:
+                _isCountdown ? _minutes * 60 + _seconds : 0,
+            onFinished: widget.onFinished,
             onTimeSaved: () {
               // فقط callback رو صدا بزن، Navigator رو خود والد مدیریت می‌کنه
               widget.onComplete();

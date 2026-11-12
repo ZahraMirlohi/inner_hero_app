@@ -1,3 +1,4 @@
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import '../models/package_model.dart';
 import '/services/supabase_service.dart';
@@ -119,8 +120,8 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
             const SizedBox(height: 16),
 
             // لیست عادت‌ها
-            const Text(
-              'عادت‌های این بسته:',
+            Text(
+              context.tr('ex.pkg.habits_of'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -195,7 +196,7 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  '${widget.package.habits.length} عادت',
+                  context.tr('ex.habits_n', {'n': '${widget.package.habits.length}'}),
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(width: 16),
@@ -240,8 +241,8 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
                       ),
                       child: Text(
                         widget.isActive
-                            ? 'غیرفعال کردن بسته'
-                            : 'فعال کردن بسته 🚀',
+                            ? context.tr('ex.dlg.toggle_off')
+                            : context.tr('ex.dlg.toggle_on'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -268,8 +269,8 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
       if (user == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لطفاً وارد حساب کاربری خود شوید'),
+            SnackBar(
+              content: Text(context.tr('ex.login_first')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -282,7 +283,7 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('بسته "${widget.package.title}" غیرفعال شد'),
+              content: Text(context.tr('ex.pkg.deactivated', {'n': widget.package.title})),
               backgroundColor: Colors.orange,
             ),
           );
@@ -292,7 +293,7 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('بسته "${widget.package.title}" فعال شد! '),
+              content: Text(context.tr('ex.pkg.activated', {'n': widget.package.title})),
               backgroundColor: Colors.green,
             ),
           );
@@ -307,7 +308,7 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -331,17 +332,17 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
   String _getCategoryText(String category) {
     switch (category) {
       case 'health':
-        return 'سلامت';
+        return context.tr('ex.cat.health');
       case 'study':
-        return 'مطالعه';
+        return context.tr('ex.cat.study');
       case 'productivity':
-        return 'بهره‌وری';
+        return context.tr('ex.cat.productivity');
       case 'sport':
-        return 'ورزش';
+        return context.tr('ex.cat.sport');
       case 'nutrition':
-        return 'تغذیه';
+        return context.tr('ex.cat.nutrition');
       case 'personal':
-        return 'رشد شخصی';
+        return context.tr('ex.cat.personal');
       default:
         return category;
     }
@@ -350,11 +351,11 @@ class _PackageDetailDialogState extends State<PackageDetailDialog> {
   String _getFrequencyText(String frequencyType) {
     switch (frequencyType) {
       case 'daily':
-        return 'روزانه';
+        return context.tr('ex.freq.daily');
       case 'weekly':
-        return 'هفتگی';
+        return context.tr('ex.freq.weekly');
       case 'monthly':
-        return 'ماهانه';
+        return context.tr('ex.freq.monthly');
       default:
         return frequencyType;
     }

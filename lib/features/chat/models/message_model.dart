@@ -1,3 +1,4 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
 // lib/features/chat/models/message_model.dart
 
 import 'package:flutter/material.dart';
@@ -134,7 +135,9 @@ class ChatMessage {
     };
   }
 
-  bool get isFromMe => senderId == 'me';
+  bool get isFromMe =>
+      senderId == 'me' ||
+      senderId == Supabase.instance.client.auth.currentUser?.id;
   bool get isFromAI => false;
   bool get isSystem => type == MessageType.system;
   bool get isReply => replyToId != null;

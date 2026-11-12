@@ -135,3 +135,7 @@
 
 # Keep all classes that are used in Flutter Contacts
 -keep class com.flutter_contacts.** { *; }
+
+# flutter_local_notifications (R8 removes these in release -> notifications never fire)
+-keep class com.dexterous.** { *; }
+-keep class androidx.core.app.NotificationCompat** { *; }

@@ -54,11 +54,16 @@ class ChatService {
       final activeConversationIds =
           activeConversationsResponse.map((c) => c['id'] as String).toList();
 
-      // مرحله 3: گرفتن همه اعضای این گفتگوها با یک کوئری
-      final allMembersResponse = await _client
+      // مرحله 3: اعضا + آخرین پیام + خوانده‌نشده‌ها به‌صورت موازی
+      final membersF = _client
           .from('conversation_members')
           .select('conversation_id, user_id')
           .inFilter('conversation_id', activeConversationIds);
+      final lastF = _lastMessages(activeConversationIds);
+      final unreadF = _unreadCounts(activeConversationIds, userId);
+      final allMembersResponse = await membersF;
+      final lastMessageByConv = await lastF;
+      final unreadByConv = await unreadF;
 
       final Map<String, List<String>> membersByConv = {};
       for (var m in allMembersResponse) {
@@ -67,36 +72,23 @@ class ChatService {
         membersByConv.putIfAbsent(convId, () => []).add(uid);
       }
 
-      // مرحله 4: گرفتن همه پروفایل‌های اعضا با یک کوئری
-      final allMemberIds = allMembersResponse
-          .map((m) => m['user_id'] as String)
-          .toSet()
-          .toList();
-
-      final profilesResponse = await _client
-          .from('profiles')
-          .select('user_id, name, avatar_url, updated_at, last_seen_at')
-          .inFilter('user_id', allMemberIds);
+      // مرحله 4: پروفایل فقط برای گفتگوهای هم‌مسیر (گروه‌ها به پروفایل اعضا نیاز ندارند)
+      final buddyIds = <String>{};
+      for (final c in activeConversationsResponse) {
+        if ((c['type'] ?? 'buddy') == 'buddy') {
+          buddyIds.addAll(membersByConv[c['id']] ?? const <String>[]);
+        }
+      }
+      final profilesResponse = buddyIds.isEmpty
+          ? <Map<String, dynamic>>[]
+          : await _client
+              .from('profiles')
+              .select('user_id, name, avatar_url, updated_at, last_seen_at')
+              .inFilter('user_id', buddyIds.toList());
 
       final Map<String, Map<String, dynamic>> profilesMap = {
         for (var p in profilesResponse) p['user_id'] as String: p,
       };
-
-      // مرحله 5: گرفتن آخرین پیام هر گفتگو با یک کوئری
-      final lastMessagesResponse = await _client
-          .from('messages')
-          .select('conversation_id, content, created_at, sender_id')
-          .inFilter('conversation_id', activeConversationIds)
-          .eq('is_deleted', false)
-          .order('created_at', ascending: false);
-
-      final Map<String, Map<String, dynamic>> lastMessageByConv = {};
-      for (var msg in lastMessagesResponse) {
-        final convId = msg['conversation_id'] as String;
-        if (!lastMessageByConv.containsKey(convId)) {
-          lastMessageByConv[convId] = msg;
-        }
-      }
 
       // مرحله 6: ساخت لیست نهایی
       final List<Conversation> conversations = [];
@@ -106,7 +98,8 @@ class ChatService {
         final memberIds = membersByConv[conversationId] ?? [];
 
         // اگر بعد از همه چک‌ها، عضو کمتر از 2 بود، این گفتگو را رد کن
-        if (memberIds.length < 2) {
+        final isBuddyConv = (convData['type'] ?? 'buddy') == 'buddy';
+        if (isBuddyConv && memberIds.length < 2) {
           print(
               '⚠️ Skipping conversation $conversationId: only ${memberIds.length} members');
           continue;
@@ -156,7 +149,9 @@ class ChatService {
         DateTime lastMessageAt = DateTime.now();
 
         if (lastMsg != null) {
-          lastMessage = lastMsg['content'] as String? ?? 'شروع گفتگو';
+          lastMessage = lastMsg['type'] == 'image'
+              ? '📷 عکس'
+              : (lastMsg['content'] as String? ?? 'شروع گفتگو');
           lastMessageAt = DateTime.tryParse(lastMsg['created_at'] as String) ??
               DateTime.now();
         }
@@ -181,9 +176,15 @@ class ChatService {
             lastMessageAt: lastMessageAt,
             createdAt: createdAt,
             lastMessage: lastMessage,
-            unreadCount: 0,
+            unreadCount:
+                (type == ConversationType.buddy || type == ConversationType.squad)
+                    ? (unreadByConv[conversationId] ?? 0)
+                    : 0,
             memberIds: memberIds,
-            avatarUrl: buddyAvatar,
+            avatarUrl: buddyAvatar ??
+                (type == ConversationType.squad
+                    ? convData['avatar_url'] as String?
+                    : null),
             buddyLastSeen: buddyLastSeen,
           ),
         );
@@ -200,6 +201,57 @@ class ChatService {
       print('Error getting conversations: $e');
       return [];
     }
+  }
+
+  Future<Map<String, Map<String, dynamic>>> _lastMessages(List<String> ids) async {
+    final out = <String, Map<String, dynamic>>{};
+    try {
+      final rows = await _client.rpc('chat_last_messages', params: {'p_conv_ids': ids});
+      for (final r in rows as List) {
+        out[r['conversation_id'] as String] = Map<String, dynamic>.from(r);
+      }
+      return out;
+    } catch (e) {
+      // sql/11 اجرا نشده: روش قدیمی ولی محدود
+      print('chat_last_messages rpc unavailable: $e');
+      final rows = await _client
+          .from('messages')
+          .select('conversation_id, content, created_at, sender_id, type')
+          .inFilter('conversation_id', ids)
+          .eq('is_deleted', false)
+          .order('created_at', ascending: false)
+          .limit(300);
+      for (final r in rows) {
+        out.putIfAbsent(r['conversation_id'] as String, () => r);
+      }
+      return out;
+    }
+  }
+
+  Future<Map<String, int>> _unreadCounts(List<String> ids, String userId) async {
+    final out = <String, int>{};
+    try {
+      final rows = await _client.rpc('chat_unread_counts', params: {'p_conv_ids': ids});
+      for (final r in rows as List) {
+        out[r['conversation_id'] as String] = (r['unread'] as num).toInt();
+      }
+    } catch (e) {
+      try {
+        final rows = await _client
+            .from('messages')
+            .select('conversation_id')
+            .inFilter('conversation_id', ids)
+            .neq('sender_id', userId)
+            .neq('status', 'seen')
+            .eq('is_deleted', false)
+            .limit(500);
+        for (final r in rows) {
+          final id = r['conversation_id'] as String;
+          out[id] = (out[id] ?? 0) + 1;
+        }
+      } catch (_) {}
+    }
+    return out;
   }
 
   Future<void> deleteConversation(String conversationId) async {
@@ -542,9 +594,13 @@ class ChatService {
     String? userId,
   }) {
     try {
-      return _client.from('messages').stream(primaryKey: ['id']).map((data) {
-        print('[STREAM] Received ${data.length} messages from Realtime');
-
+      return _client
+          .from('messages')
+          .stream(primaryKey: ['id'])
+          .eq('conversation_id', conversationId)
+          .order('created_at', ascending: false)
+          .limit(200)
+          .map((data) {
         final List<ChatMessage> messages = [];
         for (var item in data) {
           final convId = item['conversation_id'] as String?;
@@ -552,9 +608,6 @@ class ChatService {
             final msg = ChatMessage.fromMap(item);
             if (userId == null || !msg.hiddenFor.contains(userId)) {
               messages.add(msg);
-              print(
-                '[STREAM] Added message: ${msg.id.substring(0, 8)} - type: ${msg.type} - status: ${msg.status}',
-              );
             }
           }
         }
@@ -724,6 +777,11 @@ class ChatService {
     }
   }
 
+  // حذف پیام توسط ادمین گروه (نیاز به policy در sql/08)
+  Future<void> adminDeleteMessage(String messageId) async {
+    await _client.from('messages').delete().eq('id', messageId);
+  }
+
   // دریافت واکنش‌های یک پیام (بدون join)
   Future<List<MessageReaction>> getMessageReactions(String messageId) async {
     try {
@@ -777,21 +835,36 @@ class ChatService {
     String conversationId,
   ) async {
     try {
-      // 1. دریافت همه پیام‌های گفتگو
-      final messages = await _client
-          .from('messages')
-          .select('id')
-          .eq('conversation_id', conversationId);
+      // یک کوئری با join به‌جای دو مرحله
+      final List<Map<String, dynamic>> response;
+      try {
+        response = List<Map<String, dynamic>>.from(await _client
+            .from('message_reactions')
+            .select('*, messages!inner(conversation_id)')
+            .eq('messages.conversation_id', conversationId));
+      } catch (_) {
+        final messages = await _client
+            .from('messages')
+            .select('id')
+            .eq('conversation_id', conversationId);
+        if (messages.isEmpty) return {};
+        final messageIds = messages.map((m) => m['id'] as String).toList();
+        final r = await _client
+            .from('message_reactions')
+            .select()
+            .inFilter('message_id', messageIds);
+        return _groupReactionRows(List<Map<String, dynamic>>.from(r));
+      }
+      return _groupReactionRows(response);
+    } catch (e) {
+      print('Error getting conversation reactions: $e');
+      return {};
+    }
+  }
 
-      if (messages.isEmpty) return {};
-
-      final messageIds = messages.map((m) => m['id'] as String).toList();
-
-      // 2. دریافت واکنش‌های این پیام‌ها
-      final response = await _client
-          .from('message_reactions')
-          .select()
-          .inFilter('message_id', messageIds);
+  Future<Map<String, List<MessageReaction>>> _groupReactionRows(
+      List<Map<String, dynamic>> response) async {
+    try {
 
       if (response.isEmpty) return {};
 
@@ -1192,7 +1265,44 @@ class ChatService {
 
   // lib/services/chat_service.dart
 
-  Future<void> deleteConversationForBoth(String conversationId) async {
+  /// فهرست هم‌مسیرهای پذیرفته‌شده (جدا از وجود داشتن گفتگو)
+  Future<List<Map<String, dynamic>>> getBuddies(String me) async {
+    final rows = await _client
+        .from('buddy_requests')
+        .select('from_user_id, to_user_id')
+        .eq('status', 'accepted')
+        .or('from_user_id.eq.$me,to_user_id.eq.$me');
+    final ids = <String>{
+      for (final r in rows)
+        (r['from_user_id'] == me ? r['to_user_id'] : r['from_user_id']) as String
+    };
+    if (ids.isEmpty) return [];
+    final profiles = await _client
+        .from('profiles')
+        .select('user_id, name, avatar_url')
+        .inFilter('user_id', ids.toList());
+    return List<Map<String, dynamic>>.from(profiles);
+  }
+
+  /// گفتگوی هم‌مسیر را (اگر پاک شده بود) دوباره می‌سازد و شناسه‌اش را برمی‌گرداند
+  Future<String> openBuddyConversation(String me, String other) =>
+      createConversation(type: 'buddy', memberIds: [me, other], createdBy: me);
+
+  /// پایان هم‌مسیری: درخواست‌ها و گفتگو
+  Future<void> removeBuddy(String me, String other) async {
+    final convs = await getUserConversations(me);
+    for (final c in convs) {
+      if (c.type == ConversationType.buddy && c.memberIds.contains(other)) {
+        await deleteConversationForBoth(c.id);
+      }
+    }
+    await _client.from('buddy_requests').delete().or(
+        'and(from_user_id.eq.$me,to_user_id.eq.$other),'
+        'and(from_user_id.eq.$other,to_user_id.eq.$me)');
+  }
+
+  Future<void> deleteConversationForBoth(String conversationId,
+      {bool removeBuddy = true}) async {
     try {
       print('Starting deletion for conversation: $conversationId');
 
@@ -1208,7 +1318,7 @@ class ChatService {
       print('Members in conversation: $memberIds');
 
       // 2. حذف درخواست‌های هم‌مسیر
-      if (memberIds.length >= 2) {
+      if (removeBuddy && memberIds.length >= 2) {
         try {
           await _client.from('buddy_requests').delete().or(
               'and(from_user_id.eq.${memberIds[0]},to_user_id.eq.${memberIds[1]}),'
@@ -1356,5 +1466,170 @@ class ChatService {
       print('Error uploading image: $e');
       return null;
     }
+  }
+
+  // ==================== گروه‌ها (RPC های SQL 07) ====================
+
+  /// پیام خطای قابل‌فهم از PostgrestException
+  String groupErrorText(Object e) {
+    final m = e.toString();
+    if (m.contains('admin only')) return 'فقط ادمین گروه می‌تواند این کار را انجام دهد';
+    if (m.contains('invalid invite code')) return 'کد دعوت معتبر نیست';
+    if (m.contains('banned')) return 'شما از این گروه حذف شده‌اید';
+    if (m.contains('at least one admin')) return 'گروه باید حداقل یک ادمین داشته باشد';
+    if (m.contains('not public')) return 'این گروه عمومی نیست';
+    if (m.contains('only admins can post')) return 'فقط ادمین‌ها می‌توانند در این گروه پیام بدهند';
+    if (m.contains('reactions are disabled')) return 'ادمین واکنش‌ها را غیرفعال کرده است';
+    return m.replaceFirst('Exception: ', '');
+  }
+
+  Future<String> createGroup({
+    required String name,
+    String? description,
+    bool isPublic = false,
+    List<String> memberIds = const [],
+  }) async {
+    final id = await _client.rpc('create_group', params: {
+      'p_name': name,
+      'p_description': description,
+      'p_is_public': isPublic,
+      'p_member_ids': memberIds,
+    });
+    return id as String;
+  }
+
+  Future<String> joinGroupByCode(String code) async {
+    final id = await _client
+        .rpc('join_group_by_code', params: {'p_code': code.trim()});
+    return id as String;
+  }
+
+  /// افزودن هم‌مسیرهای ادمین به گروه؛ تعداد افزوده‌شده‌ها را برمی‌گرداند
+  Future<int> addGroupMembers(String conversationId, List<String> userIds) async {
+    final n = await _client.rpc('add_group_members',
+        params: {'p_conversation_id': conversationId, 'p_user_ids': userIds});
+    return (n as num).toInt();
+  }
+
+  /// هم‌مسیرهای فعلی کاربر: [{user_id, name, avatar_url}]
+  Future<List<Map<String, dynamic>>> getMyBuddies() async {
+    final uid = _client.auth.currentUser?.id;
+    if (uid == null) return [];
+    final mine = await _client
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('user_id', uid);
+    final ids = [for (final r in mine) r['conversation_id'] as String];
+    if (ids.isEmpty) return [];
+    final convs = await _client
+        .from('conversations')
+        .select('id')
+        .inFilter('id', ids)
+        .eq('type', 'buddy')
+        .eq('is_active', true);
+    final convIds = [for (final c in convs) c['id'] as String];
+    if (convIds.isEmpty) return [];
+    final members = await _client
+        .from('conversation_members')
+        .select('user_id')
+        .inFilter('conversation_id', convIds)
+        .neq('user_id', uid);
+    final userIds = {for (final m in members) m['user_id'] as String}.toList();
+    if (userIds.isEmpty) return [];
+    final profiles = await _client
+        .from('profiles')
+        .select('user_id, name, avatar_url')
+        .inFilter('user_id', userIds);
+    return List<Map<String, dynamic>>.from(profiles);
+  }
+
+  Future<String> joinPublicGroup(String conversationId) async {
+    final id = await _client
+        .rpc('join_public_group', params: {'p_conversation_id': conversationId});
+    return id as String;
+  }
+
+  Future<List<Map<String, dynamic>>> searchPublicGroups(String query) async {
+    final res =
+        await _client.rpc('search_public_groups', params: {'p_query': query});
+    return List<Map<String, dynamic>>.from(res as List);
+  }
+
+  /// تنظیمات گروه: name, description, is_public, invite_code, reactions_enabled, posting_mode
+  Future<Map<String, dynamic>> getGroupSettings(String conversationId) async {
+    final res = await _client
+        .from('conversations')
+        .select(
+            'name, description, avatar_url, is_public, invite_code, reactions_enabled, posting_mode')
+        .eq('id', conversationId)
+        .maybeSingle();
+    return res ?? {};
+  }
+
+  Future<void> updateGroup(
+    String conversationId, {
+    String? name,
+    String? description,
+    bool? isPublic,
+    bool? reactionsEnabled,
+    String? postingMode,
+    String? avatarUrl,
+  }) async {
+    await _client.rpc('update_group', params: {
+      'p_conversation_id': conversationId,
+      'p_name': name,
+      'p_description': description,
+      'p_is_public': isPublic,
+      'p_reactions_enabled': reactionsEnabled,
+      'p_posting_mode': postingMode,
+      'p_avatar_url': avatarUrl,
+    });
+  }
+
+  Future<String> regenerateInviteCode(String conversationId) async {
+    final code = await _client.rpc('regenerate_invite_code',
+        params: {'p_conversation_id': conversationId});
+    return code as String;
+  }
+
+  Future<void> setMemberRole(
+      String conversationId, String userId, String role) async {
+    await _client.rpc('set_member_role', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_role': role,
+    });
+  }
+
+  Future<void> removeGroupMember(String conversationId, String userId,
+      {bool ban = false}) async {
+    await _client.rpc('remove_group_member', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_ban': ban,
+    });
+  }
+
+  Future<void> leaveGroup(String conversationId) async {
+    await _client.rpc('leave_group', params: {'p_conversation_id': conversationId});
+  }
+
+  Future<void> deleteGroup(String conversationId) async {
+    await _client.rpc('delete_group', params: {'p_conversation_id': conversationId});
+  }
+
+  Future<void> reportMember(String conversationId, String userId, String reason,
+      {String? details}) async {
+    await _client.rpc('report_member', params: {
+      'p_conversation_id': conversationId,
+      'p_user_id': userId,
+      'p_reason': reason,
+      'p_details': details,
+    });
+  }
+
+  Future<void> setGroupMuted(String conversationId, bool muted) async {
+    await _client.rpc('set_group_muted',
+        params: {'p_conversation_id': conversationId, 'p_muted': muted});
   }
 }

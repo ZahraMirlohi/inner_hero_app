@@ -248,11 +248,7 @@ class _FileMessageWidgetState extends State<FileMessageWidget> {
     if (_isDisposed) return;
     if (_isLoading || _isBuffering) return;
 
-    if (!_isDownloaded) {
-      await _downloadFile();
-      return;
-    }
-
+    // اگر دانلود نشده، مستقیم از لینک پخش می‌شود
     final playUrl = _localFilePath ?? widget.fileUrl;
 
     setState(() {

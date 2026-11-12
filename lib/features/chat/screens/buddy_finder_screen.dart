@@ -1,5 +1,7 @@
 // lib/features/chat/screens/buddy_finder_screen.dart
 
+import '/l10n/app_strings.dart';
+import '/widgets/bottom_safe.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -102,7 +104,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (result == null) {
         setState(() {
           _isSearching = false;
-          _searchError = 'کاربری با این مشخصات پیدا نشد';
+          _searchError = context.tr('ct.bf.nouser');
         });
       } else {
         setState(() {
@@ -114,7 +116,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (!mounted) return;
       setState(() {
         _isSearching = false;
-        _searchError = 'خطا در جستجو: ${e.toString()}';
+        _searchError = context.tr('ct.bf.searchErr', {'e': e.toString()});
       });
     }
   }
@@ -137,32 +139,22 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     try {
       final appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
-      final myUsername = _myUsername ?? 'یک دوست';
+      final myUsername = _myUsername ?? context.tr('ct.bf.friend');
 
-      final message = '''
-🤝 سلام!
-
-من دارم از اپلیکیشن "$appName" استفاده می‌کنم و به نظرم می‌تونه برای تو هم مفید باشه.
-
-می‌تونی با نام کاربری "@$myUsername" من رو توی اپلیکیشن پیدا کنی و با هم هم‌مسیر بشیم!
-
-📱 اپلیکیشن $appName - مدیریت عادت‌ها و رشد شخصی
-🔗 دانلود: $appLink
-
-منتظرتم! 🌟
-''';
+      final message = context.tr('ct.bf.share1',
+          {'app': appName, 'u': myUsername, 'link': appLink});
 
       await Share.share(
         message,
-        subject: 'دعوت به اپلیکیشن $appName',
+        subject: context.tr('ct.bf.shareSubj', {'app': appName}),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در اشتراک‌گذاری: ${e.toString()}'),
+            content: Text(context.tr('ct.bf.shareErr', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -174,34 +166,22 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     try {
       final appLink =
           dotenv.env['APP_DOWNLOAD_LINK'] ?? 'https://innerhero.app/download';
-      final appName = dotenv.env['APP_NAME'] ?? 'قهرمان درون';
+      final appName = dotenv.env['APP_NAME'] ?? 'Dacko';
 
-      final myUsername = _myUsername ?? 'یک دوست';
+      final myUsername = _myUsername ?? context.tr('ct.bf.friend');
 
-      final message = '''
-🤝 سلام!
-
-من می‌خواستم توی اپلیکیشن "$appName" با تو هم‌مسیر بشم ولی هنوز عضو نیستی!
-
-بیا به اپلیکیشن ما بپیوند و با هم عادت‌های خوب بسازیم!
-
-می‌تونی من رو با نام کاربری "@$myUsername" پیدا کنی.
-
-📱 اپلیکیشن $appName - مدیریت عادت‌ها و رشد شخصی
-🔗 دانلود: $appLink
-
-منتظرتم! 🌟
-''';
+      final message = context.tr('ct.bf.share2',
+          {'app': appName, 'u': myUsername, 'link': appLink});
 
       await Share.share(
         message,
-        subject: 'دعوت به اپلیکیشن $appName',
+        subject: context.tr('ct.bf.shareSubj', {'app': appName}),
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در اشتراک‌گذاری: ${e.toString()}'),
+            content: Text(context.tr('ct.bf.shareErr', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -254,6 +234,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (!mounted) return; // بعد از await دوباره چک کن
 
       _categorizeMatches(matches);
+      await _mergeRequestsAndBuddies();
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -265,6 +247,112 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       print('Error loading data: $e');
       if (!mounted) return; // بعد از catch هم چک کن
       setState(() => _isLoading = false);
+    }
+  }
+
+  // درخواست‌های در انتظار و هم‌مسیرهای فعلی را مستقیم از دیتابیس می‌گیرد
+  // (مستقل از اینکه طرف مقابل «دنبال هم‌مسیر» باشد یا پروفایل شخصیت داشته باشد)
+  Future<void> _mergeRequestsAndBuddies() async {
+    final uid = _userId;
+    if (uid == null) return;
+    try {
+      final reqs = await _supabaseClient
+          .from('buddy_requests')
+          .select('id, from_user_id, to_user_id')
+          .or('from_user_id.eq.$uid,to_user_id.eq.$uid')
+          .eq('status', 'pending');
+
+      final myConvs = await _supabaseClient
+          .from('conversation_members')
+          .select('conversation_id')
+          .eq('user_id', uid);
+      final convIds = [for (final c in myConvs) c['conversation_id'] as String];
+      final buddyConv = <String, String>{};
+      if (convIds.isNotEmpty) {
+        final convs = await _supabaseClient
+            .from('conversations')
+            .select('id')
+            .inFilter('id', convIds)
+            .eq('type', 'buddy')
+            .eq('is_active', true);
+        final ids = [for (final c in convs) c['id'] as String];
+        if (ids.isNotEmpty) {
+          final members = await _supabaseClient
+              .from('conversation_members')
+              .select('conversation_id, user_id')
+              .inFilter('conversation_id', ids);
+          for (final m in members) {
+            if (m['user_id'] != uid) {
+              buddyConv[m['user_id'] as String] = m['conversation_id'] as String;
+            }
+          }
+        }
+      }
+
+      final reqByUser = <String, Map<String, dynamic>>{};
+      for (final r in reqs) {
+        final other = r['from_user_id'] == uid ? r['to_user_id'] : r['from_user_id'];
+        reqByUser[other as String] = r;
+      }
+
+      final needed = {...reqByUser.keys, ...buddyConv.keys};
+      final known = {for (final m in _allMatches) m['user_id'] as String: m};
+      final missing = needed.where((id) => !known.containsKey(id)).toList();
+      final profiles = <String, Map<String, dynamic>>{};
+      if (missing.isNotEmpty) {
+        final rows = await _supabaseClient
+            .from('profiles')
+            .select('user_id, name, avatar_url, total_xp, current_streak')
+            .inFilter('user_id', missing);
+        for (final p in rows) {
+          profiles[p['user_id'] as String] = p;
+        }
+      }
+
+      final pending = <Map<String, dynamic>>[];
+      final buddies = <Map<String, dynamic>>[];
+      for (final id in needed) {
+        final pr = profiles[id];
+        final e = Map<String, dynamic>.from(known[id] ??
+            {
+              'user_id': id,
+              'name': pr?['name'] ?? context.tr('ct.user'),
+              'gender': 'other',
+              'avatar_url': pr?['avatar_url'],
+              'total_xp': pr?['total_xp'] ?? 0,
+              'current_streak': pr?['current_streak'] ?? 0,
+              'match_score': 0.0,
+              'common_habits': [],
+              'common_interests': [],
+            });
+        if (buddyConv.containsKey(id)) {
+          e['is_buddy'] = true;
+          e['has_pending_request'] = false;
+          e['conversation_id'] = buddyConv[id];
+          buddies.add(e);
+        } else {
+          final r = reqByUser[id]!;
+          e['is_buddy'] = false;
+          e['has_pending_request'] = true;
+          e['is_sent_by_me'] = r['from_user_id'] == uid;
+          e['is_received_by_me'] = r['to_user_id'] == uid;
+          e['request_id'] = r['id'];
+          pending.add(e);
+        }
+        final i = _allMatches.indexWhere((m) => m['user_id'] == id);
+        if (i != -1) {
+          _allMatches[i] = e;
+        } else {
+          _allMatches.add(e);
+        }
+      }
+      _pendingRequests = pending;
+      _myBuddies = buddies;
+      _searchResults = _searchResults
+          .where((m) => !needed.contains(m['user_id']))
+          .toList();
+    } catch (e) {
+      print('merge requests/buddies error: $e');
     }
   }
 
@@ -327,7 +415,19 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
   }
 
   // ==================== ارسال درخواست ====================
+  // جلوگیری از کلیک چندباره: تا پایان کار هر درخواست، کلیک دوباره نادیده گرفته می‌شود
+  final Set<String> _inFlight = {};
+
   Future<void> _sendRequest(String toUserId, Color primaryColor) async {
+    if (!_inFlight.add('s$toUserId')) return;
+    try {
+      await _sendRequestImpl(toUserId, primaryColor);
+    } finally {
+      _inFlight.remove('s$toUserId');
+    }
+  }
+
+  Future<void> _sendRequestImpl(String toUserId, Color primaryColor) async {
     if (_userId == null) return;
 
     try {
@@ -348,11 +448,23 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         final index = _searchResults.indexWhere(
           (m) => m['user_id'] == toUserId,
         );
-        if (index != -1) {
-          final updated = Map<String, dynamic>.from(_searchResults[index]);
+        final fromSearch =
+            _searchResult != null && _searchResult!['user_id'] == toUserId;
+        if (fromSearch) {
+          // کارت نتیجه‌ی جستجو هم وضعیت «ارسال شد» را نشان بدهد
+          _searchResult = {
+            ..._searchResult!,
+            'has_pending_request': true,
+            'is_sent_by_me': true,
+          };
+        }
+        if (index != -1 || fromSearch) {
+          final updated = Map<String, dynamic>.from(
+              index != -1 ? _searchResults[index] : _searchResult!);
           updated['has_pending_request'] = true;
           updated['is_sent_by_me'] = true;
-          _searchResults.removeAt(index);
+          if (index != -1) _searchResults.removeAt(index);
+          _pendingRequests.removeWhere((m) => m['user_id'] == toUserId);
           _pendingRequests.insert(0, updated);
 
           final allIndex = _allMatches.indexWhere(
@@ -360,6 +472,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           );
           if (allIndex != -1) {
             _allMatches[allIndex] = updated;
+          } else {
+            _allMatches.add(updated);
           }
         }
       });
@@ -367,7 +481,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('درخواست هم‌مسیر ارسال شد '),
+            content: Text(context.tr('ct.bf.sent')),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -377,7 +491,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -393,18 +507,18 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('لغو درخواست'),
-        content: const Text('آیا از لغو درخواست هم‌مسیری مطمئن هستید؟'),
+        title: Text(context.tr('ct.bf.cancelTitle')),
+        content: Text(context.tr('ct.bf.cancelQ')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bd.cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'لغو درخواست',
-              style: TextStyle(color: Colors.red),
+            child: Text(
+              context.tr('ct.bf.cancelTitle'),
+              style: const TextStyle(color: Colors.red),
             ),
           ),
         ],
@@ -453,7 +567,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('درخواست هم‌مسیر لغو شد '),
+            content: Text(context.tr('ct.bf.cancelled')),
             backgroundColor: primaryColor,
             duration: const Duration(seconds: 2),
           ),
@@ -463,7 +577,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -476,6 +590,19 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
 
 // ==================== پاسخ به درخواست ====================
   Future<void> _respondToRequest(
+    String requestId,
+    bool accept,
+    Color primaryColor,
+  ) async {
+    if (!_inFlight.add('r$requestId')) return;
+    try {
+      await _respondToRequestImpl(requestId, accept, primaryColor);
+    } finally {
+      _inFlight.remove('r$requestId');
+    }
+  }
+
+  Future<void> _respondToRequestImpl(
     String requestId,
     bool accept,
     Color primaryColor,
@@ -558,7 +685,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? 'درخواست پذیرفته شد ' : 'درخواست رد شد'),
+            content: Text(context.tr(accept ? 'ct.bf.accepted' : 'ct.bf.rejected')),
             backgroundColor: accept ? primaryColor : Colors.grey,
             duration: const Duration(seconds: 2),
           ),
@@ -568,7 +695,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -659,18 +786,18 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     final primaryColor = theme.primaryColor;
 
     // PopScope حذف شد - مشکل AnimationController رفع می‌شود
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
-          'هم‌مسیرها',
+          context.tr('bd.tab.buddies'),
           style: TextStyle(color: theme.textColor),
         ),
         backgroundColor: theme.surfaceColor,
         elevation: 0,
         foregroundColor: theme.textColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back,),
           onPressed: () {
             // چک کن می‌تونه pop کنه
             if (Navigator.canPop(context)) {
@@ -734,12 +861,12 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 fontWeight: FontWeight.w500,
               ),
               tabs: [
-                Tab(height: 44, text: 'جستجو (${_searchResults.length})'),
+                Tab(height: 44, text: context.tr('ct.bf.tab.search', {'n': '${_searchResults.length}'})),
                 Tab(
                   height: 44,
-                  text: 'در انتظار (${_pendingRequests.length})',
+                  text: context.tr('ct.bf.tab.pending', {'n': '${_pendingRequests.length}'}),
                 ),
-                Tab(height: 44, text: 'هم‌مسیرها (${_myBuddies.length})'),
+                Tab(height: 44, text: context.tr('ct.bf.tab.buddies', {'n': '${_myBuddies.length}'})),
               ],
             ),
           ),
@@ -755,7 +882,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 _buildBuddiesTab(theme, primaryColor),
               ],
             ),
-    );
+    ));
   }
 
   // ==================== تب جستجو ====================
@@ -776,7 +903,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                         CircularProgressIndicator(color: primaryColor),
                         const SizedBox(height: 16),
                         Text(
-                          'در حال جستجو...',
+                          context.tr('ct.bf.searching'),
                           style: TextStyle(
                             fontSize: 13,
                             color: theme.textSecondaryColor,
@@ -806,7 +933,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                                 color: theme.textSecondaryColor,
                               ),
                               label: Text(
-                                'پاک کردن جستجو',
+                                context.tr('ct.bf.clearSearch'),
                                 style: TextStyle(
                                   color: theme.textSecondaryColor,
                                   fontSize: 13,
@@ -826,7 +953,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               children: [
                 Expanded(
                   child: Text(
-                    '${_searchResults.length} کاربر پیشنهادی',
+                    context.tr('ct.bf.suggested', {'n': '${_searchResults.length}'}),
                     style: TextStyle(
                       fontSize: 13,
                       color: theme.textSecondaryColor,
@@ -841,7 +968,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                     _showFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
                     size: 18,
                   ),
-                  label: const Text('فیلتر'),
+                  label: Text(context.tr('ct.bf.filter')),
                   style: TextButton.styleFrom(
                     foregroundColor: primaryColor,
                   ),
@@ -854,8 +981,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             child: _searchResults.isEmpty
                 ? _buildEmptyState(
                     icon: Icons.search_off,
-                    title: 'نتیجه‌ای یافت نشد',
-                    subtitle: 'فیلترها را تغییر دهید یا از جستجو استفاده کنید',
+                    title: context.tr('ct.bf.noResults'),
+                    subtitle: context.tr('ct.bf.noResults.sub'),
                     theme: theme,
                     primaryColor: primaryColor,
                   )
@@ -919,7 +1046,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               focusNode: _searchFocusNode,
               style: TextStyle(color: theme.textColor),
               decoration: InputDecoration(
-                hintText: 'جستجو با نام کاربری یا شماره موبایل...',
+                hintText: context.tr('ct.bf.hint'),
                 hintStyle: TextStyle(
                   fontSize: 13,
                   color: theme.textSecondaryColor,
@@ -964,7 +1091,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                'جستجو',
+                context.tr('ct.bf.searchBtn'),
                 style: TextStyle(
                   color:
                       theme.isDarkMode ? const Color(0xFF090909) : Colors.white,
@@ -1003,7 +1130,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             ),
             const SizedBox(height: 20),
             Text(
-              _searchError ?? 'کاربری پیدا نشد',
+              _searchError ?? context.tr('ct.bf.notFound'),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1013,7 +1140,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'می‌تونی از دوستت دعوت کنی که به اپلیکیشن بپیونده',
+              context.tr('ct.bf.inviteHint'),
               style: TextStyle(
                 fontSize: 13,
                 color: theme.textSecondaryColor,
@@ -1031,9 +1158,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 size: 18,
                 color: Colors.white,
               ),
-              label: const Text(
-                'دعوت دوست به اپلیکیشن',
-                style: TextStyle(
+              label: Text(
+                context.tr('ct.bf.invite'),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1062,7 +1189,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 color: theme.textSecondaryColor,
               ),
               label: Text(
-                'جستجوی جدید',
+                context.tr('ct.bf.newSearch'),
                 style: TextStyle(
                   fontSize: 13,
                   color: theme.textSecondaryColor,
@@ -1080,8 +1207,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     if (_pendingRequests.isEmpty) {
       return _buildEmptyState(
         icon: Icons.hourglass_empty,
-        title: 'درخواستی در انتظار نیست',
-        subtitle: 'درخواست‌های ارسالی و دریافتی شما اینجا نمایش داده می‌شوند',
+        title: context.tr('ct.bf.nopending'),
+        subtitle: context.tr('ct.bf.nopending.sub'),
         theme: theme,
         primaryColor: primaryColor,
       );
@@ -1109,8 +1236,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
     if (_myBuddies.isEmpty) {
       return _buildEmptyState(
         icon: Icons.people_outline,
-        title: 'هنوز هم‌مسیری ندارید',
-        subtitle: 'با افراد هم‌هدف ارتباط برقرار کنید',
+        title: context.tr('ct.chat.nobuddy'),
+        subtitle: context.tr('ct.chat.nobuddy.sub'),
         theme: theme,
         primaryColor: primaryColor,
       );
@@ -1156,7 +1283,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'فیلترها',
+                context.tr('ct.bf.filters'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -1172,7 +1299,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   _applyFilters();
                 },
                 child: Text(
-                  'پاک کردن',
+                  context.tr('ct.bf.clear'),
                   style: TextStyle(color: primaryColor),
                 ),
               ),
@@ -1182,12 +1309,12 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           Row(
             children: [
               Text(
-                'جنسیت:',
+                context.tr('ct.bf.gender'),
                 style: TextStyle(fontSize: 13, color: theme.textColor),
               ),
               const SizedBox(width: 8),
               _buildFilterChip(
-                'همه',
+                context.tr('ct.bf.all'),
                 _filterGender == null,
                 () {
                   setState(() => _filterGender = null);
@@ -1196,7 +1323,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 primaryColor,
               ),
               _buildFilterChip(
-                'مرد',
+                context.tr('ct.bf.male'),
                 _filterGender == Gender.male,
                 () {
                   setState(() => _filterGender = Gender.male);
@@ -1205,7 +1332,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 primaryColor,
               ),
               _buildFilterChip(
-                'زن',
+                context.tr('ct.bf.female'),
                 _filterGender == Gender.female,
                 () {
                   setState(() => _filterGender = Gender.female);
@@ -1219,7 +1346,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           Row(
             children: [
               Text(
-                'امتیاز:',
+                context.tr('ct.bf.score'),
                 style: TextStyle(fontSize: 13, color: theme.textColor),
               ),
               Expanded(
@@ -1335,7 +1462,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 ),
                 child: Center(
                   child: Text(
-                    (match['name'] ?? 'کاربر').substring(0, 1).toUpperCase(),
+                    (match['name'] ?? context.tr('ct.user')).substring(0, 1).toUpperCase(),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1353,7 +1480,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                       children: [
                         Flexible(
                           child: Text(
-                            match['name'] ?? 'کاربر',
+                            match['name'] ?? context.tr('ct.user'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -1364,11 +1491,11 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                         ),
                         const SizedBox(width: 6),
                         if (isBuddy)
-                          _buildStatusBadge('هم‌مسیر ✅', primaryColor)
+                          _buildStatusBadge(context.tr('ct.bf.badge.buddy'), primaryColor)
                         else if (isReceivedByMe)
-                          _buildStatusBadge('درخواست جدید', Colors.orange)
+                          _buildStatusBadge(context.tr('ct.bf.badge.new'), Colors.orange)
                         else if (isSentByMe)
-                          _buildStatusBadge('در انتظار پاسخ', Colors.blue),
+                          _buildStatusBadge(context.tr('ct.bf.badge.wait'), Colors.blue),
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -1414,7 +1541,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${match['current_streak'] ?? 0} روز',
+                          context.tr('ct.bf.days', {'n': '${match['current_streak'] ?? 0}'}),
                           style: TextStyle(
                             fontSize: 12,
                             color: theme.textSecondaryColor,
@@ -1565,8 +1692,8 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
               SnackBar(
                 content: Text(
                   conversationId == null
-                      ? 'گفتگو یافت نشد. لطفاً صفحه را رفرش کنید.'
-                      : 'خطا در باز کردن چت',
+                      ? context.tr('ct.bf.chatNotFound')
+                      : context.tr('ct.bf.chatErr'),
                 ),
                 backgroundColor: Colors.red,
               ),
@@ -1574,9 +1701,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           }
         },
         icon: const Icon(Icons.chat, size: 18, color: Colors.white),
-        label: const Text(
-          'گپ و گفتگو',
-          style: TextStyle(
+        label: Text(
+          context.tr('ct.chat.title'),
+          style: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -1610,7 +1737,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                     : Colors.grey.shade200,
               ),
               child: Text(
-                'در انتظار پاسخ',
+                context.tr('ct.bf.badge.wait'),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1625,7 +1752,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
           IconButton(
             onPressed: () => _cancelRequest(userId, primaryColor),
             icon: const Icon(Icons.close, color: Colors.white),
-            tooltip: 'لغو درخواست',
+            tooltip: context.tr('ct.bf.cancelReq'),
             style: IconButton.styleFrom(
               backgroundColor: Colors.red.shade500,
               foregroundColor: Colors.white,
@@ -1651,9 +1778,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
-                'قبول درخواست',
-                style: TextStyle(
+              child: Text(
+                context.tr('ct.bf.accept'),
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1673,9 +1800,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
-                'رد درخواست',
-                style: TextStyle(
+              child: Text(
+                context.tr('ct.bf.reject'),
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1697,7 +1824,7 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
         ),
       ),
       child: Text(
-        score >= 70 ? 'ارسال درخواست 🤝' : 'ارسال درخواست',
+        context.tr('ct.bf.sendReq'),
         style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
@@ -1776,9 +1903,9 @@ class _BuddyFinderScreenState extends State<BuddyFinderScreen>
                 ).then((_) => _loadData());
               },
               icon: const Icon(Icons.person_add, color: Colors.white),
-              label: const Text(
-                'تکمیل پروفایل شخصیت',
-                style: TextStyle(color: Colors.white),
+              label: Text(
+                context.tr('ct.bf.completePersonality'),
+                style: const TextStyle(color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,

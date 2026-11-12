@@ -1,5 +1,6 @@
 // lib/features/explore/screens/explore_screen.dart
 
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
@@ -43,17 +44,18 @@ class _ExploreScreenState extends State<ExploreScreen>
   bool _hasLoadedOnce = false; // رفرش‌های بعدی بی‌صدا؛ اسپینر فقط بار اول
   bool _isInitialized = false;
   bool _isLoadingInProgress = false;
-  String _errorMessage = '';
+  String _errorMessage = ''; // کلید ترجمه
+  String _errorDetail = '';
   String _currentUserId = '';
 
   final _supabase = SupabaseService();
   final Map<String, _CachedChallengeDetails> _challengeDetailsCache = {};
 
   final List<Map<String, dynamic>> _tabs = [
-    {'icon': Icons.flag_rounded, 'label': 'چالش‌ها'},
-    {'icon': Icons.inventory_2_rounded, 'label': 'بسته‌ها'},
-    {'icon': Icons.stars_rounded, 'label': 'ماموریت‌ها'},
-    {'icon': Icons.emoji_events_rounded, 'label': 'افتخارات'},
+    {'icon': Icons.flag_rounded, 'label': 'ex.tab.challenges'},
+    {'icon': Icons.inventory_2_rounded, 'label': 'ex.tab.packages'},
+    {'icon': Icons.stars_rounded, 'label': 'ex.tab.quests'},
+    {'icon': Icons.emoji_events_rounded, 'label': 'ex.tab.board'},
   ];
 
   @override
@@ -111,14 +113,11 @@ class _ExploreScreenState extends State<ExploreScreen>
       final syncProvider = Provider.of<SyncProvider>(context, listen: false);
       final currentUser = await _supabase.getCurrentUser();
 
-      if (_currentUserId.isNotEmpty) {
-        await _supabase.checkAndUpdateUserChallenges(_currentUserId);
-      }
 
       if (currentUser == null) {
         if (mounted) {
           setState(() {
-            _errorMessage = 'لطفاً وارد حساب کاربری خود شوید';
+            _errorMessage = context.tr('ex.login_first');
             _isLoading = false;
             _isInitialized = true;
             _isLoadingInProgress = false;
@@ -148,14 +147,18 @@ class _ExploreScreenState extends State<ExploreScreen>
       }
 
       if (_currentUserId.isNotEmpty) {
-        await _supabase.checkUserChallengeStreak(_currentUserId);
+        // دو بررسی مستقل همزمان اجرا می‌شوند (قبلاً پشت سر هم، کند)
+        await Future.wait([
+          _supabase.checkAndUpdateUserChallenges(_currentUserId),
+          _supabase.checkUserChallengeStreak(_currentUserId),
+        ]);
       }
 
       if (syncProvider.isOnline) {
         await _loadFromSupabase(syncProvider);
       } else if (!hasLocalData) {
         setState(() {
-          _errorMessage = 'برای بارگذاری اطلاعات به اتصال اینترنت نیاز دارید';
+          _errorMessage = 'ex.err.offline';
           _isLoading = false;
           _isInitialized = true;
           _isLoadingInProgress = false;
@@ -178,7 +181,8 @@ class _ExploreScreenState extends State<ExploreScreen>
       print('_loadData: Error - $e');
       if (mounted) {
         setState(() {
-          _errorMessage = 'خطا در خواندن از دیتابیس: ${e.toString()}';
+          _errorMessage = 'ex.err.db';
+          _errorDetail = e.toString();
           _isLoading = false;
           _isInitialized = true;
           _isLoadingInProgress = false;
@@ -269,7 +273,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   Future<void> _joinChallenge(Map<String, dynamic> challenge) async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
               SizedBox(
@@ -281,7 +285,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ),
               ),
               SizedBox(width: 12),
-              Text('در حال ثبت‌نام در چالش...'),
+              Text(context.tr('ex.ch.joining')),
             ],
           ),
           backgroundColor: Color(0xFF4A90E2),
@@ -326,8 +330,8 @@ class _ExploreScreenState extends State<ExploreScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('به چالش پیوستید! '),
+            SnackBar(
+              content: Text(context.tr('ex.ch.joined')),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
@@ -339,7 +343,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -355,7 +359,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
               SizedBox(
@@ -367,7 +371,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 ),
               ),
               SizedBox(width: 12),
-              Text('در حال انصراف از چالش...'),
+              Text(context.tr('ex.ch.leaving')),
             ],
           ),
           backgroundColor: Colors.orange,
@@ -413,7 +417,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('از چالش "${challenge['title']}" انصراف دادید'),
+              content: Text(context.tr('ex.ch.left', {'n': '${challenge['title']}'})),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 2),
             ),
@@ -425,7 +429,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -446,8 +450,8 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (currentUser == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('لطفاً وارد حساب کاربری خود شوید'),
+            SnackBar(
+              content: Text(context.tr('ex.login_first')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -477,7 +481,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ماموریت "${quest.title}" شروع شد! '),
+            content: Text(context.tr('ex.q.started', {'n': quest.title})),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
@@ -532,7 +536,7 @@ class _ExploreScreenState extends State<ExploreScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('از ماموریت "${quest.title}" انصراف دادید'),
+              content: Text(context.tr('ex.q.left', {'n': quest.title})),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 2),
             ),
@@ -543,7 +547,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ex.error', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -556,7 +560,20 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ═══════════════════════════════════════════════════════════
   // دیالوگ جزئیات چالش
   // ═══════════════════════════════════════════════════════════
+  bool _detailChallengeDetailsDialogBusy = false;
+
+  // کلیک‌های پشت‌سرهم (اینترنت کند) فقط یک صفحه باز می‌کند
   void _showChallengeDetailsDialog(Map<String, dynamic> challenge) async {
+    if (_detailChallengeDetailsDialogBusy || ModalRoute.of(context)?.isCurrent == false) return;
+    _detailChallengeDetailsDialogBusy = true;
+    try {
+      await _showChallengeDetailsDialogImpl(challenge);
+    } finally {
+      _detailChallengeDetailsDialogBusy = false;
+    }
+  }
+
+  Future<void> _showChallengeDetailsDialogImpl(Map<String, dynamic> challenge) async {
     try {
       final challengeId = challenge['id'];
 
@@ -605,7 +622,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در نمایش جزئیات چالش: ${e.toString()}'),
+            content: Text(context.tr('ex.ch.detail_err', {'n': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -657,56 +674,56 @@ class _ExploreScreenState extends State<ExploreScreen>
       final String? img = challenge['image_url'] as String?;
       final int xp = challenge['xp_reward'] as int? ?? 0;
       final status = isCompleted
-          ? 'کامل شده'
+          ? context.tr('ex.st.completed')
           : isFailed
-              ? 'ناموفق'
+              ? context.tr('ex.st.failed')
               : isExpired
-                  ? 'پایان ثبت‌نام'
+                  ? context.tr('ex.ch.reg_closed')
                   : isActive
-                      ? 'در حال انجام'
-                      : 'چالش جدید';
+                      ? context.tr('ex.st.active')
+                      : context.tr('ex.ch.new');
       final remaining = totalDays - completedDays;
 
       Widget banner;
       if (isActive) {
         banner = _sheetProgress(theme, completedDays, totalDays, progress,
-            remaining > 0 ? '$remaining روز دیگر تا تکمیل چالش' : null);
+            remaining > 0 ? context.tr('ex.ch.remaining', {'n': '$remaining'}) : null);
       } else if (isCompleted) {
-        banner = _sheetBanner(theme.tone(Tone.mint).bg, 'چالش کامل شد!',
-            'شما این چالش را با موفقیت به پایان رساندید');
+        banner = _sheetBanner(theme.tone(Tone.mint).bg, context.tr('ex.ch.done_t'),
+            context.tr('ex.ch.done_s'));
       } else if (isFailed) {
-        banner = _sheetBanner(theme.tone(Tone.rose).bg, 'چالش ناموفق بود',
-            'شما $completedDays روز از $totalDays روز را انجام دادید');
+        banner = _sheetBanner(theme.tone(Tone.rose).bg, context.tr('ex.ch.fail_t'),
+            context.tr('ex.ch.fail_s', {'n': '$completedDays', 'm': '$totalDays'}));
       } else if (isExpired) {
-        banner = _sheetBanner(const Color(0xFFE3E6D8), 'مهلت ثبت‌نام تمام شد',
-            'این چالش دیگر قابل شرکت نیست');
+        banner = _sheetBanner(const Color(0xFFE3E6D8), context.tr('ex.ch.expired_t'),
+            context.tr('ex.ch.expired_s'));
       } else {
-        banner = _sheetBanner(theme.tone(Tone.butter).bg, 'آماده شروع!',
-            'این چالش $duration روزه را شروع کنید');
+        banner = _sheetBanner(theme.tone(Tone.butter).bg, context.tr('ex.ready'),
+            context.tr('ex.ch.ready_s', {'n': '$duration'}));
       }
 
       _showDetailSheet(
         theme: theme,
         icon: Icons.flag_rounded,
-        title: challenge['title'] ?? 'چالش',
+        title: challenge['title'] ?? context.tr('ex.challenge'),
         status: status,
         description: challenge['description']?.toString() ?? '',
         imageUrl: img,
         tiles: [
-          _SheetTile(Icons.calendar_today_rounded, 'مدت زمان', '$duration روز',
+          _SheetTile(Icons.calendar_today_rounded, context.tr('ex.tile.duration'), context.tr('ex.days_n', {'n': '$duration'}),
               Tone.sky),
-          _SheetTile(Icons.people_alt_rounded, 'شرکت‌کنندگان',
-              '$realParticipants نفر', Tone.butter),
-          _SheetTile(Icons.star_rounded, 'پاداش', '+$xp XP', Tone.peach),
+          _SheetTile(Icons.people_alt_rounded, context.tr('ex.tile.participants'),
+              context.tr('ex.people_n', {'n': '$realParticipants'}), Tone.butter),
+          _SheetTile(Icons.star_rounded, context.tr('ex.tile.reward'), '+$xp XP', Tone.peach),
         ],
         banner: banner,
         actionLabel: isActive
-            ? 'انصراف از چالش'
+            ? context.tr('ex.ch.leave')
             : (isCompleted || isFailed)
-                ? 'بستن'
+                ? context.tr('ex.close')
                 : isExpired
-                    ? 'پایان ثبت‌نام'
-                    : 'شرکت در چالش',
+                    ? context.tr('ex.ch.reg_closed')
+                    : context.tr('ex.ch.join'),
         actionKind: isActive
             ? _SheetAction.danger
             : isExpired
@@ -762,12 +779,12 @@ class _ExploreScreenState extends State<ExploreScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('پیشرفت شما',
+              Text(context.tr('ex.sheet.progress'),
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF090909))),
-              Text('$done از $total روز',
+              Text(context.tr('ex.quest.progress', {'n': '$done', 'm': '$total'}),
                   style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -786,7 +803,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           ),
           const SizedBox(height: 6),
           Text(
-              '${(ratio * 100).toInt()}٪ تکمیل شده${remainingText != null ? ' - $remainingText' : ''}',
+              context.tr('ex.sheet.pct', {'n': '${(ratio * 100).toInt()}'}) + (remainingText != null ? ' - $remainingText' : ''),
               style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -831,7 +848,7 @@ class _ExploreScreenState extends State<ExploreScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: ink.withValues(alpha: 0.42),
-      builder: (ctx) => DraggableScrollableSheet(
+      builder: (ctx) => SafeArea(top: false, child: DraggableScrollableSheet(
         initialChildSize: 0.82,
         minChildSize: 0.5,
         maxChildSize: 0.95,
@@ -980,7 +997,7 @@ class _ExploreScreenState extends State<ExploreScreen>
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -1043,7 +1060,20 @@ class _ExploreScreenState extends State<ExploreScreen>
   // ═══════════════════════════════════════════════════════════
   // دیالوگ جزئیات ماموریت
   // ═══════════════════════════════════════════════════════════
+  bool _detailQuestDetailDialogBusy = false;
+
+  // کلیک‌های پشت‌سرهم (اینترنت کند) فقط یک صفحه باز می‌کند
   void _showQuestDetailDialog(Quest quest) async {
+    if (_detailQuestDetailDialogBusy || ModalRoute.of(context)?.isCurrent == false) return;
+    _detailQuestDetailDialogBusy = true;
+    try {
+      await _showQuestDetailDialogImpl(quest);
+    } finally {
+      _detailQuestDetailDialogBusy = false;
+    }
+  }
+
+  Future<void> _showQuestDetailDialogImpl(Quest quest) async {
     try {
       final theme = Provider.of<ThemeProvider>(context, listen: false);
       final Color color = _parseColor(quest.color);
@@ -1075,22 +1105,22 @@ class _ExploreScreenState extends State<ExploreScreen>
       if (!mounted) return;
 
       final status = isCompleted
-          ? 'انجام شده'
+          ? context.tr('ex.q.done')
           : hasStarted
-              ? 'در حال انجام'
-              : 'ماموریت جدید - آماده شروع';
+              ? context.tr('ex.st.active')
+              : context.tr('ex.q.new');
       final qRemaining = targetCount - progress;
 
       Widget banner;
       if (hasStarted && !isCompleted) {
         banner = _sheetProgress(theme, progress, targetCount, progressPercent,
-            qRemaining > 0 ? '$qRemaining روز دیگر تا تکمیل ماموریت' : null);
+            qRemaining > 0 ? context.tr('ex.q.remaining', {'n': '$qRemaining'}) : null);
       } else if (isCompleted) {
-        banner = _sheetBanner(theme.tone(Tone.mint).bg, 'ماموریت کامل شد!',
-            'شما این ماموریت را با موفقیت به پایان رساندید');
+        banner = _sheetBanner(theme.tone(Tone.mint).bg, context.tr('ex.q.done_t'),
+            context.tr('ex.q.done_s'));
       } else {
-        banner = _sheetBanner(theme.tone(Tone.butter).bg, 'آماده شروع!',
-            'این ماموریت ${quest.targetCount} روزه را شروع کنید');
+        banner = _sheetBanner(theme.tone(Tone.butter).bg, context.tr('ex.ready'),
+            context.tr('ex.q.ready_s', {'n': '${quest.targetCount}'}));
       }
 
       _showDetailSheet(
@@ -1101,19 +1131,19 @@ class _ExploreScreenState extends State<ExploreScreen>
         description: quest.description,
         imageUrl: quest.imageUrl,
         tiles: [
-          _SheetTile(Icons.calendar_today_rounded, 'مدت زمان',
-              '${quest.targetCount} روز', Tone.sky),
-          _SheetTile(Icons.military_tech_rounded, 'نشان', quest.badge,
+          _SheetTile(Icons.calendar_today_rounded, context.tr('ex.tile.duration'),
+              context.tr('ex.days_n', {'n': '${quest.targetCount}'}), Tone.sky),
+          _SheetTile(Icons.military_tech_rounded, context.tr('ex.pkg.info.badge'), quest.badge,
               Tone.butter),
           _SheetTile(
-              Icons.star_rounded, 'پاداش', '+${quest.xpReward} XP', Tone.peach),
+              Icons.star_rounded, context.tr('ex.tile.reward'), '+${quest.xpReward} XP', Tone.peach),
         ],
         banner: banner,
         actionLabel: isCompleted
-            ? 'بستن'
+            ? context.tr('ex.close')
             : hasStarted
-                ? 'انصراف از ماموریت'
-                : 'شروع ماموریت',
+                ? context.tr('ex.q.leave')
+                : context.tr('ex.q.begin'),
         actionKind: isCompleted
             ? _SheetAction.neutral
             : hasStarted
@@ -1127,16 +1157,15 @@ class _ExploreScreenState extends State<ExploreScreen>
                 backgroundColor: theme.cardColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28)),
-                title: const Text('انصراف از ماموریت'),
-                content: Text(
-                    'آیا از انصراف از ماموریت "${quest.title}" مطمئن هستید؟\n\nبا انصراف، تمام پیشرفت شما از دست خواهد رفت.'),
+                title: Text(context.tr('ex.q.leave')),
+                content: Text(context.tr('ex.q.leave.body', {'n': quest.title})),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('انصراف')),
+                      child: Text(context.tr('ex.cancel'))),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: Text('بله، انصراف',
+                      child: Text(context.tr('ex.q.leave.yes'),
                           style: TextStyle(color: theme.errorColor))),
                 ],
               ),
@@ -1260,7 +1289,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                   CircularProgressIndicator(color: primaryColor),
                   const SizedBox(height: 16),
                   Text(
-                    'در حال بارگذاری...',
+                    context.tr('ex.loading'),
                     style: TextStyle(color: theme.textSecondaryColor),
                   ),
                 ],
@@ -1280,7 +1309,7 @@ class _ExploreScreenState extends State<ExploreScreen>
           Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
           const SizedBox(height: 16),
           Text(
-            'خطا در بارگذاری داده‌ها',
+            context.tr('ex.err.title'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -1288,13 +1317,13 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
           const SizedBox(height: 8),
-          Text(_errorMessage,
+          Text(context.tr(_errorMessage, {'n': _errorDetail}),
               style: TextStyle(color: theme.textSecondaryColor)),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: forceRefresh,
             icon: const Icon(Icons.refresh),
-            label: const Text('تلاش مجدد'),
+            label: Text(context.tr('ex.retry')),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
@@ -1345,7 +1374,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 children: [
                   Icon(tab['icon'], size: 20),
                   const SizedBox(height: 2),
-                  Text(tab['label'], maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(context.tr(tab['label']), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             );
@@ -1413,7 +1442,61 @@ class _ExploreScreenState extends State<ExploreScreen>
           right: 0,
           child: _buildTabBar(primaryColor, theme),
         ),
+        Positioned(
+          top: 84,
+          left: 24,
+          child: GestureDetector(
+            onTap: () => _showHelp(theme),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                shape: BoxShape.circle,
+                boxShadow: theme.softShadow,
+              ),
+              child: Icon(Icons.question_mark_rounded,
+                  size: 18, color: theme.textColor),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+
+  static const _help = ['ex.help.ch', 'ex.help.pk', 'ex.help.qs', 'ex.help.lb'];
+
+  void _showHelp(ThemeProvider theme) {
+    final key = _help[_tabController.index];
+    final title = context.tr('$key.t');
+    final body = context.tr('$key.b');
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.cardColor,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: theme.textColor)),
+              const SizedBox(height: 12),
+              Text(body,
+                  style: TextStyle(
+                      fontSize: 14,
+                      height: 1.9,
+                      color: theme.textSecondaryColor)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

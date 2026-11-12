@@ -1,5 +1,6 @@
 // lib/features/profile/screens/personality_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '/core/app_palette.dart';
@@ -296,7 +297,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
           shape: BoxShape.circle,
           boxShadow: t.softShadow,
         ),
-        child: Icon(Icons.arrow_forward_rounded, size: 22, color: t.textColor),
+        child: Icon(Icons.arrow_back_rounded, size: 22, color: t.textColor),
       ),
     );
   }
@@ -308,7 +309,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
     final theme = context.watch<ThemeProvider>();
     final accent = theme.effectivePrimary;
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       body: SafeArea(
         child: _isLoading
@@ -333,7 +334,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
                 ),
               ),
       ),
-    );
+    ));
   }
 
   Widget _buildTopBar(ThemeProvider theme, Color accent) {
@@ -636,7 +637,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
       ),
-      builder: (sheetContext) {
+      builder: (sheetContext) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -735,7 +736,7 @@ class _PersonalityScreenState extends State<PersonalityScreen> {
             ),
           ),
         );
-      },
+      })),
     );
   }
 

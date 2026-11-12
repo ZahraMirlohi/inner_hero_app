@@ -13,6 +13,7 @@ import '../widgets/analytics_overview_widget.dart';
 import 'terms_and_conditions_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/streak_card_widget.dart';
+import 'medals_screen.dart';
 import '/../providers/sync_provider.dart';
 import 'package:shamsi_date/shamsi_date.dart';
 import 'package:flutter/services.dart';
@@ -651,7 +652,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     _theme = context.watch<ThemeProvider>();
     final bool darkBg =
-        ThemeData.estimateBrightnessForColor(_theme.primaryColor) ==
+        ThemeData.estimateBrightnessForColor(_theme.backgroundColor) ==
             Brightness.dark;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -660,7 +661,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         statusBarBrightness: darkBg ? Brightness.dark : Brightness.light,
       ),
       child: Scaffold(
-      backgroundColor: _theme.primaryColor,
+      backgroundColor: _theme.backgroundColor,
       body: Consumer<SyncProvider>(
         builder: (context, syncProvider, child) {
           // حالت بارگذاری
@@ -811,6 +812,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }),
         const SizedBox(width: 10),
+        tile(Tone.butter, Icons.military_tech_rounded,
+            context.tr('profile.medals'), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MedalsScreen(userId: _profile!.userId),
+            ),
+          );
+        }),
+        const SizedBox(width: 10),
         tile(Tone.lilac, Icons.auto_awesome_rounded,
             context.tr('profile.personality_short'), () {
           Navigator.push(
@@ -879,9 +890,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             weekDays: weekDays,
           ),
           const SizedBox(height: 12),
-          _buildShortcuts(),
-          const SizedBox(height: 12),
           _buildUserInfoSection(),
+          const SizedBox(height: 12),
+          _buildShortcuts(),
           const SizedBox(height: 12),
           _buildListRow(Tone.butter, Icons.description_rounded,
               context.tr('profile.terms'), () {
@@ -908,7 +919,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
-                color: _theme.onPrimaryColor,
+                color: _theme.textColor,
               ),
             ),
           ),
@@ -1069,8 +1080,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Row(
           children: [
-            cell(Tone.butter, Icons.schedule_rounded,
-                '${p.avatarAge} $days', context.tr('profile.stat_age')),
+            cell(Tone.butter, Icons.stars_rounded,
+                '${p.totalXp}', context.tr('profile.stat_age')),
             const SizedBox(width: 10),
             cell(Tone.lilac, Icons.bolt_rounded, '${p.level}',
                 context.tr('profile.stat_level')),
@@ -1120,7 +1131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            Icon(Icons.chevron_left_rounded, color: _theme.textSecondaryColor),
+            Icon(Icons.chevron_right_rounded, color: _theme.textSecondaryColor),
           ],
         ),
       ),
@@ -1325,7 +1336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -1393,7 +1404,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         );
-      },
+      })),
     );
   }
 
@@ -1566,7 +1577,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (dialogContext) {
+      builder: (dialogContext) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1677,7 +1688,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         );
-      },
+      })),
     );
   }
 
@@ -2119,7 +2130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
             return Padding(
@@ -2329,7 +2340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           },
         );
-      },
+      })),
     );
   }
 

@@ -1,5 +1,6 @@
 // lib/features/profile/screens/gallery_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -89,7 +90,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           shape: BoxShape.circle,
           boxShadow: t.softShadow,
         ),
-        child: Icon(Icons.arrow_forward_rounded, size: 22, color: t.textColor),
+        child: Icon(Icons.arrow_back_rounded, size: 22, color: t.textColor),
       ),
     );
   }
@@ -649,7 +650,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ? context.tr('pm.gl.title_other', {'name': widget.userName!})
         : context.tr('pm.gl.title');
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       body: SafeArea(
         bottom: false,
@@ -734,7 +735,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildAddButton(ThemeProvider theme, Color accent) {

@@ -1,5 +1,6 @@
 // lib/features/chat/screens/location_picker_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -179,7 +180,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     final theme = Provider.of<ThemeProvider>(context);
     final primaryColor = theme.primaryColor;
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       appBar: AppBar(
         title: Text(
@@ -214,7 +215,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           : _errorMessage.isNotEmpty
               ? _buildErrorState(theme, primaryColor)
               : _buildMapContent(theme, primaryColor),
-    );
+    ));
   }
 
 // lib/features/chat/screens/user_profile_screen.dart

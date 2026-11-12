@@ -119,7 +119,10 @@ class AudioPlayerService extends ChangeNotifier {
       debugPrint('Setting audio source...');
 
       // Timeout 30 ثانیه‌ای برای جلوگیری از گیر کردن
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(url))).timeout(
+      final source = url.startsWith('http')
+          ? AudioSource.uri(Uri.parse(url))
+          : AudioSource.file(url); // فایل دانلودشده روی گوشی
+      await _player.setAudioSource(source).timeout(
         const Duration(seconds: 30),
         onTimeout: () {
           debugPrint('[AudioPlayerService] Timeout loading audio');

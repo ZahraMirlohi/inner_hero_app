@@ -11,6 +11,9 @@
 import 'package:flutter/material.dart';
 
 import 'strings_ad.dart';
+import 'strings_bd.dart';
+import 'strings_ct.dart';
+import 'strings_ex.dart';
 import 'strings_af.dart';
 import 'strings_ah.dart';
 import 'strings_an.dart';
@@ -46,8 +49,11 @@ class AppStrings {
     ...adFa,
     ...atFa,
     ...ahFa,
+    ...bdFa,
+    ...ctFa,
+    ...exFa,
     // عمومی
-    'app.name': 'قهرمان درون',
+    'app.name': 'Dacko',
     'common.cancel': 'بی‌خیال',
     'common.ok': 'باشه',
     'common.save': 'ذخیره',
@@ -95,7 +101,14 @@ class AppStrings {
     'settings.notif_chat': 'پیام‌های جدید',
     'settings.notif_challenges': 'چالش‌ها و دعوت‌ها',
     'settings.notif_xp': 'هدیه و امتیاز',
-    'settings.notif_note': 'فعلاً یادآور روزانهٔ عادت‌ها کار می‌کنه؛ بقیه اعلان‌ها با آماده شدن سرورشون روشن می‌شن.',
+    'settings.notif_requests': 'درخواست هم‌مسیری جدید',
+    'settings.notif_streak': 'هشدار از دست رفتن استریک',
+    'settings.notif_timer': 'پایان تایمر عادت',
+    'settings.allow_requests': 'دریافت درخواست هم‌مسیری',
+    'settings.allow_requests_hint': 'اگر خاموش باشد کسی نمی‌تواند برایت درخواست بفرستد.',
+    'settings.discoverable': 'نمایش در پیشنهادهای هم‌مسیر',
+    'settings.discoverable_hint': 'اگر خاموش باشد در لیست پیشنهادها دیده نمی‌شوی.',
+    'settings.notif_note': 'اعلان پیام و درخواست جدید وقتی برنامه باز یا در پس‌زمینه باشد می‌آید. برای وقتی که کاملاً بسته است، هنوز سرور اعلان وصل نشده.',
     'settings.section_privacy': 'حریم خصوصی',
     'settings.private_profile': 'پروفایل خصوصی',
     'settings.private_profile_hint': 'فقط وقتی سرورش آماده شد روشن می‌شه.',
@@ -125,7 +138,7 @@ class AppStrings {
 
     'settings.remind_time': 'ساعت یادآور روزانه',
     'notif.channel': 'یادآور روزانه',
-    'notif.title': 'قهرمان درون',
+    'notif.title': 'Dacko',
     'notif.body1': 'عادت‌هات دلشون برات تنگ شده. یه سر بزن.',
     'notif.body2': 'استریکت بدون تو غذا نمی‌خوره. بیا نجاتش بده.',
     'notif.body3': 'پنج دقیقه وقت داری؟ قهرمان‌ها از همین پنج دقیقه‌ها ساخته می‌شن.',
@@ -140,13 +153,14 @@ class AppStrings {
     'streak.today_done': 'امروز رو گرفتی. فردا هم بیا!',
 
     'profile.title': 'پروفایل',
-    'profile.stat_age': 'سن قهرمان',
+    'profile.stat_age': 'امتیاز XP',
     'profile.stat_level': 'سطح فعلی',
     'profile.stat_streak': 'استریک جاری',
     'profile.stat_best': 'رکورد استریک',
     'profile.analytics': 'تحلیل‌ها',
     'profile.personality_short': 'شخصیت',
     'profile.gallery_short': 'گالری',
+    'profile.medals': 'مدال‌ها',
     'profile.look': 'ظاهر قهرمان',
     'profile.gallery': 'گالری من',
     'profile.personality': 'شخصیت من',
@@ -177,7 +191,10 @@ class AppStrings {
     ...adEn,
     ...atEn,
     ...ahEn,
-    'app.name': 'Inner Hero',
+    ...bdEn,
+    ...ctEn,
+    ...exEn,
+    'app.name': 'Dacko',
     'common.cancel': 'Cancel',
     'common.ok': 'OK',
     'common.save': 'Save',
@@ -225,8 +242,15 @@ class AppStrings {
     'settings.notif_chat': 'New messages',
     'settings.notif_challenges': 'Challenges and invites',
     'settings.notif_xp': 'Gifts and points',
+    'settings.notif_requests': 'New buddy requests',
+    'settings.notif_streak': 'Streak about to break',
+    'settings.notif_timer': 'Habit timer finished',
+    'settings.allow_requests': 'Receive buddy requests',
+    'settings.allow_requests_hint': 'When off, nobody can send you a request.',
+    'settings.discoverable': 'Show me in buddy suggestions',
+    'settings.discoverable_hint': 'When off, you will not appear in suggestions.',
     'settings.notif_note':
-        'The daily habit reminder works now; other notifications turn on as their servers get ready.',
+        'Message and request alerts arrive while the app is open or in the background. For a fully closed app, push is not connected yet.',
     'settings.section_privacy': 'Privacy',
     'settings.private_profile': 'Private profile',
     'settings.private_profile_hint': 'Available once the server side is ready.',
@@ -256,7 +280,7 @@ class AppStrings {
 
     'settings.remind_time': 'Daily reminder time',
     'notif.channel': 'Daily reminder',
-    'notif.title': 'Inner Hero',
+    'notif.title': 'Dacko',
     'notif.body1': 'Your habits miss you. Come say hi.',
     'notif.body2': 'Your streak needs you. Do not let it down.',
     'notif.body3': 'Got five minutes? Heroes are made of those.',
@@ -270,13 +294,14 @@ class AppStrings {
     'streak.today_done': 'Today is done. See you tomorrow!',
 
     'profile.title': 'Profile',
-    'profile.stat_age': 'Hero age',
+    'profile.stat_age': 'XP',
     'profile.stat_level': 'Current level',
     'profile.stat_streak': 'Current streak',
     'profile.stat_best': 'Best streak',
     'profile.analytics': 'Analytics',
     'profile.personality_short': 'Personality',
     'profile.gallery_short': 'Gallery',
+    'profile.medals': 'Medals',
     'profile.look': 'Hero look',
     'profile.gallery': 'My gallery',
     'profile.personality': 'My personality',

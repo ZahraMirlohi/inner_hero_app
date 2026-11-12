@@ -1,5 +1,6 @@
 // lib/features/profile/screens/analytics_detail_screen.dart
 
+import '/widgets/bottom_safe.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -106,6 +107,11 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             .eq('is_active', true)
             .order('activity_date', ascending: false);
 
+        _maxXpInDay = 0;
+        for (final d in activityResponse) {
+          final xp = (d['xp_earned'] as num?)?.toInt() ?? 0;
+          if (xp > _maxXpInDay) _maxXpInDay = xp;
+        }
         if (activityResponse.isNotEmpty) {
           _activeDays = activityResponse
               .map((d) => DateTime.parse(d['activity_date']))
@@ -121,6 +127,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
       await _calculateBestStreak();
       await _calculateSuccessData();
+      await _calculateHabitRates();
+      await _calculateToday();
 
       if (mounted) {
         setState(() {
@@ -186,6 +194,14 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
 
         int streak = 0;
         DateTime checkDate = DateTime.now();
+        // اگر امروز هنوز انجام نشده، استریک از دیروز حساب می‌شود (فقط با یک روز کامل خالی می‌شکند)
+        final latest = sortedDates.first;
+        final yesterday = checkDate.subtract(const Duration(days: 1));
+        if (!(latest.year == checkDate.year &&
+            latest.month == checkDate.month &&
+            latest.day == checkDate.day)) {
+          checkDate = yesterday;
+        }
 
         for (var date in sortedDates) {
           if (date.year == checkDate.year &&
@@ -518,7 +534,8 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
                 boxShadow: theme.softShadow,
               ),
               child: Icon(
-                rtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
+                Icons.arrow_back_rounded,
+
                 size: 22,
                 color: theme.textColor,
               ),
@@ -737,7 +754,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
     final theme = context.watch<ThemeProvider>();
     final showLoading = _isLoading && _habits.isEmpty && _activeDays.isEmpty;
 
-    return Scaffold(
+    return BottomSafe(child: Scaffold(
       backgroundColor: theme.backgroundColor,
       body: SafeArea(
         child: Column(
@@ -810,7 +827,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildTodayCard(ThemeProvider theme) {
@@ -992,6 +1009,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             ),
             Icon(
               rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+              textDirection: TextDirection.ltr,
               size: 22,
               color: theme.textColor,
             ),
@@ -1058,7 +1076,7 @@ class _AnalyticsDetailScreenState extends State<AnalyticsDetailScreen>
             color: theme.cardSecondaryColor,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 18, color: theme.textColor),
+          child: Icon(icon, size: 18, color: theme.textColor, textDirection: TextDirection.ltr),
         ),
       );
     }

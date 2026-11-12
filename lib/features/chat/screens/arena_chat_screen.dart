@@ -1,5 +1,6 @@
 // lib/features/chat/screens/arena_chat_screen.dart
 
+import '/services/sound_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +42,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   bool _isLoading = true;
   bool _isSending = false;
   String? _userId;
+  String _myName = 'کاربر';
+  StreamSubscription<List<ChatMessage>>? _msgSub;
 
   // ==================== وضعیت‌ها ====================
   bool _showPostInput = false;
@@ -122,6 +125,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
 
   @override
   void dispose() {
+    _msgSub?.cancel();
     _tabController.dispose();
     _messageController.dispose();
     _postController.dispose();
@@ -139,6 +143,14 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         _userId = user.id;
       });
 
+      try {
+        final me = await _chatService.client
+            .from('profiles')
+            .select('name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        _myName = (me?['name'] as String?) ?? 'کاربر';
+      } catch (_) {}
       _challengeInfo = await _getChallengeInfo(widget.conversation.challengeId);
       _participants = await _getChallengeParticipants(
         widget.conversation.challengeId,
@@ -250,12 +262,22 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     ];
   }
 
+  bool _streamReady = false;
+
   void _setupRealtimeSubscription() {
-    _chatService.getMessages(widget.conversation.id).listen((newMessages) {
+    _msgSub = _chatService
+        .getMessages(widget.conversation.id,
+            userId: _chatService.client.auth.currentUser?.id)
+        .listen((newMessages) {
       if (mounted) {
+        final grew = _streamReady && newMessages.length > _messages.length;
         setState(() {
           _messages = newMessages.reversed.toList();
         });
+        if (grew && !_messages.last.isFromMe) {
+          SoundService.instance.play(Sfx.message);
+        }
+        _streamReady = true;
       }
     });
   }
@@ -268,13 +290,27 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   }) async {
     final content = text ?? _messageController.text.trim();
     if (content.isEmpty || _userId == null || _isSending) return;
+    SoundService.instance.play(Sfx.tap);
 
+    final temp = ChatMessage(
+      id: 'tmp_${DateTime.now().microsecondsSinceEpoch}',
+      conversationId: widget.conversation.id,
+      senderId: _userId!,
+      senderName: _myName,
+      content: content,
+      type: type,
+      status: MessageStatus.sending,
+      metadata: metadata,
+      createdAt: DateTime.now(),
+      isTemp: true,
+    );
     _messageController.clear();
-    _focusNode.unfocus();
     setState(() {
+      _messages.add(temp); // بلافاصله پایین لیست
       _isSending = true;
       _showStickerPicker = false;
     });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
 
     try {
       await _chatService.sendMessage(
@@ -283,9 +319,11 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         content: content,
         type: type.toString().split('.').last,
         metadata: metadata,
+        senderName: _myName,
       );
     } catch (e) {
       if (mounted) {
+        setState(() => _messages.removeWhere((m) => m.id == temp.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطا در ارسال پیام: ${e.toString()}'),
@@ -1472,8 +1510,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                           vertical: 10,
                         ),
                       ),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
+                      textInputAction: TextInputAction.newline,
+                      keyboardType: TextInputType.multiline,
                       maxLines: 4,
                       minLines: 1,
                     ),
@@ -1811,7 +1849,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: theme.surfaceColor,
-      builder: (context) {
+      builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return SafeArea(
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -1928,7 +1966,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
             ),
           ),
         );
-      },
+      })),
     );
   }
 

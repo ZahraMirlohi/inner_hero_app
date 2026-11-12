@@ -258,7 +258,7 @@ class _UsernameSetupScreenState extends State<UsernameSetupScreen> {
                                 shape: BoxShape.circle,
                                 boxShadow: theme.softShadow,
                               ),
-                              child: Icon(Icons.arrow_forward_rounded,
+                              child: Icon(Icons.arrow_back_rounded,
                                   size: 22, color: theme.textColor),
                             ),
                           ),

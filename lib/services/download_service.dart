@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
-import 'package:permission_handler/permission_handler.dart';
 
 class DownloadService extends ChangeNotifier {
   static final DownloadService _instance = DownloadService._internal();
@@ -43,35 +42,41 @@ class DownloadService extends ChangeNotifier {
       return;
     }
 
-    // درخواست دسترسی (فقط در موبایل)
-    final hasPermission = await _requestStoragePermission();
-    if (!hasPermission) {
-      _tasks[url] = _DownloadTask(
-        url: url,
-        fileName: fileName,
-        errorMessage: 'دسترسی به حافظه داده نشد',
-      );
-      notifyListeners();
-      onError?.call();
-      return;
-    }
-
     final task = _DownloadTask(url: url, fileName: fileName);
     _tasks[url] = task;
     notifyListeners();
 
     try {
       final String downloadPath = await _getDownloadsPath();
-      final String localPath = '$downloadPath/${_sanitizeFileName(fileName)}';
+      final String localPath = _localPathFor(downloadPath, url, fileName);
 
       task.isDownloading = true;
       task.progress = 0.0;
       notifyListeners();
 
-      final response = await http.get(Uri.parse(url));
+      final client = http.Client();
+      final response = await client.send(http.Request('GET', Uri.parse(url)));
       if (response.statusCode == 200) {
-        final file = File(localPath);
-        await file.writeAsBytes(response.bodyBytes);
+        final file = File('$localPath.part');
+        final sink = file.openWrite();
+        final total = response.contentLength ?? 0;
+        var received = 0;
+        var lastNotify = 0;
+        try {
+          await for (final chunk in response.stream) {
+            sink.add(chunk);
+            received += chunk.length;
+            if (total > 0 && received - lastNotify > total ~/ 50) {
+              lastNotify = received;
+              task.progress = received / total;
+              notifyListeners();
+            }
+          }
+        } finally {
+          await sink.close();
+          client.close();
+        }
+        await file.rename(localPath); // فایل نیمه‌کاره هرگز کامل حساب نمی‌شود
 
         task.isDownloading = false;
         task.isDownloaded = true;
@@ -83,6 +88,7 @@ class DownloadService extends ChangeNotifier {
         print('File saved to: $localPath');
         onComplete?.call();
       } else {
+        client.close();
         task.isDownloading = false;
         task.progress = 0.0;
         task.errorMessage = 'Download failed: ${response.statusCode}';
@@ -123,87 +129,21 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
+  // پوشه‌ی اختصاصی برنامه: روی اندروید ۱۰+ بدون نیاز به مجوز کار می‌کند
   Future<String> _getDownloadsPath() async {
+    Directory? base;
     try {
-      if (Platform.isAndroid) {
-        // Android: مسیر Download
-        final Directory downloadsDir =
-            Directory('/storage/emulated/0/Download');
-        if (await downloadsDir.exists()) {
-          print('Using downloads path: /storage/emulated/0/Download');
-          return '/storage/emulated/0/Download';
-        }
-      }
-
-      if (Platform.isIOS) {
-        // iOS: Documents/Downloads
-        final directory = await getApplicationDocumentsDirectory();
-        final String iosPath = '${directory.path}/Downloads';
-        final Directory iosDir = Directory(iosPath);
-        if (!await iosDir.exists()) {
-          await iosDir.create(recursive: true);
-        }
-        print('Using iOS path: $iosPath');
-        return iosPath;
-      }
-
-      // Fallback
-      final directory = await getExternalStorageDirectory();
-      if (directory != null) {
-        final String appDownloadPath = '${directory.path}/Download';
-        final Directory appDownloadDir = Directory(appDownloadPath);
-        if (!await appDownloadDir.exists()) {
-          await appDownloadDir.create(recursive: true);
-        }
-        print('Using app download path: $appDownloadPath');
-        return appDownloadPath;
-      }
-
-      final docDir = await getApplicationDocumentsDirectory();
-      final String fallbackPath = '${docDir.path}/Downloads';
-      final Directory fallbackDir = Directory(fallbackPath);
-      if (!await fallbackDir.exists()) {
-        await fallbackDir.create(recursive: true);
-      }
-      print('Using fallback path: $fallbackPath');
-      return fallbackPath;
-    } catch (e) {
-      print('Error getting downloads path: $e');
-      final docDir = await getApplicationDocumentsDirectory();
-      final String fallbackPath = '${docDir.path}/Downloads';
-      final Directory fallbackDir = Directory(fallbackPath);
-      if (!await fallbackDir.exists()) {
-        await fallbackDir.create(recursive: true);
-      }
-      return fallbackPath;
-    }
+      if (Platform.isAndroid) base = await getExternalStorageDirectory();
+    } catch (_) {}
+    base ??= await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/chat_files');
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir.path;
   }
 
-  Future<bool> _requestStoragePermission() async {
-    // در Web نیازی نیست
-    if (kIsWeb) {
-      return true;
-    }
-
-    try {
-      if (Platform.isAndroid) {
-        // در Android، از Permission.storage استفاده کن
-        // در Android 13+، برای ذخیره در Downloads نیازی به permission نیست
-        final status = await Permission.storage.request();
-        return status.isGranted;
-      }
-
-      if (Platform.isIOS) {
-        // iOS نیازی به permission برای Documents نداره
-        return true;
-      }
-
-      return true;
-    } catch (e) {
-      print('Permission error: $e');
-      return true; // اگر خطا داد، اجازه بده ادامه بده
-    }
-  }
+  // نام یکتا برای هر لینک تا دو فایل هم‌نام روی هم نیفتند
+  String _localPathFor(String dir, String url, String fileName) =>
+      '$dir/${url.hashCode.abs()}_${_sanitizeFileName(fileName)}';
 
   String _sanitizeFileName(String fileName) {
     return fileName.replaceAll(RegExp(r'[^\w\-.]'), '_');
@@ -216,7 +156,7 @@ class DownloadService extends ChangeNotifier {
 
     try {
       final String downloadPath = await _getDownloadsPath();
-      final String localPath = '$downloadPath/${_sanitizeFileName(fileName)}';
+      final String localPath = _localPathFor(downloadPath, url, fileName);
       final File file = File(localPath);
       if (await file.exists()) {
         _tasks[url] = _DownloadTask(

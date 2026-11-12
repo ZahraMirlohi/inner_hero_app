@@ -23,7 +23,7 @@ class SplashScreen extends StatelessWidget {
               const Icon(Icons.emoji_events, size: 80, color: Colors.white),
               const SizedBox(height: 24),
               const Text(
-                'قهرمان درون',
+                'Dacko',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
