@@ -1,6 +1,7 @@
 // lib/features/auth/screens/verify_email_screen.dart
 //
-// بعد از ثبت‌نام: کد ۶ رقمی ایمیل را می‌نویسد؛ با تایید، وارد می‌شود (رویداد signedIn).
+// بعد از ثبت‌نام: لینک تایید به ایمیل رفته. با باز شدن لینک، رویداد signedIn
+// کاربر را وارد می‌کند و این صفحه خودش بسته می‌شود.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,46 +19,18 @@ class VerifyEmailScreen extends StatefulWidget {
 }
 
 class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _code = TextEditingController();
-  bool _loading = false;
   bool _sent = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
-
-  Future<void> _verify() async {
-    if (!_formKey.currentState!.validate()) return;
-    FocusScope.of(context).unfocus();
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final auth = context.read<AuthProvider>();
-    final navigator = Navigator.of(context);
-    try {
-      await auth.verifySignupCode(widget.email, normalizeCode(_code.text));
-      // ورود موفق: HeroApp پشتهٔ صفحه‌ها را عوض می‌کند؛ این را هم می‌بندیم
-      if (mounted) navigator.popUntil((r) => r.isFirst);
-    } catch (e) {
-      if (mounted) setState(() => _error = authErrorText(context, e));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
   Future<void> _resend() async {
-    final auth = context.read<AuthProvider>();
     try {
-      await auth.resendConfirmation(widget.email);
-      if (mounted) setState(() {
-        _sent = true;
-        _error = null;
-      });
+      await context.read<AuthProvider>().resendConfirmation(widget.email);
+      if (mounted) {
+        setState(() {
+          _sent = true;
+          _error = null;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = authErrorText(context, e));
     }
@@ -65,6 +38,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loggedIn = context.select<AuthProvider, bool>((a) => a.isLoggedIn);
+    if (loggedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+      });
+    }
     return AuthShell(
       title: context.tr('auth.verify_title'),
       subtitle: context.tr('auth.verify_body', {'email': widget.email}),
@@ -72,26 +51,6 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         if (_error != null) AuthMessage(text: _error!),
         if (_sent)
           AuthMessage(text: context.tr('auth.verify_sent'), isError: false),
-        Form(
-          key: _formKey,
-          child: AuthField(
-            controller: _code,
-            label: context.tr('auth.code_label'),
-            icon: Icons.pin_rounded,
-            keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.oneTimeCode],
-            onSubmitted: (_) => _verify(),
-            validator: (v) => AuthCodeValidator.check(context, v),
-          ),
-        ),
-        const SizedBox(height: 20),
-        AuthButton(
-          label: context.tr('auth.code_btn'),
-          onPressed: _verify,
-          isLoading: _loading,
-        ),
-        const SizedBox(height: 12),
         ResendButton(onResend: _resend),
         const SizedBox(height: 12),
         AuthButton(

@@ -114,8 +114,13 @@ class AuthProvider extends ChangeNotifier {
       case AuthChangeEvent.initialSession:
         if (_holdSignIn) break;
         final user = data.session?.user;
+        if (user != null && !_needsPasswordReset && await _looksLikeRecoveryLogin(user)) {
+          _needsPasswordReset = true;
+        }
         if (user != null && user.id != _userId) {
           await _loadForUser(user);
+        } else if (_needsPasswordReset) {
+          notifyListeners();
         }
         break;
       default:
@@ -143,6 +148,9 @@ class AuthProvider extends ChangeNotifier {
         _resetState();
         notifyListeners();
         return;
+      }
+      if (!_needsPasswordReset && await _looksLikeRecoveryLogin(user)) {
+        _needsPasswordReset = true;
       }
       await _loadForUser(user);
     } catch (e) {
@@ -273,6 +281,7 @@ class AuthProvider extends ChangeNotifier {
           .signInWithPassword(email: email.trim(), password: password);
       _failedLogins = 0;
       _lockUntil = null;
+      _clearRecoveryMark();
     } on AuthException catch (e) {
       if (e.code == 'invalid_credentials' ||
           e.message.toLowerCase().contains('invalid login')) {
@@ -348,7 +357,7 @@ class AuthProvider extends ChangeNotifier {
       }
 
       if (res.session == null) {
-        _justSignedUp = false;
+        // _justSignedUp می‌ماند تا بعد از باز شدن لینک تایید، معرفی نشان داده شود
         return SignUpResult.needsEmailConfirmation;
       }
 
@@ -391,8 +400,38 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  static const _recoveryKey = 'recovery_requested_at';
+
   Future<void> sendPasswordReset(String email) async {
     await _client.auth.resetPasswordForEmail(email.trim(), redirectTo: redirectUrl);
+    // نشانه‌ای برای وقتی که رویداد بازیابی هنگام باز شدن لینک از دست رفت (مثلاً برنامه بسته بود)
+    try {
+      (await SharedPreferences.getInstance())
+          .setInt(_recoveryKey, DateTime.now().millisecondsSinceEpoch);
+    } catch (_) {}
+  }
+
+  Future<void> _clearRecoveryMark() async {
+    try {
+      (await SharedPreferences.getInstance()).remove(_recoveryKey);
+    } catch (_) {}
+  }
+
+  /// آیا این ورود تازه از لینک بازیابی آمده؟ (درخواست در ۲ ساعت اخیر + نشست در چند دقیقهٔ اخیر ساخته شده)
+  Future<bool> _looksLikeRecoveryLogin(User user) async {
+    try {
+      final at = (await SharedPreferences.getInstance()).getInt(_recoveryKey);
+      if (at == null) return false;
+      final now = DateTime.now();
+      if (now.difference(DateTime.fromMillisecondsSinceEpoch(at)) >
+          const Duration(hours: 2)) {
+        return false;
+      }
+      final last = DateTime.tryParse(user.lastSignInAt ?? '');
+      return last != null && now.difference(last.toLocal()).abs() < const Duration(minutes: 3);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> resendConfirmation(String email) async {
@@ -401,12 +440,14 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> updatePassword(String newPassword) async {
     await _client.auth.updateUser(UserAttributes(password: newPassword));
+    await _clearRecoveryMark();
     _needsPasswordReset = false;
     notifyListeners();
   }
 
   /// کاربر صفحهٔ بازیابی رمز را بست
   void dismissPasswordReset() {
+    _clearRecoveryMark();
     _needsPasswordReset = false;
     notifyListeners();
   }
