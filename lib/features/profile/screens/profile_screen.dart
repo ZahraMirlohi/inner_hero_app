@@ -3,6 +3,7 @@
 import '/l10n/app_strings.dart';
 import '/core/app_palette.dart';
 import 'package:flutter/material.dart';
+import '../../chat/widgets/avatar_viewer.dart';
 import 'package:provider/provider.dart';
 import '/services/supabase_service.dart';
 import '../models/profile_model.dart';
@@ -964,7 +965,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             showBorder: false,
             showEditBadge: true,
             onEditTap: _showAvatarEditOptions,
-            onTap: _showAvatarEditOptions,
+            onTap: () => _openAvatar(p.avatarUrl),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1212,6 +1213,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 // ==================== بخش آواتار ====================
 
+  // لمس عکس: نمایش بزرگ (اگر عکسی نیست، مستقیم گزینه‌های انتخاب عکس)؛ تغییر فقط با آیکون دوربین
+  void _openAvatar(String? url) {
+    if (url == null || url.trim().isEmpty) {
+      _showAvatarEditOptions();
+    } else {
+      showAvatarViewer(context, url);
+    }
+  }
+
   Widget _buildAvatarSection() {
     return Column(
       children: [
@@ -1223,7 +1233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             showBorder: true,
             showEditBadge: true,
             onEditTap: _showAvatarEditOptions,
-            onTap: _showAvatarEditOptions,
+            onTap: () => _openAvatar(_profile?.avatarUrl),
           ),
         ),
         const SizedBox(height: 16),

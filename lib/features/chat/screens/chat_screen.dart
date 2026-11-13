@@ -134,6 +134,15 @@ class _ChatScreenState extends State<ChatScreen>
     if (_openingChat) return; // لمس تکراری تا باز شدن چت نادیده گرفته می‌شود
     _openingChat = true;
     try {
+      // گفتگو از قبل در لیست بارگذاری‌شده هست: بدون هیچ درخواست شبکه‌ای فوری باز شود
+      for (final c in _conversations) {
+        if (c.type == ConversationType.buddy && c.memberIds.contains(otherId)) {
+          await Navigator.push(context,
+              MaterialPageRoute(builder: (_) => BuddyChatScreen(conversation: c)));
+          if (mounted) _loadData();
+          return;
+        }
+      }
       final me = (await _chatService.getCurrentUser())!.id;
       final id = await _chatService.openBuddyConversation(me, otherId);
       final convs = await _chatService.getUserConversations(me);

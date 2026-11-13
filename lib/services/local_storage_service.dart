@@ -1,6 +1,7 @@
 // lib/services/local_storage_service.dart
 
 import 'package:flutter/foundation.dart';
+import 'notification_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../features/arena/models/habit_model.dart';
@@ -165,6 +166,7 @@ class LocalStorageService {
   Future<void> saveHabits(List<Habit> habits) async {
     try {
       await _habitsBox.put('user_habits', habits);
+      NotificationService.instance.refreshSoon(); // یادآورها با تغییر عادت‌ها هماهنگ شوند
     } catch (e) {
       print('Error saving habits: $e');
       rethrow;

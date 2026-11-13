@@ -26,6 +26,7 @@ import 'package:http/http.dart' as http;
 
 // ✅ سرویس‌ها
 import '/services/chat_service.dart';
+import '/services/download_service.dart';
 import '/services/supabase_service.dart';
 import '/services/audio_player_service.dart';
 import '/services/date_service.dart';
@@ -180,6 +181,26 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     '😍',
     '🙏',
     '👍',
+    '👏',
+    '🤩',
+    '🥳',
+    '😎',
+    '🤝',
+    '💯',
+    '⭐',
+    '🚀',
+    '🌟',
+    '😅',
+    '🤔',
+    '😭',
+    '😮',
+    '🥰',
+    '🙌',
+    '😴',
+    '👀',
+    '💔',
+    '😡',
+    '👎',
   ];
 
   String? _bgPath;
@@ -261,7 +282,18 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         _conversationId = widget.conversation.id;
       });
 
-      await _updateLastSeen(user.id);
+      // پیام‌ها را همین حالا و هم‌زمان با بقیه (آخرین بازدید، پروفایل‌ها) بارگیری می‌کنیم؛
+      // قبلاً همه پشت‌سرهم می‌آمدند و چت با تاخیر زیاد باز می‌شد
+      final messagesF = () async {
+        try {
+          await _loadMessages();
+          _scrollToBottom();
+        } catch (e) {
+          print('❌ Error in _loadMessages: $e');
+          if (mounted) setState(() => _isLoading = false);
+        }
+      }();
+      unawaited(_updateLastSeen(user.id));
 
       try {
         final myProfile = await _supabase.client
@@ -343,17 +375,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
       }
 
-      try {
-        await _loadMessages();
-        _scrollToBottom();
-      } catch (e) {
-        print('❌ Error in _loadMessages: $e');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      }
+      await messagesF;
 
       _messageSubscription = _chatService
           .getMessages(widget.conversation.id, userId: _userId)
@@ -4685,9 +4707,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                           }
                         }
                       },
-                      onLongPressStart: (d) {
-                        if (!_isSelectMode) {
-                          _showMessageActionsPopup(message, d.globalPosition);
+                      onLongPress: () {
+                        if (!_isSelectMode && !isFailed) {
+                          HapticFeedback.mediumImpact();
+                          _enterSelectMode(message.id);
                         }
                       },
                       child: AnimatedOpacity(
@@ -5763,9 +5786,10 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               _openImageViewer(message.content);
             }
           },
-          onLongPressStart: (d) {
+          onLongPress: () {
             if (!_isSelectMode) {
-              _showMessageActionsPopup(message, d.globalPosition);
+              HapticFeedback.mediumImpact();
+              _enterSelectMode(message.id);
             }
           },
           child: ClipRRect(
@@ -5826,6 +5850,19 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }
   }
 
+  void _downloadImage(String url) {
+    final name = 'dacko_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final messenger = ScaffoldMessenger.of(context);
+    context.read<DownloadService>().downloadFile(
+          url: url,
+          fileName: name,
+          onComplete: () => messenger.showSnackBar(
+              const SnackBar(content: Text('عکس ذخیره شد'), duration: Duration(seconds: 2))),
+          onError: () => messenger.showSnackBar(
+              const SnackBar(content: Text('دانلود انجام نشد'), backgroundColor: Colors.red)),
+        );
+  }
+
   void _openImageViewer(String url) {
     showDialog(
       context: context,
@@ -5847,10 +5884,23 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: IconButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      style:
+                          IconButton.styleFrom(backgroundColor: Colors.black54),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => _downloadImage(url),
+                      icon: const Icon(Icons.download_rounded,
+                          color: Colors.white),
+                      style:
+                          IconButton.styleFrom(backgroundColor: Colors.black54),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -6968,6 +7018,148 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     );
   }
 
+  // ==================== انتخاب چندپیامی ====================
+  List<ChatMessage> get _selectedSorted => _messages
+      .where((m) => _selectedMessageIds.contains(m.id))
+      .toList()
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+  List<Widget> _selectionActions(Color primaryColor) {
+    final sel = _selectedSorted;
+    final single = sel.length == 1 ? sel.first : null;
+    final canEdit = single != null &&
+        single.senderId == _userId &&
+        single.canBeEdited &&
+        single.type == MessageType.text;
+    return [
+      IconButton(
+        tooltip: 'پاسخ',
+        icon: const Icon(Icons.reply),
+        onPressed: sel.isEmpty
+            ? null
+            : () {
+                final m = sel.first;
+                _exitSelectMode();
+                _setReplyTo(m);
+              },
+      ),
+      if (canEdit)
+        IconButton(
+          tooltip: 'ویرایش',
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () {
+            final m = single;
+            _exitSelectMode();
+            _editMessage(m, primaryColor);
+          },
+        ),
+      IconButton(
+        tooltip: 'کپی',
+        icon: const Icon(Icons.copy),
+        onPressed: sel.isEmpty ? null : _copySelected,
+      ),
+      IconButton(
+        tooltip: 'فوروارد',
+        icon: const Icon(Icons.forward),
+        onPressed: sel.isEmpty ? null : _forwardSelected,
+      ),
+      IconButton(
+        tooltip: 'حذف',
+        icon: const Icon(Icons.delete_outline, color: Colors.red),
+        onPressed: sel.isEmpty ? null : _deleteSelectedMessages,
+      ),
+    ];
+  }
+
+  void _copySelected() {
+    final text = _selectedSorted.map((m) => m.content).join('\n');
+    Clipboard.setData(ClipboardData(text: text));
+    _exitSelectMode();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('کپی شد'), duration: Duration(seconds: 1)),
+    );
+  }
+
+  /// فوروارد به گفتگوی یکی دیگر از هم‌مسیرها
+  Future<void> _forwardSelected() async {
+    final me = _userId;
+    if (me == null) return;
+    final msgs = _selectedSorted;
+    final targets = <({String convId, String name})>[];
+    try {
+      final convs = await _chatService.getUserConversations(me);
+      final others = <String, String>{}; // convId -> otherUserId
+      for (final c in convs) {
+        if (c.type != ConversationType.buddy || c.id == widget.conversation.id) {
+          continue;
+        }
+        final o = c.memberIds.where((id) => id != me);
+        if (o.isNotEmpty) others[c.id] = o.first;
+      }
+      if (others.isNotEmpty) {
+        final rows = await _chatService.client
+            .from('profiles')
+            .select('user_id, name')
+            .inFilter('user_id', others.values.toList());
+        final names = {for (final r in rows) r['user_id'] as String: (r['name'] as String?) ?? 'کاربر'};
+        others.forEach((cid, uid) => targets.add((convId: cid, name: names[uid] ?? 'کاربر')));
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('گفتگوی دیگری برای فوروارد نیست')),
+      );
+      return;
+    }
+    final target = await showModalBottomSheet<({String convId, String name})>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('فوروارد به...',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            ),
+            for (final t in targets)
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: Text(t.name),
+                onTap: () => Navigator.pop(ctx, t),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (target == null || !mounted) return;
+    try {
+      for (final m in msgs) {
+        await _chatService.sendMessage(
+          conversationId: target.convId,
+          senderId: me,
+          content: m.content,
+          type: m.type.name,
+          metadata: m.metadata,
+          senderName: _myName,
+        );
+      }
+      _exitSelectMode();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('برای ${target.name} فوروارد شد')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('فوروارد انجام نشد'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   // ==================== App Bar ====================
   PreferredSizeWidget _buildAppBar(
     ThemeProvider theme,
@@ -6986,13 +7178,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         backgroundColor: theme.surfaceColor,
         elevation: 0,
         foregroundColor: theme.textColor,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed:
-                _selectedMessageIds.isEmpty ? null : _deleteSelectedMessages,
-          ),
-        ],
+        actions: _selectionActions(primaryColor),
       );
     }
 

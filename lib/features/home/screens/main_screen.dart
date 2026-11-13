@@ -53,6 +53,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _runDailyCheck();
     _initRequests();
+    // اجازهٔ اعلان (اندروید ۱۳+) و تازه‌سازی یادآورها؛ بعد از لحظه‌ای تا باز شدن صفحه مزاحم نشود
+    Future.delayed(const Duration(seconds: 2), () async {
+      await NotificationService.instance.requestPermission();
+      await NotificationService.instance.reschedule();
+    });
   }
 
   @override
@@ -61,6 +66,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _popupDismissed = false;
       _refreshPending();
+      NotificationService.instance.reschedule();
     }
   }
 

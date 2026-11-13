@@ -138,6 +138,10 @@ class AppStrings {
 
     'settings.remind_time': 'ساعت یادآور روزانه',
     'notif.channel': 'یادآور روزانه',
+    'notif.streak': 'امروز هنوز عادتی ثبت نکردی؛ استریکت داره نفس‌نفس می‌زنه.',
+    'notif.streakChannel': 'هشدار استریک',
+    'notif.habitBody': 'وقتشه! عادتت منتظره.',
+    'notif.habitChannel': 'یادآور عادت',
     'notif.title': 'Dacko',
     'notif.body1': 'عادت‌هات دلشون برات تنگ شده. یه سر بزن.',
     'notif.body2': 'استریکت بدون تو غذا نمی‌خوره. بیا نجاتش بده.',
@@ -280,6 +284,10 @@ class AppStrings {
 
     'settings.remind_time': 'Daily reminder time',
     'notif.channel': 'Daily reminder',
+    'notif.streak': 'No habit logged today yet; your streak is gasping.',
+    'notif.streakChannel': 'Streak warning',
+    'notif.habitBody': 'Time to go! Your habit is waiting.',
+    'notif.habitChannel': 'Habit reminders',
     'notif.title': 'Dacko',
     'notif.body1': 'Your habits miss you. Come say hi.',
     'notif.body2': 'Your streak needs you. Do not let it down.',
