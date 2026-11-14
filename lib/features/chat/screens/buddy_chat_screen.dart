@@ -304,13 +304,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         if (myProfile != null && mounted) {
           setState(() {
-            _myName = myProfile['name'] as String? ?? 'کاربر';
+            _myName = myProfile['name'] as String? ?? context.tr('bc.k001');
           });
         }
       } catch (e) {
         if (mounted) {
           setState(() {
-            _myName = 'کاربر';
+            _myName = context.tr('bc.k001');
           });
         }
       }
@@ -356,7 +356,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           if (mounted) {
             if (profile != null) {
               setState(() {
-                _buddyName = profile['name'] as String? ?? 'کاربر';
+                _buddyName = profile['name'] as String? ?? context.tr('bc.k001');
                 _buddyAvatar = profile['avatar_url'];
               });
 
@@ -549,9 +549,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   ),
                   const SizedBox(height: 16),
                   Padding(
-                    padding: const EdgeInsets.only(left: 4),
+                    padding: EdgeInsets.only(left: 4),
                     child: Text(
-                      'ارسال',
+                      context.tr('bc.k002'),
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
@@ -638,62 +638,62 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     return [
       MediaMenuItem(
         icon: Icons.image,
-        title: 'عکس',
-        color: const Color(0xFF9C27B0), // بنفش
+        title: context.tr('bc.k003'),
+        color: Color(0xFF9C27B0), // بنفش
         onTap: _sendImage,
       ),
       MediaMenuItem(
         icon: Icons.location_on,
-        title: 'لوکیشن',
-        color: const Color(0xFF2ECC71), // سبز
+        title: context.tr('bc.k004'),
+        color: Color(0xFF2ECC71), // سبز
         onTap: _sendLocation,
       ),
       if (!isWeb)
         MediaMenuItem(
           icon: Icons.contact_phone,
-          title: 'مخاطب',
-          color: const Color(0xFF3498DB), // آبی
+          title: context.tr('bc.k005'),
+          color: Color(0xFF3498DB), // آبی
           onTap: _sendContact,
         ),
       MediaMenuItem(
         icon: Icons.attach_file,
-        title: 'فایل',
-        color: const Color(0xFFE67E22), // نارنجی
+        title: context.tr('bc.k006'),
+        color: Color(0xFFE67E22), // نارنجی
         onTap: _sendFile,
       ),
       MediaMenuItem(
         icon: Icons.music_note,
-        title: 'موزیک',
-        color: const Color(0xFFE91E63), // صورتی
+        title: context.tr('bc.k007'),
+        color: Color(0xFFE91E63), // صورتی
         onTap: _sendMusic,
       ),
       MediaMenuItem(
         icon: Icons.trending_up,
-        title: 'پیشرفت',
-        color: const Color(0xFF1ABC9C), // فیروزه‌ای
+        title: context.tr('bc.k008'),
+        color: Color(0xFF1ABC9C), // فیروزه‌ای
         onTap: _sendDailyProgressCard,
       ),
       MediaMenuItem(
         icon: Icons.analytics,
-        title: 'گزارش',
-        color: const Color(0xFF7C3AED), // بنفش تیره
+        title: context.tr('bc.k009'),
+        color: Color(0xFF7C3AED), // بنفش تیره
         onTap: _sendWeeklyPerformance,
       ),
       MediaMenuItem(
         icon: Icons.checklist,
-        title: 'لیست امروز',
-        color: const Color(0xFFF39C12), // زرد
+        title: context.tr('bc.k010'),
+        color: Color(0xFFF39C12), // زرد
         onTap: _sendTodayHabitsList,
       ),
       MediaMenuItem(
         icon: Icons.emoji_events,
-        title: 'چالش',
-        color: const Color(0xFFFFA500), // طلایی
+        title: context.tr('bc.k011'),
+        color: Color(0xFFFFA500), // طلایی
         onTap: () => _showCreateChallengeDialog(theme, primaryColor),
       ),
       MediaMenuItem(
         icon: Icons.stars,
-        title: 'هدیه XP',
+        title: context.tr('bc.k012'),
         color: const Color(0xFFFFC107), // زرد طلایی
         onTap: _sendXPGift,
       ),
@@ -726,8 +726,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('برای ارسال شماره تماس به دسترسی مخاطبان نیاز است'),
+            SnackBar(
+              content: Text(context.tr('bc.k013')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -744,8 +744,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (contacts.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('مخاطبی در گوشی شما وجود ندارد'),
+          SnackBar(
+            content: Text(context.tr('bc.k014')),
             backgroundColor: Colors.orange,
           ),
         );
@@ -780,16 +780,16 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'انتخاب مخاطب',
+                    Text(
+                      context.tr('bc.k015'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
-                      '${contacts.length} مخاطب',
+                      context.tr('bc.k016', {'p0': '${contacts.length}'}),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,
@@ -802,7 +802,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                         itemCount: contacts.length,
                         itemBuilder: (context, index) {
                           final contact = contacts[index];
-                          final displayName = contact.displayName ?? 'بدون نام';
+                          final displayName = contact.displayName ?? context.tr('bc.k017');
                           final phones =
                               contact.phones.map((p) => p.number).toList();
 
@@ -853,8 +853,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (selectedContact != null && mounted) {
         final phones = selectedContact.phones.map((p) => p.number).toList();
         final phoneNumber =
-            phones.isNotEmpty ? phones.first : 'شماره موجود نیست';
-        final displayName = selectedContact.displayName ?? 'کاربر';
+            phones.isNotEmpty ? phones.first : context.tr('bc.k018');
+        final displayName = selectedContact.displayName ?? context.tr('bc.k001');
 
         final contactText = '''
 📞 شماره تماس
@@ -870,7 +870,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در دریافت مخاطبان: ${e.toString()}'),
+            content: Text(context.tr('bc.k019', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -903,9 +903,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 size: 22,
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Text(
-              'ارسال شماره تماس',
+              context.tr('bc.k020'),
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -921,7 +921,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               controller: nameController,
               style: TextStyle(color: theme.textColor), // ✅
               decoration: InputDecoration(
-                hintText: 'نام مخاطب',
+                hintText: context.tr('bc.k021'),
                 hintStyle: TextStyle(color: theme.textSecondaryColor), // ✅
                 prefixIcon: Icon(Icons.person_outline, color: primaryColor),
                 border: OutlineInputBorder(
@@ -934,13 +934,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     : Colors.grey.shade50,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: phoneController,
               style: TextStyle(color: theme.textColor), // ✅
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                hintText: 'شماره تماس',
+                hintText: context.tr('bc.k022'),
                 hintStyle: TextStyle(color: theme.textSecondaryColor), // ✅
                 prefixIcon: Icon(Icons.phone_outlined, color: primaryColor),
                 border: OutlineInputBorder(
@@ -958,7 +958,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -967,8 +967,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
               if (name.isEmpty && phone.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('لطفاً نام یا شماره تماس را وارد کنید'),
+                  SnackBar(
+                    content: Text(context.tr('bc.k024')),
                     backgroundColor: Colors.orange,
                     duration: Duration(seconds: 2),
                   ),
@@ -981,8 +981,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               final contactText = '''
 📞 شماره تماس
 ━━━━━━━━━━━━━━━━━━━━
-👤 نام: ${name.isNotEmpty ? name : 'کاربر'}
-📱 شماره: ${phone.isNotEmpty ? phone : 'شماره موجود نیست'}
+👤 نام: ${name.isNotEmpty ? name : context.tr('bc.k001')}
+📱 شماره: ${phone.isNotEmpty ? phone : context.tr('bc.k018')}
 ━━━━━━━━━━━━━━━━━━━━
 ''';
 
@@ -995,7 +995,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('ارسال'),
+            child: Text(context.tr('bc.k002')),
           ),
         ],
       ),
@@ -1008,8 +1008,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+          SnackBar(
+            content: Text(context.tr('bc.k025')),
             backgroundColor: Colors.red,
           ),
         );
@@ -1049,7 +1049,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
 
       if (fileBytes == null) {
-        _showSnackBar('فایل قابل خواندن نیست');
+        _showSnackBar(context.tr('bc.k026'));
         continue;
       }
 
@@ -1061,7 +1061,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         senderId: _userId!,
         senderName: _myName,
         senderAvatar: null,
-        content: '📁 در حال آپلود فایل...',
+        content: context.tr('bc.k027'),
         type: MessageType.text,
         status: MessageStatus.sending,
         metadata: {
@@ -1100,7 +1100,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           }
           _isSending = false;
         });
-        _showSnackBar('خطا در آپلود فایل');
+        _showSnackBar(context.tr('bc.k028'));
         continue;
       }
 
@@ -1140,8 +1140,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📁 فایل با موفقیت ارسال شد'),
+          SnackBar(
+            content: Text(context.tr('bc.k029')),
             duration: Duration(seconds: 1),
           ),
         );
@@ -1156,7 +1156,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -1170,8 +1170,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+          SnackBar(
+            content: Text(context.tr('bc.k025')),
             backgroundColor: Colors.red,
           ),
         );
@@ -1213,7 +1213,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
 
       if (fileBytes == null) {
-        _showSnackBar('فایل موزیک قابل خواندن نیست');
+        _showSnackBar(context.tr('bc.k031'));
         continue;
       }
 
@@ -1225,7 +1225,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         senderId: _userId!,
         senderName: _myName,
         senderAvatar: null,
-        content: '🎵 در حال ارسال موزیک...',
+        content: context.tr('bc.k032'),
         type: MessageType.text,
         status: MessageStatus.sending,
         metadata: {
@@ -1266,7 +1266,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               senderId: _messages[index].senderId,
               senderName: _messages[index].senderName,
               senderAvatar: _messages[index].senderAvatar,
-              content: '❌ خطا در ارسال موزیک',
+              content: context.tr('bc.k033'),
               type: MessageType.text,
               status: MessageStatus.failed,
               metadata: _messages[index].metadata,
@@ -1280,7 +1280,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           }
           _isSending = false;
         });
-        _showSnackBar('خطا در آپلود موزیک');
+        _showSnackBar(context.tr('bc.k034'));
         continue;
       }
 
@@ -1343,8 +1343,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🎵 فایل موزیک ارسال شد'),
+            SnackBar(
+              content: Text(context.tr('bc.k035')),
               duration: Duration(seconds: 1),
             ),
           );
@@ -1360,7 +1360,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               senderId: _messages[index].senderId,
               senderName: _messages[index].senderName,
               senderAvatar: _messages[index].senderAvatar,
-              content: '❌ خطا در ارسال موزیک',
+              content: context.tr('bc.k033'),
               type: MessageType.text,
               status: MessageStatus.failed,
               metadata: _messages[index].metadata,
@@ -1391,7 +1391,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             senderId: _messages[index].senderId,
             senderName: _messages[index].senderName,
             senderAvatar: _messages[index].senderAvatar,
-            content: '❌ خطا در ارسال موزیک',
+            content: context.tr('bc.k033'),
             type: MessageType.text,
             status: MessageStatus.failed,
             metadata: _messages[index].metadata,
@@ -1409,7 +1409,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در ارسال موزیک: ${e.toString()}'),
+            content: Text(context.tr('bc.k036', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -1420,7 +1420,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   // ==================== ارسال عملکرد هفتگی ====================
   void _sendWeeklyPerformance() async {
     if (_userId == null) {
-      _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
+      _showSnackBar(context.tr('bc.k037'));
       return;
     }
 
@@ -1436,7 +1436,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: 12),
-                Text('در حال آماده‌سازی ویجت...'),
+                Text(context.tr('bc.k038')),
               ],
             ),
             duration: Duration(seconds: 2),
@@ -1450,8 +1450,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (performance == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('هیچ عادتی برای نمایش وجود ندارد'),
+            SnackBar(
+              content: Text(context.tr('bc.k039')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -1489,8 +1489,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📊 ویجت عملکرد ارسال شد'),
+          SnackBar(
+            content: Text(context.tr('bc.k040')),
             duration: Duration(seconds: 1),
           ),
         );
@@ -1500,7 +1500,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -1511,7 +1511,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   // ==================== ارسال لیست عادت‌های امروز ====================
   void _sendTodayHabitsList() async {
     if (_userId == null) {
-      _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
+      _showSnackBar(context.tr('bc.k037'));
       return;
     }
 
@@ -1527,7 +1527,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 SizedBox(width: 12),
-                Text('در حال آماده‌سازی لیست...'),
+                Text(context.tr('bc.k041')),
               ],
             ),
             duration: Duration(seconds: 2),
@@ -1541,8 +1541,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (data == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('هیچ عادتی برای امروز وجود ندارد'),
+            SnackBar(
+              content: Text(context.tr('bc.k042')),
               backgroundColor: Colors.orange,
             ),
           );
@@ -1581,8 +1581,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📋 لیست امروز ارسال شد'),
+          SnackBar(
+            content: Text(context.tr('bc.k043')),
             duration: Duration(seconds: 1),
           ),
         );
@@ -1592,7 +1592,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -1626,15 +1626,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (context) => SafeArea(top: false, child: Builder(builder: (_) {
         return CreateChallengeSheet(
-          buddyName: _buddyName ?? 'هم‌مسیر',
+          buddyName: _buddyName ?? context.tr('bc.k044'),
           buddyId: _buddyId ?? '',
           userId: _userId ?? '',
-          userName: _myName ?? 'کاربر',
+          userName: _myName ?? context.tr('bc.k001'),
           onSubmit: (challenge) {
             _sendChallengeInvite(challenge);
           },
@@ -1671,8 +1671,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('🏆 چالش با موفقیت ارسال شد!'),
+            SnackBar(
+              content: Text(context.tr('bc.k045')),
               backgroundColor: Colors.green,
             ),
           );
@@ -1683,7 +1683,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -1701,7 +1701,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(accept ? '✅ چالش پذیرفته شد!' : '❌ چالش رد شد'),
+            content: Text(accept ? context.tr('bc.k047') : context.tr('bc.k046')),
             backgroundColor: accept ? Colors.green : Colors.orange,
           ),
         );
@@ -1738,7 +1738,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     try {
       final user = await _supabase.getCurrentUser();
       if (user == null) {
-        _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
+        _showSnackBar(context.tr('bc.k037'));
         return '';
       }
 
@@ -1760,7 +1760,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       return publicUrl;
     } catch (e) {
       print('❌ Upload error: $e');
-      _showSnackBar('خطا در آپلود: ${e.toString()}');
+      _showSnackBar(context.tr('bc.k048', {'p0': '${e.toString()}'}));
       return '';
     }
   }
@@ -1773,21 +1773,21 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     try {
       final user = await _supabase.getCurrentUser();
       if (user == null) {
-        _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
+        _showSnackBar(context.tr('bc.k037'));
         return '';
       }
 
       // ✅ اطمینان از معتبر بودن session
       final isValid = await _supabase.ensureValidSession();
       if (!isValid) {
-        _showSnackBar('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید');
+        _showSnackBar(context.tr('bc.k025'));
         return '';
       }
 
       // ✅ حالا session معتبر است
       final session = _supabase.client.auth.currentSession;
       if (session == null) {
-        _showSnackBar('جلسه کاربری معتبر نیست');
+        _showSnackBar(context.tr('bc.k049'));
         return '';
       }
 
@@ -1832,12 +1832,12 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             _supabase.client.storage.from('chat_files').getPublicUrl(path);
         return publicUrl;
       } else {
-        _showSnackBar('خطا در آپلود: ${response.statusCode}');
+        _showSnackBar(context.tr('bc.k048', {'p0': '${response.statusCode}'}));
         return '';
       }
     } catch (e) {
       print('❌ Upload error (HTTP): $e');
-      _showSnackBar('خطا در آپلود: ${e.toString()}');
+      _showSnackBar(context.tr('bc.k048', {'p0': '${e.toString()}'}));
       return '';
     }
   }
@@ -1866,8 +1866,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ یادآوری با موفقیت ارسال شد!'),
+        SnackBar(
+          content: Text(context.tr('bc.k050')),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
         ),
@@ -1979,7 +1979,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   // ==================== ارسال هدیه XP ====================
   void _sendXPGift() async {
     if (_userId == null || _buddyId == null) {
-      _showSnackBar('لطفاً وارد حساب کاربری خود شوید');
+      _showSnackBar(context.tr('bc.k037'));
       return;
     }
 
@@ -1993,15 +1993,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       final userXP = profile?['total_xp'] as int? ?? 0;
 
       if (userXP < 5) {
-        _showSnackBar('XP کافی برای ارسال هدیه ندارید (حداقل ۵ XP)');
+        _showSnackBar(context.tr('bc.k051'));
         return;
       }
 
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => XPGiftDialog(
-          senderName: _myName ?? 'کاربر',
-          receiverName: _buddyName ?? 'کاربر',
+          senderName: _myName ?? context.tr('bc.k001'),
+          receiverName: _buddyName ?? context.tr('bc.k001'),
           maxXP: userXP,
         ),
       );
@@ -2016,9 +2016,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       await _supabase.client.from('xp_gifts').insert({
         'id': giftId,
         'sender_id': _userId,
-        'sender_name': _myName ?? 'کاربر',
+        'sender_name': _myName ?? context.tr('bc.k001'),
         'receiver_id': _buddyId,
-        'receiver_name': _buddyName ?? 'کاربر',
+        'receiver_name': _buddyName ?? context.tr('bc.k001'),
         'amount': amount,
         'message': message,
         'sent_at': DateTime.now().toIso8601String(),
@@ -2036,9 +2036,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           'gift_id': giftId,
           'amount': amount,
           'sender_id': _userId,
-          'sender_name': _myName ?? 'کاربر',
+          'sender_name': _myName ?? context.tr('bc.k001'),
           'receiver_id': _buddyId,
-          'receiver_name': _buddyName ?? 'کاربر',
+          'receiver_name': _buddyName ?? context.tr('bc.k001'),
           'message': message,
         },
       );
@@ -2046,15 +2046,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('🎁 کارت هدیه $amount XP ارسال شد!'),
+            content: Text(context.tr('bc.k052', {'amount': '$amount'})),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
       print('❌ Error sending XP gift: $e');
-      _showSnackBar('خطا در ارسال هدیه: ${e.toString()}');
+      _showSnackBar(context.tr('bc.k053', {'p0': '${e.toString()}'}));
     }
   }
 
@@ -2083,22 +2083,22 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
-                  'گزینه‌های گفتگو',
+                  context.tr('bc.k054'),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: theme.textColor, // ✅
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _buildMenuTile(
                   icon: _isChatMuted ? Icons.volume_off : Icons.volume_up,
-                  title: _isChatMuted ? 'فعال کردن صدا' : 'بی‌صدا کردن',
+                  title: _isChatMuted ? context.tr('bc.k056') : context.tr('bc.k055'),
                   subtitle: _isChatMuted
-                      ? 'اعلان‌های این گفتگو فعال می‌شوند'
-                      : 'اعلان‌های این گفتگو غیرفعال می‌شوند',
+                      ? context.tr('bc.k057')
+                      : context.tr('bc.k058'),
                   onTap: () {
                     Navigator.pop(context);
                     _toggleMuteChat(primaryColor);
@@ -2122,8 +2122,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 Divider(height: 1, color: theme.borderColor),
                 _buildMenuTile(
                   icon: Icons.search,
-                  title: 'جستجو در گفتگو',
-                  subtitle: 'جستجوی پیام‌ها',
+                  title: context.tr('bc.k059'),
+                  subtitle: context.tr('bc.k060'),
                   onTap: () {
                     Navigator.pop(context);
                     _showSearchInChat(primaryColor);
@@ -2134,8 +2134,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 Divider(height: 1, color: theme.borderColor),
                 _buildMenuTile(
                   icon: Icons.delete_sweep,
-                  title: 'پاک کردن تاریخچه',
-                  subtitle: 'تمام پیام‌های این گفتگو حذف می‌شوند',
+                  title: context.tr('bc.k061'),
+                  subtitle: context.tr('bc.k062'),
                   onTap: () {
                     Navigator.pop(context);
                     _confirmClearHistory(primaryColor);
@@ -2146,8 +2146,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 Divider(height: 1, color: theme.borderColor),
                 _buildMenuTile(
                   icon: Icons.exit_to_app,
-                  title: 'حذف گفتگو',
-                  subtitle: 'از لیست گفتگوها حذف می‌شود',
+                  title: context.tr('bc.k063'),
+                  subtitle: context.tr('bc.k064'),
                   onTap: () {
                     Navigator.pop(context);
                     _confirmDeleteConversation(primaryColor);
@@ -2213,7 +2213,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _isChatMuted ? '🔇 گفتگو بی‌صدا شد' : '🔊 گفتگو صدا دار شد',
+          _isChatMuted ? context.tr('bc.k066') : context.tr('bc.k065'),
         ),
         duration: const Duration(seconds: 1),
         backgroundColor: primaryColor,
@@ -2250,8 +2250,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               ),
             ),
             const SizedBox(width: 10),
-            const Text(
-              'جستجو در گفتگو',
+            Text(
+              context.tr('bc.k059'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -2266,7 +2266,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               controller: searchController,
               focusNode: focusNode,
               decoration: InputDecoration(
-                hintText: 'متن مورد نظر را وارد کنید...',
+                hintText: context.tr('bc.k067'),
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 prefixIcon: Icon(Icons.search, color: primaryColor),
                 suffixIcon: searchController.text.isNotEmpty
@@ -2309,7 +2309,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           ElevatedButton.icon(
             onPressed: () {
@@ -2319,15 +2319,15 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 _searchMessages(query);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('لطفاً متن مورد نظر را وارد کنید'),
+                  SnackBar(
+                    content: Text(context.tr('bc.k068')),
                     duration: Duration(seconds: 1),
                   ),
                 );
               }
             },
             icon: const Icon(Icons.search, size: 18),
-            label: const Text('جستجو'),
+            label: Text(context.tr('bc.k069')),
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
@@ -2343,7 +2343,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
   void _searchMessages(String query) {
     if (query.isEmpty) {
-      _showSnackBar('لطفاً متن مورد نظر را وارد کنید');
+      _showSnackBar(context.tr('bc.k068'));
       return;
     }
 
@@ -2352,7 +2352,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     }).toList();
 
     if (results.isEmpty) {
-      _showSnackBar('نتیجه‌ای یافت نشد 🔍');
+      _showSnackBar(context.tr('bc.k070'));
       return;
     }
 
@@ -2402,9 +2402,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   Row(
                     children: [
                       const Icon(Icons.search, color: Color(0xFF4A90E2)),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Text(
-                        'نتایج جستجو (${results.length})',
+                        context.tr('bc.k071', {'p0': '${results.length}'}),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -2413,7 +2413,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       const Spacer(),
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('بستن'),
+                        child: Text(context.tr('bc.k072')),
                       ),
                     ],
                   ),
@@ -2435,9 +2435,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                           ),
                           leading: CircleAvatar(
                             radius: 16,
-                            backgroundColor: const Color(0xFF4A90E2),
+                            backgroundColor: Color(0xFF4A90E2),
                             child: Text(
-                              isMe ? 'من' : '👤',
+                              isMe ? context.tr('bc.k073') : '👤',
                               style: const TextStyle(
                                 fontSize: 10,
                                 color: Colors.white,
@@ -2453,7 +2453,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                           subtitle: Row(
                             children: [
                               Text(
-                                msg.senderName ?? 'کاربر',
+                                msg.senderName ?? context.tr('bc.k001'),
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: theme.textSecondaryColor, // ✅
@@ -2502,8 +2502,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('لطفاً مجدداً وارد حساب کاربری خود شوید'),
+          SnackBar(
+            content: Text(context.tr('bc.k074')),
             backgroundColor: Colors.orange,
           ),
         );
@@ -2515,24 +2515,23 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'پاک کردن تاریخچه',
+        title: Text(
+          context.tr('bc.k061'),
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        content: const Text(
-          'آیا از پاک کردن تمام پیام‌های این گفتگو مطمئن هستید؟\n\n'
-          'این عمل قابل بازگشت نیست.',
+        content: Text(
+          context.tr('bc.k172'),
           textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'پاک کردن همه',
+            child: Text(
+              context.tr('bc.k075'),
               style: TextStyle(color: Colors.red),
             ),
           ),
@@ -2565,8 +2564,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تاریخچه گفتگو با موفقیت پاک شد 🗑️'),
+          SnackBar(
+            content: Text(context.tr('bc.k076')),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -2580,7 +2579,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در پاک کردن تاریخچه: ${e.toString()}'),
+            content: Text(context.tr('bc.k077', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -2593,26 +2592,25 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'حذف گفتگو',
+        title: Text(
+          context.tr('bc.k063'),
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'آیا از حذف گفتگو با "${_buddyName ?? 'کاربر'}" مطمئن هستید؟\n\n'
-          'با این کار، این گفتگو از لیست شما حذف می‌شود.',
+          context.tr('bc.k173', {'n': _buddyName ?? context.tr('bc.k001')}),
           textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _deleteConversation();
             },
-            child: const Text('حذف گفتگو', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('bc.k063'), style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -2637,8 +2635,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('گفتگو حذف شد 🗑️'),
+        SnackBar(
+          content: Text(context.tr('bc.k078')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -2652,7 +2650,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -2949,7 +2947,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     children: [
                       _buildPopupMenuItem(
                         icon: Icons.reply,
-                        label: 'پاسخ',
+                        label: context.tr('bc.k079'),
                         onTap: () {
                           _closeMenu();
                           _setReplyTo(message);
@@ -2959,7 +2957,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       if (isOwnMessage && message.canBeEdited)
                         _buildPopupMenuItem(
                           icon: Icons.edit,
-                          label: 'ویرایش',
+                          label: context.tr('bc.k080'),
                           onTap: () {
                             _closeMenu();
                             _editMessage(message, primaryColor);
@@ -2969,7 +2967,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       _buildPopupMenuItem(
                         icon:
                             isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                        label: isPinned ? 'لغو پین' : 'پین کردن',
+                        label: isPinned ? context.tr('bc.k082') : context.tr('bc.k081'),
                         color: isPinned ? Colors.orange : primaryColor,
                         onTap: () {
                           _closeMenu();
@@ -2983,7 +2981,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       ),
                       _buildPopupMenuItem(
                         icon: Icons.copy,
-                        label: 'کپی',
+                        label: context.tr('bc.k083'),
                         onTap: () {
                           _closeMenu();
                           _copyMessage(message);
@@ -2992,7 +2990,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       ),
                       _buildPopupMenuItem(
                         icon: Icons.delete_outline,
-                        label: 'حذف',
+                        label: context.tr('bc.k084'),
                         color: Colors.red,
                         onTap: () {
                           _closeMenu();
@@ -3002,7 +3000,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       ),
                       _buildPopupMenuItem(
                         icon: Icons.check_circle_outline,
-                        label: 'انتخاب',
+                        label: context.tr('bc.k085'),
                         onTap: () {
                           _closeMenu();
                           _enterSelectMode(message.id);
@@ -3011,7 +3009,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       ),
                       _buildPopupMenuItem(
                         icon: Icons.share,
-                        label: 'اشتراک‌گذاری',
+                        label: context.tr('bc.k086'),
                         onTap: () {
                           _closeMenu();
                           _forwardMessage(message);
@@ -3102,8 +3100,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📌 پیام پین شد'),
+        SnackBar(
+          content: Text(context.tr('bc.k087')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -3111,7 +3109,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       print('❌ Error pinning message: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('خطا: ${e.toString()}'),
+          content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
           backgroundColor: Colors.red,
         ),
       );
@@ -3155,8 +3153,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📌 پین پیام لغو شد'),
+        SnackBar(
+          content: Text(context.tr('bc.k088')),
           duration: Duration(seconds: 2),
         ),
       );
@@ -3164,7 +3162,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       print('❌ Error unpinning message: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('خطا: ${e.toString()}'),
+          content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
           backgroundColor: Colors.red,
         ),
       );
@@ -3172,11 +3170,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   }
 
   Widget _buildPinnedMessageBar(ThemeProvider theme, Color primaryColor) {
-    if (_pinnedMessage == null) return const SizedBox.shrink();
+    if (_pinnedMessage == null) return SizedBox.shrink();
 
     final message = _pinnedMessage!;
     final isMe = message.senderId == _userId;
-    final senderName = isMe ? 'شما' : (message.senderName ?? 'کاربر');
+    final senderName = isMe ? context.tr('bc.k089') : (message.senderName ?? context.tr('bc.k001'));
 
     return GestureDetector(
       onTap: () {
@@ -3222,7 +3220,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '📌 پیام پین شده توسط $senderName',
+                    context.tr('bc.k090', {'senderName': '$senderName'}),
                     style: TextStyle(
                       fontSize: 11,
                       color: primaryColor,
@@ -3578,8 +3576,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+          SnackBar(
+            content: Text(context.tr('bc.k025')),
             backgroundColor: Colors.red,
           ),
         );
@@ -3681,7 +3679,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در ارسال پیام: ${e.toString()}'),
+            content: Text(context.tr('bc.k091', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -3712,8 +3710,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('جلسه کاربری منقضی شده. لطفاً دوباره وارد شوید'),
+          SnackBar(
+            content: Text(context.tr('bc.k025')),
             backgroundColor: Colors.red,
           ),
         );
@@ -3739,7 +3737,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         senderId: _userId!,
         senderName: _myName,
         senderAvatar: null,
-        content: '🖼️ در حال آپلود تصویر...',
+        content: context.tr('bc.k092'),
         type: MessageType.text,
         status: MessageStatus.sending,
         metadata: {
@@ -3772,7 +3770,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           }
           _isSending = false;
         });
-        _showSnackBar('خطا در آپلود عکس');
+        _showSnackBar(context.tr('bc.k093'));
         continue;
       }
 
@@ -3801,8 +3799,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🖼️ عکس با موفقیت ارسال شد'),
+          SnackBar(
+            content: Text(context.tr('bc.k094')),
             duration: Duration(seconds: 1),
           ),
         );
@@ -3817,7 +3815,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -3908,7 +3906,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               currentReactions[userReactionIndex] = MessageReaction(
                 userId: _userId!,
                 emoji: emoji,
-                userName: 'من',
+                userName: context.tr('bc.k073'),
                 createdAt: DateTime.now(),
               );
             }
@@ -3917,7 +3915,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               MessageReaction(
                 userId: _userId!,
                 emoji: emoji,
-                userName: 'من',
+                userName: context.tr('bc.k073'),
                 createdAt: DateTime.now(),
               ),
             );
@@ -3951,7 +3949,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -3993,18 +3991,18 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف پیام‌های انتخاب شده'),
+        title: Text(context.tr('bc.k095')),
         content: Text(
-          'آیا از حذف ${_selectedMessageIds.length} پیام انتخاب شده مطمئن هستید؟',
+          context.tr('bc.k096', {'p0': '${_selectedMessageIds.length}'}),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف همه', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('bc.k097'), style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -4030,7 +4028,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${_selectedMessageIds.length} پیام حذف شد 🗑️'),
+              content: Text(context.tr('bc.k098', {'p0': '${_selectedMessageIds.length}'})),
               duration: const Duration(seconds: 1),
             ),
           );
@@ -4039,7 +4037,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('خطا: ${e.toString()}'),
+              content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
               backgroundColor: Colors.red,
             ),
           );
@@ -4062,7 +4060,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف پیام', textAlign: TextAlign.center),
+        title: Text(context.tr('bc.k099'), textAlign: TextAlign.center),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -4071,8 +4069,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 borderRadius: BorderRadius.circular(14),
               ),
               leading: const Icon(Icons.person_remove, color: Colors.orange),
-              title: const Text('حذف برای من'),
-              subtitle: const Text('پیام فقط برای شما حذف میشود'),
+              title: Text(context.tr('bc.k100')),
+              subtitle: Text(context.tr('bc.k101')),
               onTap: () {
                 Navigator.pop(context);
                 _deleteMessageForMe(message);
@@ -4084,11 +4082,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   borderRadius: BorderRadius.circular(14),
                 ),
                 leading: const Icon(Icons.delete_forever, color: Colors.red),
-                title: const Text(
-                  'حذف برای همه',
+                title: Text(
+                  context.tr('bc.k102'),
                   style: TextStyle(color: Colors.red),
                 ),
-                subtitle: const Text('پیام برای همه حذف میشود'),
+                subtitle: Text(context.tr('bc.k103')),
                 onTap: () {
                   Navigator.pop(context);
                   _deleteMessageForEveryone(message);
@@ -4099,7 +4097,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
         ],
       ),
@@ -4114,7 +4112,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (message.type == MessageType.image) {
         final String shareText = '''
-📷 ${message.senderName ?? 'کاربر'} یک تصویر ارسال کرده:
+📷 ${message.senderName ?? context.tr('bc.k001')} یک تصویر ارسال کرده:
 
 🔗 مشاهده تصویر: ${message.content}
 
@@ -4127,7 +4125,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         await Share.share(shareText);
       } else {
         final String shareText = '''
-📩 ${message.senderName ?? 'کاربر'} نوشته:
+📩 ${message.senderName ?? context.tr('bc.k001')} نوشته:
 
 "${message.content}"
 
@@ -4142,8 +4140,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('پیام با موفقیت به اشتراک گذاشته شد 📤'),
+          SnackBar(
+            content: Text(context.tr('bc.k104')),
             duration: Duration(seconds: 2),
           ),
         );
@@ -4153,7 +4151,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در اشتراک‌گذاری: ${e.toString()}'),
+            content: Text(context.tr('bc.k105', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -4166,16 +4164,16 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف برای من'),
-        content: const Text('آیا از حذف این پیام برای خودتان مطمئن هستید؟'),
+        title: Text(context.tr('bc.k100')),
+        content: Text(context.tr('bc.k106')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف', style: TextStyle(color: Colors.orange)),
+            child: Text(context.tr('bc.k084'), style: TextStyle(color: Colors.orange)),
           ),
         ],
       ),
@@ -4191,8 +4189,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('پیام برای شما حذف شد 🗑️'),
+            SnackBar(
+              content: Text(context.tr('bc.k107')),
               duration: Duration(seconds: 1),
             ),
           );
@@ -4201,7 +4199,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('خطا: ${e.toString()}'),
+              content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
               backgroundColor: Colors.red,
             ),
           );
@@ -4215,17 +4213,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('حذف برای همه'),
-        content: const Text('آیا از حذف این پیام برای همه مطمئن هستید؟'),
+        title: Text(context.tr('bc.k102')),
+        content: Text(context.tr('bc.k108')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('انصراف'),
+            child: Text(context.tr('bc.k023')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'حذف برای همه',
+            child: Text(
+              context.tr('bc.k102'),
               style: TextStyle(color: Colors.red),
             ),
           ),
@@ -4243,8 +4241,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('پیام برای همه حذف شد 🗑️'),
+            SnackBar(
+              content: Text(context.tr('bc.k109')),
               duration: Duration(seconds: 1),
             ),
           );
@@ -4253,7 +4251,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('خطا: ${e.toString()}'),
+              content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
               backgroundColor: Colors.red,
             ),
           );
@@ -4427,8 +4425,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'ویرایش پیام',
+            Text(
+              context.tr('bc.k110'),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -4442,7 +4440,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           maxLines: 3,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'متن جدید را وارد کنید...',
+            hintText: context.tr('bc.k111'),
             hintStyle: TextStyle(color: Colors.grey.shade400),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -4462,8 +4460,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'انصراف',
+            child: Text(
+              context.tr('bc.k023'),
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
           ),
@@ -4486,8 +4484,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text(
-              'ذخیره تغییرات',
+            child: Text(
+              context.tr('bc.k112'),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -4503,8 +4501,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   void _copyMessage(ChatMessage message) {
     Clipboard.setData(ClipboardData(text: message.content));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('متن کپی شد'),
+      SnackBar(
+        content: Text(context.tr('bc.k113')),
         duration: Duration(seconds: 1),
       ),
     );
@@ -4590,9 +4588,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.reply, color: primaryColor, size: 20),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
-              'پاسخ',
+              context.tr('bc.k079'),
               style: TextStyle(
                 color: primaryColor,
                 fontWeight: FontWeight.w700,
@@ -4827,7 +4825,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                                       ),
                                       SizedBox(width: 3),
                                       Text(
-                                        'پین شده',
+                                        context.tr('bc.k114'),
                                         style: TextStyle(
                                           fontSize: 9,
                                           color: Colors.orange,
@@ -5060,47 +5058,47 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'ارسال پیام ناموفق بود',
+                Text(
+                  context.tr('bc.k115'),
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: Colors.red,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  'پیام به دلیل مشکل در اتصال ارسال نشد',
+                  context.tr('bc.k116'),
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
+                SizedBox(height: 16),
+                Divider(height: 1),
                 _buildFailedMessageOption(
                   icon: Icons.refresh,
-                  title: 'ارسال مجدد',
-                  subtitle: 'تلاش مجدد برای ارسال پیام',
+                  title: context.tr('bc.k117'),
+                  subtitle: context.tr('bc.k118'),
                   color: primaryColor,
                   onTap: () {
                     Navigator.pop(context);
                     _resendFailedMessage(message);
                   },
                 ),
-                const Divider(height: 1),
+                Divider(height: 1),
                 _buildFailedMessageOption(
                   icon: Icons.copy,
-                  title: 'کپی متن',
-                  subtitle: 'متن پیام را کپی کنید',
+                  title: context.tr('bc.k119'),
+                  subtitle: context.tr('bc.k120'),
                   color: Colors.grey,
                   onTap: () {
                     Navigator.pop(context);
                     _copyMessage(message);
                   },
                 ),
-                const Divider(height: 1),
+                Divider(height: 1),
                 _buildFailedMessageOption(
                   icon: Icons.delete_outline,
-                  title: 'حذف پیام',
-                  subtitle: 'پیام ناموفق را حذف کنید',
+                  title: context.tr('bc.k099'),
+                  subtitle: context.tr('bc.k121'),
                   color: Colors.red,
                   onTap: () {
                     Navigator.pop(context);
@@ -5183,8 +5181,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('پیام با موفقیت ارسال شد ✅'),
+          SnackBar(
+            content: Text(context.tr('bc.k122')),
             duration: Duration(seconds: 1),
           ),
         );
@@ -5200,7 +5198,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در ارسال مجدد: ${e.toString()}'),
+            content: Text(context.tr('bc.k123', {'p0': '${e.toString()}'})),
             backgroundColor: Colors.red,
           ),
         );
@@ -5214,20 +5212,20 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('پیام ناموفق حذف شد 🗑️'),
+      SnackBar(
+        content: Text(context.tr('bc.k124')),
         duration: Duration(seconds: 1),
       ),
     );
   }
 
   String _getReplyToSenderName(ChatMessage message) {
-    if (message.replyTo == null) return 'کاربر';
+    if (message.replyTo == null) return context.tr('bc.k001');
 
     final replyTo = message.replyTo!;
 
     if (replyTo.senderId == _userId) {
-      return 'شما';
+      return context.tr('bc.k089');
     }
 
     if (replyTo.senderName != null && replyTo.senderName!.isNotEmpty) {
@@ -5238,7 +5236,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       return _buddyName!;
     }
 
-    return 'کاربر';
+    return context.tr('bc.k001');
   }
 
   Widget _buildStatusIcon(
@@ -5390,9 +5388,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 color: Colors.blue,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text(
-              '🎵 در حال آپلود...',
+              context.tr('bc.k125'),
               style: TextStyle(
                 fontSize: 13,
                 color: isMe ? Colors.white70 : Colors.grey.shade600,
@@ -5418,9 +5416,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           Row(
             children: [
               const Icon(Icons.error_outline, size: 14, color: Colors.red),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Text(
-                'ارسال ناموفق',
+                context.tr('bc.k126'),
                 style: TextStyle(fontSize: 11, color: Colors.red.shade300),
               ),
             ],
@@ -5436,9 +5434,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         final giftId = message.metadata!['gift_id'] as String;
         final amount = message.metadata!['amount'] as int;
         final senderName =
-            message.metadata!['sender_name'] as String? ?? 'کاربر';
+            message.metadata!['sender_name'] as String? ?? context.tr('bc.k001');
         final receiverName =
-            message.metadata!['receiver_name'] as String? ?? 'کاربر';
+            message.metadata!['receiver_name'] as String? ?? context.tr('bc.k001');
         final messageText = message.metadata!['message'] as String? ?? '';
 
         return XPGiftCardWidget(
@@ -5481,8 +5479,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               color: Colors.grey.shade100,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text(
-              '⏳ در حال بارگذاری چالش...',
+            child: Text(
+              context.tr('bc.k127'),
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
           );
@@ -5644,7 +5642,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         (message.metadata!['file_url'] != null ||
             message.metadata!['file_name'] != null)) {
       final fileUrl = message.metadata!['file_url'] as String? ?? '';
-      final fileName = message.metadata!['file_name'] as String? ?? 'فایل';
+      final fileName = message.metadata!['file_name'] as String? ?? context.tr('bc.k006');
       final fileSize = message.metadata!['file_size'] as int? ?? 0;
 
       String fileType = message.metadata!['type'] as String? ?? 'file';
@@ -5731,13 +5729,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 size: 18,
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '📍 موقعیت مکانی',
+                    context.tr('bc.k128'),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -5747,7 +5745,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     ),
                   ),
                   Text(
-                    'مشاهده روی نقشه',
+                    context.tr('bc.k129'),
                     style: TextStyle(
                       fontSize: 11,
                       color: isMe
@@ -5857,9 +5855,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           url: url,
           fileName: name,
           onComplete: () => messenger.showSnackBar(
-              const SnackBar(content: Text('عکس ذخیره شد'), duration: Duration(seconds: 2))),
+              SnackBar(content: Text(context.tr('bc.k130')), duration: Duration(seconds: 2))),
           onError: () => messenger.showSnackBar(
-              const SnackBar(content: Text('دانلود انجام نشد'), backgroundColor: Colors.red)),
+              SnackBar(content: Text(context.tr('bc.k131')), backgroundColor: Colors.red)),
         );
   }
 
@@ -5933,7 +5931,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       }
     }
 
-    final hasPhone = phone.isNotEmpty && phone != 'شماره موجود نیست';
+    final hasPhone = phone.isNotEmpty && phone != context.tr('bc.k018');
     return GestureDetector(
       onTap: hasPhone ? () => _showPhoneActions(name, phone) : null,
       child: Container(
@@ -5958,13 +5956,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               size: 18,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name.isNotEmpty ? name : 'مخاطب',
+                  name.isNotEmpty ? name : context.tr('bc.k005'),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -5972,7 +5970,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   ),
                 ),
                 Text(
-                  phone.isNotEmpty ? phone : 'شماره موجود نیست',
+                  phone.isNotEmpty ? phone : context.tr('bc.k018'),
                   style: TextStyle(
                     fontSize: 11,
                     color: isMe ? Colors.white70 : theme.textSecondaryColor,
@@ -5981,7 +5979,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               ],
             ),
           ),
-          if (phone.isNotEmpty && phone != 'شماره موجود نیست')
+          if (phone.isNotEmpty && phone != context.tr('bc.k018'))
             IconButton(
               icon: const Icon(Icons.phone, size: 16),
               color: isMe ? Colors.white : Colors.blue,
@@ -6024,25 +6022,25 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     color: theme.textColor)),
             ListTile(
               leading: const Icon(Icons.call),
-              title: const Text('تماس'),
+              title: Text(context.tr('bc.k132')),
               onTap: () {
                 Navigator.pop(ctx);
                 _callPhoneNumber(phone);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.copy),
-              title: const Text('کپی شماره'),
+              leading: Icon(Icons.copy),
+              title: Text(context.tr('bc.k133')),
               onTap: () {
                 Navigator.pop(ctx);
                 Clipboard.setData(ClipboardData(text: phone));
-                _showSnackBar('شماره کپی شد');
+                _showSnackBar(context.tr('bc.k134'));
               },
             ),
             if (!kIsWeb)
               ListTile(
                 leading: const Icon(Icons.person_add_alt_1),
-                title: const Text('ذخیره در مخاطبین'),
+                title: Text(context.tr('bc.k135')),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
@@ -6051,7 +6049,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       phones: [Phone(phone)],
                     ));
                   } catch (e) {
-                    _showSnackBar('باز کردن مخاطبین ممکن نشد');
+                    _showSnackBar(context.tr('bc.k136'));
                   }
                 },
               ),
@@ -6198,9 +6196,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           Row(
             children: [
               Icon(Icons.trending_up, color: textColor, size: 16),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
-                'پیشرفت روزانه',
+                context.tr('bc.k137'),
                 style: TextStyle(
                   color: textColor,
                   fontSize: 13,
@@ -6221,9 +6219,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                       color: textColor,
                       size: 12,
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Text(
-                      '$streak روز',
+                      context.tr('bc.k138', {'streak': '$streak'}),
                       style: TextStyle(color: textColor, fontSize: 11),
                     ),
                   ],
@@ -6231,20 +6229,20 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             children: [
               _buildProgressStat(
                 Icons.check_circle,
                 '$completed',
-                'انجام شده',
+                context.tr('bc.k139'),
                 textColor,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               _buildProgressStat(
                 Icons.pending,
                 '${total - completed}',
-                'باقیمانده',
+                context.tr('bc.k140'),
                 textColor,
               ),
             ],
@@ -6259,9 +6257,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               minHeight: 4,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
-            '${total > 0 ? ((completed / total) * 100).toInt() : 0}% تکمیل شده',
+            context.tr('bc.k141', {'p0': '${total > 0 ? ((completed / total) * 100).toInt() : 0}'}),
             style: TextStyle(
               color: textSecondary,
               fontSize: 10,
@@ -6327,7 +6325,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   Future<void> _scrollToMessage(String messageId, {int attempt = 0}) async {
     if (!mounted) return;
     if (_messages.indexWhere((m) => m.id == messageId) == -1) {
-      _showSnackBar('پیام مورد نظر در این گفتگو پیدا نشد');
+      _showSnackBar(context.tr('bc.k142'));
       return;
     }
     if (attempt == 0) _highlightMessage(messageId);
@@ -6531,8 +6529,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         children: [
           CircularProgressIndicator(color: primaryColor, strokeWidth: 2),
           const SizedBox(height: 12),
-          const Text(
-            'در حال بارگذاری پیام‌ها...',
+          Text(
+            context.tr('bc.k143'),
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
         ],
@@ -6557,9 +6555,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               color: primaryColor,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
-            'گفتگو را شروع کنید',
+            context.tr('bc.k144'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -6568,7 +6566,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'با ${_buddyName ?? 'کاربر'} پیام دهید',
+            context.tr('bc.k174', {'n': _buddyName ?? context.tr('bc.k001')}),
             style: TextStyle(
               fontSize: 13,
               color: theme.textSecondaryColor,
@@ -6608,7 +6606,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'پاسخ به ${_replyToMessage!.senderName ?? "کاربر"}',
+                  context.tr('bc.k145', {'p0': '${_replyToMessage!.senderName ?? context.tr('bc.user')}'}),
                   style: TextStyle(
                     fontSize: 12,
                     color: primaryColor,
@@ -6665,7 +6663,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'استیکرها',
+                context.tr('bc.k146'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -6881,8 +6879,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                         color: primaryColor,
                       ),
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'ارسال محتوا',
+                      constraints: BoxConstraints(),
+                      tooltip: context.tr('bc.k147'),
                     ),
 
                     const SizedBox(width: 4),
@@ -6933,8 +6931,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                           ),
                           decoration: InputDecoration(
                             hintText: _replyToMessage != null
-                                ? 'پاسخ به ${_replyToMessage!.senderName ?? "کاربر"}...'
-                                : 'پیام خود را بنویسید...',
+                                ? context.tr('bc.k148', {'p0': '${_replyToMessage!.senderName ?? context.tr('bc.user')}'})
+                                : context.tr('bc.k149'),
                             hintStyle: TextStyle(
                               fontSize: 14,
                               color: theme.isDarkMode
@@ -7033,7 +7031,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         single.type == MessageType.text;
     return [
       IconButton(
-        tooltip: 'پاسخ',
+        tooltip: context.tr('bc.k079'),
         icon: const Icon(Icons.reply),
         onPressed: sel.isEmpty
             ? null
@@ -7045,7 +7043,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       ),
       if (canEdit)
         IconButton(
-          tooltip: 'ویرایش',
+          tooltip: context.tr('bc.k080'),
           icon: const Icon(Icons.edit_outlined),
           onPressed: () {
             final m = single;
@@ -7054,17 +7052,17 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
           },
         ),
       IconButton(
-        tooltip: 'کپی',
-        icon: const Icon(Icons.copy),
+        tooltip: context.tr('bc.k083'),
+        icon: Icon(Icons.copy),
         onPressed: sel.isEmpty ? null : _copySelected,
       ),
       IconButton(
-        tooltip: 'فوروارد',
-        icon: const Icon(Icons.forward),
+        tooltip: context.tr('bc.k150'),
+        icon: Icon(Icons.forward),
         onPressed: sel.isEmpty ? null : _forwardSelected,
       ),
       IconButton(
-        tooltip: 'حذف',
+        tooltip: context.tr('bc.k084'),
         icon: const Icon(Icons.delete_outline, color: Colors.red),
         onPressed: sel.isEmpty ? null : _deleteSelectedMessages,
       ),
@@ -7076,7 +7074,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     Clipboard.setData(ClipboardData(text: text));
     _exitSelectMode();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('کپی شد'), duration: Duration(seconds: 1)),
+      SnackBar(content: Text(context.tr('bc.k151')), duration: Duration(seconds: 1)),
     );
   }
 
@@ -7101,14 +7099,14 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
             .from('profiles')
             .select('user_id, name')
             .inFilter('user_id', others.values.toList());
-        final names = {for (final r in rows) r['user_id'] as String: (r['name'] as String?) ?? 'کاربر'};
-        others.forEach((cid, uid) => targets.add((convId: cid, name: names[uid] ?? 'کاربر')));
+        final names = {for (final r in rows) r['user_id'] as String: (r['name'] as String?) ?? context.tr('bc.k001')};
+        others.forEach((cid, uid) => targets.add((convId: cid, name: names[uid] ?? context.tr('bc.k001'))));
       }
     } catch (_) {}
     if (!mounted) return;
     if (targets.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('گفتگوی دیگری برای فوروارد نیست')),
+        SnackBar(content: Text(context.tr('bc.k152'))),
       );
       return;
     }
@@ -7118,9 +7116,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         child: ListView(
           shrinkWrap: true,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(16),
-              child: Text('فوروارد به...',
+              child: Text(context.tr('bc.k153'),
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
             for (final t in targets)
@@ -7148,13 +7146,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       _exitSelectMode();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('برای ${target.name} فوروارد شد')),
+          SnackBar(content: Text(context.tr('bc.k154', {'p0': '${target.name}'}))),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فوروارد انجام نشد'), backgroundColor: Colors.red),
+          SnackBar(content: Text(context.tr('bc.k155')), backgroundColor: Colors.red),
         );
       }
     }
@@ -7168,11 +7166,11 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     if (_isSelectMode) {
       return AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(Icons.close),
           onPressed: _exitSelectMode,
         ),
         title: Text(
-          '${_selectedMessageIds.length} پیام انتخاب شده',
+          context.tr('bc.k156', {'p0': '${_selectedMessageIds.length}'}),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         backgroundColor: theme.surfaceColor,
@@ -7265,7 +7263,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _buddyName ?? 'کاربر',
+                    _buddyName ?? context.tr('bc.k001'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -7275,7 +7273,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   ),
                   if (_isBuddyTyping)
                     Text(
-                      'در حال تایپ...',
+                      context.tr('bc.k157'),
                       style: TextStyle(
                         fontSize: 11,
                         color: primaryColor,
@@ -7294,9 +7292,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       foregroundColor: theme.textColor,
       actions: [
         IconButton(
-          icon: const Icon(Icons.more_vert),
+          icon: Icon(Icons.more_vert),
           onPressed: () => _showHeaderMenu(theme, primaryColor),
-          tooltip: 'گزینه‌های بیشتر',
+          tooltip: context.tr('bc.k158'),
         ),
       ],
     );
@@ -7321,9 +7319,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
         }
         return fileName;
       }
-      return 'فایل موزیک';
+      return context.tr('bc.k159');
     } catch (e) {
-      return 'فایل موزیک';
+      return context.tr('bc.k159');
     }
   }
 
@@ -7339,7 +7337,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
     } else if (diff == 1) {
       // دیروز
-      return calendar.isJalali ? 'دیروز' : 'Yesterday';
+      return calendar.isJalali ? context.tr('bc.k160') : 'Yesterday';
     } else {
       // ✅ قبل‌تر: تاریخ کامل با نام ماه
       return calendar.formatWithMonthName(time);
@@ -7354,9 +7352,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     final diff = today.difference(target).inDays;
 
     if (diff == 0) {
-      return calendar.isJalali ? 'امروز' : 'Today';
+      return calendar.isJalali ? context.tr('bc.k161') : 'Today';
     } else if (diff == 1) {
-      return calendar.isJalali ? 'دیروز' : 'Yesterday';
+      return calendar.isJalali ? context.tr('bc.k160') : 'Yesterday';
     } else {
       // ✅ تاریخ کامل با نام ماه
       return calendar.formatWithMonthName(date);
@@ -7393,9 +7391,9 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
       // canLaunchUrl روی اندروید ۱۱+ برای tel: بدون <queries> همیشه false است
       final ok = await launchUrl(Uri.parse(url),
           mode: LaunchMode.externalApplication);
-      if (!ok && mounted) _showSnackBar('لینک باز نشد');
+      if (!ok && mounted) _showSnackBar(context.tr('bc.k162'));
     } catch (e) {
-      if (mounted) _showSnackBar('لینک معتبر نیست');
+      if (mounted) _showSnackBar(context.tr('bc.k163'));
     }
   }
 
@@ -7442,8 +7440,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
   void _copyLink(String url) {
     Clipboard.setData(ClipboardData(text: url));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('لینک کپی شد 📋'),
+      SnackBar(
+        content: Text(context.tr('bc.k164')),
         duration: Duration(seconds: 2),
       ),
     );
@@ -7462,7 +7460,7 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('خطا: ${e.toString()}'),
+          content: Text(context.tr('bc.k030', {'p0': '${e.toString()}'})),
           backgroundColor: Colors.red,
         ),
       );
@@ -7513,13 +7511,13 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                     textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Divider(height: 1),
+                SizedBox(height: 16),
+                Divider(height: 1),
                 if (isLocationLink)
                   _buildLinkOption(
                     icon: Icons.map,
-                    title: 'باز کردن در نقشه',
-                    subtitle: 'مشاهده موقعیت روی نقشه',
+                    title: context.tr('bc.k165'),
+                    subtitle: context.tr('bc.k166'),
                     color: primaryColor,
                     onTap: () {
                       Navigator.pop(context);
@@ -7528,8 +7526,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                   ),
                 _buildLinkOption(
                   icon: Icons.open_in_browser,
-                  title: 'باز کردن در مرورگر',
-                  subtitle: 'باز کردن لینک در مرورگر',
+                  title: context.tr('bc.k167'),
+                  subtitle: context.tr('bc.k168'),
                   color: primaryColor,
                   onTap: () {
                     Navigator.pop(context);
@@ -7538,8 +7536,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 ),
                 _buildLinkOption(
                   icon: Icons.copy,
-                  title: 'کپی لینک',
-                  subtitle: 'کپی آدرس در کلیپ‌بورد',
+                  title: context.tr('bc.k169'),
+                  subtitle: context.tr('bc.k170'),
                   color: Colors.orange,
                   onTap: () {
                     Navigator.pop(context);
@@ -7548,8 +7546,8 @@ class _BuddyChatScreenState extends State<BuddyChatScreen>
                 ),
                 _buildLinkOption(
                   icon: Icons.share,
-                  title: 'اشتراک‌گذاری',
-                  subtitle: 'ارسال لینک برای دیگران',
+                  title: context.tr('bc.k086'),
+                  subtitle: context.tr('bc.k171'),
                   color: Colors.purple,
                   onTap: () {
                     Navigator.pop(context);

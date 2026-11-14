@@ -14,6 +14,7 @@ import 'strings_ad.dart';
 import 'strings_bd.dart';
 import 'strings_ct.dart';
 import 'strings_sq.dart';
+import 'strings_bc.dart';
 import 'strings_ex.dart';
 import 'strings_af.dart';
 import 'strings_ah.dart';
@@ -53,6 +54,7 @@ class AppStrings {
     ...bdFa,
     ...ctFa,
     ...sqFa,
+    ...bcFa,
     ...exFa,
     // عمومی
     'app.name': 'Dacko',
@@ -200,6 +202,7 @@ class AppStrings {
     ...bdEn,
     ...ctEn,
     ...sqEn,
+    ...bcEn,
     ...exEn,
     'app.name': 'Dacko',
     'common.cancel': 'Cancel',
