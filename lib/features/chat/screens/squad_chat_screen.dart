@@ -354,14 +354,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   // ==================== پیوست (چندتایی) ====================
   void _showAttachMenu(ThemeProvider theme, Color primaryColor) {
     final items = <(IconData, String, Tone, VoidCallback)>[
-      (Icons.image_rounded, 'عکس', Tone.sky, () => _sendAttachments(AttachKind.image)),
-      (Icons.insert_drive_file_rounded, 'فایل', Tone.butter, () => _sendAttachments(AttachKind.file)),
-      (Icons.music_note_rounded, 'موزیک', Tone.lilac, () => _sendAttachments(AttachKind.music)),
-      (Icons.location_on_rounded, 'موقعیت', Tone.mint, _sendLocation),
-      (Icons.contact_phone_rounded, 'شماره تماس', Tone.peach, () => _sendRich(GroupRichSender.contact(context))),
-      (Icons.insights_rounded, 'گزارش هفتگی', Tone.rose, () => _sendRich(GroupRichSender.weekly(_userId!))),
-      (Icons.show_chart_rounded, 'پیشرفت', Tone.lime, () => _sendRich(GroupRichSender.progress(_userId!))),
-      (Icons.checklist_rounded, 'لیست امروز', Tone.apricot, () => _sendRich(GroupRichSender.todayList(_userId!))),
+      (Icons.image_rounded, context.tr('sq.img'), Tone.sky, () => _sendAttachments(AttachKind.image)),
+      (Icons.insert_drive_file_rounded, context.tr('sq.file'), Tone.butter, () => _sendAttachments(AttachKind.file)),
+      (Icons.music_note_rounded, context.tr('sq.music'), Tone.lilac, () => _sendAttachments(AttachKind.music)),
+      (Icons.location_on_rounded, context.tr('sq.loc'), Tone.mint, _sendLocation),
+      (Icons.contact_phone_rounded, context.tr('sq.contact'), Tone.peach, () => _sendRich(GroupRichSender.contact(context))),
+      (Icons.insights_rounded, context.tr('sq.weekly'), Tone.rose, () => _sendRich(GroupRichSender.weekly(_userId!))),
+      (Icons.show_chart_rounded, context.tr('sq.progress'), Tone.lime, () => _sendRich(GroupRichSender.progress(_userId!))),
+      (Icons.checklist_rounded, context.tr('sq.today'), Tone.apricot, () => _sendRich(GroupRichSender.todayList(_userId!))),
     ];
     showModalBottomSheet(
       context: context,
@@ -384,8 +384,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
-              const SizedBox(height: 14),
-              Text('ارسال',
+              SizedBox(height: 14),
+              Text(context.tr('sq.send'),
                   style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -444,11 +444,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     try {
       final picked = await ChatUploadService.pick(AttachKind.image);
       if (picked.isEmpty) return;
-      _snack('در حال بارگذاری عکس...');
+      _snack(context.tr('sq.uploading'));
       final url = await ChatUploadService.upload(picked.first, 'chat_images');
       await _chatService.updateGroup(widget.conversation.id, avatarUrl: url);
       if (mounted) setState(() => _settings = {..._settings, 'avatar_url': url});
-      _snack('عکس گروه تغییر کرد');
+      _snack(context.tr('sq.photoChanged'));
     } catch (e) {
       _snack(_chatService.groupErrorText(e), error: true);
     }
@@ -464,12 +464,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     try {
       final p = await f;
       if (p == null) {
-        _snack('داده‌ای برای ارسال وجود ندارد');
+        _snack(context.tr('sq.noData'));
         return;
       }
       await _sendMessage(text: p.text, type: p.type, metadata: p.meta);
     } catch (e) {
-      _snack('ارسال ناموفق بود', error: true);
+      _snack(context.tr('sq.sendFail'), error: true);
     }
   }
 
@@ -505,7 +505,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       }
     }
     if (mounted) setState(() => _isSending = false);
-    if (failed > 0) _snack('ارسال $failed مورد ناموفق بود', error: true);
+    if (failed > 0) _snack(context.tr('sq.sendFailN', {'n': '$failed'}), error: true);
   }
 
   // ==================== جستجو و پرش دقیق ====================
@@ -516,14 +516,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Text('جستجو در گفتگو', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('sq.searchChat'), style: TextStyle(color: theme.textColor)),
         content: TextField(
           controller: c,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'متن پیام...'),
+          decoration: InputDecoration(hintText: context.tr('sq.msgText')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('sq.cancel'))),
           TextButton(
             onPressed: () {
               final q = c.text.trim().toLowerCase();
@@ -535,14 +535,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   .reversed
                   .toList();
               if (res.isEmpty) {
-                _snack('نتیجه‌ای یافت نشد');
+                _snack(context.tr('sq.noResult'));
               } else if (res.length == 1) {
                 _jumpTo(res.first.id);
               } else {
                 _showSearchResults(res, theme);
               }
             },
-            child: const Text('جستجو'),
+            child: Text(context.tr('sq.search')),
           ),
         ],
       ),
@@ -581,7 +581,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     if (!mounted) return;
     final idx = _messages.indexWhere((m) => m.id == id);
     if (idx == -1) {
-      _snack('پیام مورد نظر پیدا نشد');
+      _snack(context.tr('sq.msgNotFound'));
       return;
     }
     if (attempt == 0) {
@@ -676,7 +676,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       builder: (context) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('ویرایش پیام', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('sq.editMsg'), style: TextStyle(color: theme.textColor)),
         content: TextField(
           controller: controller,
           style: TextStyle(color: theme.textColor),
@@ -698,7 +698,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('sq.cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -709,7 +709,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                         messageId: message.id,
                         userId: _userId!,
                         newContent: newContent)
-                    .catchError((e) => _snack('ویرایش ناموفق بود', error: true));
+                    .catchError((e) => _snack(context.tr('sq.editFail'), error: true));
                 setState(() {
                   final index = _messages.indexWhere((m) => m.id == message.id);
                   if (index != -1) {
@@ -744,7 +744,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: const Text('ذخیره'),
+            child: Text(context.tr('sq.save')),
           ),
         ],
       ),
@@ -758,27 +758,27 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       builder: (context) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('حذف پیام', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('sq.delMsg'), style: TextStyle(color: theme.textColor)),
         content: Text(
-          'آیا از حذف این پیام برای خودتان مطمئن هستید؟',
+          context.tr('sq.delMeQ'),
           style: TextStyle(color: theme.textSecondaryColor),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('sq.cancel')),
           ),
           TextButton(
             onPressed: () {
               _chatService
                   .deleteMessageForMe(message.id, _userId!)
-                  .catchError((e) => _snack('حذف ناموفق بود', error: true));
+                  .catchError((e) => _snack(context.tr('sq.delFail'), error: true));
               setState(() {
                 _messages.removeWhere((m) => m.id == message.id);
               });
               Navigator.pop(context);
             },
-            child: const Text('حذف', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('sq.delete'), style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -789,8 +789,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final theme = Provider.of<ThemeProvider>(context, listen: false);
     if (!_isAdmin && !message.isFromMe) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('فقط ادمین یا فرستنده می‌تواند پیام را حذف کند'),
+        SnackBar(
+          content: Text(context.tr('sq.delOnlyAdmin')),
           backgroundColor: Colors.orange,
         ),
       );
@@ -802,22 +802,22 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       builder: (context) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('حذف برای همه', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('sq.delAll'), style: TextStyle(color: theme.textColor)),
         content: Text(
-          'آیا از حذف این پیام برای همه مطمئن هستید؟',
+          context.tr('sq.delAllQ'),
           style: TextStyle(color: theme.textSecondaryColor),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('انصراف'),
+            child: Text(context.tr('sq.cancel')),
           ),
           TextButton(
             onPressed: () {
               final del = message.isFromMe
                   ? _chatService.deleteMessageForEveryone(message.id, _userId!)
                   : _chatService.adminDeleteMessage(message.id);
-              del.catchError((e) => _snack('حذف ناموفق بود', error: true));
+              del.catchError((e) => _snack(context.tr('sq.delFail'), error: true));
               setState(() {
                 final index = _messages.indexWhere((m) => m.id == message.id);
                 if (index != -1) {
@@ -844,8 +844,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               });
               Navigator.pop(context);
             },
-            child: const Text(
-              'حذف برای همه',
+            child: Text(
+              context.tr('sq.delAll'),
               style: TextStyle(color: Colors.red),
             ),
           ),
@@ -857,8 +857,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   void _copyMessage(ChatMessage message) {
     Clipboard.setData(ClipboardData(text: message.content));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('متن کپی شد 📋'),
+      SnackBar(
+        content: Text(context.tr('sq.copied2')),
         duration: Duration(seconds: 1),
       ),
     );
@@ -866,7 +866,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   void _toggleReaction(ChatMessage message, String emoji) {
     if (!_reactionsEnabled) {
-      _snack('ادمین واکنش‌ها را غیرفعال کرده است');
+      _snack(context.tr('sq.reactOff'));
       return;
     }
     final list = List<MessageReaction>.from(_reactionsOf(message));
@@ -881,15 +881,15 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     _chatService
         .toggleReaction(messageId: message.id, userId: _userId!, emoji: emoji)
         .catchError((e) {
-      _snack('ثبت واکنش ناموفق بود', error: true);
+      _snack(context.tr('sq.reactFail'), error: true);
       _loadReactions();
     });
   }
 
   void _forwardMessage(ChatMessage message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('اشتراک‌گذاری به زودی اضافه می‌شود'),
+      SnackBar(
+        content: Text(context.tr('sq.shareSoon')),
         duration: Duration(seconds: 1),
       ),
     );
@@ -923,7 +923,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'پاسخ به ${_replyToMessage!.senderName ?? "کاربر"}',
+                  context.tr('sq.replyTo', {'n': _replyToMessage!.senderName ?? context.tr('sq.user')}),
                   style: TextStyle(
                     fontSize: 12,
                     color: primaryColor,
@@ -995,12 +995,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           decoration: BoxDecoration(
             // ✅ با تم هماهنگ
             color: theme.isDarkMode
-                ? const Color(0xFF2A2A2A)
+                ? Color(0xFF2A2A2A)
                 : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
-            'این پیام حذف شده است',
+            context.tr('sq.msgDeleted'),
             style: TextStyle(
               fontSize: 11,
               color: theme.textSecondaryColor,
@@ -1042,9 +1042,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             children: [
               if (!isMe)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 2, left: 4),
+                  padding: EdgeInsets.only(bottom: 2, left: 4),
                   child: Text(
-                    message.senderName ?? 'کاربر',
+                    message.senderName ?? context.tr('sq.user'),
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -1071,7 +1071,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'پاسخ به ${message.replyTo!.senderName ?? "کاربر"}',
+                        context.tr('sq.replyTo', {'n': message.replyTo!.senderName ?? context.tr('sq.user')}),
                         style: TextStyle(
                           fontSize: 9,
                           color: isMe ? Colors.white70 : primaryColor,
@@ -1135,9 +1135,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     _buildSquadContent(message, isMe, textColor),
                     if (message.showEditedBadge)
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: EdgeInsets.only(top: 2),
                         child: Text(
-                          '(ویرایش شده)',
+                          context.tr('sq.edited'),
                           style: TextStyle(
                             fontSize: 9,
                             color: isMe
@@ -1205,7 +1205,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final url = (member?['avatar'] as String?)?.isNotEmpty == true
         ? member!['avatar'] as String
         : m.senderAvatar;
-    final name = m.senderName ?? 'کاربر';
+    final name = m.senderName ?? context.tr('sq.user');
     return Padding(
       padding: const EdgeInsets.only(right: 6, bottom: 18),
       child: CircleAvatar(
@@ -1245,14 +1245,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         .join('\n');
     Clipboard.setData(ClipboardData(text: texts));
     setState(_selectedIds.clear);
-    _snack('متن کپی شد');
+    _snack(context.tr('sq.copied'));
   }
 
   void _deleteSelectedForMe() {
     for (final id in _selectedIds) {
       _chatService
           .deleteMessageForMe(id, _userId!)
-          .catchError((e) => _snack('حذف ناموفق بود', error: true));
+          .catchError((e) => _snack(context.tr('sq.delFail'), error: true));
     }
     setState(() {
       _messages.removeWhere((m) => _selectedIds.contains(m.id));
@@ -1305,18 +1305,18 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     const w = 210.0;
     final own = m.isFromMe;
     final items = <Widget>[
-      _menuItem(Icons.reply, 'پاسخ', () => _setReplyTo(m), theme),
+      _menuItem(Icons.reply, context.tr('sq.reply'), () => _setReplyTo(m), theme),
       if (own && m.canBeEdited)
-        _menuItem(Icons.edit, 'ویرایش', () => _editMessage(m, primaryColor), theme),
-      _menuItem(Icons.copy, 'کپی', () => _copyMessage(m), theme),
-      _menuItem(Icons.check_circle_outline, 'انتخاب',
+        _menuItem(Icons.edit, context.tr('sq.edit'), () => _editMessage(m, primaryColor), theme),
+      _menuItem(Icons.copy, context.tr('sq.copy'), () => _copyMessage(m), theme),
+      _menuItem(Icons.check_circle_outline, context.tr('sq.select'),
           () => setState(() => _selectedIds.add(m.id)), theme),
       if (own)
-        _menuItem(Icons.delete_outline, 'حذف برای من',
+        _menuItem(Icons.delete_outline, context.tr('sq.delMe'),
             () => _deleteMessageForMe(m), theme,
             color: Colors.red),
       if (own || _isAdmin)
-        _menuItem(Icons.delete_forever, 'حذف برای همه',
+        _menuItem(Icons.delete_forever, context.tr('sq.delAll'),
             () => _deleteMessageForEveryone(m), theme,
             color: Colors.red),
     ];
@@ -1456,7 +1456,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       return FileMessageWidget(
         key: ValueKey('f_${m.id}'),
         fileUrl: md['file_url'] as String,
-        fileName: md['file_name'] as String? ?? 'فایل',
+        fileName: md['file_name'] as String? ?? context.tr('sq.file'),
         fileType: t,
         fileSize: (md['file_size'] as num?)?.toInt() ?? 0,
         isMe: isMe,
@@ -1515,7 +1515,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'استیکرها',
+                context.tr('sq.stickers'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1584,9 +1584,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         top: false,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           color: theme.surfaceColor,
-          child: Text('فقط ادمین‌های گروه می‌توانند پیام بفرستند',
+          child: Text(context.tr('sq.adminsOnlyMsg'),
               textAlign: TextAlign.center,
               style: TextStyle(color: theme.textSecondaryColor, fontSize: 13)),
         ),
@@ -1649,7 +1649,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                                 style: TextStyle(
                                     color: theme.textColor, fontSize: 14),
                                 decoration: InputDecoration(
-                                  hintText: 'پیام خود را بنویسید...',
+                                  hintText: context.tr('sq.typeMsg'),
                                   hintStyle: TextStyle(
                                     fontSize: 14,
                                     color: theme.textSecondaryColor,
@@ -1772,7 +1772,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         builder: (ctx) => BottomSafe(child: Scaffold(
           backgroundColor: theme.backgroundColor,
           appBar: AppBar(
-            title: const Text('اعضای گروه'),
+            title: Text(context.tr('sq.members')),
             backgroundColor: theme.surfaceColor,
             elevation: 0,
             foregroundColor: theme.textColor,
@@ -1791,14 +1791,14 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     try {
       buddies = await _chatService.getMyBuddies();
     } catch (e) {
-      _snack('خواندن هم‌مسیرها ناموفق بود', error: true);
+      _snack(context.tr('sq.buddiesFail'), error: true);
       return;
     }
     final existing = {for (final m in _members) m['user_id']};
     buddies = buddies.where((b) => !existing.contains(b['user_id'])).toList();
     if (!mounted) return;
     if (buddies.isEmpty) {
-      _snack('هم‌مسیری برای افزودن نمانده است');
+      _snack(context.tr('sq.noBuddies'));
       return;
     }
     final picked = <String>{};
@@ -1814,8 +1814,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           child: SizedBox(
             height: MediaQuery.of(ctx).size.height * 0.7,
             child: Column(children: [
-              const SizedBox(height: 16),
-              Text('افزودن از هم‌مسیرهای من',
+              SizedBox(height: 16),
+              Text(context.tr('sq.addBuddies'),
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -1837,7 +1837,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                               ? null
                               : Text(((b['name'] as String?) ?? '؟').characters.first),
                         ),
-                        title: Text((b['name'] as String?) ?? 'کاربر'),
+                        title: Text((b['name'] as String?) ?? context.tr('sq.user')),
                       ),
                   ],
                 ),
@@ -1850,11 +1850,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     onPressed: picked.isEmpty ? null : () => Navigator.pop(ctx, true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: Text('افزودن ${picked.length} نفر',
+                    child: Text(context.tr('sq.addN', {'n': '${picked.length}'}),
                         style: const TextStyle(color: Colors.white)),
                   ),
                 ),
@@ -1867,7 +1867,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     if (ok != true || picked.isEmpty) return;
     await _run(() async {
       await _chatService.addGroupMembers(widget.conversation.id, picked.toList());
-    }, ok: 'اعضا اضافه شدند');
+    }, ok: context.tr('sq.added'));
   }
 
   Widget _buildMembersTab(ThemeProvider theme, Color primaryColor) {
@@ -1898,8 +1898,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => _addFromBuddies(theme, primaryColor),
-                icon: const Icon(Icons.group_add, color: Colors.white),
-                label: const Text('افزودن از هم‌مسیرهای من',
+                icon: Icon(Icons.group_add, color: Colors.white),
+                label: Text(context.tr('sq.addBuddies'),
                     style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
@@ -1921,8 +1921,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   _showInviteDialog(theme, primaryColor);
                 },
                 icon: const Icon(Icons.person_add, color: Colors.white),
-                label: const Text(
-                  'دعوت به گروه',
+                label: Text(
+                  context.tr('sq.invite'),
                   style: TextStyle(color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -1980,9 +1980,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               ),
               child: const Icon(Icons.group, color: Colors.white, size: 20),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
-              child: Text(info['name'] ?? 'گروه',
+              child: Text(info['name'] ?? context.tr('sq.group'),
                   style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1997,17 +1997,17 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     height: 1.7,
                     color: Colors.white.withValues(alpha: 0.9))),
           ],
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Wrap(spacing: 6, runSpacing: 6, children: [
-            badge(Icons.people_alt_rounded, '${info['current_members'] ?? 0} عضو'),
+            badge(Icons.people_alt_rounded, context.tr('sq.memberN', {'n': '${info['current_members'] ?? 0}'})),
             badge(
                 info['is_public'] == true
                     ? Icons.public_rounded
                     : Icons.lock_rounded,
-                info['is_public'] == true ? 'عمومی' : 'خصوصی'),
+                info['is_public'] == true ? context.tr('sq.public') : context.tr('sq.private')),
             if (!_reactionsEnabled)
-              badge(Icons.sentiment_dissatisfied_rounded, 'واکنش‌ها خاموش'),
-            if (_adminsOnlyPosting) badge(Icons.campaign_rounded, 'فقط ادمین‌ها'),
+              badge(Icons.sentiment_dissatisfied_rounded, context.tr('sq.reactOffBadge')),
+            if (_adminsOnlyPosting) badge(Icons.campaign_rounded, context.tr('sq.adminsOnly')),
           ]),
         ],
       ),
@@ -2079,7 +2079,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   children: [
                     Flexible(
                       child: Text(
-                        member['name'] ?? 'کاربر',
+                        member['name'] ?? context.tr('sq.user'),
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: isMe ? FontWeight.w700 : FontWeight.w600,
@@ -2099,8 +2099,8 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                           color: primaryColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text(
-                          'من',
+                        child: Text(
+                          context.tr('sq.me'),
                           style: TextStyle(
                             fontSize: 8,
                             color: Colors.white,
@@ -2121,7 +2121,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          'ادمین',
+                          context.tr('sq.admin'),
                           style: TextStyle(
                             fontSize: 8,
                             color: primaryColor,
@@ -2132,9 +2132,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ],
                   ],
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
-                  isOnline ? 'آنلاین 🟢' : 'آفلاین',
+                  isOnline ? context.tr('sq.online') : context.tr('sq.offline'),
                   style: TextStyle(
                     fontSize: 11,
                     color: isOnline ? primaryColor : theme.textSecondaryColor,
@@ -2161,27 +2161,27 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                 } else if (value == 'ban') {
                   _removeMember(id, ban: true);
                 } else if (value == 'report') {
-                  _reportMember(id, member['name'] ?? 'کاربر');
+                  _reportMember(id, member['name'] ?? context.tr('sq.user'));
                 }
               },
               itemBuilder: (context) => [
                 if (_isAdmin && !isAdmin)
-                  const PopupMenuItem(
-                      value: 'make_admin', child: Text('تبدیل به ادمین')),
+                  PopupMenuItem(
+                      value: 'make_admin', child: Text(context.tr('sq.makeAdmin'))),
                 if (_isAdmin && isAdmin)
-                  const PopupMenuItem(
-                      value: 'remove_admin', child: Text('برداشتن ادمینی')),
+                  PopupMenuItem(
+                      value: 'remove_admin', child: Text(context.tr('sq.removeAdmin'))),
                 if (_isAdmin)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                       value: 'remove',
-                      child: Text('حذف از گروه',
+                      child: Text(context.tr('sq.removeFromGroup'),
                           style: TextStyle(color: Colors.red))),
                 if (_isAdmin)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                       value: 'ban',
-                      child: Text('حذف و مسدود کردن',
+                      child: Text(context.tr('sq.removeBan'),
                           style: TextStyle(color: Colors.red))),
-                const PopupMenuItem(value: 'report', child: Text('گزارش عضو')),
+                PopupMenuItem(value: 'report', child: Text(context.tr('sq.reportMember'))),
               ],
             ),
         ],
@@ -2206,18 +2206,18 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               color: primaryColor,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
-            'گفتگو را شروع کنید',
+            context.tr('sq.startChat'),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.textColor,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
-            'با اعضای گروه پیام دهید',
+            context.tr('sq.msgMembers'),
             style: TextStyle(
               fontSize: 13,
               color: theme.textSecondaryColor,
@@ -2277,7 +2277,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('انصراف')),
+              child: Text(context.tr('sq.cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child:
@@ -2335,7 +2335,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: 14),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.wallpaper_rounded, color: primaryColor),
@@ -2352,18 +2352,18 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                           (p) => setState(() => _bgPath = p));
                     },
                   ),
-                  Text('ابزارهای گروه',
+                  Text(context.tr('sq.tools'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: theme.textColor)),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   if (_isAdmin) ...[
                     _buildToolItem(
                       icon: Icons.photo_camera_rounded,
-                      title: 'عکس پروفایل گروه',
-                      subtitle: 'انتخاب یا تغییر عکس گروه',
+                      title: context.tr('sq.groupPhoto'),
+                      subtitle: context.tr('sq.groupPhotoSub'),
                       onTap: () {
                         Navigator.pop(ctx);
                         _changeGroupPhoto();
@@ -2371,11 +2371,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       primaryColor: primaryColor,
                       theme: theme,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     _buildToolItem(
                       icon: Icons.edit,
-                      title: 'ویرایش اطلاعات گروه',
-                      subtitle: 'تغییر نام و توضیحات',
+                      title: context.tr('sq.editInfo'),
+                      subtitle: context.tr('sq.editInfoSub'),
                       onTap: () {
                         Navigator.pop(ctx);
                         _editSquadInfo(theme, primaryColor);
@@ -2383,11 +2383,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       primaryColor: primaryColor,
                       theme: theme,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     _buildToolItem(
                       icon: Icons.person_add,
-                      title: 'دعوت به گروه',
-                      subtitle: 'کد دعوت',
+                      title: context.tr('sq.invite'),
+                      subtitle: context.tr('sq.inviteCode'),
                       onTap: () {
                         Navigator.pop(ctx);
                         _showInviteDialog(theme, primaryColor);
@@ -2395,19 +2395,19 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                       primaryColor: primaryColor,
                       theme: theme,
                     ),
-                    const Divider(height: 24),
+                    Divider(height: 24),
                     switchTile(
                       Icons.public_rounded,
-                      'گروه عمومی',
-                      'همه می‌توانند گروه را پیدا کنند و بپیوندند',
+                      context.tr('sq.publicGroup'),
+                      context.tr('sq.publicGroupSub'),
                       _settings['is_public'] == true,
                       (v) => _run(() => _chatService
                           .updateGroup(widget.conversation.id, isPublic: v)),
                     ),
                     switchTile(
                       Icons.emoji_emotions_rounded,
-                      'واکنش با استیکر',
-                      'اعضا بتوانند به پیام‌ها واکنش بدهند',
+                      context.tr('sq.stickerReact'),
+                      context.tr('sq.stickerReactSub'),
                       _reactionsEnabled,
                       (v) => _run(() => _chatService.updateGroup(
                           widget.conversation.id,
@@ -2415,25 +2415,25 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                     switchTile(
                       Icons.campaign_rounded,
-                      'فقط ادمین‌ها پیام بدهند',
-                      'اعضا فقط می‌خوانند (حالت کانال)',
+                      context.tr('sq.adminsPost'),
+                      context.tr('sq.adminsPostSub'),
                       _adminsOnlyPosting,
                       (v) => _run(() => _chatService.updateGroup(
                           widget.conversation.id,
                           postingMode: v ? 'admins' : 'all')),
                     ),
-                    const Divider(height: 24),
+                    Divider(height: 24),
                   ],
                   _buildToolItem(
                     icon: Icons.notifications_off,
-                    title: 'بی‌صدا کردن گروه',
-                    subtitle: 'غیرفعال کردن اعلان‌ها',
+                    title: context.tr('sq.mute'),
+                    subtitle: context.tr('sq.muteSub'),
                     onTap: () async {
                       Navigator.pop(ctx);
                       try {
                         await _chatService.setGroupMuted(
                             widget.conversation.id, true);
-                        _snack('گروه بی‌صدا شد');
+                        _snack(context.tr('sq.muted'));
                       } catch (e) {
                         _snack(_chatService.groupErrorText(e), error: true);
                       }
@@ -2441,11 +2441,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     primaryColor: primaryColor,
                     theme: theme,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   _buildToolItem(
                     icon: Icons.exit_to_app,
-                    title: 'ترک گروه',
-                    subtitle: 'از این گروه خارج می‌شوید',
+                    title: context.tr('sq.leave'),
+                    subtitle: context.tr('sq.leaveSub'),
                     color: Colors.red,
                     onTap: () {
                       Navigator.pop(ctx);
@@ -2455,11 +2455,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     theme: theme,
                   ),
                   if (_isAdmin) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     _buildToolItem(
                       icon: Icons.delete_forever,
-                      title: 'حذف گروه',
-                      subtitle: 'حذف کامل گروه برای همه',
+                      title: context.tr('sq.delGroup'),
+                      subtitle: context.tr('sq.delGroupSub'),
                       color: Colors.red,
                       onTap: () {
                         Navigator.pop(ctx);
@@ -2543,12 +2543,12 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           backgroundColor: theme.cardColor,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          title: Text('دعوت به گروه', style: TextStyle(color: theme.textColor)),
+          title: Text(context.tr('sq.invite'), style: TextStyle(color: theme.textColor)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                  'این کد را برای دوستانت بفرست. با «پیوستن به گروه» وارد می‌شوند.',
+                  context.tr('sq.inviteBody'),
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(color: theme.textSecondaryColor, height: 1.7)),
@@ -2584,16 +2584,16 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   _snack(_chatService.groupErrorText(e), error: true);
                 }
               },
-              child: const Text('کد جدید'),
+              child: Text(context.tr('sq.newCode')),
             ),
             ElevatedButton.icon(
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: code!));
                 if (ctx.mounted) Navigator.pop(ctx);
-                _snack('کد دعوت کپی شد');
+                _snack(context.tr('sq.codeCopied'));
               },
-              icon: const Icon(Icons.copy, size: 18, color: Colors.white),
-              label: const Text('کپی', style: TextStyle(color: Colors.white)),
+              icon: Icon(Icons.copy, size: 18, color: Colors.white),
+              label: Text(context.tr('sq.copy'), style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
@@ -2614,27 +2614,27 @@ class _SquadChatScreenState extends State<SquadChatScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: theme.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Text('ویرایش گروه', style: TextStyle(color: theme.textColor)),
+        title: Text(context.tr('sq.editGroup'), style: TextStyle(color: theme.textColor)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameC,
               maxLength: 40,
-              decoration: const InputDecoration(labelText: 'نام گروه'),
+              decoration: InputDecoration(labelText: context.tr('sq.groupName')),
             ),
             TextField(
               controller: descC,
               maxLength: 200,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'توضیحات'),
+              decoration: InputDecoration(labelText: context.tr('sq.desc')),
             ),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('انصراف')),
+              child: Text(context.tr('sq.cancel'))),
           TextButton(
             onPressed: () {
               final n = nameC.text.trim();
@@ -2643,10 +2643,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
               _run(
                 () => _chatService.updateGroup(widget.conversation.id,
                     name: n, description: descC.text.trim()),
-                ok: 'اطلاعات گروه ذخیره شد',
+                ok: context.tr('sq.infoSaved'),
               );
             },
-            child: const Text('ذخیره'),
+            child: Text(context.tr('sq.save')),
           ),
         ],
       ),
@@ -2655,11 +2655,11 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Future<void> _setRole(String userId, String role) async {
     final ok = await _confirm(
-      role == 'admin' ? 'تبدیل به ادمین' : 'برداشتن ادمینی',
+      role == 'admin' ? context.tr('sq.makeAdmin') : context.tr('sq.removeAdmin'),
       role == 'admin'
-          ? 'این کاربر می‌تواند گروه را مدیریت کند.'
-          : 'این کاربر دیگر ادمین نخواهد بود.',
-      'تأیید',
+          ? context.tr('sq.adminBody')
+          : context.tr('sq.unadminBody'),
+      context.tr('sq.confirm'),
     );
     if (!ok) return;
     await _run(
@@ -2668,18 +2668,18 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Future<void> _removeMember(String userId, {bool ban = false}) async {
     final ok = await _confirm(
-      ban ? 'حذف و مسدود کردن' : 'حذف از گروه',
+      ban ? context.tr('sq.removeBan') : context.tr('sq.removeFromGroup'),
       ban
-          ? 'کاربر حذف می‌شود و دیگر نمی‌تواند دوباره به گروه بپیوندد.'
-          : 'آیا از حذف این کاربر از گروه مطمئن هستید؟',
-      'حذف',
+          ? context.tr('sq.banBody')
+          : context.tr('sq.removeBody'),
+      context.tr('sq.delete'),
       danger: true,
     );
     if (!ok) return;
     await _run(
       () => _chatService.removeGroupMember(widget.conversation.id, userId,
           ban: ban),
-      ok: 'کاربر حذف شد',
+      ok: context.tr('sq.userRemoved'),
     );
   }
 
@@ -2701,7 +2701,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title:
-              Text('گزارش «$name»', style: TextStyle(color: theme.textColor)),
+              Text(context.tr('sq.reportName', {'n': name}), style: TextStyle(color: theme.textColor)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2718,7 +2718,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                   controller: detailsC,
                   maxLines: 2,
                   decoration:
-                      const InputDecoration(labelText: 'توضیح (اختیاری)'),
+                      InputDecoration(labelText: context.tr('sq.detailOpt')),
                 ),
               ],
             ),
@@ -2726,10 +2726,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('انصراف')),
+                child: Text(context.tr('sq.cancel'))),
             TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('ارسال گزارش')),
+                child: Text(context.tr('sq.sendReport'))),
           ],
         ),
       ),
@@ -2738,7 +2738,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     try {
       await _chatService.reportMember(widget.conversation.id, userId, reason,
           details: detailsC.text.trim().isEmpty ? null : detailsC.text.trim());
-      _snack('گزارش ثبت شد، ممنون');
+      _snack(context.tr('sq.reported'));
     } catch (e) {
       _snack(_chatService.groupErrorText(e), error: true);
     }
@@ -2746,7 +2746,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Future<void> _leaveSquad() async {
     final ok = await _confirm(
-        'ترک گروه', 'آیا از خروج از این گروه مطمئن هستید؟', 'ترک گروه',
+        context.tr('sq.leave'), context.tr('sq.leaveQ'), context.tr('sq.leave'),
         danger: true);
     if (!ok) return;
     try {
@@ -2759,9 +2759,9 @@ class _SquadChatScreenState extends State<SquadChatScreen>
 
   Future<void> _deleteSquad(Color primaryColor) async {
     final ok = await _confirm(
-      'حذف گروه',
-      'با حذف گروه، تمام پیام‌ها و اعضا برای همه حذف می‌شوند و قابل بازگشت نیست.',
-      'حذف گروه',
+      context.tr('sq.delGroup'),
+      context.tr('sq.delGroupBody'),
+      context.tr('sq.delGroup'),
       danger: true,
     );
     if (!ok) return;
@@ -2774,7 +2774,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
   }
 
   void _showChallengeProgress(Color primaryColor) {
-    _snack('پیشرفت چالش گروهی به‌زودی');
+    _snack(context.tr('sq.groupChallengeSoon'));
   }
 
   @override
@@ -2850,10 +2850,10 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         elevation: 0,
         foregroundColor: theme.textColor,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(Icons.close),
           onPressed: () => setState(_selectedIds.clear),
         ),
-        title: Text('${_selectedIds.length} پیام انتخاب شده',
+        title: Text(context.tr('sq.selectedN', {'n': '${_selectedIds.length}'}),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(icon: const Icon(Icons.copy), onPressed: _copySelected),
@@ -2903,7 +2903,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
                     ),
                   ),
                   Text(
-                    '$memberCount عضو',
+                    context.tr('sq.memberN', {'n': '$memberCount'}),
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.textSecondaryColor,
@@ -2932,13 +2932,13 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     final diff = now.difference(time);
 
     if (diff.inDays > 0) {
-      return '${diff.inDays} روز پیش';
+      return context.tr('ct.ago.day', {'n': '${diff.inDays}'});
     } else if (diff.inHours > 0) {
-      return '${diff.inHours} ساعت پیش';
+      return context.tr('ct.ago.hour', {'n': '${diff.inHours}'});
     } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} دقیقه پیش';
+      return context.tr('ct.ago.min', {'n': '${diff.inMinutes}'});
     } else {
-      return 'لحظاتی پیش';
+      return context.tr('ct.ago.moments');
     }
   }
 }

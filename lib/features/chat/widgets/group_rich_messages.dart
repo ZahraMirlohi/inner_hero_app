@@ -1,5 +1,6 @@
 // پیام‌های غنی (گزارش، لیست امروز، پیشرفت، مخاطب، لوکیشن) برای چت گروه
 // منطق ارسال/نمایش مشابه چت هم‌مسیر است.
+import '/l10n/app_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -126,8 +127,8 @@ class GroupRichSender {
   static Future<RichPayload?> contact(BuildContext context) async {
     if (!await FlutterContacts.requestPermission(readonly: true)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('برای ارسال شماره تماس به دسترسی مخاطبان نیاز است')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tr('sq.contactPerm'))));
       }
       return null;
     }
@@ -135,7 +136,7 @@ class GroupRichSender {
     if (!context.mounted) return null;
     if (contacts.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('مخاطبی در گوشی شما وجود ندارد')));
+          .showSnackBar(SnackBar(content: Text(context.tr('sq.noContacts'))));
       return null;
     }
     final theme = Provider.of<ThemeProvider>(context, listen: false);
@@ -188,11 +189,11 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
                 color: theme.borderColor, borderRadius: BorderRadius.circular(3)),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+            padding: EdgeInsets.fromLTRB(20, 14, 20, 8),
             child: TextField(
               onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'جستجو در مخاطبین...',
+                hintText: context.tr('sq.searchContacts'),
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.backgroundColor,
@@ -254,14 +255,14 @@ class GroupRichContent {
       return fallback;
     }
     if (md != null && md['is_progress_card'] == true || m.type == MessageType.progress) {
-      return _progress(m, isMe, theme);
+      return _progress(context, m, isMe, theme);
     }
     if (m.type == MessageType.text && isLocation(m.content)) return _location(m, isMe, theme);
     if (m.type == MessageType.text && isContact(m.content)) return _contact(context, m, isMe, theme);
     return null;
   }
 
-  static Widget _progress(ChatMessage m, bool isMe, ThemeProvider theme) {
+  static Widget _progress(BuildContext context, ChatMessage m, bool isMe, ThemeProvider theme) {
     final md = m.metadata ?? {};
     final streak = md['streak'] ?? 0;
     final done = (md['completed'] as num?)?.toInt() ?? 0;
@@ -280,15 +281,15 @@ class GroupRichContent {
         children: [
           Row(children: [
             Icon(Icons.trending_up, color: fg, size: 16),
-            const SizedBox(width: 6),
-            Text('پیشرفت روزانه',
+            SizedBox(width: 6),
+            Text(context.tr('sq.dailyProgress'),
                 style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.bold)),
-            const Spacer(),
+            Spacer(),
             Icon(Icons.local_fire_department, color: fg, size: 14),
-            Text(' $streak روز', style: TextStyle(color: fg, fontSize: 11)),
+            Text(' ' + context.tr('sq.nDays', {'n': '$streak'}), style: TextStyle(color: fg, fontSize: 11)),
           ]),
-          const SizedBox(height: 10),
-          Text('$done انجام شده  •  ${total - done} باقیمانده',
+          SizedBox(height: 10),
+          Text(context.tr('sq.doneLeft', {'a': '$done', 'b': '${total - done}'}),
               style: TextStyle(color: fg, fontSize: 12)),
           const SizedBox(height: 8),
           ClipRRect(
@@ -362,10 +363,10 @@ class GroupRichContent {
         ),
         child: Row(children: [
           const Icon(Icons.contact_phone, color: Colors.blue, size: 24),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name.isEmpty ? 'مخاطب' : name,
+              Text(name.isEmpty ? context.tr('sq.contactName') : name,
                   style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: isMe ? Colors.white : theme.textColor)),
@@ -394,24 +395,24 @@ class GroupRichContent {
               textDirection: TextDirection.ltr,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.textColor)),
           ListTile(
-            leading: const Icon(Icons.call),
-            title: const Text('تماس'),
+            leading: Icon(Icons.call),
+            title: Text(context.tr('sq.call')),
             onTap: () {
               Navigator.pop(ctx);
               launchUrl(Uri.parse('tel:$clean'), mode: LaunchMode.externalApplication);
             },
           ),
           ListTile(
-            leading: const Icon(Icons.copy),
-            title: const Text('کپی شماره'),
+            leading: Icon(Icons.copy),
+            title: Text(context.tr('sq.copyNumber')),
             onTap: () {
               Navigator.pop(ctx);
               Clipboard.setData(ClipboardData(text: phone));
             },
           ),
           ListTile(
-            leading: const Icon(Icons.person_add_alt_1),
-            title: const Text('ذخیره در مخاطبین'),
+            leading: Icon(Icons.person_add_alt_1),
+            title: Text(context.tr('sq.saveContact')),
             onTap: () async {
               Navigator.pop(ctx);
               try {

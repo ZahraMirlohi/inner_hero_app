@@ -1,5 +1,6 @@
 // lib/features/chat/screens/arena_chat_screen.dart
 
+import '/l10n/app_strings.dart';
 import '/services/sound_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -42,7 +43,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   bool _isLoading = true;
   bool _isSending = false;
   String? _userId;
-  String _myName = 'کاربر';
+  String _myName = '';
   StreamSubscription<List<ChatMessage>>? _msgSub;
 
   // ==================== وضعیت‌ها ====================
@@ -149,7 +150,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
             .select('name')
             .eq('user_id', user.id)
             .maybeSingle();
-        _myName = (me?['name'] as String?) ?? 'کاربر';
+        _myName = (me?['name'] as String?) ?? (mounted ? context.tr('sq.user') : '');
       } catch (_) {}
       _challengeInfo = await _getChallengeInfo(widget.conversation.challengeId);
       _participants = await _getChallengeParticipants(
@@ -326,7 +327,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
         setState(() => _messages.removeWhere((m) => m.id == temp.id));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا در ارسال پیام: ${e.toString()}'),
+            content: Text(context.tr('sq.sendErr', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -378,7 +379,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('پست با موفقیت ارسال شد 🎉'),
+          content: Text(context.tr('sq.postSent')),
           backgroundColor: primaryColor,
           duration: const Duration(seconds: 1),
         ),
@@ -387,7 +388,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطا: ${e.toString()}'),
+            content: Text(context.tr('ct.err', {'e': e.toString()})),
             backgroundColor: Colors.red,
           ),
         );
@@ -544,12 +545,12 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
             color: theme.isDarkMode
-                ? const Color(0xFF2A2A2A)
+                ? Color(0xFF2A2A2A)
                 : Colors.grey.shade200,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(
-            'این پیام حذف شده است',
+            context.tr('sq.msgDeleted'),
             style: TextStyle(
               fontSize: 11,
               color: theme.textSecondaryColor,
@@ -581,9 +582,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
           children: [
             if (!isMe)
               Padding(
-                padding: const EdgeInsets.only(bottom: 2, left: 4),
+                padding: EdgeInsets.only(bottom: 2, left: 4),
                 child: Text(
-                  message.senderName ?? 'کاربر',
+                  message.senderName ?? context.tr('sq.user'),
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -707,7 +708,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        post.userName ?? 'کاربر',
+                        post.userName ?? context.tr('sq.user'),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -761,9 +762,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                           size: 12,
                           color: primaryColor,
                         ),
-                        const SizedBox(width: 2),
+                        SizedBox(width: 2),
                         Text(
-                          'پین',
+                          context.tr('sq.pin'),
                           style: TextStyle(
                             fontSize: 10,
                             color: primaryColor,
@@ -878,8 +879,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 IconButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('اشتراک‌گذاری به زودی اضافه می‌شود'),
+                      SnackBar(
+                        content: Text(context.tr('sq.shareSoon')),
                         duration: Duration(seconds: 1),
                       ),
                     );
@@ -906,7 +907,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               child: GestureDetector(
                 onTap: () => _showComments(post.id),
                 child: Text(
-                  'مشاهده ${post.commentsCount} کامنت',
+                  context.tr('sq.viewComments', {'n': '${post.commentsCount}'}),
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.textSecondaryColor,
@@ -1032,7 +1033,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                     controller: _commentController,
                     style: TextStyle(color: theme.textColor),
                     decoration: InputDecoration(
-                      hintText: 'نظر خود را بنویسید...',
+                      hintText: context.tr('sq.typeComment'),
                       hintStyle: TextStyle(
                         fontSize: 13,
                         color: theme.textSecondaryColor,
@@ -1075,7 +1076,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 });
               },
               child: Text(
-                'بستن',
+                context.tr('sq.close'),
                 style: TextStyle(
                   fontSize: 12,
                   color: theme.textSecondaryColor,
@@ -1112,7 +1113,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'استیکرها',
+                context.tr('sq.stickers'),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1266,7 +1267,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                     maxLines: 3,
                     minLines: 1,
                     decoration: InputDecoration(
-                      hintText: 'پیشرفت امروز خود را به اشتراک بگذارید...',
+                      hintText: context.tr('sq.shareProgress'),
                       hintStyle: TextStyle(
                         fontSize: 14,
                         color: theme.textSecondaryColor,
@@ -1312,7 +1313,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                       });
                     },
                     child: Text(
-                      'لغو',
+                      context.tr('sq.abort'),
                       style: TextStyle(
                         fontSize: 11,
                         color: theme.textSecondaryColor,
@@ -1338,8 +1339,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 )
               : _messages.isEmpty
                   ? _buildEmptyState(
-                      'هنوز پیامی ارسال نشده است',
-                      'اولین پیام را ارسال کنید',
+                      context.tr('sq.noMsgs'),
+                      context.tr('sq.firstMsg'),
                       theme,
                       primaryColor,
                     )
@@ -1404,9 +1405,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                         size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Text(
-                      'پیشرفت امروز خود را به اشتراک بگذارید...',
+                      context.tr('sq.shareProgress'),
                       style: TextStyle(
                         fontSize: 14,
                         color: theme.textSecondaryColor,
@@ -1425,8 +1426,8 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 )
               : _posts.isEmpty
                   ? _buildEmptyState(
-                      'هنوز پستی وجود ندارد',
-                      'اولین پست را ارسال کنید',
+                      context.tr('sq.noPosts'),
+                      context.tr('sq.firstPost'),
                       theme,
                       primaryColor,
                     )
@@ -1499,7 +1500,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                       focusNode: _focusNode,
                       style: TextStyle(color: theme.textColor),
                       decoration: InputDecoration(
-                        hintText: 'پیام خود را بنویسید...',
+                        hintText: context.tr('sq.typeMsg'),
                         hintStyle: TextStyle(
                           fontSize: 14,
                           color: theme.textSecondaryColor,
@@ -1648,7 +1649,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      info['title'] ?? 'چالش',
+                      info['title'] ?? context.tr('sq.challenge'),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -1656,7 +1657,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                       ),
                     ),
                     Text(
-                      '${info['total_participants'] ?? 0} شرکت‌کننده',
+                      context.tr('sq.participants', {'n': '${info['total_participants'] ?? 0}'}),
                       style: TextStyle(
                         fontSize: 11,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -1695,19 +1696,19 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
               minHeight: 6,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'روز $progress از $total',
+                context.tr('sq.dayOf', {'a': '$progress', 'b': '$total'}),
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
               Text(
-                '${total - progress} روز باقی‌مانده',
+                context.tr('sq.daysLeft', {'n': '${total - progress}'}),
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.white.withValues(alpha: 0.9),
@@ -1777,12 +1778,12 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
-              tabs: const [
-                Tab(height: 42, icon: Icon(Icons.chat, size: 16), text: 'چت'),
+              tabs: [
+                Tab(height: 42, icon: Icon(Icons.chat, size: 16), text: context.tr('sq.chat')),
                 Tab(
                   height: 42,
                   icon: Icon(Icons.article, size: 16),
-                  text: 'فید',
+                  text: context.tr('sq.feed'),
                 ),
               ],
             ),
@@ -1818,7 +1819,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
             ),
           ),
           Text(
-            '🔥 ${_challengeInfo?['total_participants'] ?? 0} شرکت‌کننده',
+            '🔥 ' + context.tr('sq.participants', {'n': '${_challengeInfo?['total_participants'] ?? 0}'}),
             style: TextStyle(
               fontSize: 11,
               color: theme.textSecondaryColor,
@@ -1871,9 +1872,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.emoji_events, color: primaryColor, size: 24),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
-                      'جدول رده‌بندی',
+                      context.tr('sq.leaderboard'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1928,10 +1929,10 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            item['name'] ?? 'کاربر',
+                            item['name'] ?? context.tr('sq.user'),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -1949,7 +1950,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${item['progress'] ?? 0} روز',
+                            context.tr('sq.nDays', {'n': '${item['progress'] ?? 0}'}),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1976,26 +1977,26 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
     final diff = now.difference(time);
 
     if (diff.inDays > 0) {
-      return '${diff.inDays} روز پیش';
+      return context.tr('ct.ago.day', {'n': '${diff.inDays}'});
     } else if (diff.inHours > 0) {
-      return '${diff.inHours} ساعت پیش';
+      return context.tr('ct.ago.hour', {'n': '${diff.inHours}'});
     } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} دقیقه پیش';
+      return context.tr('ct.ago.min', {'n': '${diff.inMinutes}'});
     } else {
-      return 'لحظاتی پیش';
+      return context.tr('ct.ago.moments');
     }
   }
 
   String _getMetadataLabel(String key) {
     switch (key) {
       case 'habits_completed':
-        return 'عادت انجام شده';
+        return context.tr('sq.habitsDone');
       case 'total_habits':
-        return 'کل عادت‌ها';
+        return context.tr('sq.totalHabits');
       case 'streak':
-        return 'استریک';
+        return context.tr('sq.streak');
       case 'best_streak':
-        return 'بهترین استریک';
+        return context.tr('sq.bestStreak');
       default:
         return key;
     }
