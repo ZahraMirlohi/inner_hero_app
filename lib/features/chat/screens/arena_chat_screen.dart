@@ -14,6 +14,8 @@ import '../models/message_model.dart';
 import '../models/conversation_model.dart';
 import '../models/feed_post_model.dart';
 import '../widgets/message_actions_menu.dart';
+import '../widgets/forward_sheet.dart';
+import 'package:flutter/services.dart';
 
 class ArenaChatScreen extends StatefulWidget {
   final Conversation conversation;
@@ -512,6 +514,40 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
   }
 
   // ==================== ویجت‌ها ====================
+  void _showMessageSheet(ChatMessage message) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.copy),
+            title: Text(context.tr('sq.copy')),
+            onTap: () {
+              Navigator.pop(ctx);
+              Clipboard.setData(ClipboardData(text: message.content));
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(context.tr('sq.copied'))));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.forward),
+            title: Text(context.tr('bc.k150')),
+            onTap: () {
+              Navigator.pop(ctx);
+              if (_userId == null) return;
+              forwardMessages(context,
+                  chat: _chatService,
+                  me: _userId!,
+                  myName: _myName,
+                  excludeConvId: widget.conversation.id,
+                  msgs: [message]);
+            },
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(
     ChatMessage message,
     ThemeProvider theme,
@@ -592,7 +628,9 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   ),
                 ),
               ),
-            Container(
+            GestureDetector(
+              onLongPress: () => _showMessageSheet(message),
+              child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 11,
                 vertical: 6,
@@ -616,7 +654,7 @@ class _ArenaChatScreenState extends State<ArenaChatScreen>
                   height: 1.4,
                 ),
               ),
-            ),
+            )),
             Padding(
               padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
               child: Row(

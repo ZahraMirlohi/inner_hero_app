@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/chat_background.dart';
 import '/l10n/app_strings.dart';
+import '../widgets/forward_sheet.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -886,13 +887,23 @@ class _SquadChatScreenState extends State<SquadChatScreen>
     });
   }
 
-  void _forwardMessage(ChatMessage message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.tr('sq.shareSoon')),
-        duration: Duration(seconds: 1),
-      ),
-    );
+  void _forwardMessage(ChatMessage message) => _forwardMany([message]);
+
+  void _forwardMany(List<ChatMessage> msgs) {
+    if (_userId == null) return;
+    forwardMessages(context,
+        chat: _chatService,
+        me: _userId!,
+        myName: _myName,
+        excludeConvId: widget.conversation.id,
+        msgs: msgs);
+  }
+
+  void _forwardSelected() {
+    final msgs = _messages.where((m) => _selectedIds.contains(m.id)).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    setState(_selectedIds.clear);
+    _forwardMany(msgs);
   }
 
   Widget _buildReplyPreview(ThemeProvider theme, Color primaryColor) {
@@ -2856,6 +2867,7 @@ class _SquadChatScreenState extends State<SquadChatScreen>
         title: Text(context.tr('sq.selectedN', {'n': '${_selectedIds.length}'}),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         actions: [
+          IconButton(icon: const Icon(Icons.forward), onPressed: _forwardSelected),
           IconButton(icon: const Icon(Icons.copy), onPressed: _copySelected),
           IconButton(
               icon: const Icon(Icons.delete_outline, color: Colors.red),
